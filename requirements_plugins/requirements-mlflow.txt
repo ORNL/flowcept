@@ -1,0 +1,5 @@
+mlflow-skinny
+sqlalchemy
+alembic
+sqlparse
+watchdog>=2.1.9

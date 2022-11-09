@@ -1,7 +1,17 @@
 plugins:
-  zambeze:
-    type: message_broker
-    subtype: rabbit_mq
+  mlflow1:
+    kind: mlflow
+    observer_type: db
+    observer_subtype: sqlite
+    file_path: mlflow.db
+    log_params: ['*']
+    log_metrics: ['*']
+    watch_interval_sec: 1
+
+  zambeze1:
+    kind: zambeze
+    observer_type: message_broker
+    observer_subtype: rabbit_mq
     host: localhost
     port: 5672
     queue_name: hello
