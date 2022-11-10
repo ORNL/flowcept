@@ -1,4 +1,4 @@
-# flowcept
+# Flowcept
 
 ## Redis for local interceptions
 ```$ docker run -p 6379:6379  --name redis -d redis```
