@@ -6,7 +6,7 @@ plugins:
     file_path: mlflow.db
     log_params: ['*']
     log_metrics: ['*']
-    watch_interval_sec: 1
+    watch_interval_sec: 2
 
   zambeze1:
     kind: zambeze

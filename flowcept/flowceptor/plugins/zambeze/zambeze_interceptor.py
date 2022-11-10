@@ -11,7 +11,6 @@ class ZambezeInterceptor(AbstractFlowceptor):
         super().__init__(plugin_key)
 
     def intercept(self, message: dict):
-        intercepted_msg = dict()
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
         # TODO: make constants
@@ -31,7 +30,6 @@ class ZambezeInterceptor(AbstractFlowceptor):
             port=self.settings.port))
         channel = connection.channel()
         channel.queue_declare(queue=self.settings.queue_name)
-
         channel.basic_consume(queue=self.settings.queue_name,
                               on_message_callback=self.callback, auto_ack=True)
 
@@ -39,6 +37,10 @@ class ZambezeInterceptor(AbstractFlowceptor):
         channel.start_consuming()
 
     def callback(self, ch, method, properties, body):
+        """
+        function that decides what do to when a change is identified.
+        If it's an interesting change, it calls self.intercept; otherwise, let it go....
+        """
         body_obj = json.loads(body)
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
