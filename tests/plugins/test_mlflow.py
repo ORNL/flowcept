@@ -1,5 +1,4 @@
 import unittest
-import json
 import threading
 import time
 
