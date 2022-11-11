@@ -24,6 +24,7 @@ jobs:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           script: |
             try {
+              console.log(process.env.CURRENT_VERSION);
               await github.rest.repos.createRelease({
                 draft: false,
                 generate_release_notes: true,
