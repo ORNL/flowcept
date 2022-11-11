@@ -43,7 +43,6 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
-        "Intended Audience :: Engineers",
         "Natural Language :: English",
         "Topic :: Documentation :: Sphinx",
         "Topic :: System :: Distributed Computing",
