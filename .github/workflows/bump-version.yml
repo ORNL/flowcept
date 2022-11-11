@@ -5,6 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TEST: HELLO
+
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.10
@@ -17,11 +18,16 @@ jobs:
           pip install GitPython
           ls -l
           export PYTHONPATH=$PYTHONPATH:flowcept
+          echo $PYTHONPATH
       - name: Update version.py
-        run: python .github/workflows/version_bumper.py
+        run: |
+          export PYTHONPATH=$PYTHONPATH:flowcept
+          echo $PYTHONPATH
+          echo ${{ env.TEST }}
+          python .github/workflows/version_bumper.py
       - name: Commit new version
         run: |
-          echo ${{ env.TEST }}
+          
           git config --global user.name 'Flowcept Bot'
           git config --global user.email 'flowcept@users.noreply.github.com'
           git add flowcept/version.py
