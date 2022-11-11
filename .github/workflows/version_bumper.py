@@ -20,4 +20,10 @@ new_version = re.sub(
 print(f"New version: {new_version}")
 
 with open(version_file_path, "w") as f:
-    f.write(f'__version__ = "{new_version}"\n')
+    f.write(
+        f"""# WARNING: CHANGE THIS FILE MANUALLY ONLY TO RESOLVE CONFLICTS!
+# This file is supposed to be automatically modified by the CI Bot.
+# See .github/workflows/version_bumper.py
+__version__ = "{new_version}"
+"""
+    )
