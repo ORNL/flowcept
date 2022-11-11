@@ -1,6 +1,6 @@
 - name: GIT commit and push docs
   env: 
-    CI_COMMIT_MESSAGE: [CI] Bumping version
+    CI_COMMIT_MESSAGE: "CI Bumping version"
     CI_COMMIT_AUTHOR: Continuous Integration
   run: |
     ls
