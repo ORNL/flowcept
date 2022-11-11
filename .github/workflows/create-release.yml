@@ -27,11 +27,11 @@ jobs:
               await github.rest.repos.createRelease({
                 draft: false,
                 generate_release_notes: true,
-                name: "${CURRENT_VERSION}",
+                name: "${{CURRENT_VERSION}}",
                 owner: context.repo.owner,
                 prerelease: false,
                 repo: context.repo.repo,
-                tag_name: "${CURRENT_VERSION}",
+                tag_name: "${{CURRENT_VERSION}}",
               });
             } catch (error) {
               core.setFailed(error.message);
