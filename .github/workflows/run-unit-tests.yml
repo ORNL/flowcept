@@ -20,11 +20,6 @@ jobs:
         python-version: "3.10"
     - name: Check python version
       run: python --version
-    - name: List files
-      run: |
-        ls -l
-        ls -l requirements.txt
-        ls -l requirements_plugins
     - name: Install our dependencies
       run: |
         python -m pip install --upgrade pip
@@ -40,7 +35,7 @@ jobs:
         fi
     - name: Run Redis
       run: docker run -p 6379:6379 --name redis -d redis
-    - name: Run RabbitMQ for Zambeze tests
+    - name: Run RabbitMQ for Zambeze Plugin tests
       run: docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 -d rabbitmq:3.11-management
     - name: Test with pytest
       run: |
