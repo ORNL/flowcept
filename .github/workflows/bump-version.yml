@@ -1,7 +1,7 @@
 name: Push commit
 on: push
 jobs:
-  report:
+  bump_version:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -9,7 +9,10 @@ jobs:
         run: date +%s > report.txt
       - name: Commit report
         run: |
+          git status
+          ls -l
           git config --global user.name 'Renan Souza'
           git config --global user.email 'renan-souza@users.noreply.github.com'
-          git commit -am "Automated report"
+          git add report.txt
+          git commit -m "Automated version bumping"
           git push
