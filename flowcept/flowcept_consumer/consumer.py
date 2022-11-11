@@ -14,7 +14,7 @@ def consume_intercepted_messages():
     p.psubscribe(REDIS_CHANNEL)
     print(f"Subscribed to {REDIS_CHANNEL}. Waiting for messages.")
     for message in p.listen():
-        if message['type'] in ['psubscribe']:
+        if message['type'] in {'psubscribe'}:
             continue
         print(f"I'm a Flowceptor consumer and I received this message:"
               f"\n\t{message}")
