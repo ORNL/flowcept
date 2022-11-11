@@ -18,7 +18,8 @@ def consume_intercepted_messages():
         if message["type"] in {"psubscribe"}:  # TODO make it a constant
             continue
         print(
-            f"I'm a Flowceptor consumer and I received this message:" f""
+            f"I'm a Flowceptor consumer and I received this message:"
+            f""
             f"\n\t{message}"
         )
         send_to_service(message)

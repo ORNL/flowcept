@@ -3,8 +3,9 @@ import threading
 import time
 
 from flowcept.flowcept_consumer.consumer import consume_intercepted_messages
-from flowcept.flowceptor.plugins.mlflow.mlflow_interceptor import \
-    MLFlowInterceptor
+from flowcept.flowceptor.plugins.mlflow.mlflow_interceptor import (
+    MLFlowInterceptor,
+)
 
 
 class TestMLFlow(unittest.TestCase):
@@ -12,10 +13,10 @@ class TestMLFlow(unittest.TestCase):
         super(TestMLFlow, self).__init__(*args, **kwargs)
         self.interceptor = MLFlowInterceptor("mlflow1")
 
-        threading.Thread(target=self.interceptor.observe, daemon=True).\
-            start()
-        threading.Thread(target=consume_intercepted_messages, daemon=True).\
-            start()
+        threading.Thread(target=self.interceptor.observe, daemon=True).start()
+        threading.Thread(
+            target=consume_intercepted_messages, daemon=True
+        ).start()
         time.sleep(3)
 
     def test_mlflow(self):
@@ -24,11 +25,13 @@ class TestMLFlow(unittest.TestCase):
 
         # from mlflow.tracking import MlflowClient
         # client = MlflowClient()
-        mlflow.set_tracking_uri(f"sqlite:///"
-                                f"{self.interceptor.settings.file_path}")
+        mlflow.set_tracking_uri(
+            f"sqlite:///" f"{self.interceptor.settings.file_path}"
+        )
         experiment_name = "LinearRegression"
         experiment_id = mlflow.create_experiment(
-            experiment_name + str(uuid.uuid4()))
+            experiment_name + str(uuid.uuid4())
+        )
         with mlflow.start_run(experiment_id=experiment_id):
             mlflow.log_params({"number_epochs": 10})
             print("\nTrained model")
