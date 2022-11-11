@@ -2,8 +2,6 @@ name: Create Release
 on: push
 jobs:
   build:
-    env:
-      CURRENT_VERSION: curr-version
     name: Create Release
     runs-on: ubuntu-latest
     steps:
