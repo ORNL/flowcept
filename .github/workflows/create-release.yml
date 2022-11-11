@@ -19,7 +19,7 @@ jobs:
       - name: "Create release"
         uses: "actions/github-script@v5"
         env:
-          CURRENT_VERSION: ${CURRENT_VERSION}
+          CURRENT_VERSION: "${{ env.CURRENT_VERSION }}"
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           script: |
