@@ -1,5 +1,4 @@
 class Vocabulary:
-
     class Settings:
 
         PLUGINS = "plugins"

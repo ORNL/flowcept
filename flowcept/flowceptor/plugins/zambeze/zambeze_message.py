@@ -4,7 +4,7 @@ from typing import List, Dict
 
 @dataclass
 class ZambezeMessage:
-    
+
     name: str
     activity_id: str
     campaign_id: str

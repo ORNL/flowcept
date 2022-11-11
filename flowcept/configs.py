@@ -1,6 +1,7 @@
 import os
 
-PROJECT_DIR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+PROJECT_DIR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                ".."))
 
 _settings_path = os.path.join(PROJECT_DIR_PATH, "resources", "settings.yaml")
 SETTINGS_PATH = os.getenv("SETTINGS_PATH", _settings_path)
