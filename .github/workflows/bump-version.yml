@@ -1,16 +1,19 @@
-name: Push commit
+name: Version Bumper
 on: push
 jobs:
   bump_version:
     runs-on: ubuntu-latest
+    env:
+      TEST: HELLO
     steps:
       - uses: actions/checkout@v2
-      - name: Create report file
-        run: date +%s > report.txt
+      - name: Update version.py
+        run: python .github/workflows/version_bumper.py
       - name: Commit report
         run: |
+          echo ${{ env.TEST }}
           git config --global user.name 'Flowcept Bot'
           git config --global user.email 'flowcept@users.noreply.github.com'
-          git add report.txt
+          git add flowcept/version.py
           git commit -m "Automated version bumping"
           git push
