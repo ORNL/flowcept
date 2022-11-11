@@ -30,16 +30,20 @@ class AbstractFlowceptor(object, metaclass=ABCMeta):
         with open(SETTINGS_PATH) as f:
             data = yaml.load(f, Loader=yaml.FullLoader)
         settings = data[Vocabulary.Settings.PLUGINS][plugin_key]
-        if settings[Vocabulary.Settings.KIND]\
-                == Vocabulary.Settings.ZAMBEZE_KIND:
+        if (
+            settings[Vocabulary.Settings.KIND]
+            == Vocabulary.Settings.ZAMBEZE_KIND
+        ):
             settings_obj: ZambezeSettings = ZambezeSettings(**settings)
             settings_obj.key_values_to_filter = [
                 KeyValuesToFilter(**item)
                 for item in settings_obj.key_values_to_filter
             ]
             return settings_obj
-        elif settings[Vocabulary.Settings.KIND]\
-                == Vocabulary.Settings.MLFLOW_KIND:
+        elif (
+            settings[Vocabulary.Settings.KIND]
+            == Vocabulary.Settings.MLFLOW_KIND
+        ):
             settings_obj: MLFlowSettings = MLFlowSettings(**settings)
             if not os.path.isabs(settings_obj.file_path):
                 settings_obj.file_path = os.path.join(

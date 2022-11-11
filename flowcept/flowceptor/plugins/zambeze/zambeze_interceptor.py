@@ -22,8 +22,9 @@ class ZambezeInterceptor(AbstractFlowceptor):
 
     def observe(self):
         connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=self.settings.host,
-                                      port=self.settings.port)
+            pika.ConnectionParameters(
+                host=self.settings.host, port=self.settings.port
+            )
         )
         channel = connection.channel()
         channel.queue_declare(queue=self.settings.queue_name)

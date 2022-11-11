@@ -5,10 +5,10 @@ import pika
 
 from flowcept.flowcept_consumer.consumer import consume_intercepted_messages
 
-from flowcept.flowceptor.plugins.zambeze.zambeze_interceptor import\
-    ZambezeInterceptor
-from flowcept.flowceptor.plugins.zambeze.zambeze_message import\
-    ZambezeMessage
+from flowcept.flowceptor.plugins.zambeze.zambeze_interceptor import (
+    ZambezeInterceptor,
+)
+from flowcept.flowceptor.plugins.zambeze.zambeze_message import ZambezeMessage
 
 
 class TestZambeze(unittest.TestCase):
@@ -23,10 +23,10 @@ class TestZambeze(unittest.TestCase):
         )
         self._channel = self._connection.channel()
         self._channel.queue_declare(queue=self.interceptor.settings.queue_name)
-        threading.Thread(target=self.interceptor.observe, daemon=True)\
-            .start()
-        threading.Thread(target=consume_intercepted_messages, daemon=True)\
-            .start()
+        threading.Thread(target=self.interceptor.observe, daemon=True).start()
+        threading.Thread(
+            target=consume_intercepted_messages, daemon=True
+        ).start()
 
     def test_send_message(self):
         msg = ZambezeMessage(

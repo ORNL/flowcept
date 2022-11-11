@@ -24,8 +24,9 @@ class MLFlowInterceptor(AbstractFlowceptor):
         interceptor_instance.intercept({"nothing": "yet"})
 
     def observe(self):
-        event_handler = InterceptionEventHandler(self,
-                                                 MLFlowInterceptor.callback)
+        event_handler = InterceptionEventHandler(
+            self, MLFlowInterceptor.callback
+        )
         while not os.path.isfile(self.settings.file_path):
             print(
                 f"I can't watch the file {self.settings.file_path},"
@@ -38,8 +39,9 @@ class MLFlowInterceptor(AbstractFlowceptor):
             time.sleep(self.settings.watch_interval_sec)
 
         observer = Observer()
-        observer.schedule(event_handler, self.settings.file_path,
-                          recursive=True)
+        observer.schedule(
+            event_handler, self.settings.file_path, recursive=True
+        )
         observer.start()
         print(f"Watching {self.settings.file_path}")
 
