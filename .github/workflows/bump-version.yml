@@ -15,7 +15,7 @@ jobs:
           pip install GitPython
       - name: Update version.py
         run: |
-          export PYTHONPATH=flowcept
+          export PYTHONPATH=$PYTHONPATH:flowcept
           python .github/workflows/version_bumper.py
       - name: Commit new version
         run: |
