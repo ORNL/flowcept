@@ -22,18 +22,16 @@ jobs:
         uses: "actions/github-script@v5"
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
-          env:
-            CURRENT_VERSION: $CURRENT_VERSION
           script: |
             try {
               await github.rest.repos.createRelease({
                 draft: false,
                 generate_release_notes: true,
-                name: "${{env.CURRENT_VERSION}}",
+                name: "${{process.env.CURRENT_VERSION}}",
                 owner: context.repo.owner,
                 prerelease: false,
                 repo: context.repo.repo,
-                tag_name: "${{env.CURRENT_VERSION}}",
+                tag_name: "${{process.env.CURRENT_VERSION}}",
               });
             } catch (error) {
               core.setFailed(error.message);
