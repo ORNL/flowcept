@@ -1,10 +1,6 @@
-[![Build][build-badge]][build-link]
-[![PyPI][pypi-badge]][pypi-link]
+[![Unit Tests](https://github.com/ORNL/flowcept/actions/workflows/run-unit-tests.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-unit-tests.yml)
+[![Python Formatting](https://github.com/ORNL/flowcept/actions/workflows/python-formatting.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/python-formatting.yml)
 [![License: MIT][license-badge]](LICENSE)
-[![Docs][docs-badge]][docs-link]
-[![codecov][codecov-badge]][codecov-link]
-[![Codacy Badge][codacy-badge]][codacy-link]
-[![CodeFactor][codefactor-badge]][codefactor-link]
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 # Flowcept
@@ -49,15 +45,4 @@ pytest
 ## RabbitMQ for Zambeze plugin
 ```$ docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.11-management```
 
-
-[build-badge]:         https://github.com/ORNL/flowcept/workflows/Build/badge.svg
-[build-link]:          https://github.com/ORNL/flowcept/actions
-[license-badge]:       https://img.shields.io/github/license/ORNL/flowcept
-[docs-badge]:          https://readthedocs.org/projects/flowcept/badge/?version=latest
-[docs-link]:           https://flowcept.readthedocs.io/en/latest/
-[pypi-badge]:          https://badge.fury.io/py/flowcept.svg
-[pypi-link]:           https://pypi.org/project/flowcept/
-[codecov-badge]:       https://codecov.io/gh/ORNL/flowcept/branch/main/graph/badge.svg?token=H5VS82WTRZ
-[codecov-link]:        https://codecov.io/gh/ORNL/flowcept
-[codefactor-badge]:    https://www.codefactor.io/repository/github/ornl/flowcept/badge
-[codefactor-link]:     https://www.codefactor.io/repository/github/ornl/flowcept
+\
