@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
 
 from flowcept.version import __version__
+from flowcept.configs import PROJECT_NAME
 
 with open("README.md") as fh:
     long_description = fh.read()
@@ -19,7 +20,7 @@ full_requirements = (
 )
 
 setup(
-    name="flowcept",
+    name=PROJECT_NAME,
     version=__version__,
     license="MIT",
     author="Oak Ridge National Laboratory",
