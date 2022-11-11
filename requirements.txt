@@ -1,7 +1,4 @@
 flask
 requests
-pytest>=6.2.4
 PyYAML
 redis
-flake8
-black

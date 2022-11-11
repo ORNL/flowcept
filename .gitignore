@@ -1,4 +1,6 @@
-__pycache__/
+gi__pycache__/
 .idea
 **/*mlruns*
+**/*build*
+**/*egg*
 mlflow.db
