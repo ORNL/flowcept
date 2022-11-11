@@ -31,6 +31,9 @@ class TestMLFlow(unittest.TestCase):
 
         time.sleep(3)
 
+    def test_error(self):
+        print(2/0)
+        
 
 if __name__ == '__main__':
     unittest.main()
