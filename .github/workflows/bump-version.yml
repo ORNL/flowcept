@@ -1,40 +1,12 @@
-name: Bump Version
-
-on:
-  push:
-    branches: [ "dev" ]
-  pull_request:
-    branches: [ "dev" ]
-
-jobs:
-
-  build:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
-    - name: Bump version
-      run: |
-        git config --global user.name "renan-souza"
-        git config --global user.email "contact@renansouza.org"
-        git config --global pull.rebase false
-        export LOGIN="renan-souza"
-        export BRANCH=${GITHUB_REF##*/}
-        git remote add ${{ LOGIN }} https://${{ LOGIN }}:${{ secrets.GH_TOKEN }}@github.com/ORNL/flowcept
-        git pull --no-edit $LOGIN $BRANCH
-        # merge done by git pull does not update submodules changed in $BRANCH
-        
-        ls -l
-        python .github/workflows/version_bumper.py
-        git diff
-        cat flowcept/__version__.py
-        
-        git diff
-        git add flowcept/__version__.py
-        git commit -m "Bot version bumper"
-        git push 
+- name: GIT commit and push docs
+  env: 
+    CI_COMMIT_MESSAGE: [CI] Bumping version
+    CI_COMMIT_AUTHOR: Continuous Integration
+  run: |
+    ls
+    git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+    git config --global user.email "username@users.noreply.github.com"
+    touch test
+    git add test
+    git commit -m "${{ env.CI_COMMIT_MESSAGE }}"
+    git push
