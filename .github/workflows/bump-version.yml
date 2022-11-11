@@ -9,10 +9,8 @@ jobs:
         run: date +%s > report.txt
       - name: Commit report
         run: |
-          git status
-          ls -l
-          git config --global user.name 'Renan Souza'
-          git config --global user.email 'renan-souza@users.noreply.github.com'
+          git config --global user.name 'Flowcept Bot'
+          git config --global user.email 'flowcept@users.noreply.github.com'
           git add report.txt
           git commit -m "Automated version bumping"
           git push
