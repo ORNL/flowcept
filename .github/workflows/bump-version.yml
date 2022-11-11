@@ -1,7 +1,8 @@
 name: Version Bumper
 on: push
 jobs:
-  bump_version:
+  build:
+    name: Version Bumper
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
