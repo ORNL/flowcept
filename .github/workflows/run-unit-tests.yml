@@ -32,7 +32,7 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Install plugin dependencies
       run: |               
-        if [ -f requirements_plugins ]; then
+        if [ -d requirements_plugins ]; then
           for requirement_file in `ls requirements_plugins`; do
             echo $requirement_file;
             pip install -r requirements_plugins/$requirement_file; 
