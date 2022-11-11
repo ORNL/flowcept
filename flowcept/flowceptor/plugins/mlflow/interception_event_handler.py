@@ -2,7 +2,6 @@ from watchdog.events import LoggingEventHandler
 
 
 class InterceptionEventHandler(LoggingEventHandler):
-
     def __init__(self, interceptor_instance, callback_function):
         super().__init__()
         self.callback_function = callback_function
