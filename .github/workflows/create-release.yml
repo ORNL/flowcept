@@ -18,16 +18,21 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:flowcept
           export CURRENT_VERSION=`python -c "from flowcept import __version__; print(__version__)"`
           echo $CURRENT_VERSION
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-          CURRENT_VERSION: ${CURRENT_VERSION}
+      - name: "Create release"
+        uses: "actions/github-script@v5"
         with:
-          tag_name: ${env.CURRENT_VERSION}
-          release_name: Release ${env.CURRENT_VERSION}
-          body: "Automated message"
-          draft: false
-          prerelease: true
-
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          script: |
+            try {
+              await github.rest.repos.createRelease({
+                draft: false,
+                generate_release_notes: true,
+                name: "${CURRENT_VERSION}",
+                owner: context.repo.owner,
+                prerelease: false,
+                repo: context.repo.repo,
+                tag_name: "${CURRENT_VERSION}",
+              });
+            } catch (error) {
+              core.setFailed(error.message);
+            }
