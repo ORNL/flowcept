@@ -19,7 +19,7 @@ jobs:
       - name: Create Release
         run: |
             REPOSITORY=${{ github.repository }}
-            ACCESS_TOKEN=${{ secrets.GITHUB_TOKEN  }
+            ACCESS_TOKEN=${{ secrets.GITHUB_TOKEN  }}
             TARGET=${{ github.ref_name }}
             echo $CURRENT_VERSION
             echo "https://api.github.com/repos/${REPOSITORY}/releases?access_token=$ACCESS_TOKEN"
