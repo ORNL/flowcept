@@ -7,7 +7,7 @@ from flowcept.configs import SRC_DIR_PATH
 version_file_path = os.path.join(SRC_DIR_PATH, "version.py")
 
 BRANCH_NAME = os.getenv("BRANCH_NAME", "dev")
-print(BRANCH_NAME)
+print("Branch Name:" + BRANCH_NAME)
 
 regex = (
     r"(0|(?:[1-9]\d*))(?:\.(0|(?:[1-9]\d*))(?:\.(0|(?:[1-9]\d*)))?"
