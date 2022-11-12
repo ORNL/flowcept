@@ -1,0 +1,44 @@
+name: Create Release
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: Get current version
+        run: |
+          export PYTHONPATH=$PYTHONPATH:flowcept
+          export CURRENT_VERSION=`python -c "from flowcept import __version__; print(__version__)"`
+          echo $CURRENT_VERSION
+      - name: Create Release
+        run: |
+            export PYTHONPATH=$PYTHONPATH:flowcept
+            export CURRENT_VERSION=`python -c "from flowcept import __version__; print(__version__)"`
+            echo $CURRENT_VERSION
+          
+            REPOSITORY=${{ github.repository }}
+            ACCESS_TOKEN=${{ secrets.GITHUB_TOKEN  }}
+            TARGET=${{ github.ref_name }}
+            echo "REPOSITORY=$REPOSITORY"
+            echo "TARGET=$TARGET"
+            echo "CURRENT_VERSION=${CURRENT_VERSION}"
+            echo "Now run curl"
+            curl --data "{\"tag_name\": \"v${CURRENT_VERSION}\",
+                            \"target_commitish\": \"${TARGET}\",
+                            \"name\": \"v${CURRENT_VERSION}\",
+                            \"body\": \"Release of version ${CURRENT_VERSION}\",
+                            \"draft\": true,
+                            \"prerelease\": true}" \
+                -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+                https://api.github.com/repos/${REPOSITORY}/releases
+
