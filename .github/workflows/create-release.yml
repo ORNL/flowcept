@@ -34,8 +34,8 @@ jobs:
                             \"name\": \"v${CURRENT_VERSION}\",
                             \"body\": \"Release of version ${CURRENT_VERSION}\",
                             \"make_latest\": \"true\",
-                            \"draft\": \"false\",
-                            \"prerelease\": \"false\"}" \
+                            \"draft\": false,
+                            \"prerelease\": false}" \
                 -H "Authorization: Bearer ${ACCESS_TOKEN}" \
                 https://api.github.com/repos/${REPOSITORY}/releases
 
