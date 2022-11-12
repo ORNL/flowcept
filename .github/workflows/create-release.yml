@@ -21,8 +21,9 @@ jobs:
             REPOSITORY=${{ github.repository }}
             ACCESS_TOKEN=${{ secrets.GITHUB_TOKEN  }}
             TARGET=${{ github.ref_name }}
+            echo $TARGET
+            TARGET=${GITHUB_REF##*/}
             echo $CURRENT_VERSION
-            echo "https://api.github.com/repos/${REPOSITORY}/releases?access_token=$ACCESS_TOKEN"
             curl --data '{"tag_name": "v$VERSION",
                             "target_commitish": "$TARGET",
                             "name": "v$CURRENT_VERSION",
