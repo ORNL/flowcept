@@ -16,12 +16,13 @@ jobs:
       - name: Update version.py
         run: |
           export PYTHONPATH=$PYTHONPATH:flowcept
-          export BRANCH_NAME="${{ steps.branch-name.outputs.base_ref_branch }}"
-          echo Base Branch ${{ steps.branch-name.outputs.base_ref_branch }}
+          export BRANCH_NAME=${{ steps.branch-name.outputs.base_ref_branch }}
+          echo Base Ref Branch ${{ steps.branch-name.outputs.base_ref_branch }}
           echo Current Branch ${{ steps.branch-name.outputs.current_branch }}
-          echo Base ref Branch ${{ steps.branch-name.outputs.ref_branch }}
+          echo Ref Branch ${{ steps.branch-name.outputs.ref_branch }}
           echo Head ref Branch ${{ steps.branch-name.outputs.head_ref_branch }}
           
+          echo "BRANCH_NAME VAR = $BRANCH_NAME" 
           python .github/workflows/version_bumper.py
       - name: Commit new version
         run: |
