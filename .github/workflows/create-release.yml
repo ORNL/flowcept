@@ -1,9 +1,15 @@
 name: Create Release
+#on:
+#  push:
+#    branches: [ "main", "dev" ]
+#  pull_request:
+#    branches: [ "main", "dev" ]
 on: push
 jobs:
   build:
     name: Create Release
     runs-on: ubuntu-latest
+    needs: ["Code Formatting"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -38,24 +44,3 @@ jobs:
                 -H "Authorization: Bearer ${ACCESS_TOKEN}" \
                 https://api.github.com/repos/${REPOSITORY}/releases
 
-#      - name: "Create release"
-#        uses: "actions/github-script@v5"
-#        env:
-#          CURRENT_VERSION: "${CURRENT_VERSION}"
-#        with:
-#          github-token: "${{ secrets.GITHUB_TOKEN }}"
-#          script: |
-#            try {
-#              console.log(process.env.CURRENT_VERSION);
-#              await github.rest.repos.createRelease({
-#                draft: false,
-#                generate_release_notes: true,
-#                name: process.env.CURRENT_VERSION,
-#                owner: context.repo.owner,
-#                prerelease: true,
-#                repo: context.repo.repo,
-#                tag_name: process.env.CURRENT_VERSION,
-#              });
-#            } catch (error) {
-#              core.setFailed(error.message);
-#            }
