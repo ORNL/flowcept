@@ -1,12 +1,13 @@
 import os
 import re
-from git import Repo
-from flowcept.configs import PROJECT_DIR_PATH, SRC_DIR_PATH
+
 from flowcept.version import __version__
+from flowcept.configs import SRC_DIR_PATH
 
 version_file_path = os.path.join(SRC_DIR_PATH, "version.py")
-local_repo = Repo(path=PROJECT_DIR_PATH)
-local_branch = local_repo.active_branch.name
+
+BRANCH_NAME = os.getenv("BRANCH_NAME", "dev")
+print("Branch Name:" + BRANCH_NAME)
 
 regex = (
     r"(0|(?:[1-9]\d*))(?:\.(0|(?:[1-9]\d*))(?:\.(0|(?:[1-9]\d*)))?"
@@ -15,7 +16,7 @@ regex = (
 
 patch_number = int(re.findall(regex, __version__)[0][2])
 new_version = re.sub(
-    regex, r"\1.\2." + str(patch_number + 1) + f"-{local_branch}", __version__
+    regex, r"\1.\2." + str(patch_number + 1) + f"-{BRANCH_NAME}", __version__
 )
 print(f"New version: {new_version}")
 
