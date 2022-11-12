@@ -14,10 +14,13 @@ jobs:
 #        run: |
 #          python -m pip install --upgrade pip
 #          pip install GitPython
+      - name: Get branch names
+        id: branch-name
+        uses: tj-actions/branch-names@v6
       - name: Update version.py
         run: |
           export PYTHONPATH=$PYTHONPATH:flowcept
-          export BRANCH_NAME=${{ github.ref }}
+          export BRANCH_NAME="${{ steps.branch-name.outputs.ref_branch }}"
           python .github/workflows/version_bumper.py
       - name: Commit new version
         run: |
