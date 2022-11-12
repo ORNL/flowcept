@@ -17,7 +17,7 @@ jobs:
       - name: Update version.py
         run: |
           export PYTHONPATH=$PYTHONPATH:flowcept
-          export BRANCH_NAME=${{ github.ref_branch }}
+          export BRANCH_NAME=${{ github.ref }}
           python .github/workflows/version_bumper.py
       - name: Commit new version
         run: |

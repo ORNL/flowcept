@@ -26,7 +26,7 @@ jobs:
           
             REPOSITORY=${{ github.repository }}
             ACCESS_TOKEN=${{ secrets.GITHUB_TOKEN  }}
-            TARGET=${{ github.ref_branch }}
+            TARGET=${{ github.ref }}
             echo "REPOSITORY=$REPOSITORY"
             echo "TARGET=$TARGET"
             echo "CURRENT_VERSION=${CURRENT_VERSION}"
