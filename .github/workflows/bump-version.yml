@@ -4,7 +4,7 @@ jobs:
   build:
     name: Version Bumper
     runs-on: ubuntu-latest
-    if: !startsWith(github.ref, 'refs/tags/v')
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.10
