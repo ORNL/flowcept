@@ -29,7 +29,8 @@ jobs:
                             "body": "Release of version $CURRENT_VERSION",
                             "draft": true,
                             "prerelease": true}' \
-                https://api.github.com/repos/${REPOSITORY}/releases?access_token=$ACCESS_TOKEN
+                -H "Authorization: Bearer $ACCESS_TOKEN" \
+                https://api.github.com/repos/${REPOSITORY}/releases
 
 #      - name: "Create release"
 #        uses: "actions/github-script@v5"
