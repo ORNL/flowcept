@@ -25,7 +25,7 @@ jobs:
             TARGET=${GITHUB_REF##*/}
             echo $CURRENT_VERSION
             curl --data '{"tag_name": "v$VERSION",
-                            "target_commitish": "$TARGET",
+                            "target_commitish": "dev",
                             "name": "v$CURRENT_VERSION",
                             "body": "Release of version $CURRENT_VERSION",
                             "draft": true,
