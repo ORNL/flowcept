@@ -22,8 +22,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Branch name
-      run: echo ${GITHUB_REF##*/}
     - name: Install pypa/build
       run: >-
         python -m
