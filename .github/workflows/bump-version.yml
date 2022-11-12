@@ -30,4 +30,4 @@ jobs:
           git config --global user.email 'flowcept@users.noreply.github.com'
           git add flowcept/version.py
           git commit -m "Automated version bumping"
-          git push --force 
+          git push --force
