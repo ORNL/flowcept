@@ -2,8 +2,6 @@ name: Create Release
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 jobs:
   build:
     name: Create Release
