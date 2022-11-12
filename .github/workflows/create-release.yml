@@ -1,15 +1,13 @@
 name: Create Release
-#on:
-#  push:
-#    branches: [ "main", "dev" ]
-#  pull_request:
-#    branches: [ "main", "dev" ]
-on: push
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 jobs:
   build:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: ["Code Formatting"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
