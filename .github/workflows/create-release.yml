@@ -16,6 +16,11 @@ jobs:
       - name: Get branch names
         id: branch-name
         uses: tj-actions/branch-names@v6
+      - name: Update version.py
+        run: |
+          export PYTHONPATH=$PYTHONPATH:flowcept
+          export BRANCH_NAME="${{ steps.branch-name.outputs.current_branch }}" 
+          python .github/workflows/version_bumper.py
       - name: Create Release
         run: |
             export PYTHONPATH=$PYTHONPATH:flowcept
