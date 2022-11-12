@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-from flowcept.version import __version__
+from flowcept import __version__
 from flowcept.configs import PROJECT_NAME
 
 with open("README.md") as fh:
