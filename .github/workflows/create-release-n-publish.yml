@@ -1,4 +1,4 @@
-name: Create Release and Publish Package
+name: Release and Publish
 on:
   push:
     branches: [ "main" ]
