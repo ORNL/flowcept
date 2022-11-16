@@ -27,7 +27,9 @@ class TestZambeze(unittest.TestCase):
             )
         )
         self._channel = self._connection.channel()
-        self._channel.queue_declare(queue=self.interceptor.settings.queue_name)
+        self._channel.queue_declare(
+            queue=self.interceptor.settings.queue_name
+        )
         threading.Thread(target=self.interceptor.observe, daemon=True).start()
         threading.Thread(
             target=consume_intercepted_messages, daemon=True
