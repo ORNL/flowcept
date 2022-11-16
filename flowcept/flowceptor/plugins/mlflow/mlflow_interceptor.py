@@ -2,26 +2,39 @@ import sys
 import os
 import time
 from watchdog.observers import Observer
-from flowcept.flowceptor.plugins.abstract_flowceptor import AbstractFlowceptor
+from flowcept.flowceptor.plugins.abstract_flowceptor import (
+    AbstractFlowceptor,
+)
 
+from flowcept.flowceptor.plugins.mlflow.mlflow_dao import MLFlowDAO
+from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import Run
 from flowcept.flowceptor.plugins.mlflow.interception_event_handler import (
     InterceptionEventHandler,
 )
 
 
 class MLFlowInterceptor(AbstractFlowceptor):
+    def __init__(self, plugin_key):
+        super().__init__(plugin_key)
+        self.dao = MLFlowDAO(self.settings)
+
     def intercept(self, message: dict):
         super().post_intercept(message)
 
-    @staticmethod
-    def callback(interceptor_instance: "MLFlowInterceptor"):
+    def callback(self):
         """
         function that decides what do to when a change is identified.
         If it's an interesting change, it calls self.intercept; otherwise,
         let it go....
         """
+
+        runs = self.dao.get_runs()
+
+        for run in runs:
+            Run(**run)
+
         # TODO get latest info
-        interceptor_instance.intercept({"nothing": "yet"})
+        self.intercept({"nothing": "yet"})
 
     def observe(self):
         event_handler = InterceptionEventHandler(

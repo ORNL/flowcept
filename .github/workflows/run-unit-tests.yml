@@ -27,10 +27,8 @@ jobs:
             pip install -r extra_requirements/$requirements_file; 
           done;
         fi
-    - name: Run Redis
-      run: docker run -p 6379:6379 --name redis -d redis
-    - name: Run RabbitMQ for Zambeze Plugin tests
-      run: docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 -d rabbitmq:3.11-management
+    - name: Run Docker Compose
+      run: docker compose -f deployment/compose.yml up
     - name: Test with pytest
       run: |
         pytest

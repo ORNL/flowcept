@@ -2,7 +2,9 @@ import pika
 import sys
 import json
 from datetime import datetime
-from flowcept.flowceptor.plugins.abstract_flowceptor import AbstractFlowceptor
+from flowcept.flowceptor.plugins.abstract_flowceptor import (
+    AbstractFlowceptor,
+)
 
 
 class ZambezeInterceptor(AbstractFlowceptor):
@@ -13,7 +15,10 @@ class ZambezeInterceptor(AbstractFlowceptor):
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
         # TODO: make constants
-        intercepted_message = {"time": dt_string, "application_msg": {}}
+        intercepted_message = {
+            "time": dt_string,
+            "application_msg": {},
+        }
         for key in self.settings.keys_to_intercept:
             if key in message:
                 intercepted_message["application_msg"][key] = message[key]
