@@ -6,6 +6,8 @@ plugins:
     file_path: mlflow.db
     log_params: ['*']
     log_metrics: ['*']
+    redis_host: localhost
+    redis_port: 60379
     watch_interval_sec: 2
 
   zambeze1:

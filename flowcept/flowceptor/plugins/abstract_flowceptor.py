@@ -59,6 +59,10 @@ class AbstractFlowceptor(object, metaclass=ABCMeta):
     def observe(self):
         raise NotImplementedError()
 
+    @abstractmethod
+    def callback(self, *args, **kwargs):
+        raise NotImplementedError()
+
     def post_intercept(self, intercepted_message: dict):
         print(
             f"Going to send to Redis an intercepted message:"

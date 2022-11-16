@@ -2,7 +2,9 @@ import unittest
 import threading
 import time
 
-from flowcept.flowcept_consumer.consumer import consume_intercepted_messages
+from flowcept.flowcept_consumer.consumer import (
+    consume_intercepted_messages,
+)
 from flowcept.flowceptor.plugins.mlflow.mlflow_interceptor import (
     MLFlowInterceptor,
 )

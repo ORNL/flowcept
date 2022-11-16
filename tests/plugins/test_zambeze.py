@@ -3,12 +3,16 @@ import json
 import threading
 import pika
 
-from flowcept.flowcept_consumer.consumer import consume_intercepted_messages
+from flowcept.flowcept_consumer.consumer import (
+    consume_intercepted_messages,
+)
 
 from flowcept.flowceptor.plugins.zambeze.zambeze_interceptor import (
     ZambezeInterceptor,
 )
-from flowcept.flowceptor.plugins.zambeze.zambeze_message import ZambezeMessage
+from flowcept.flowceptor.plugins.zambeze.zambeze_message import (
+    ZambezeMessage,
+)
 
 
 class TestZambeze(unittest.TestCase):
@@ -18,7 +22,8 @@ class TestZambeze(unittest.TestCase):
 
         self._connection = pika.BlockingConnection(
             pika.ConnectionParameters(
-                self.interceptor.settings.host, self.interceptor.settings.port
+                self.interceptor.settings.host,
+                self.interceptor.settings.port,
             )
         )
         self._channel = self._connection.channel()

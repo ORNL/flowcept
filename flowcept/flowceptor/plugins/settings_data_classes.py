@@ -28,6 +28,8 @@ class MLFlowSettings:
     log_params: List[str]
     log_metrics: List[str]
     watch_interval_sec: int
+    redis_port: int
     kind: str = "mlflow"
     observer_type: str = "db"
     observer_subtype: str = "sqlite"
+    redis_host: str = "mlflow_interceptor_redis"
