@@ -10,7 +10,7 @@ from flowcept.flowceptor.plugins.zambeze.zambeze_interceptor import (
     ZambezeInterceptor,
 )
 from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
-    ZambezeMessage
+    ZambezeMessage,
 )
 
 
