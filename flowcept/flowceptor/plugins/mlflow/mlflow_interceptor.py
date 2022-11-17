@@ -5,6 +5,10 @@ from watchdog.observers import Observer
 from flowcept.flowceptor.plugins.abstract_flowceptor import (
     AbstractFlowceptor,
 )
+from flowcept.flowceptor.plugins.interceptor_state_manager import (
+    InterceptorStateManager,
+)
+
 
 from flowcept.flowceptor.plugins.mlflow.mlflow_dao import MLFlowDAO
 from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import Run
@@ -16,6 +20,7 @@ from flowcept.flowceptor.plugins.mlflow.interception_event_handler import (
 class MLFlowInterceptor(AbstractFlowceptor):
     def __init__(self, plugin_key="mlflow"):
         super().__init__(plugin_key)
+        self.state_manager = InterceptorStateManager(self.settings)
         self.dao = MLFlowDAO(self.settings)
 
     def intercept(self, message: dict):
@@ -28,10 +33,12 @@ class MLFlowInterceptor(AbstractFlowceptor):
         let it go....
         """
 
-        runs = self.dao.get_runs()
+        run_tuples = self.dao.get_runs()
 
-        for run in runs:
-            Run(**run)
+        for run_tuple in run_tuples:
+            run = Run(**run_tuple)
+            print(run)
+            # if run.run_uuid in :
 
         # TODO get latest info
         self.intercept({"nothing": "yet"})

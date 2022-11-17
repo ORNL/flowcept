@@ -1,16 +1,15 @@
-from abc import ABCMeta
 from redis import Redis
 
-from flowcept.flowceptor.plugins.abstract_flowceptor import AbstractFlowceptor
+from flowcept.flowceptor.plugins.settings_dataclasses import AbstractSettings
 
 
-class AbstractInterceptorStateManager(object, metaclass=ABCMeta):
-    def __init__(self, plugin_key: str):
-        self.set_name = plugin_key
-        settings = AbstractFlowceptor.get_settings(plugin_key)
+class InterceptorStateManager(object):
+    def __init__(self, settings: AbstractSettings):
+        self.set_name = settings.key
+
         if not hasattr(settings, "redis_host"):
             raise Exception(
-                f"This plugin setting {plugin_key} "
+                f"This plugin setting {settings.key} "
                 f"does not have a Redis Host."
             )
 
