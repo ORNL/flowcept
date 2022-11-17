@@ -8,7 +8,7 @@ from flowcept.flowceptor.plugins.abstract_flowceptor import (
 
 
 class ZambezeInterceptor(AbstractFlowceptor):
-    def __init__(self, plugin_key):
+    def __init__(self, plugin_key="zambeze"):
         super().__init__(plugin_key)
 
     def intercept(self, message: dict):

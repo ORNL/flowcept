@@ -1,5 +1,4 @@
 name: Code Formatting
-
 on: [push, pull_request]
 
 permissions:
@@ -9,7 +8,7 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-
+    if: "!contains(github.event.head_commit.message, 'CI Bot')"
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.10

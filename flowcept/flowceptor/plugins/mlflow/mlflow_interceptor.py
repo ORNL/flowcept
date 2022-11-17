@@ -14,7 +14,7 @@ from flowcept.flowceptor.plugins.mlflow.interception_event_handler import (
 
 
 class MLFlowInterceptor(AbstractFlowceptor):
-    def __init__(self, plugin_key):
+    def __init__(self, plugin_key="mlflow"):
         super().__init__(plugin_key)
         self.dao = MLFlowDAO(self.settings)
 

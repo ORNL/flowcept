@@ -13,7 +13,7 @@ from flowcept.flowceptor.plugins.mlflow.mlflow_interceptor import (
 class TestMLFlow(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestMLFlow, self).__init__(*args, **kwargs)
-        self.interceptor = MLFlowInterceptor("mlflow1")
+        self.interceptor = MLFlowInterceptor()
 
         threading.Thread(target=self.interceptor.observe, daemon=True).start()
         threading.Thread(

@@ -10,7 +10,7 @@ from flowcept.flowcept_consumer.consumer import (
 from flowcept.flowceptor.plugins.zambeze.zambeze_interceptor import (
     ZambezeInterceptor,
 )
-from flowcept.flowceptor.plugins.zambeze.zambeze_message import (
+from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
     ZambezeMessage,
 )
 
@@ -18,7 +18,7 @@ from flowcept.flowceptor.plugins.zambeze.zambeze_message import (
 class TestZambeze(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestZambeze, self).__init__(*args, **kwargs)
-        self.interceptor = ZambezeInterceptor("zambeze1")
+        self.interceptor = ZambezeInterceptor()
 
         self._connection = pika.BlockingConnection(
             pika.ConnectionParameters(
