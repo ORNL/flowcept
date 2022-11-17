@@ -14,7 +14,7 @@ from flowcept.flowceptor.plugins.mlflow.mlflow_interceptor_state_manager \
 class MLFlowDB(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(MLFlowDB, self).__init__(*args, **kwargs)
-        interceptor = MLFlowInterceptor("mlflow1")
+        interceptor = MLFlowInterceptor()
         self.dao = MLFlowDAO(interceptor.settings)
         self.mlflow_state = MLFlowInterceptorStateManager(interceptor.settings)
         self.mlflow_state.clear_set()

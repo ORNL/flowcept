@@ -1,5 +1,5 @@
 from redis import Redis
-from flowcept.flowceptor.plugins.settings_data_classes import (
+from flowcept.flowceptor.plugins.settings_dataclasses import (
     MLFlowSettings,
 )
 

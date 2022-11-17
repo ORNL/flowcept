@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import Run
-from flowcept.flowceptor.plugins.settings_data_classes import (
+from flowcept.flowceptor.plugins.settings_dataclasses import (
     MLFlowSettings,
 )
 

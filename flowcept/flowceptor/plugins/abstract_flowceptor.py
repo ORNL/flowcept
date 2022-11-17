@@ -12,9 +12,9 @@ from flowcept.configs import (
     REDIS_PORT,
     REDIS_CHANNEL,
 )
-from flowcept.flowceptor.plugins.settings_data_classes import (
+from flowcept.flowceptor.plugins.settings_dataclasses import (
     ZambezeSettings,
-    KeyValuesToFilter,
+    KeyValue,
     MLFlowSettings,
 )
 
@@ -26,7 +26,7 @@ class AbstractFlowceptor(object, metaclass=ABCMeta):
 
     @staticmethod
     def __get_settings(plugin_key):
-        # TODO: use factory pattern
+        # TODO: use the factory pattern
         with open(SETTINGS_PATH) as f:
             data = yaml.load(f, Loader=yaml.FullLoader)
         settings = data[Vocabulary.Settings.PLUGINS][plugin_key]
@@ -36,7 +36,7 @@ class AbstractFlowceptor(object, metaclass=ABCMeta):
         ):
             settings_obj: ZambezeSettings = ZambezeSettings(**settings)
             settings_obj.key_values_to_filter = [
-                KeyValuesToFilter(**item)
+                KeyValue(**item)
                 for item in settings_obj.key_values_to_filter
             ]
             return settings_obj
