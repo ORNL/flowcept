@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 import os
 import json
 import yaml
-import redis
+from redis import Redis
 
 from flowcept.commons.vocabulary import Vocabulary
 from flowcept.configs import (
@@ -16,16 +16,18 @@ from flowcept.flowceptor.plugins.settings_dataclasses import (
     ZambezeSettings,
     KeyValue,
     MLFlowSettings,
+    AbstractSettings,
 )
 
 
 class AbstractFlowceptor(object, metaclass=ABCMeta):
     def __init__(self, plugin_key):
-        self.settings = AbstractFlowceptor.__get_settings(plugin_key)
-        self._redis = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+        self.plugin_key = plugin_key
+        self.settings = AbstractFlowceptor.get_settings(self.plugin_key)
+        self._redis = Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 
     @staticmethod
-    def __get_settings(plugin_key):
+    def get_settings(plugin_key: str) -> AbstractSettings:
         # TODO: use the factory pattern
         with open(SETTINGS_PATH) as f:
             data = yaml.load(f, Loader=yaml.FullLoader)
@@ -36,8 +38,7 @@ class AbstractFlowceptor(object, metaclass=ABCMeta):
         ):
             settings_obj: ZambezeSettings = ZambezeSettings(**settings)
             settings_obj.key_values_to_filter = [
-                KeyValue(**item)
-                for item in settings_obj.key_values_to_filter
+                KeyValue(**item) for item in settings_obj.key_values_to_filter
             ]
             return settings_obj
         elif (

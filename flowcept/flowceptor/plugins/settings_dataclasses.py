@@ -42,4 +42,3 @@ class MLFlowSettings(AbstractSettings):
     kind = "mlflow"
     observer_type = "db"
     observer_subtype = "sqlite"
-
