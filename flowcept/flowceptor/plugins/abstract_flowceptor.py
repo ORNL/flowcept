@@ -32,6 +32,8 @@ class AbstractFlowceptor(object, metaclass=ABCMeta):
         with open(SETTINGS_PATH) as f:
             data = yaml.load(f, Loader=yaml.FullLoader)
         settings = data[Vocabulary.Settings.PLUGINS][plugin_key]
+        settings["key"] = plugin_key
+        settings_obj: AbstractSettings = None
         if (
             settings[Vocabulary.Settings.KIND]
             == Vocabulary.Settings.ZAMBEZE_KIND
@@ -40,7 +42,6 @@ class AbstractFlowceptor(object, metaclass=ABCMeta):
             settings_obj.key_values_to_filter = [
                 KeyValue(**item) for item in settings_obj.key_values_to_filter
             ]
-            return settings_obj
         elif (
             settings[Vocabulary.Settings.KIND]
             == Vocabulary.Settings.MLFLOW_KIND
@@ -50,7 +51,7 @@ class AbstractFlowceptor(object, metaclass=ABCMeta):
                 settings_obj.file_path = os.path.join(
                     PROJECT_DIR_PATH, settings_obj.file_path
                 )
-            return settings_obj
+        return settings_obj
 
     @abstractmethod
     def intercept(self, message: dict):

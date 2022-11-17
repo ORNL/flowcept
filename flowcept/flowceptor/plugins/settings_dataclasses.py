@@ -12,6 +12,7 @@ class KeyValue:
 @dataclass
 class AbstractSettings(abc.ABC):
 
+    key: str
     kind: str
     observer_type: str
     observer_subtype: str
