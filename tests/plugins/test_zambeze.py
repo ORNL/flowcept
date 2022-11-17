@@ -6,12 +6,11 @@ import pika
 from flowcept.flowcept_consumer.consumer import (
     consume_intercepted_messages,
 )
-
 from flowcept.flowceptor.plugins.zambeze.zambeze_interceptor import (
     ZambezeInterceptor,
 )
 from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
-    ZambezeMessage,
+    ZambezeMessage
 )
 
 
