@@ -5,7 +5,7 @@ from flowcept.flowceptor.plugins.settings_dataclasses import AbstractSettings
 
 class InterceptorStateManager(object):
     def __init__(self, settings: AbstractSettings):
-        self.set_name = settings.key
+        self._set_name = settings.key
 
         if not hasattr(settings, "redis_host"):
             raise Exception(
@@ -20,10 +20,10 @@ class InterceptorStateManager(object):
         )
 
     def clear_set(self):
-        self._db.delete(self.set_name)
+        self._db.delete(self._set_name)
 
     def add_element_id(self, element_id: str):
-        self._db.sadd(self.set_name, element_id)
+        self._db.sadd(self._set_name, element_id)
 
     def has_element_id(self, element_id) -> bool:
-        return self._db.sismember(self.set_name, element_id)
+        return self._db.sismember(self._set_name, element_id)

@@ -9,9 +9,7 @@ from flowcept.flowceptor.plugins.interceptor_state_manager import (
     InterceptorStateManager,
 )
 
-
 from flowcept.flowceptor.plugins.mlflow.mlflow_dao import MLFlowDAO
-from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import Run
 from flowcept.flowceptor.plugins.mlflow.interception_event_handler import (
     InterceptionEventHandler,
 )
@@ -28,20 +26,22 @@ class MLFlowInterceptor(AbstractFlowceptor):
 
     def callback(self):
         """
-        function that decides what do to when a change is identified.
+        This function is called whenever a change is identified in the data.
+        It decides what to do in the event of a change.
         If it's an interesting change, it calls self.intercept; otherwise,
         let it go....
         """
+        from time import sleep
 
-        run_tuples = self.dao.get_runs()
-
-        for run_tuple in run_tuples:
-            run = Run(**run_tuple)
-            print(run)
-            # if run.run_uuid in :
-
-        # TODO get latest info
-        self.intercept({"nothing": "yet"})
+        sleep(5)
+        runs = self.dao.get_finished_run_uuids()
+        for run_uuid_tuple in runs:
+            run_uuid = run_uuid_tuple[0]
+            if not self.state_manager.has_element_id(run_uuid):
+                print(f"We need to intercept this Run: {run_uuid}")
+                run_data = self.dao.get_run_data(run_uuid)
+                self.state_manager.add_element_id(run_uuid)
+                self.intercept(run_data.__dict__)
 
     def observe(self):
         event_handler = InterceptionEventHandler(
@@ -68,7 +68,7 @@ class MLFlowInterceptor(AbstractFlowceptor):
 
 if __name__ == "__main__":
     try:
-        interceptor = MLFlowInterceptor("mlflow1")
+        interceptor = MLFlowInterceptor()
         interceptor.observe()
         while True:
             time.sleep(interceptor.settings.watch_interval_sec)

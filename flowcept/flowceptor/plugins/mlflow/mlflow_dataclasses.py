@@ -1,16 +1,12 @@
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 
 
 @dataclass
-class Run:
+class RunData:
 
     run_uuid: str
-    name: str
-    user_id: str
     start_time: int
     end_time: int
-
-    @classmethod
-    @property
-    def fields(cls):
-        return ", ".join([field.name for field in fields(cls)])
+    metrics: dict
+    parameters: dict
+    status: str
