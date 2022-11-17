@@ -28,7 +28,7 @@ jobs:
           done;
         fi
     - name: Run Docker Compose
-      run: docker compose -f deployment/compose.yml up
+      run: docker compose -f deployment/compose.yml up -d
     - name: Test with pytest
       run: |
         pytest
