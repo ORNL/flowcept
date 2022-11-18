@@ -1,5 +1,6 @@
 mlflow-skinny
-sqlalchemy
+SQLAlchemy>=1.4.42
 alembic
 sqlparse
 watchdog>=2.1.9
+

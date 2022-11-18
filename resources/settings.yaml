@@ -1,14 +1,17 @@
 plugins:
-  mlflow1:
+  # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2.
+  mlflow:
     kind: mlflow
     observer_type: db
     observer_subtype: sqlite
     file_path: mlflow.db
     log_params: ['*']
     log_metrics: ['*']
+    redis_host: localhost
+    redis_port: 60379
     watch_interval_sec: 2
 
-  zambeze1:
+  zambeze:
     kind: zambeze
     observer_type: message_broker
     observer_subtype: rabbit_mq

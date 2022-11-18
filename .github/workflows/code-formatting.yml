@@ -1,5 +1,4 @@
 name: Code Formatting
-
 on: [push, pull_request]
 
 permissions:
@@ -9,7 +8,7 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-
+    if: "!contains(github.event.head_commit.message, 'CI Bot')"
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.10
@@ -24,5 +23,5 @@ jobs:
       run: black --check .
     - name: Run flake8 checks
       run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --max-complexity=10 --max-line-length=79 --statistics
+        flake8 . --count --show-source --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --show-source --max-complexity=10 --max-line-length=79 --statistics
