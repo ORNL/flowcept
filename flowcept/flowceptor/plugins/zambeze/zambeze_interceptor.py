@@ -2,12 +2,12 @@ import pika
 import sys
 import json
 from datetime import datetime
-from flowcept.flowceptor.plugins.abstract_flowceptor import (
-    AbstractFlowceptor,
+from flowcept.flowceptor.plugins.base_interceptor import (
+    BaseInterceptor,
 )
 
 
-class ZambezeInterceptor(AbstractFlowceptor):
+class ZambezeInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="zambeze"):
         super().__init__(plugin_key)
 

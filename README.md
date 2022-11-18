@@ -9,6 +9,8 @@
 
 ## Development Environment
 
+Read the [Contributing](CONTRIBUTING.md) file.
+
 ### Code Formatting
 
 Flowcept code uses [Black](https://github.com/psf/black), a PEP 8 compliant code formatter, and 
@@ -50,3 +52,7 @@ $ docker run -p 6379:6379  --name redis -d redis
 ```bash
 $ docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.11-management
 ```
+
+# See also
+
+- [Zambeze Repository](https://github.com/ORNL/zambeze)

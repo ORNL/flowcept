@@ -1,8 +1,8 @@
 from typing import List
 from sqlalchemy.engine import Row, create_engine
 from textwrap import dedent
-from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import RunData
-from flowcept.flowceptor.plugins.settings_dataclasses import (
+from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import (
+    RunData,
     MLFlowSettings,
 )
 
