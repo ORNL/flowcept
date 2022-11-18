@@ -36,7 +36,6 @@ jobs:
             echo $CURRENT_VERSION
             
             REPOSITORY=${{ github.repository }}
-            ORG="ORNL"
             ACCESS_TOKEN=${{ secrets.GITHUB_TOKEN  }}
             TARGET=${{ steps.branch-name.outputs.current_branch }}
             echo "REPOSITORY=$REPOSITORY"
@@ -46,7 +45,7 @@ jobs:
             echo "Get latest PR"
             LATEST_PR_JSON=`curl -H "Accept: application/vnd.github+json" \
                 -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-                "https://api.github.com/repos/${ORG}/{$REPOSITORY}/pulls?state=all&per_page=1&sort=created&base=main&direction=desc"`
+                "https://api.github.com/repos/${REPOSITORY}/pulls?state=all&per_page=1&sort=created&base=main&direction=desc"`
             LATEST_PR=`echo $LATEST_PR_JSON | python -c "import json, sys; data = json.load(sys.stdin); print(data[0]['html_url'])"`
             echo "Latest PR: ${LATEST_PR}"
           
