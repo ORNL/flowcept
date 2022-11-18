@@ -42,10 +42,12 @@ jobs:
             echo "TARGET=$TARGET"
             echo "CURRENT_VERSION=${CURRENT_VERSION}"
             echo "Get latest PR"
-            LATEST_PR=`curl -H "Accept: application/vnd.github+json" \
+            LATEST_PR_JSON=`curl -H "Accept: application/vnd.github+json" \
                 -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-                "https://api.github.com/repos/ORNL/flowcept/pulls?state=all&per_page=1&sort=created&base=main&direction=desc" | \ 
-                python -c "import json, sys; data = json.load(sys.stdin); print(data[0]['html_url'])"`
+                "https://api.github.com/repos/ORNL/flowcept/pulls?state=all&per_page=1&sort=created&base=main&direction=desc"`
+            echo $LATEST_PR_JSON
+          
+            LATEST_PR=`echo $LATEST_PR_JSON | python -c "import json, sys; data = json.load(sys.stdin); print(data[0]['html_url'])"`
             
             echo "Latest PR: ${LATEST_PR}"
           
