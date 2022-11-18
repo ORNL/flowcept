@@ -3,26 +3,32 @@ import json
 import threading
 import pika
 
-from flowcept.flowcept_consumer.consumer import consume_intercepted_messages
-
+from flowcept.flowcept_consumer.consumer import (
+    consume_intercepted_messages,
+)
 from flowcept.flowceptor.plugins.zambeze.zambeze_interceptor import (
     ZambezeInterceptor,
 )
-from flowcept.flowceptor.plugins.zambeze.zambeze_message import ZambezeMessage
+from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
+    ZambezeMessage,
+)
 
 
 class TestZambeze(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestZambeze, self).__init__(*args, **kwargs)
-        self.interceptor = ZambezeInterceptor("zambeze1")
+        self.interceptor = ZambezeInterceptor()
 
         self._connection = pika.BlockingConnection(
             pika.ConnectionParameters(
-                self.interceptor.settings.host, self.interceptor.settings.port
+                self.interceptor.settings.host,
+                self.interceptor.settings.port,
             )
         )
         self._channel = self._connection.channel()
-        self._channel.queue_declare(queue=self.interceptor.settings.queue_name)
+        self._channel.queue_declare(
+            queue=self.interceptor.settings.queue_name
+        )
         threading.Thread(target=self.interceptor.observe, daemon=True).start()
         threading.Thread(
             target=consume_intercepted_messages, daemon=True
