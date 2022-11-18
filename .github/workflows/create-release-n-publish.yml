@@ -29,23 +29,31 @@ jobs:
           git add flowcept/version.py
           git commit -m "Flowcept CI Bot: bumping master version"
           git push --force
-      - name: Create Release
+      - name: Get Latest PR and Create Release
         run: |
             export PYTHONPATH=$PYTHONPATH:flowcept
             export CURRENT_VERSION=`python -c "from flowcept import __version__; print(__version__)"`
             echo $CURRENT_VERSION
-          
+            
             REPOSITORY=${{ github.repository }}
             ACCESS_TOKEN=${{ secrets.GITHUB_TOKEN  }}
             TARGET=${{ steps.branch-name.outputs.current_branch }}
             echo "REPOSITORY=$REPOSITORY"
             echo "TARGET=$TARGET"
             echo "CURRENT_VERSION=${CURRENT_VERSION}"
-            echo "Now run curl"
+          
+            echo "Get latest PR"
+            LATEST_PR_JSON=`curl -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+                "https://api.github.com/repos/${REPOSITORY}/pulls?state=all&per_page=1&sort=created&base=main&direction=desc"`
+            LATEST_PR=`echo $LATEST_PR_JSON | python -c "import json, sys; data = json.load(sys.stdin); print(data[0]['html_url'])"`
+            echo "Latest PR: ${LATEST_PR}"
+          
+            echo "Now Release the version"
             curl --data "{\"tag_name\": \"v${CURRENT_VERSION}\",
                             \"target_commitish\": \"${TARGET}\",
                             \"name\": \"v${CURRENT_VERSION}\",
-                            \"body\": \"Release of version ${CURRENT_VERSION}.\nRun `pip install flowcept==${CURRENT_VERSION}` to install this version.\",
+                            \"body\": \"Release of version ${CURRENT_VERSION}.\nRun \`pip install flowcept==${CURRENT_VERSION}\` to install this version.\n\nFor more details about the latest changes in this version, see the latest Pull Request's commits to the main branch: ${LATEST_PR}.\",
                             \"make_latest\": \"true\",
                             \"draft\": false,
                             \"prerelease\": false}" \
