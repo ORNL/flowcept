@@ -1,10 +1,10 @@
 from redis import Redis
 
-from flowcept.flowceptor.plugins.settings_dataclasses import AbstractSettings
+from flowcept.flowceptor.plugins.base_settings_dataclasses import BaseSettings
 
 
 class InterceptorStateManager(object):
-    def __init__(self, settings: AbstractSettings):
+    def __init__(self, settings: BaseSettings):
         self._set_name = settings.key
 
         if not hasattr(settings, "redis_host"):

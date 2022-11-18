@@ -72,7 +72,7 @@ class TestMLFlow(unittest.TestCase):
     def test_mlflow_observer_and_consumption(self):
         self._init_mlflow_consumption()
         run_uuid = self.test_pure_run_mlflow()
-        time.sleep(5)
+        time.sleep(10)
         assert self.interceptor.state_manager.has_element_id(run_uuid) is True
 
 
