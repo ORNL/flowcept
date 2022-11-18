@@ -7,7 +7,10 @@ from flowcept.configs import (
     SETTINGS_PATH,
 )
 
-from flowcept.flowceptor.plugins.base_settings_dataclasses import BaseSettings, KeyValue
+from flowcept.flowceptor.plugins.base_settings_dataclasses import (
+    BaseSettings,
+    KeyValue,
+)
 from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
     ZambezeSettings,
 )
