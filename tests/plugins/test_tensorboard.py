@@ -142,8 +142,9 @@ class TestTensorboard(unittest.TestCase):
                     df_dict = dict(zip(df.tag, df.value))
                     msg[tag] = df_dict
 
-                    for tracked_metric in TRACKED_METRICS:
-                        found_metric = tracked_metric in df_dict
+                    if not found_metric:
+                        for tracked_metric in TRACKED_METRICS:
+                            found_metric = tracked_metric in df_dict
 
             if found_metric:
                 # Only append if we find a tracked metric in the event
