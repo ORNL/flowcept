@@ -1,12 +1,11 @@
 
-# Branches and Pull Requests 
-CI/CD Pipeline
+# Branches and Pull Requests
 
 We have two protected branches: `dev` and `main`. This means that these two branches should be as stable as
 possible, especially the `main` branch. PRs to them should be peer-reviewed.   
 
 The `main` branch always has the latest working version, with a tagged release published to 
-[pypi](https://pypi.org/manage/project/flowcept/releases). 
+[pypi](https://pypi.org/project/flowcept). 
 The `dev` branch may be ahead of `main` while new features are
 being implemented. Feature branches should be pull requested to the `dev` branch. Pull requests into the 
 `main` branch should always be made from the `dev` branch and be merged when the developers agree it is time
@@ -40,7 +39,7 @@ $ flake8 .
 ## Automated Releases
 
 All commits to the `main` branch will launch the [automated publish and release GitHub Action](.github/workflows/create-release-n-publish.yml).
-This will create a [tagged release](https://github.com/ORNL/flowcept/releases) and publish the package to [pypi](https://pypi.org/manage/project/flowcept/releases).
+This will create a [tagged release](https://github.com/ORNL/flowcept/releases) and publish the package to [pypi](https://pypi.org/project/flowcept).
 
 # Checklist for Creating a new Flowcept Plugin
 
