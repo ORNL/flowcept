@@ -13,8 +13,9 @@ class TestTensorboard(unittest.TestCase):
         import shutil
 
         base_logdir = "tensorboard_events"
-        for dir_ in os.listdir(base_logdir):
-            shutil.rmtree(os.path.join(base_logdir, dir_))
+        if os.path.exists(base_logdir):
+            for dir_ in os.listdir(base_logdir):
+                shutil.rmtree(os.path.join(base_logdir, dir_))
 
         from uuid import uuid4
 
