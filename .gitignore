@@ -5,3 +5,5 @@
 **/*pycache*
 **/*dist*
 mlflow.db
+tests/plugins/mnist_train
+tests/plugins/tensorboard_events/
