@@ -15,8 +15,14 @@ with open("extra_requirements/zambeze-requirements.txt") as f:
 with open("extra_requirements/mlflow-requirements.txt") as f:
     mlflow_plugin_requirements = f.read().splitlines()
 
+with open("extra_requirements/tensorboard-requirements.txt") as f:
+    tensorboard_plugin_requirements = f.read().splitlines()
+
 full_requirements = (
-    requirements + zambeze_plugin_requirements + mlflow_plugin_requirements
+    requirements
+    + zambeze_plugin_requirements
+    + mlflow_plugin_requirements
+    + tensorboard_plugin_requirements
 )
 
 setup(
@@ -35,6 +41,7 @@ setup(
         "full": full_requirements,
         "mlflow": mlflow_plugin_requirements,
         "zambeze": zambeze_plugin_requirements,
+        "tensorboard": tensorboard_plugin_requirements,
     },
     packages=find_packages(),
     classifiers=[
@@ -48,6 +55,6 @@ setup(
         "Topic :: Documentation :: Sphinx",
         "Topic :: System :: Distributed Computing",
     ],
-    python_requires=">=3.9",  # TODO: try a lower version
+    python_requires=">=3.9",  # TODO: Do we really need py3.9?
     # scripts=["bin/flowcept"],
 )
