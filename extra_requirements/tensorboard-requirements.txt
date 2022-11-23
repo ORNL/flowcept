@@ -3,4 +3,4 @@ torch
 torchvision
 tensorflow
 pandas
-tbparse-0.0.7
+tbparse==0.0.7
