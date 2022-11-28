@@ -10,3 +10,5 @@ rm -rf  .pytest_cache \
 
 rm -rf **/*mlruns*
 rm -rf */*/*mlruns*
+rm -rf **/*/*mnist*
+rm -rf **/*/*tensorboard_events*
