@@ -43,24 +43,20 @@ class TensorboardInterceptor(BaseInterceptor):
             if self.state_manager.has_element_id(child_event.log_path):
                 print(f"Already extracted metric from {child_event_file}.")
                 continue
-            msg = {}
             event_tags = child_event.get_tags()
+            msg = dict()
             found_metric = False
             for tag in self.settings.log_tags:
                 if len(event_tags[tag]):
-                    if "run_name" not in msg:
-                        msg["event_file"] = child_event_file
-                    if "log_path" not in msg:
-                        msg["log_path"] = child_event.log_path
+                    msg["event_file"] = child_event_file
+                    msg["log_path"] = child_event.log_path
                     df = child_event.__getattribute__(tag)
                     df_dict = dict(zip(df.tag, df.value))
                     msg[tag] = df_dict
-
                     if not found_metric:
                         for tracked_metric in self.settings.log_metrics:
                             if tracked_metric in df_dict:
                                 found_metric = True
-
                                 print("Found metric in this file!")
                                 break
             if found_metric:
