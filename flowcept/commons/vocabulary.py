@@ -6,4 +6,4 @@ class Vocabulary:
 
         ZAMBEZE_KIND = "zambeze"
         MLFLOW_KIND = "mlflow"
-        TENSORBOARD_KIND = "mlflow"
+        TENSORBOARD_KIND = "tensorboard"

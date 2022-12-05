@@ -1,9 +1,22 @@
 import unittest
+import threading
+import time
+
+from flowcept.flowcept_consumer.consumer import (
+    consume_intercepted_messages,
+)
+from flowcept.flowceptor.plugins.tensorboard.tensorboard_interceptor import (
+    TensorboardInterceptor,
+)
 
 
 class TestTensorboard(unittest.TestCase):
-    @staticmethod
-    def run_tensorboard_hparam_tuning():
+    def __init__(self, *args, **kwargs):
+        super(TestTensorboard, self).__init__(*args, **kwargs)
+        self.interceptor = TensorboardInterceptor()
+        self.interceptor.state_manager.reset()
+
+    def run_tensorboard_hparam_tuning(self):
         """
         Code based on
          https://www.tensorflow.org/tensorboard/hyperparameter_tuning_with_hparams
@@ -12,14 +25,10 @@ class TestTensorboard(unittest.TestCase):
         import os
         import shutil
 
-        base_logdir = "tensorboard_events"
-        if os.path.exists(base_logdir):
-            for dir_ in os.listdir(base_logdir):
-                shutil.rmtree(os.path.join(base_logdir, dir_))
-
-        from uuid import uuid4
-
-        logdir = f"{base_logdir}/experiment_{uuid4()}"
+        logdir = self.interceptor.settings.file_path
+        if os.path.exists(logdir):
+            print("Path exists, gonna delete")
+            shutil.rmtree(logdir)
 
         import tensorflow as tf
         from tensorboard.plugins.hparams import api as hp
@@ -112,17 +121,30 @@ class TestTensorboard(unittest.TestCase):
 
         return logdir
 
+    def _init_consumption(self):
+        threading.Thread(target=self.interceptor.observe, daemon=True).start()
+        threading.Thread(
+            target=consume_intercepted_messages, daemon=True
+        ).start()
+        time.sleep(3)
+
+    def test_observer_and_consumption(self):
+        self._init_consumption()
+        self.run_tensorboard_hparam_tuning()
+        time.sleep(20)
+        assert self.interceptor.state_manager.count() == 16
+
     def test_read_tensorboard_hparam_tuning(self):
 
-        logdir = TestTensorboard.run_tensorboard_hparam_tuning()
+        logdir = self.run_tensorboard_hparam_tuning()
 
         from tbparse import SummaryReader
-        from uuid import uuid4
 
         reader = SummaryReader(logdir)
 
         TRACKED_TAGS = {"scalars", "hparams", "tensors"}
         TRACKED_METRICS = {"accuracy"}
+
         output = []
         for child_event_file in reader.children:
             msg = {}
@@ -132,8 +154,6 @@ class TestTensorboard(unittest.TestCase):
             found_metric = False
             for tag in TRACKED_TAGS:
                 if len(event_tags[tag]):
-                    if "msg_id" not in msg:
-                        msg["msg_id"] = str(uuid4())
                     if "run_name" not in msg:
                         msg["run_name"] = child_event_file
                     if "log_path" not in msg:
@@ -144,7 +164,10 @@ class TestTensorboard(unittest.TestCase):
 
                     if not found_metric:
                         for tracked_metric in TRACKED_METRICS:
-                            found_metric = tracked_metric in df_dict
+                            if tracked_metric in df_dict:
+                                found_metric = True
+                                print("Found metric!")
+                                break
 
             if found_metric:
                 # Only append if we find a tracked metric in the event
