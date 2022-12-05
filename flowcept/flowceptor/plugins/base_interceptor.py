@@ -1,5 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import json
+from datetime import datetime
+from uuid import uuid4
 from redis import Redis
 
 from flowcept.configs import (
@@ -41,6 +43,12 @@ class BaseInterceptor(object, metaclass=ABCMeta):
 
     def post_intercept(self, intercepted_message: dict):
         intercepted_message["plugin_key"] = self.settings.key
+        if "msg_id" not in intercepted_message:
+            intercepted_message["msg_id"] = str(uuid4())
+        if "time" not in intercepted_message:
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            intercepted_message["time"] = dt_string
         print(
             f"Going to send to Redis an intercepted message:"
             f"\n\t{json.dumps(intercepted_message)}"

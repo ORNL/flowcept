@@ -19,8 +19,11 @@ class InterceptorStateManager(object):
             db=0,
         )
 
-    def clear_set(self):
+    def reset(self):
         self._db.delete(self._set_name)
+
+    def count(self):
+        return self._db.scard(self._set_name)
 
     def add_element_id(self, element_id: str):
         self._db.sadd(self._set_name, element_id)

@@ -43,7 +43,7 @@ From the root directory using pytest we can run:
 $ pytest
 ```
 
-## Redis for local interceptions
+## Redis Server for the Interception Messages and Local State Managers
 ```bash
 $ docker run -p 6379:6379  --name redis -d redis
 ```

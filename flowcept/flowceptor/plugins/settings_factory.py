@@ -17,6 +17,9 @@ from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
 from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import (
     MLFlowSettings,
 )
+from flowcept.flowceptor.plugins.tensorboard.tensorboard_dataclasses import (
+    TensorboardSettings,
+)
 
 
 def get_settings(plugin_key: str) -> BaseSettings:
@@ -35,6 +38,15 @@ def get_settings(plugin_key: str) -> BaseSettings:
         settings[Vocabulary.Settings.KIND] == Vocabulary.Settings.MLFLOW_KIND
     ):
         settings_obj: MLFlowSettings = MLFlowSettings(**settings)
+        if not os.path.isabs(settings_obj.file_path):
+            settings_obj.file_path = os.path.join(
+                PROJECT_DIR_PATH, settings_obj.file_path
+            )
+    elif (
+        settings[Vocabulary.Settings.KIND]
+        == Vocabulary.Settings.TENSORBOARD_KIND
+    ):
+        settings_obj: TensorboardSettings = TensorboardSettings(**settings)
         if not os.path.isabs(settings_obj.file_path):
             settings_obj.file_path = os.path.join(
                 PROJECT_DIR_PATH, settings_obj.file_path
