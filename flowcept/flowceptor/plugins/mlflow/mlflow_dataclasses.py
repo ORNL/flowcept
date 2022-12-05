@@ -14,7 +14,7 @@ class MLFlowSettings(BaseSettings):
     redis_port: int
     redis_host: str
     kind = "mlflow"
-    observer_type = "db"
+    observer_type = "file"
     observer_subtype = "sqlite"
 
 
