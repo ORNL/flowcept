@@ -1,6 +1,4 @@
 tensorboard
-torch
-torchvision
 tensorflow
 pandas
 tbparse==0.0.7
