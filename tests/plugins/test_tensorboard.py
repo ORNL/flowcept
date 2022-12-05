@@ -172,4 +172,4 @@ class TestTensorboard(unittest.TestCase):
             if found_metric:
                 # Only append if we find a tracked metric in the event
                 output.append(msg)
-        assert len(output) > 1
+        assert len(output) == 16
