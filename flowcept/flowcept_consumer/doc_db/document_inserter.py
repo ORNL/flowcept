@@ -2,14 +2,20 @@ from typing import Dict
 import json
 import sys
 from time import time
+
+from flowcept.configs import (
+    MONGO_INSERTION_BUFFER_TIME,
+    MONGO_INSERTION_BUFFER_SIZE
+)
+
 from flowcept.commons.mq_dao import MQDao
 from flowcept.flowcept_consumer.doc_db.document_db_dao import DocumentDBDao
 
 
 class DocumentInserter:
 
-    BUFFER_SIZE = 10
-    FLUSH_TIME = 3  # secs.
+    BUFFER_SIZE = MONGO_INSERTION_BUFFER_SIZE
+    FLUSH_TIME = MONGO_INSERTION_BUFFER_TIME  # secs.
 
     def __init__(self):
         self.buffer = list()

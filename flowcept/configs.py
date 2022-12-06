@@ -20,3 +20,7 @@ MONGO_HOST = os.getenv("MONGO_HOST", "localhost")
 MONGO_PORT = int(os.getenv("MONGO_PORT", "27017"))
 MONGO_DB = os.getenv("MONGO_DB", "flowcept")
 MONGO_COLLECTION = os.getenv("MONGO_COLLECTION", "messages")
+
+# sec
+MONGO_INSERTION_BUFFER_TIME = int(os.getenv("MONGO_INSERTION_BUFFER_TIME", 5))
+MONGO_INSERTION_BUFFER_SIZE = int(os.getenv("MONGO_INSERTION_BUFFER_SIZE", 50))
