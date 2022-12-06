@@ -2,8 +2,8 @@ import sys
 import os
 import time
 from watchdog.observers import Observer
-from flowcept.flowceptor.plugins.abstract_flowceptor import (
-    AbstractFlowceptor,
+from flowcept.flowceptor.plugins.base_interceptor import (
+    BaseInterceptor,
 )
 from flowcept.flowceptor.plugins.interceptor_state_manager import (
     InterceptorStateManager,
@@ -15,7 +15,7 @@ from flowcept.flowceptor.plugins.mlflow.interception_event_handler import (
 )
 
 
-class MLFlowInterceptor(AbstractFlowceptor):
+class MLFlowInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="mlflow"):
         super().__init__(plugin_key)
         self.state_manager = InterceptorStateManager(self.settings)
@@ -31,9 +31,6 @@ class MLFlowInterceptor(AbstractFlowceptor):
         If it's an interesting change, it calls self.intercept; otherwise,
         let it go....
         """
-        from time import sleep
-
-        sleep(5)
         runs = self.dao.get_finished_run_uuids()
         for run_uuid_tuple in runs:
             run_uuid = run_uuid_tuple[0]
@@ -45,7 +42,7 @@ class MLFlowInterceptor(AbstractFlowceptor):
 
     def observe(self):
         event_handler = InterceptionEventHandler(
-            self, MLFlowInterceptor.callback
+            self, self.__class__.callback
         )
         while not os.path.isfile(self.settings.file_path):
             print(
