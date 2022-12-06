@@ -2,8 +2,8 @@ import unittest
 import threading
 import time
 
-from flowcept.flowcept_consumer.consumer import (
-    consume_intercepted_messages,
+from flowcept.flowcept_consumer.main import (
+    main,
 )
 from flowcept.flowceptor.plugins.mlflow.mlflow_interceptor import (
     MLFlowInterceptor,
@@ -64,9 +64,7 @@ class TestMLFlow(unittest.TestCase):
 
     def _init_consumption(self):
         threading.Thread(target=self.interceptor.observe, daemon=True).start()
-        threading.Thread(
-            target=consume_intercepted_messages, daemon=True
-        ).start()
+        threading.Thread(target=main, daemon=True).start()
         time.sleep(3)
 
     def test_observer_and_consumption(self):

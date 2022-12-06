@@ -43,14 +43,25 @@ From the root directory using pytest we can run:
 $ pytest
 ```
 
-## Redis Server for the Interception Messages and Local State Managers
+## Redis Server for the Interception Messages 
 ```bash
-$ docker run -p 6379:6379  --name redis -d redis
+$ docker run -p 6379:6379  --name flowcept_redis -d redis
 ```
+
+## Redis Server for the local cache 
+```bash
+$ docker run -p 60379:6379  --name local_interceptor_cache -d redis
+```
+
 
 ## RabbitMQ for Zambeze plugin
 ```bash
 $ docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.11-management
+```
+
+## MongoDB
+```
+$ docker run --name mongo -d -p 27017:27017 mongo
 ```
 
 # See also
