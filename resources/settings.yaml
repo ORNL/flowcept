@@ -1,16 +1,5 @@
 plugins:
   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2.
-  mlflow:
-    kind: mlflow
-    observer_type: db
-    observer_subtype: sqlite
-    file_path: mlflow.db
-    log_params: ['*']
-    log_metrics: ['*']
-    redis_host: localhost
-    redis_port: 60379
-    watch_interval_sec: 2
-
   zambeze:
     kind: zambeze
     observer_type: message_broker
@@ -27,3 +16,25 @@ plugins:
       - files
       - name
       - activity_id
+
+  mlflow:
+    kind: mlflow
+    observer_type: file
+    observer_subtype: sqlite
+    file_path: mlflow.db
+    log_params: ['*']
+    log_metrics: ['*']
+    redis_host: localhost
+    redis_port: 6379
+    watch_interval_sec: 2
+
+  tensorboard:
+    kind: tensorboard
+    observer_type: file
+    observer_subtype: binary
+    file_path: tensorboard_events
+    log_tags: ['scalars', 'hparams', 'tensors']
+    log_metrics: ['accuracy']
+    redis_host: localhost
+    redis_port: 6379
+    watch_interval_sec: 5

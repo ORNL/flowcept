@@ -1,10 +1,10 @@
 from redis import Redis
 
-from flowcept.flowceptor.plugins.settings_dataclasses import AbstractSettings
+from flowcept.flowceptor.plugins.base_settings_dataclasses import BaseSettings
 
 
 class InterceptorStateManager(object):
-    def __init__(self, settings: AbstractSettings):
+    def __init__(self, settings: BaseSettings):
         self._set_name = settings.key
 
         if not hasattr(settings, "redis_host"):
@@ -19,8 +19,11 @@ class InterceptorStateManager(object):
             db=0,
         )
 
-    def clear_set(self):
+    def reset(self):
         self._db.delete(self._set_name)
+
+    def count(self):
+        return self._db.scard(self._set_name)
 
     def add_element_id(self, element_id: str):
         self._db.sadd(self._set_name, element_id)

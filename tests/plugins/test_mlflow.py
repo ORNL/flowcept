@@ -50,7 +50,7 @@ class TestMLFlow(unittest.TestCase):
         assert run_data.run_uuid == run_uuid
 
     def test_check_state_manager(self):
-        self.interceptor.state_manager.clear_set()
+        self.interceptor.state_manager.reset()
         self.interceptor.state_manager.add_element_id("dummy-value")
         self.test_pure_run_mlflow()
         runs = self.interceptor.dao.get_finished_run_uuids()
@@ -62,17 +62,17 @@ class TestMLFlow(unittest.TestCase):
                 print(f"We need to intercept {run_uuid}")
                 self.interceptor.state_manager.add_element_id(run_uuid)
 
-    def _init_mlflow_consumption(self):
+    def _init_consumption(self):
         threading.Thread(target=self.interceptor.observe, daemon=True).start()
         threading.Thread(
             target=consume_intercepted_messages, daemon=True
         ).start()
         time.sleep(3)
 
-    def test_mlflow_observer_and_consumption(self):
-        self._init_mlflow_consumption()
+    def test_observer_and_consumption(self):
+        self._init_consumption()
         run_uuid = self.test_pure_run_mlflow()
-        time.sleep(5)
+        time.sleep(10)
         assert self.interceptor.state_manager.has_element_id(run_uuid) is True
 
 
