@@ -37,16 +37,15 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
     def post_intercept(self, intercepted_message: dict):
-        intercepted_message["plugin_key"] = self.settings.key
-        intercepted_message["user"] = FLOWCEPT_USER
-        if "msg_id" not in intercepted_message:
-            intercepted_message["msg_id"] = str(uuid4())
-        if "time" not in intercepted_message:
-            now = datetime.now()
-            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-            intercepted_message["time"] = dt_string
+        flowcept_message = dict()
+        flowcept_message["intercepted_message"] = intercepted_message
+        flowcept_message["plugin_key"] = self.settings.key
+        flowcept_message["user"] = FLOWCEPT_USER
+        flowcept_message["msg_id"] = str(uuid4())
+        now = datetime.utcnow()
+        flowcept_message["utc_now_timestamp"] = now.timestamp()
         print(
             f"Going to send to Redis an intercepted message:"
-            f"\n\t{json.dumps(intercepted_message)}"
+            f"\n\t{json.dumps(flowcept_message)}"
         )
-        self._mq_dao.publish(json.dumps(intercepted_message))
+        self._mq_dao.publish(json.dumps(flowcept_message))
