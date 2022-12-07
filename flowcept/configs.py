@@ -37,7 +37,12 @@ SYS_NAME = os.getenv("SYS_NAME", os.uname()[0])
 NODE_NAME = os.getenv("NODE_NAME", os.uname()[1])
 LOGIN_NAME = os.getenv("LOGIN_NAME", getpass.getuser())
 
-external_ip = urllib.request.urlopen("https://ident.me").read().decode("utf8")
+try:
+    external_ip = urllib.request.urlopen("https://ident.me").read().decode("utf8")
+except Exception as e:
+    print("Unable to retrieve external IP", e)
+    external_ip = "unavailable"
+
 PUBLIC_IP = os.getenv("PUBLIC_IP", external_ip)
 
 PRIVATE_IP = os.getenv("PRIVATE_IP", socket.gethostbyname(socket.getfqdn()))
