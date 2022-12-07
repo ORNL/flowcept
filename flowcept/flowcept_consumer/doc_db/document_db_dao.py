@@ -29,7 +29,7 @@ class DocumentDBDao(object):
             r = self._collection.insert_many(doc_list)
             return r.inserted_ids
         except Exception as e:
-            print("Error when inserting many docs", e)
+            print("Error when inserting many docs", e, str(doc_list))
             return None
 
     def delete(self, doc_list: List[ObjectId]):

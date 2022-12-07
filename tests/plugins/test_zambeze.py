@@ -65,7 +65,7 @@ class TestZambeze(unittest.TestCase):
         self._connection.close()
         import time
 
-        time.sleep(3)
+        time.sleep(10)
 
 
 if __name__ == "__main__":

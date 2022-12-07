@@ -1,49 +1,52 @@
-from typing import Dict
-import json
 import sys
-from time import time
+import json
+from time import time, sleep
+from threading import Thread
+from typing import Dict
+from datetime import datetime
 
 from flowcept.configs import (
     MONGO_INSERTION_BUFFER_TIME,
-    MONGO_INSERTION_BUFFER_SIZE
+    MONGO_INSERTION_BUFFER_SIZE,
 )
-
 from flowcept.commons.mq_dao import MQDao
 from flowcept.flowcept_consumer.doc_db.document_db_dao import DocumentDBDao
 
 
 class DocumentInserter:
-
-    BUFFER_SIZE = MONGO_INSERTION_BUFFER_SIZE
-    FLUSH_TIME = MONGO_INSERTION_BUFFER_TIME  # secs.
-
     def __init__(self):
-        self.buffer = list()
-        self.counter = 0
-        self.mq_dao = MQDao()
-        self.doc_dao = DocumentDBDao()
+        self._buffer = list()
+        self._mq_dao = MQDao()
+        self._doc_dao = DocumentDBDao()
         self._previous_time = time()
 
     def _flush(self):
-        self.doc_dao.insert_many(self.buffer)
-        self.buffer = list()
+        self._doc_dao.insert_many(self._buffer)
+        self._buffer = list()
 
     def handle_message(self, intercepted_message: Dict):
-        self.buffer.append(intercepted_message)
+        dt = datetime.fromtimestamp(intercepted_message["utc_now_timestamp"])
+        intercepted_message["timestamp"] = dt.utcnow()
+        self._buffer.append(intercepted_message)
         print("An intercepted message was received.")
-        if len(self.buffer) >= DocumentInserter.BUFFER_SIZE:
+        if len(self._buffer) >= MONGO_INSERTION_BUFFER_SIZE:
             print("Buffer exceeded, flushing...")
             self._flush()
-        else:
-            now = time()
-            timediff = now - self._previous_time
-            if timediff > DocumentInserter.FLUSH_TIME:
-                print("Time to flush!")
-                self._previous_time = now
-                self._flush()
+
+    def time_based_flushing(self):
+        while True:
+            if len(self._buffer):
+                now = time()
+                timediff = now - self._previous_time
+                if timediff >= MONGO_INSERTION_BUFFER_TIME:
+                    print("Time to flush!")
+                    self._previous_time = now
+                    self._flush()
+            sleep(MONGO_INSERTION_BUFFER_TIME)
 
     def main(self):
-        pubsub = self.mq_dao.subscribe()
+        Thread(target=self.time_based_flushing).start()
+        pubsub = self._mq_dao.subscribe()
         for message in pubsub.listen():
             if message["type"] not in {"psubscribe"}:
                 _dict_obj = json.loads(json.loads(message["data"]))
