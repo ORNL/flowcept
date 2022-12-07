@@ -38,7 +38,9 @@ NODE_NAME = os.getenv("NODE_NAME", os.uname()[1])
 LOGIN_NAME = os.getenv("LOGIN_NAME", getpass.getuser())
 
 try:
-    external_ip = urllib.request.urlopen("https://ident.me").read().decode("utf8")
+    external_ip = (
+        urllib.request.urlopen("https://ident.me").read().decode("utf8")
+    )
 except Exception as e:
     print("Unable to retrieve external IP", e)
     external_ip = "unavailable"
