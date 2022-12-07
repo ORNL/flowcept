@@ -1,4 +1,6 @@
 import os
+import urllib.request
+import socket
 
 PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
 
@@ -12,10 +14,12 @@ SETTINGS_PATH = os.getenv("SETTINGS_PATH", _settings_path)
 
 FLOWCEPT_USER = os.getenv("FLOWCEPT_USER", "flowcept_main_user")
 
+# REDIS SETTINGS
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 REDIS_CHANNEL = "interception"
 
+# MONGO SETTINGS
 MONGO_HOST = os.getenv("MONGO_HOST", "localhost")
 MONGO_PORT = int(os.getenv("MONGO_PORT", "27017"))
 MONGO_DB = os.getenv("MONGO_DB", "flowcept")
@@ -26,3 +30,13 @@ MONGO_INSERTION_BUFFER_TIME = int(os.getenv("MONGO_INSERTION_BUFFER_TIME", 5))
 MONGO_INSERTION_BUFFER_SIZE = int(
     os.getenv("MONGO_INSERTION_BUFFER_SIZE", 50)
 )
+
+# EXTRA MSG METADATA
+SYS_NAME = os.getenv("SYS_NAME", os.uname()[0])
+NODE_NAME = os.getenv("NODE_NAME", os.uname()[1])
+LOGIN_NAME = os.getenv("LOGIN_NAME", os.getlogin())
+
+external_ip = urllib.request.urlopen("https://ident.me").read().decode("utf8")
+PUBLIC_IP = os.getenv("PUBLIC_IP", external_ip)
+
+PRIVATE_IP = os.getenv("PRIVATE_IP", socket.gethostbyname(socket.getfqdn()))
