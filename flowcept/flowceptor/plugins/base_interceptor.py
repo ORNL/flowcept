@@ -10,9 +10,11 @@ from flowcept.configs import (
     LOGIN_NAME,
     PUBLIC_IP,
     PRIVATE_IP,
+    EXPERIMENT_ID,
 )
 
 from flowcept.commons.mq_dao import MQDao
+from flowcept.commons.flowcept_data_classes import TaskMessage
 from flowcept.flowceptor.plugins.settings_factory import get_settings
 
 
@@ -44,26 +46,40 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @staticmethod
-    def enrich_flowcept_message(intercepted_message: dict):
-        intercepted_message["user"] = FLOWCEPT_USER
-        intercepted_message["sys_name"] = SYS_NAME
-        intercepted_message["node_name"] = NODE_NAME
-        intercepted_message["login_name"] = LOGIN_NAME
-        intercepted_message["public_ip"] = PUBLIC_IP
-        intercepted_message["private_ip"] = PRIVATE_IP
+    def enrich_task_message(task_msg: TaskMessage):
+        task_msg.sys_name = SYS_NAME
+        task_msg.node_name = NODE_NAME
+        task_msg.login_name = LOGIN_NAME
+        task_msg.public_ip = PUBLIC_IP
+        task_msg.private_ip = PRIVATE_IP
 
     def post_intercept(self, intercepted_message: dict):
-        flowcept_message = dict()
-        flowcept_message["intercepted_message"] = intercepted_message
-        flowcept_message["plugin_key"] = self.settings.key
-        flowcept_message["msg_id"] = str(uuid4())
-        now = datetime.utcnow()
-        flowcept_message["utc_now_timestamp"] = now.timestamp()
 
-        BaseInterceptor.enrich_flowcept_message(flowcept_message)
+        now = datetime.utcnow()
+        task_msg = TaskMessage(
+            plugin_id=self.settings.key,
+            used=intercepted_message.get("used"),
+            msg_id=str(uuid4()),
+            user=FLOWCEPT_USER,
+            utc_timestamp=now.timestamp(),
+        )
+        task_msg.experiment_id = EXPERIMENT_ID
+        task_msg.generated = intercepted_message.get("generated", None)
+        task_msg.start_time = intercepted_message.get("start_time", None)
+        task_msg.end_time = intercepted_message.get("end_time", None)
+        task_msg.activity_id = intercepted_message.get("activity_id", None)
+        task_msg.status = intercepted_message.get("status", None)
+        task_msg.stdout = intercepted_message.get("stdout", None)
+        task_msg.stderr = intercepted_message.get("stderr", None)
+        task_msg.task_id = intercepted_message.get("task_id", None)
+        task_msg.custom_metadata = intercepted_message.get(
+            "custom_metadata", None
+        )
+
+        BaseInterceptor.enrich_task_message(task_msg)
 
         print(
             f"Going to send to Redis an intercepted message:"
-            f"\n\t{json.dumps(flowcept_message)}"
+            f"\n\t{json.dumps(task_msg.__dict__)}"
         )
-        self._mq_dao.publish(json.dumps(flowcept_message))
+        self._mq_dao.publish(json.dumps(task_msg.__dict__))
