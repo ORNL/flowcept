@@ -8,6 +8,7 @@ class TaskMessage:
     plugin_id: AnyStr
     used: Dict[AnyStr, Any]
     msg_id: AnyStr
+    task_id: AnyStr  # Any way to identify a task
     user: AnyStr
     utc_timestamp: float
     experiment_id: AnyStr = None
@@ -19,7 +20,6 @@ class TaskMessage:
     status: AnyStr = None
     stdout: AnyStr = None
     stderr: AnyStr = None
-    task_id: AnyStr = None
     custom_metadata: Dict[AnyStr, Any] = None
     node_name: AnyStr = None
     login_name: AnyStr = None

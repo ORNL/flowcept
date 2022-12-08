@@ -37,4 +37,5 @@ plugins:
     log_metrics: ['accuracy']
     redis_host: localhost
     redis_port: 60379
+
     watch_interval_sec: 5

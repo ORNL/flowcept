@@ -12,12 +12,17 @@ class ZambezeInterceptor(BaseInterceptor):
         super().__init__(plugin_key)
 
     def intercept(self, message: Dict):
-        intercepted_message = {}
-        for key in self.settings.keys_to_intercept:
-            if key in message:
-                intercepted_message[key] = message[key]
-
-        super().post_intercept(intercepted_message)
+        intercepted_message = {
+            "task_id": message.get("msg_id"),
+            "activity_id": message.get("activity_id"),
+            "status": message.get("activity_status"),
+            "used": {
+                "arguments": message["arguments"],
+                "kwargs": message["kwargs"],
+                "files": message["files"],
+            },
+        }
+        super().prepare_and_send(intercepted_message)
 
     def observe(self):
         connection = pika.BlockingConnection(
