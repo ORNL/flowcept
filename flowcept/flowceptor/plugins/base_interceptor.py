@@ -53,13 +53,13 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         task_msg.public_ip = PUBLIC_IP
         task_msg.private_ip = PRIVATE_IP
 
-    def post_intercept(self, intercepted_message: dict):
-
+    def prepare_and_send(self, intercepted_message: dict):
         now = datetime.utcnow()
         task_msg = TaskMessage(
             plugin_id=self.settings.key,
             used=intercepted_message.get("used"),
             msg_id=str(uuid4()),
+            task_id=intercepted_message.get("task_id"),
             user=FLOWCEPT_USER,
             utc_timestamp=now.timestamp(),
         )

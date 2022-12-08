@@ -22,8 +22,10 @@ class TensorboardInterceptor(BaseInterceptor):
         self.state_manager = InterceptorStateManager(self.settings)
 
     def intercept(self, message: dict):
+        message["used"] = message.pop("hparams")
+        message["generated"] = message.pop("tensors")
         print(f"Going to intercept: {message}")
-        super().post_intercept(message)
+        super().prepare_and_send(message)
 
     def callback(self):
         """
@@ -61,8 +63,13 @@ class TensorboardInterceptor(BaseInterceptor):
                                 break
             if found_metric:
                 # Only intercept if we find a tracked metric in the event
-                msg["used"] = msg["hparams"]
-                msg["generated"] = msg["tensors"]
+                if os.path.isdir(msg["custom_metadata"]["log_path"]):
+                    event_files = os.listdir(
+                        msg["custom_metadata"]["log_path"]
+                    )
+                    if len(event_files):
+                        msg["task_id"] = event_files[0]
+
                 self.intercept(msg)
                 self.state_manager.add_element_id(child_event.log_path)
 
