@@ -33,7 +33,7 @@ class TensorboardInterceptor(BaseInterceptor):
         let it go....
         """
         print("New tensorboard event file changed!")
-        # TODO: we're waiting for the file to be completely written.
+        # TODO: now we're waiting for the file to be completely written.
         # Is there a better way to be informed when the file is finished?
         time.sleep(self.settings.watch_interval_sec)
 
@@ -44,12 +44,12 @@ class TensorboardInterceptor(BaseInterceptor):
                 print(f"Already extracted metric from {child_event_file}.")
                 continue
             event_tags = child_event.get_tags()
-            msg = dict()
+            msg = {"custom_metadata": {}}
             found_metric = False
             for tag in self.settings.log_tags:
                 if len(event_tags[tag]):
-                    msg["event_file"] = child_event_file
-                    msg["log_path"] = child_event.log_path
+                    msg["custom_metadata"]["event_file"] = child_event_file
+                    msg["custom_metadata"]["log_path"] = child_event.log_path
                     df = child_event.__getattribute__(tag)
                     df_dict = dict(zip(df.tag, df.value))
                     msg[tag] = df_dict
@@ -61,6 +61,8 @@ class TensorboardInterceptor(BaseInterceptor):
                                 break
             if found_metric:
                 # Only intercept if we find a tracked metric in the event
+                msg["used"] = msg["hparams"]
+                msg["generated"] = msg["tensors"]
                 self.intercept(msg)
                 self.state_manager.add_element_id(child_event.log_path)
 

@@ -25,7 +25,7 @@ class DocumentInserter:
         self._buffer = list()
 
     def handle_message(self, intercepted_message: Dict):
-        dt = datetime.fromtimestamp(intercepted_message["utc_now_timestamp"])
+        dt = datetime.fromtimestamp(intercepted_message["utc_timestamp"])
         intercepted_message["timestamp"] = dt.utcnow()
         self._buffer.append(intercepted_message)
         print("An intercepted message was received.")

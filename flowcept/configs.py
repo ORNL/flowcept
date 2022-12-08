@@ -13,7 +13,8 @@ SRC_DIR_PATH = os.path.join(PROJECT_DIR_PATH, PROJECT_NAME)
 _settings_path = os.path.join(PROJECT_DIR_PATH, "resources", "settings.yaml")
 SETTINGS_PATH = os.getenv("SETTINGS_PATH", _settings_path)
 
-FLOWCEPT_USER = os.getenv("FLOWCEPT_USER", "flowcept_main_user")
+FLOWCEPT_USER = os.getenv("FLOWCEPT_USER", "root")
+EXPERIMENT_ID = "super-experiment"
 
 # REDIS SETTINGS
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")

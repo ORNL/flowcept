@@ -16,6 +16,16 @@ class DocumentDBDao(object):
         db = client[MONGO_DB]
         self._collection = db[MONGO_COLLECTION]
 
+    def find(self, filter_: Dict) -> List[Dict]:
+        try:
+            lst = list()
+            for doc in self._collection.find(filter_):
+                lst.append(doc)
+            return lst
+        except Exception as e:
+            print("Error when querying", e)
+            return None
+
     def insert_one(self, doc: Dict) -> ObjectId:
         try:
             r = self._collection.insert_one(doc)
