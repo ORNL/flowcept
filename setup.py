@@ -18,11 +18,15 @@ with open("extra_requirements/mlflow-requirements.txt") as f:
 with open("extra_requirements/tensorboard-requirements.txt") as f:
     tensorboard_plugin_requirements = f.read().splitlines()
 
+with open("extra_requirements/mongo-requirements.txt") as f:
+    mongo_requirements = f.read().splitlines()
+
 full_requirements = (
     requirements
     + zambeze_plugin_requirements
     + mlflow_plugin_requirements
     + tensorboard_plugin_requirements
+    + mongo_requirements
 )
 
 setup(

@@ -20,10 +20,13 @@ class TensorboardInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="tensorboard"):
         super().__init__(plugin_key)
         self.state_manager = InterceptorStateManager(self.settings)
+        self.log_metrics = set(self.settings.log_metrics)
 
     def intercept(self, message: dict):
+        message["used"] = message.pop("hparams")
+        message["generated"] = message.pop("tensors")
         print(f"Going to intercept: {message}")
-        super().post_intercept(message)
+        super().prepare_and_send(message)
 
     def callback(self):
         """
@@ -33,8 +36,8 @@ class TensorboardInterceptor(BaseInterceptor):
         let it go....
         """
         print("New tensorboard event file changed!")
-        # TODO: we're waiting for the file to be completely written.
-        # Is there a better way to be informed when the file is finished?
+        # TODO: now we're waiting for the file to be completely written.
+        # Is there a better way to inform when the file writing is finished?
         time.sleep(self.settings.watch_interval_sec)
 
         reader = SummaryReader(self.settings.file_path)
@@ -44,23 +47,24 @@ class TensorboardInterceptor(BaseInterceptor):
                 print(f"Already extracted metric from {child_event_file}.")
                 continue
             event_tags = child_event.get_tags()
-            msg = dict()
-            found_metric = False
+
+            msg = {}
             for tag in self.settings.log_tags:
                 if len(event_tags[tag]):
-                    msg["event_file"] = child_event_file
-                    msg["log_path"] = child_event.log_path
                     df = child_event.__getattribute__(tag)
                     df_dict = dict(zip(df.tag, df.value))
                     msg[tag] = df_dict
-                    if not found_metric:
-                        for tracked_metric in self.settings.log_metrics:
-                            if tracked_metric in df_dict:
-                                found_metric = True
-                                print("Found metric in this file!")
-                                break
-            if found_metric:
-                # Only intercept if we find a tracked metric in the event
+            # Only intercept if we find a tracked metric in the event
+            if msg.get("tensors") and len(
+                self.log_metrics.intersection(msg["tensors"].keys())
+            ):
+                msg["custom_metadata"] = {}
+                msg["custom_metadata"]["event_file"] = child_event_file
+                msg["custom_metadata"]["log_path"] = child_event.log_path
+                if os.path.isdir(child_event.log_path):
+                    event_files = os.listdir(child_event.log_path)
+                    if len(event_files):
+                        msg["task_id"] = event_files[0]
                 self.intercept(msg)
                 self.state_manager.add_element_id(child_event.log_path)
 
