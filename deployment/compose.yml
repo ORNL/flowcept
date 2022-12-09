@@ -6,8 +6,14 @@ services:
     ports:
       - 6379:6379
 
-  mlflow_interceptor_redis:
-    container_name: mlflow_interceptor_redis
+  flowcept_mongo:
+    container_name: flowcept_mongo
+    image: mongo:latest
+    ports:
+      - 27017:27017
+
+  local_interceptor_cache:
+    container_name: local_interceptor_cache
     image: redis
     ports:
       - 60379:6379

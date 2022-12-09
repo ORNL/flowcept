@@ -2,8 +2,9 @@ import unittest
 import threading
 import time
 
-from flowcept.flowcept_consumer.consumer import (
-    consume_intercepted_messages,
+from flowcept.flowcept_consumer.doc_db.document_db_dao import DocumentDBDao
+from flowcept.flowcept_consumer.main import (
+    main,
 )
 from flowcept.flowceptor.plugins.mlflow.mlflow_interceptor import (
     MLFlowInterceptor,
@@ -47,7 +48,7 @@ class TestMLFlow(unittest.TestCase):
     def test_get_run_data(self):
         run_uuid = self.test_pure_run_mlflow()
         run_data = self.interceptor.dao.get_run_data(run_uuid)
-        assert run_data.run_uuid == run_uuid
+        assert run_data.task_id == run_uuid
 
     def test_check_state_manager(self):
         self.interceptor.state_manager.reset()
@@ -64,16 +65,16 @@ class TestMLFlow(unittest.TestCase):
 
     def _init_consumption(self):
         threading.Thread(target=self.interceptor.observe, daemon=True).start()
-        threading.Thread(
-            target=consume_intercepted_messages, daemon=True
-        ).start()
+        threading.Thread(target=main, daemon=True).start()
         time.sleep(3)
 
     def test_observer_and_consumption(self):
+        doc_dao = DocumentDBDao()
         self._init_consumption()
         run_uuid = self.test_pure_run_mlflow()
         time.sleep(10)
         assert self.interceptor.state_manager.has_element_id(run_uuid) is True
+        assert len(doc_dao.find({"task_id": run_uuid})) > 0
 
 
 if __name__ == "__main__":
