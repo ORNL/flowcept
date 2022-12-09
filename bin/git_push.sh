@@ -49,7 +49,7 @@ if ! version_bump; then
   exit 1
 fi
 
-if ! commit_and_push $1; then
+if ! commit_and_push "${1}"; then
   echo "Sorry, could not commit and push"
   exit 1
 fi
