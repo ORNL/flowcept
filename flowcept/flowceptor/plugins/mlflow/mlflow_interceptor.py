@@ -22,7 +22,7 @@ class MLFlowInterceptor(BaseInterceptor):
         self.dao = MLFlowDAO(self.settings)
 
     def intercept(self, message: dict):
-        super().post_intercept(message)
+        super().prepare_and_send(message)
 
     def callback(self):
         """

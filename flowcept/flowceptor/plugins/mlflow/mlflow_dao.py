@@ -68,24 +68,24 @@ class MLFlowDAO:
         )
         conn = self._engine.connect()
         result_set = conn.execute(sql).fetchall()
-        run_data_dict = {"metrics": {}, "parameters": {}}
+        run_data_dict = {"used": {}, "generated": {}}
         for tuple_ in result_set:
             tuple_dict = tuple_._asdict()
             metric_key = tuple_dict.get("metric_key", None)
             metric_value = tuple_dict.get("metric_value", None)
             if metric_key and metric_value:
-                if not (metric_key in run_data_dict["metrics"]):
-                    run_data_dict["metrics"][metric_key] = None
-                run_data_dict["metrics"][metric_key] = metric_value
+                if not (metric_key in run_data_dict["generated"]):
+                    run_data_dict["generated"][metric_key] = None
+                run_data_dict["generated"][metric_key] = metric_value
 
             param_key = tuple_dict.get("parameter_key", None)
             param_value = tuple_dict.get("parameter_value", None)
             if param_key and param_value:
-                if not (param_key in run_data_dict["parameters"]):
-                    run_data_dict["parameters"][param_key] = None
-                run_data_dict["parameters"][param_key] = param_value
+                if not (param_key in run_data_dict["used"]):
+                    run_data_dict["used"][param_key] = None
+                run_data_dict["used"][param_key] = param_value
 
-            run_data_dict["run_uuid"] = tuple_dict["run_uuid"]
+            run_data_dict["task_id"] = tuple_dict["run_uuid"]
             run_data_dict["start_time"] = tuple_dict["start_time"]
             run_data_dict["end_time"] = tuple_dict["end_time"]
             run_data_dict["status"] = tuple_dict["status"]

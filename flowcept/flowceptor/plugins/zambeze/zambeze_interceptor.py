@@ -1,6 +1,7 @@
 import pika
 import sys
 import json
+from typing import Dict
 from flowcept.flowceptor.plugins.base_interceptor import (
     BaseInterceptor,
 )
@@ -10,17 +11,18 @@ class ZambezeInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="zambeze"):
         super().__init__(plugin_key)
 
-    def intercept(self, message: dict):
-
-        # TODO: make constants
+    def intercept(self, message: Dict):
         intercepted_message = {
-            "application_msg": {},
+            "task_id": message.get("msg_id"),
+            "activity_id": message.get("activity_id"),
+            "status": message.get("activity_status"),
+            "used": {
+                "arguments": message["arguments"],
+                "kwargs": message["kwargs"],
+                "files": message["files"],
+            },
         }
-        for key in self.settings.keys_to_intercept:
-            if key in message:
-                intercepted_message["application_msg"][key] = message[key]
-
-        super().post_intercept(intercepted_message)
+        super().prepare_and_send(intercepted_message)
 
     def observe(self):
         connection = pika.BlockingConnection(
