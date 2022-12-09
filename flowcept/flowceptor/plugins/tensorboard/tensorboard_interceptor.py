@@ -37,7 +37,7 @@ class TensorboardInterceptor(BaseInterceptor):
         """
         print("New tensorboard event file changed!")
         # TODO: now we're waiting for the file to be completely written.
-        # Is there a better way to be informed when the file is finished?
+        # Is there a better way to inform when the file writing is finished?
         time.sleep(self.settings.watch_interval_sec)
 
         reader = SummaryReader(self.settings.file_path)
@@ -54,7 +54,6 @@ class TensorboardInterceptor(BaseInterceptor):
                     df = child_event.__getattribute__(tag)
                     df_dict = dict(zip(df.tag, df.value))
                     msg[tag] = df_dict
-
             # Only intercept if we find a tracked metric in the event
             if msg.get("tensors") and len(
                 self.log_metrics.intersection(msg["tensors"].keys())

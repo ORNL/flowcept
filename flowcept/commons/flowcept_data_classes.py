@@ -6,13 +6,13 @@ from typing import Dict, AnyStr, Any
 class TaskMessage:
 
     plugin_id: AnyStr
-    used: Dict[AnyStr, Any]
+    used: Dict[AnyStr, Any]  # Used parameter and files
     msg_id: AnyStr
     task_id: AnyStr  # Any way to identify a task
     user: AnyStr
     utc_timestamp: float
     experiment_id: AnyStr = None
-    generated: Dict[AnyStr, Any] = None
+    generated: Dict[AnyStr, Any] = None  # Generated results and files
     start_time: float = None
     end_time: float = None
     workflow_id: AnyStr = None
