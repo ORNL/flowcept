@@ -21,9 +21,9 @@ class MLFlowSettings(BaseSettings):
 @dataclass
 class RunData:
 
-    run_uuid: str
+    task_id: str
     start_time: int
     end_time: int
-    metrics: dict
-    parameters: dict
+    used: dict
+    generated: dict
     status: str
