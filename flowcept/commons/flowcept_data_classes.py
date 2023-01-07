@@ -1,5 +1,14 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Dict, AnyStr, Any
+
+
+class Status(Enum):
+    SUBMITTED = "SUBMITTED"
+    WAITING = "WAITING"
+    RUNNING = "RUNNING"
+    FINISHED = "FINISHED"
+    ERROR = "ERROR"
 
 
 @dataclass
@@ -17,7 +26,7 @@ class TaskMessage:
     end_time: float = None
     workflow_id: AnyStr = None
     activity_id: AnyStr = None
-    status: AnyStr = None
+    status: Status = None
     stdout: AnyStr = None
     stderr: AnyStr = None
     custom_metadata: Dict[AnyStr, Any] = None
