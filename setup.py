@@ -9,25 +9,23 @@ with open("README.md") as fh:
 with open("requirements.txt") as f:
     requirements = f.read().splitlines()
 
-with open("extra_requirements/zambeze-requirements.txt") as f:
-    zambeze_plugin_requirements = f.read().splitlines()
+full_requirements = requirements
 
-with open("extra_requirements/mlflow-requirements.txt") as f:
-    mlflow_plugin_requirements = f.read().splitlines()
+_EXTRA_REQUIREMENTS = [
+    "zambeze",
+    "mlflow",
+    "tensorboard",
+    "mongo",
+    "dask"
+]
 
-with open("extra_requirements/tensorboard-requirements.txt") as f:
-    tensorboard_plugin_requirements = f.read().splitlines()
+extras_requires = dict()
+for req in _EXTRA_REQUIREMENTS:
+    with open(f"extra_requirements/{req}-requirements.txt") as f:
+        extras_requires[req] = f.read().splitlines()
+        full_requirements.extend(extras_requires[req])
 
-with open("extra_requirements/mongo-requirements.txt") as f:
-    mongo_requirements = f.read().splitlines()
-
-full_requirements = (
-    requirements
-    + zambeze_plugin_requirements
-    + mlflow_plugin_requirements
-    + tensorboard_plugin_requirements
-    + mongo_requirements
-)
+extras_requires["full"] = full_requirements
 
 setup(
     name=PROJECT_NAME,
@@ -41,12 +39,7 @@ setup(
     url="https://github.com/ORNL/flowcept",
     include_package_data=True,
     install_requires=requirements,
-    extras_require={
-        "full": full_requirements,
-        "mlflow": mlflow_plugin_requirements,
-        "zambeze": zambeze_plugin_requirements,
-        "tensorboard": tensorboard_plugin_requirements,
-    },
+    extras_require=extras_requires,
     packages=find_packages(),
     classifiers=[
         "License :: OSI Approved :: MIT License",
