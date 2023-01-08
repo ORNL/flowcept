@@ -11,13 +11,7 @@ with open("requirements.txt") as f:
 
 full_requirements = requirements
 
-_EXTRA_REQUIREMENTS = [
-    "zambeze",
-    "mlflow",
-    "tensorboard",
-    "mongo",
-    "dask"
-]
+_EXTRA_REQUIREMENTS = ["zambeze", "mlflow", "tensorboard", "mongo", "dask"]
 
 extras_requires = dict()
 for req in _EXTRA_REQUIREMENTS:
