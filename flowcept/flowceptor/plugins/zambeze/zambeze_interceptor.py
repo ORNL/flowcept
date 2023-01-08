@@ -42,12 +42,6 @@ class ZambezeInterceptor(BaseInterceptor):
         channel.start_consuming()
 
     def callback(self, ch, method, properties, body):
-        # TODO: consider making it a superclass method
-        """
-        function that decides what do to when a change is identified.
-        If it's an interesting change, it calls self.intercept; otherwise,
-        let it go....
-        """
         body_obj = json.loads(body)
 
         for key_value in self.settings.key_values_to_filter:

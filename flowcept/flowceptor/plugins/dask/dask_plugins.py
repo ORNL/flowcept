@@ -3,67 +3,17 @@ import pickle
 from dask.distributed import WorkerPlugin, SchedulerPlugin
 
 
+from flowcept.flowceptor.plugins.dask.dask_interceptor import DaskInterceptor
+
+
 class FlowceptDaskSchedulerPlugin(SchedulerPlugin):
-    @staticmethod
-    def get_run_spec_data(run_spec):
-        line = f""
-        if run_spec.get("function"):
-            line += (
-                f", function_call={pickle.loads(run_spec.get('function'))}"
-            )
-        if run_spec.get("args"):
-            line += f", function_args={pickle.loads(run_spec.get('args'))}"
-        if run_spec.get("kwargs"):
-            line += (
-                f", function_kwargs={pickle.loads(run_spec.get('kwargs'))}"
-            )
-        return line
 
     def __init__(self, scheduler):
-        self.scheduler = scheduler
-        self.filepath = "scheduler.log"
-        self.error_path = "scheduler_error.log"
-        self._should_get_all_transitions = True
-        self._should_get_input = True
-
-        for f in [self.filepath, self.error_path]:
-            if os.path.exists(f):
-                os.remove(f)
+        self.address = scheduler.address
+        self.interceptor = DaskInterceptor(scheduler)
 
     def transition(self, key, start, finish, *args, **kwargs):
-        with open(self.filepath, "a+") as f:
-
-            line = ""
-            if self._should_get_all_transitions:
-                line += (
-                    f"Key={key}, start={start}, finish={finish}, args={args}"
-                )
-                try:
-                    if kwargs:
-                        if kwargs.get("type"):
-                            kwargs["type"] = pickle.loads(kwargs.get("type"))
-                        line += f", kwargs={kwargs}; "
-                except Exception as e:
-                    with open(self.error_path, "a+") as ferr:
-                        ferr.write(
-                            f"should_get_all_transitions_error={repr(e)}\n"
-                        )
-
-            if self._should_get_input:
-                try:
-                    ts = self.scheduler.tasks[key]
-                    if hasattr(ts, "group_key"):
-                        line += f" FunctionName={ts.group_key};"
-                    if hasattr(ts, "run_spec"):
-                        line += FlowceptDaskSchedulerPlugin.get_run_spec_data(
-                            ts.run_spec
-                        )
-                except Exception as e:
-                    with open(self.error_path, "a+") as ferr:
-                        ferr.write(f"FullStateError={repr(e)}\n")
-
-            line += "\n"
-            f.write(line)
+        self.interceptor.callback(self.address,key, start, finish)
 
 
 class FlowceptDaskWorkerPlugin(WorkerPlugin):

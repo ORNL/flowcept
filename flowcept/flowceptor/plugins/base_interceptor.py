@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from typing import Dict
 import json
 from datetime import datetime
 from uuid import uuid4
@@ -24,7 +25,7 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         self._mq_dao = MQDao()
 
     @abstractmethod
-    def intercept(self, message: dict):
+    def intercept(self, message: Dict):
         """
         Method that intercepts the identified data
         :param message:
@@ -34,12 +35,16 @@ class BaseInterceptor(object, metaclass=ABCMeta):
 
     @abstractmethod
     def observe(self):
+        """
+        This method implements data observability over a data channel (e.g., a file, a DBMS, an MQ)
+        :return:
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def callback(self, *args, **kwargs):
         """
-        Method that decides what do to when a change is identified.
+        Method that implements the logic that decides what do to when a change (e.g., task state change) is identified.
         If it's an interesting change, it calls self.intercept; otherwise,
         let it go....
         """
@@ -53,11 +58,11 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         task_msg.public_ip = PUBLIC_IP
         task_msg.private_ip = PRIVATE_IP
 
-    def prepare_and_send(self, intercepted_message: dict):
+    def prepare_and_send(self, intercepted_message: Dict):
         now = datetime.utcnow()
         task_msg = TaskMessage(
             plugin_id=self.settings.key,
-            used=intercepted_message.get("used"),
+            used=intercepted_message.get("used", None),
             msg_id=str(uuid4()),
             task_id=intercepted_message.get("task_id"),
             user=FLOWCEPT_USER,

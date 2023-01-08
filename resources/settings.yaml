@@ -39,3 +39,11 @@ plugins:
     redis_port: 60379
 
     watch_interval_sec: 5
+
+  dask:
+    kind: dask
+    observer_type: outsourced
+    observer_subtype: None
+    redis_host: localhost
+    redis_port: 60379
+
