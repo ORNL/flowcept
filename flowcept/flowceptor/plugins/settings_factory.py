@@ -25,7 +25,7 @@ from flowcept.flowceptor.plugins.dask.dask_dataclasses import (
 )
 
 
-SettingsClasses = {
+SETTINGS_CLASSES = {
     Vocabulary.Settings.ZAMBEZE_KIND: ZambezeSettings,
     Vocabulary.Settings.MLFLOW_KIND: MLFlowSettings,
     Vocabulary.Settings.TENSORBOARD_KIND: TensorboardSettings,
@@ -35,8 +35,10 @@ SettingsClasses = {
 
 def _build_base_settings(kind, settings) -> BaseSettings:
 
-    settings_obj = SettingsClasses.get(kind)(**settings)
-    if hasattr(settings_obj, "file_path") and not os.path.isabs(settings_obj.file_path):
+    settings_obj = SETTINGS_CLASSES.get(kind)(**settings)
+    if hasattr(settings_obj, "file_path") and not os.path.isabs(
+        settings_obj.file_path
+    ):
         settings_obj.file_path = os.path.join(
             PROJECT_DIR_PATH, settings_obj.file_path
         )
@@ -49,7 +51,9 @@ def get_settings(plugin_key: str) -> BaseSettings:
         data = yaml.load(f, Loader=yaml.FullLoader)
     settings = data[Vocabulary.Settings.PLUGINS].get(plugin_key)
     if not settings:
-        raise Exception(f"You must specify the plugin <<{plugin_key}>> in the settings YAML file.")
+        raise Exception(
+            f"You must specify the plugin <<{plugin_key}>> in the settings YAML file."
+        )
     settings["key"] = plugin_key
     kind = settings[Vocabulary.Settings.KIND]
     settings_obj = _build_base_settings(kind, settings)
@@ -60,5 +64,3 @@ def get_settings(plugin_key: str) -> BaseSettings:
             KeyValue(**item) for item in settings_obj.key_values_to_filter
         ]
     return settings_obj
-
-
