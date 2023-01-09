@@ -10,14 +10,13 @@ from flowcept.flowceptor.plugins.base_interceptor import (
 class DaskSchedulerInterceptor(BaseInterceptor):
     def __init__(self, scheduler, plugin_key="dask"):
         self._scheduler = scheduler
-        self._filepath = "scheduler.log"
         self._error_path = "scheduler_error.log"
 
         # Scheduler-specific props
         self._should_get_all_transitions = True
         self._should_get_input = True
 
-        for f in [self._filepath, self._error_path]:
+        for f in [self._error_path]:
             if os.path.exists(f):
                 os.remove(f)
         super().__init__(plugin_key)
@@ -104,7 +103,6 @@ class DaskWorkerInterceptor(BaseInterceptor):
         return line
 
     def __init__(self, plugin_key="dask"):
-        self._filepath = "worker.log"
         self._error_path = "worker_error.log"
         self._plugin_key = plugin_key
 
@@ -113,7 +111,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
         self._worker_should_get_input = True
         self._worker_should_get_output = True
 
-        for f in [self._filepath, self._error_path]:
+        for f in [self._error_path]:
             if os.path.exists(f):
                 os.remove(f)
 
@@ -136,7 +134,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
         super().prepare_and_send(intercepted_message)
 
     def callback(self, task_id, start, finish, *args, **kwargs):
-        msg = {}
+        msg = {"task_id": task_id}
         line = ""
         if self._worker_should_get_input and start == "released":
             line = f"Worker={self._worker.worker_address}; Key={task_id}; Start={start}; Finish={finish};"

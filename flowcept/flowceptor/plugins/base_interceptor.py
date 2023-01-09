@@ -50,8 +50,14 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         """
         raise NotImplementedError()
 
-    @staticmethod
-    def enrich_task_message(task_msg: TaskMessage):
+    def enrich_task_message(self, task_msg: TaskMessage):
+        now = datetime.utcnow()
+        task_msg.utc_timestamp = now.timestamp()
+        task_msg.plugin_id = self.settings.key
+        task_msg.user = FLOWCEPT_USER
+        task_msg.experiment_id = EXPERIMENT_ID
+        task_msg.msg_id = str(uuid4())
+
         task_msg.sys_name = SYS_NAME
         task_msg.node_name = NODE_NAME
         task_msg.login_name = LOGIN_NAME
@@ -59,32 +65,35 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         task_msg.private_ip = PRIVATE_IP
 
     def prepare_and_send(self, intercepted_message: Dict):
-        now = datetime.utcnow()
-        task_msg = TaskMessage(
-            plugin_id=self.settings.key,
-            used=intercepted_message.get("used", None),
-            msg_id=str(uuid4()),
-            task_id=intercepted_message.get("task_id"),
-            user=FLOWCEPT_USER,
-            utc_timestamp=now.timestamp(),
-        )
-        task_msg.experiment_id = EXPERIMENT_ID
-        task_msg.generated = intercepted_message.get("generated", None)
-        task_msg.start_time = intercepted_message.get("start_time", None)
-        task_msg.end_time = intercepted_message.get("end_time", None)
-        task_msg.activity_id = intercepted_message.get("activity_id", None)
-        task_msg.status = intercepted_message.get("status", None)
-        task_msg.stdout = intercepted_message.get("stdout", None)
-        task_msg.stderr = intercepted_message.get("stderr", None)
-        task_msg.task_id = intercepted_message.get("task_id", None)
-        task_msg.custom_metadata = intercepted_message.get(
-            "custom_metadata", None
-        )
 
-        BaseInterceptor.enrich_task_message(task_msg)
+        task_msg = TaskMessage()
+        task_msg.task_id = intercepted_message.get("task_id")
+        if intercepted_message.get("used"):
+            task_msg.used = intercepted_message.get("used")
+        if intercepted_message.get("generated"):
+            task_msg.generated = intercepted_message.get("generated")
+        if intercepted_message.get("start_time"):
+            task_msg.start_time = intercepted_message.get("start_time")
+        if intercepted_message.get("end_time"):
+            task_msg.end_time = intercepted_message.get("end_time")
+        if intercepted_message.get("activity_id"):
+            task_msg.activity_id = intercepted_message.get("activity_id")
+        if intercepted_message.get("status"):
+            task_msg.status = intercepted_message.get("status")
+        if intercepted_message.get("stdout"):
+            task_msg.stdout = intercepted_message.get("stdout")
+        if intercepted_message.get("stderr"):
+            task_msg.stderr = intercepted_message.get("stderr")
+        if intercepted_message.get("custom_metadata"):
+            task_msg.custom_metadata = intercepted_message.get(
+                "custom_metadata"
+            )
 
+        self.enrich_task_message(task_msg)
+
+        dumped_task_msg = json.dumps(task_msg.__dict__)
         print(
             f"Going to send to Redis an intercepted message:"
-            f"\n\t{json.dumps(task_msg.__dict__)}"
+            f"\n\t{dumped_task_msg}"
         )
-        self._mq_dao.publish(json.dumps(task_msg.__dict__))
+        self._mq_dao.publish(dumped_task_msg)
