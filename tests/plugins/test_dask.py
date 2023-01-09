@@ -32,8 +32,8 @@ class TestDask(unittest.TestCase):
 
         # Instantiate and Register FlowceptPlugins, which are the ONLY
         # additional steps users would need to do in their code:
-        # scheduler_plugin = FlowceptDaskSchedulerPlugin(scheduler)
-        # scheduler.add_plugin(scheduler_plugin)
+        scheduler_plugin = FlowceptDaskSchedulerPlugin(scheduler)
+        scheduler.add_plugin(scheduler_plugin)
 
         worker_plugin = FlowceptDaskWorkerPlugin()
         client.register_worker_plugin(worker_plugin)
