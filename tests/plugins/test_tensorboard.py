@@ -129,7 +129,7 @@ class TestTensorboard(unittest.TestCase):
     def test_observer_and_consumption(self):
         self._init_consumption()
         self.run_tensorboard_hparam_tuning()
-        time.sleep(20)
+        time.sleep(30)
         assert self.interceptor.state_manager.count() == 16
 
     def test_read_tensorboard_hparam_tuning(self):

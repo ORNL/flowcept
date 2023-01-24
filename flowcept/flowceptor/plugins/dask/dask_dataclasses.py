@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import List
 
 from flowcept.flowceptor.plugins.base_settings_dataclasses import BaseSettings
 
@@ -10,5 +9,7 @@ class DaskSettings(BaseSettings):
     redis_port: int
     redis_host: str
     kind = "dask"
-    observer_type = "outsourced"
-    observer_subtype = None
+
+    def __post_init__(self):
+        self.observer_type = "outsourced"
+        self.observer_subtype = None

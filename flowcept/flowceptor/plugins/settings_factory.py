@@ -43,14 +43,13 @@ def _build_base_settings(kind: str, settings_dict: dict) -> BaseSettings:
             PROJECT_DIR_PATH, settings_obj.file_path
         )
 
-    # Add default values for abstract settings here:
-    if settings_obj.enrich_messages is None:
-        settings_obj.enrich_messages = True
+    # # Add default values for abstract settings here:
+    # if settings_obj.enrich_messages is None:
+    #     settings_obj.enrich_messages = True
     return settings_obj
 
 
 def get_settings(plugin_key: str) -> BaseSettings:
-    # TODO: use the factory pattern
     with open(SETTINGS_PATH) as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
     settings_dict = data[Vocabulary.Settings.PLUGINS][plugin_key]
