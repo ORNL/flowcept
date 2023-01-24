@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from typing import List, Dict
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional
 
 from flowcept.flowceptor.plugins.base_settings_dataclasses import (
     BaseSettings,
@@ -31,5 +31,7 @@ class ZambezeSettings(BaseSettings):
     key_values_to_filter: List[KeyValue]
     keys_to_intercept: List[str]
     kind = "zambeze"
-    observer_type = "message_broker"
-    observer_subtype = "rabbit_mq"
+
+    def __post_init__(self):
+        self.observer_type = "message_broker"
+        self.observer_subtype = "rabbit_mq"
