@@ -43,7 +43,8 @@ plugins:
   dask:
     kind: dask
     observer_type: outsourced
-    observer_subtype: None
     redis_host: localhost
     redis_port: 60379
+    enrich_messages: true
+
 

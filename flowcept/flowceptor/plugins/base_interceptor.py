@@ -89,7 +89,8 @@ class BaseInterceptor(object, metaclass=ABCMeta):
                 "custom_metadata"
             )
 
-        self.enrich_task_message(task_msg)
+        if self.settings.enrich_messages:
+            self.enrich_task_message(task_msg)
 
         dumped_task_msg = json.dumps(task_msg.__dict__)
         print(

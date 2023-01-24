@@ -16,3 +16,4 @@ class BaseSettings(abc.ABC):
     kind: str
     observer_type: str
     observer_subtype: str
+    enrich_messages: bool

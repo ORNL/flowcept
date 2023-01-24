@@ -2,6 +2,7 @@ from typing import Dict
 import os
 import pickle
 
+from flowcept.commons.flowcept_data_classes import TaskMessage
 from flowcept.flowceptor.plugins.base_interceptor import (
     BaseInterceptor,
 )
@@ -36,7 +37,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
             )
         return line
 
-    def intercept(self, message: Dict):
+    def intercept(self, message: TaskMessage):
         intercepted_message = {
             "task_id": message.get("task_id"),
             "custom_metadata": message.get("line"),
@@ -54,28 +55,31 @@ class DaskSchedulerInterceptor(BaseInterceptor):
         pass
 
     def callback(self, task_id, start, finish, *args, **kwargs):
+        task_msg = TaskMessage()
+        task_msg.task_id = task_id
         msg = {"task_id": task_id}
         line = ""
-        if self._should_get_all_transitions:
-            line += (
-                f"Key={task_id}, start={start}, finish={finish}, args={args}"
-            )
-            try:
-                if kwargs:
-                    if kwargs.get("type"):
-                        kwargs["type"] = pickle.loads(kwargs.get("type"))
-                    line += f", kwargs={kwargs}; "
-            except Exception as e:
-                with open(self._error_path, "a+") as ferr:
-                    ferr.write(
-                        f"should_get_all_transitions_error={repr(e)}\n"
-                    )
+        # if self._should_get_all_transitions:
+        #
+        #     line += (
+        #         f"Key={task_id}, start={start}, finish={finish}, args={args}"
+        #     )
+        #     try:
+        #         if kwargs:
+        #             if kwargs.get("type"):
+        #                 kwargs["type"] = pickle.loads(kwargs.get("type"))
+        #             line += f", kwargs={kwargs}; "
+        #     except Exception as e:
+        #         with open(self._error_path, "a+") as ferr:
+        #             ferr.write(
+        #                 f"should_get_all_transitions_error={repr(e)}\n"
+        #             )
 
         if self._should_get_input:
             try:
                 ts = self._scheduler.tasks[task_id]
                 if hasattr(ts, "group_key"):
-                    line += f" FunctionName={ts.group_key};"
+                    task_msg.activity_id = ts.group_key
                 if hasattr(ts, "run_spec"):
                     line += DaskSchedulerInterceptor.get_run_spec_data_in_scheduler(
                         ts.run_spec
