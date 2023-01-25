@@ -17,4 +17,3 @@ class BaseSettings(abc.ABC):
     enrich_messages: bool
     observer_type: str = field(init=False)
     observer_subtype: Optional[str] = field(init=False)
-
