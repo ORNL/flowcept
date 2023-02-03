@@ -8,6 +8,41 @@ from flowcept.flowceptor.plugins.base_interceptor import (
 )
 
 
+def get_run_spec_data(task_msg: TaskMessage, run_spec):
+    def _get_arg(arg_name):
+        if type(run_spec) == dict:
+            return run_spec.get(arg_name, None)
+        elif hasattr(run_spec, arg_name):
+            return getattr(run_spec, arg_name)
+        return None
+
+    arg_val = _get_arg("function")
+    # if arg_val is not None:
+    #     task_msg.activity_id = pickle.loads(arg_val)
+    arg_val = _get_arg("args")
+    if arg_val is not None:
+        picked_args = pickle.loads(arg_val)
+        if len(picked_args) and task_msg.used is not None:
+            task_msg.used.update({"args": picked_args})
+    arg_val = _get_arg("kwargs")
+    if arg_val is not None:
+        picked_kwargs = pickle.loads(arg_val)
+        if len(picked_kwargs) and task_msg.used is not None:
+            task_msg.used.update(picked_kwargs)
+
+#
+# def get_run_spec_data_in_worker(task_msg: TaskMessage, run_spec):
+#     if hasattr(run_spec, "function"):
+#         task_msg.activity_id = pickle.loads(run_spec.function)
+#     if hasattr(run_spec, "args") and run_spec.args:
+#         picked_args = pickle.loads(run_spec.get('args'))
+#         if len(picked_args):
+#             task_msg.used.update({"args": picked_args})
+#     if hasattr(run_spec, "kwargs") and run_spec.kwargs:
+#         picked_kwargs = pickle.loads(run_spec.get('kwargs'))
+#         if len(picked_kwargs):
+#             task_msg.used.update(picked_kwargs)
+
 class DaskSchedulerInterceptor(BaseInterceptor):
     def __init__(self, scheduler, plugin_key="dask"):
         self._scheduler = scheduler
@@ -22,21 +57,6 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                 os.remove(f)
         super().__init__(plugin_key)
 
-    @staticmethod
-    def get_run_spec_data_in_scheduler(run_spec):
-        line = f""
-        if run_spec.get("function"):
-            line += (
-                f", function_call={pickle.loads(run_spec.get('function'))}"
-            )
-        if run_spec.get("args"):
-            line += f", function_args={pickle.loads(run_spec.get('args'))}"
-        if run_spec.get("kwargs"):
-            line += (
-                f", function_kwargs={pickle.loads(run_spec.get('kwargs'))}"
-            )
-        return line
-
     def intercept(self, message: TaskMessage):
         super().prepare_and_send(message)
 
@@ -49,54 +69,29 @@ class DaskSchedulerInterceptor(BaseInterceptor):
 
     def callback(self, task_id, start, finish, *args, **kwargs):
         line = ""
-        # if self._should_get_all_transitions:
-        #
-        #     line += (
-        #         f"Key={task_id}, start={start}, finish={finish}, args={args}"
-        #     )
-        #     try:
-        #         if kwargs:
-        #             if kwargs.get("type"):
-        #                 kwargs["type"] = pickle.loads(kwargs.get("type"))
-        #             line += f", kwargs={kwargs}; "
-        #     except Exception as e:
-        #         with open(self._error_path, "a+") as ferr:
-        #             ferr.write(
-        #                 f"should_get_all_transitions_error={repr(e)}\n"
-        #             )
-
         if self._should_get_input:
             task_msg = TaskMessage()
             task_msg.task_id = task_id
+            task_msg.used = {}
             try:
                 ts = self._scheduler.tasks[task_id]
                 if hasattr(ts, "group_key"):
                     task_msg.activity_id = ts.group_key
                 if hasattr(ts, "run_spec"):
-                    line += DaskSchedulerInterceptor.get_run_spec_data_in_scheduler(
+                    get_run_spec_data(
+                        task_msg,
                         ts.run_spec
                     )
             except Exception as e:
+                # TODO: use logger
                 with open(self._error_path, "a+") as ferr:
                     ferr.write(f"FullStateError={repr(e)}\n")
 
-            task_msg.custom_metadata = {"line": line}
-            task_msg.used = {}
-            task_msg.status = Status.FINISHED
+            task_msg.status = Status.SUBMITTED
             self.intercept(task_msg)
 
 
 class DaskWorkerInterceptor(BaseInterceptor):
-    @staticmethod
-    def get_run_spec_data_in_worker(run_spec):
-        line = ""
-        if hasattr(run_spec, "function"):
-            line += f", function_call={pickle.loads(run_spec.function)}"
-        if hasattr(run_spec, "args") and run_spec.args:
-            line += f", function_args={pickle.loads(run_spec.args)}"
-        if hasattr(run_spec, "kwargs") and run_spec.kwargs:
-            line += f", function_kwargs={pickle.loads(run_spec.kwargs)}"
-        return line
 
     def __init__(self, plugin_key="dask"):
         self._error_path = "worker_error.log"
@@ -125,17 +120,19 @@ class DaskWorkerInterceptor(BaseInterceptor):
     def callback(self, task_id, start, finish, *args, **kwargs):
         task_msg = TaskMessage()
         task_msg.task_id = task_id
-        line = ""
+        #task_msg.used = {}
         if self._worker_should_get_input and start == "released":
-            line = f"Worker={self._worker.worker_address}; Key={task_id}; Start={start}; Finish={finish};"
+            #task_msg.status = Status.SUBMITTED
+            task_msg.private_ip = self._worker.worker_address
+            # task_msg.start_time = start
+            # task_msg.end_time = finish
             if task_id in self._worker.state.tasks:
                 try:
                     ts = self._worker.state.tasks[task_id]
                     if hasattr(ts, "run_spec"):
-                        line += (
-                            DaskWorkerInterceptor.get_run_spec_data_in_worker(
-                                ts.run_spec
-                            )
+                        get_run_spec_data(
+                            task_msg,
+                            ts.run_spec
                         )
                 except Exception as e:
                     with open(self._error_path, "a+") as ferr:
@@ -144,14 +141,12 @@ class DaskWorkerInterceptor(BaseInterceptor):
         if self._worker_should_get_output and finish == "memory":
             try:
                 if task_id in self._worker.data.memory:
-                    line += f"Worker={self._worker.worker_address}; Key={task_id}; Output={self._worker.data.memory[task_id]}\n"
+                    task_msg.generated = self._worker.data.memory[task_id]
             except Exception as e:
                 with open(self._error_path, "a+") as ferr:
                     ferr.write(f"should_get_output_error={repr(e)}\n")
-        line += "\n"
-        task_msg.custom_metadata = {"line": line}
-        task_msg.used = {}
-        task_msg.status = Status.FINISHED
+            task_msg.status = Status.FINISHED
+        task_msg.custom_metadata = {"worker": True}
         self.intercept(task_msg)
 
     def observe(self):

@@ -35,3 +35,7 @@ class TaskMessage:
     public_ip: AnyStr = None
     private_ip: AnyStr = None
     sys_name: AnyStr = None
+
+    @staticmethod
+    def get_dict_field_names():
+        return ["used", "generated", "custom_metadata"]

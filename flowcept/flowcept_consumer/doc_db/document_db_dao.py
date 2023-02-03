@@ -1,6 +1,6 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 from bson import ObjectId
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 
 from flowcept.configs import (
     MONGO_HOST,
@@ -42,9 +42,48 @@ class DocumentDBDao(object):
             print("Error when inserting many docs", e, str(doc_list))
             return None
 
-    def delete(self, doc_list: List[ObjectId]):
+    def insert_and_update_many(self, indexing_key, doc_list: List[Dict], nested_fields: Optional[List[str]] = None) -> bool:
+        indexed_buffer = {}
+        for doc in doc_list:
+            indexing_key_value = doc[indexing_key]
+            if doc[indexing_key] not in indexed_buffer:
+                indexed_buffer[indexing_key_value] = doc
+                continue
+
+            if nested_fields:
+                for field in nested_fields:
+                    if field in doc:
+                        if doc[field] is not None and len(doc[field]):
+                            if field in indexed_buffer[indexing_key_value]:
+                                indexed_buffer[indexing_key_value][field].update(doc[field])
+                            else:
+                                indexed_buffer[indexing_key_value][field] = doc[field]
+                        doc.pop(field)
+
+            indexed_buffer[indexing_key_value].update(**doc)
+
+        requests = []
         try:
-            self._collection.delete_many({"_id": {"$in": doc_list}})
+            for indexing_key_value in indexed_buffer:
+                requests.append(UpdateOne(
+                    filter={indexing_key: indexing_key_value},
+                    update=[{"$set": indexed_buffer[indexing_key_value]}],
+                    upsert=True))
+            self._collection.bulk_write(requests)
+            return True
+        except Exception as e:
+            print("Error when inserting many docs", e, str(doc_list))
+            return False
+
+    def delete_ids(self, ids_list: List[ObjectId]):
+        try:
+            self._collection.delete_many({"_id": {"$in": ids_list}})
+        except Exception as e:
+            print("Error when deleting documents.", e)
+
+    def delete_keys(self, key_name, keys_list: List[ObjectId]):
+        try:
+            self._collection.delete_many({key_name: {"$in": keys_list}})
         except Exception as e:
             print("Error when deleting documents.", e)
 

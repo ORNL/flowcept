@@ -12,20 +12,23 @@ def dummy_func1(x):
     return x * 2
 
 
-def dummy_func2(x):
-    return x + x
+def dummy_func2(y):
+    return y + y
 
 
-def dummy_func3(x):
-    return x + 2
+def dummy_func3(z):
+    return z + 2
+
+
+def _init_consumption():
+    threading.Thread(target=main, daemon=True).start()
+    sleep(3)
 
 
 class TestDask(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestDask, self).__init__(*args, **kwargs)
         self.client = TestDask._setup_local_dask_cluster()
-        #self.scheduler_interceptor = DaskSchedulerInterceptor()
-        #self.scheduler_interceptor = DaskSchedulerInterceptor()
 
     @staticmethod
     def _setup_local_dask_cluster():
@@ -48,20 +51,19 @@ class TestDask(unittest.TestCase):
         client.register_worker_plugin(worker_plugin)
 
         return client
-    def _init_consumption(self):
-        threading.Thread(target=main, daemon=True).start()
-        sleep(3)
 
     def test_pure_workflow(self):
-        i1 = 1
-        o1 = self.client.submit(dummy_func1, i1)
-        o2 = self.client.submit(dummy_func2, o1)
+        import numpy as np
+        i1 = np.random.random()
+        o1 = self.client.submit(dummy_func1, x=i1)
+        o2 = self.client.submit(dummy_func2, y=o1)
         print(o2.result())
+        print(o2.key)
         return o2.key
 
     def test_observer_and_consumption(self):
         doc_dao = DocumentDBDao()
-        self._init_consumption()
+        _init_consumption()
         o2_task_id = self.test_pure_workflow()
         sleep(10)
         assert len(doc_dao.find({"task_id": o2_task_id})) > 0

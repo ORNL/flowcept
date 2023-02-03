@@ -53,18 +53,36 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
     def enrich_task_message(self, task_msg: TaskMessage):
-        now = datetime.utcnow()
-        task_msg.utc_timestamp = now.timestamp()
-        task_msg.plugin_id = self.settings.key
-        task_msg.user = FLOWCEPT_USER
-        task_msg.experiment_id = EXPERIMENT_ID
-        task_msg.msg_id = str(uuid4())
+        if task_msg.utc_timestamp is None:
+            now = datetime.utcnow()
+            task_msg.utc_timestamp = now.timestamp()
 
-        task_msg.sys_name = SYS_NAME
-        task_msg.node_name = NODE_NAME
-        task_msg.login_name = LOGIN_NAME
-        task_msg.public_ip = PUBLIC_IP
-        task_msg.private_ip = PRIVATE_IP
+        if task_msg.plugin_id is None:
+            task_msg.plugin_id = self.settings.key
+
+        if task_msg.user is None:
+            task_msg.user = FLOWCEPT_USER
+
+        if task_msg.experiment_id is None:
+            task_msg.experiment_id = EXPERIMENT_ID
+
+        # if task_msg.msg_id is None:
+        #     task_msg.msg_id = str(uuid4())
+
+        if task_msg.sys_name is None:
+            task_msg.sys_name = SYS_NAME
+
+        if task_msg.node_name is None:
+            task_msg.node_name = NODE_NAME
+
+        if task_msg.login_name is None:
+            task_msg.login_name = LOGIN_NAME
+
+        if task_msg.public_ip is None:
+            task_msg.public_ip = PUBLIC_IP
+
+        if task_msg.private_ip is None:
+            task_msg.private_ip = PRIVATE_IP
 
     # @abstractmethod
     # def prepare_task_message(self, original_msg) -> TaskMessage:
@@ -97,6 +115,21 @@ class BaseInterceptor(object, metaclass=ABCMeta):
 
         if self.settings.enrich_messages:
             self.enrich_task_message(intercepted_message)
+
+        # Converting any arg to kwarg in the form {"arg1": val1, "arg2: val2}
+        for field in TaskMessage.get_dict_field_names():
+            field_val = getattr(intercepted_message, field)
+            if field_val is not None and type(field_val) != dict:
+                field_val_dict = {}
+
+                if type(field_val) == list:
+                    i = 0
+                    for arg in field_val:
+                        field_val_dict[f"arg{i}"] = arg
+                        i += 1
+                else:  # Scalar value
+                    field_val_dict["arg1"] = field_val
+                setattr(intercepted_message, field, field_val_dict)
 
         dumped_task_msg = json.dumps(intercepted_message.__dict__)
         print(
