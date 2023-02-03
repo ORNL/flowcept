@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Dict, AnyStr, Any
 
 
-class Status(Enum):
+class Status(str, Enum):  # inheriting from str here for JSON serialization
     SUBMITTED = "SUBMITTED"
     WAITING = "WAITING"
     RUNNING = "RUNNING"
@@ -18,7 +18,7 @@ class TaskMessage:
     utc_timestamp: float = None
     plugin_id: AnyStr = None
     user: AnyStr = None
-    msg_id: AnyStr = None  # TODO: Remove this in all plugins in the future
+    msg_id: AnyStr = None  # TODO: Remove this from all plugins in the future
     used: Dict[AnyStr, Any] = None  # Used parameter and files
     experiment_id: AnyStr = None
     generated: Dict[AnyStr, Any] = None  # Generated results and files

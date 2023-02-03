@@ -2,7 +2,7 @@ from typing import Dict
 import os
 import pickle
 
-from flowcept.commons.flowcept_data_classes import TaskMessage
+from flowcept.commons.flowcept_data_classes import TaskMessage, Status
 from flowcept.flowceptor.plugins.base_interceptor import (
     BaseInterceptor,
 )
@@ -38,14 +38,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
         return line
 
     def intercept(self, message: TaskMessage):
-        intercepted_message = {
-            "task_id": message.get("task_id"),
-            "custom_metadata": message.get("line"),
-            "activity_id": "",
-            "status": "",
-            "used": {},
-        }
-        super().prepare_and_send(intercepted_message)
+        super().prepare_and_send(message)
 
     def observe(self):
         """
@@ -55,9 +48,6 @@ class DaskSchedulerInterceptor(BaseInterceptor):
         pass
 
     def callback(self, task_id, start, finish, *args, **kwargs):
-        task_msg = TaskMessage()
-        task_msg.task_id = task_id
-        msg = {"task_id": task_id}
         line = ""
         # if self._should_get_all_transitions:
         #
@@ -76,6 +66,8 @@ class DaskSchedulerInterceptor(BaseInterceptor):
         #             )
 
         if self._should_get_input:
+            task_msg = TaskMessage()
+            task_msg.task_id = task_id
             try:
                 ts = self._scheduler.tasks[task_id]
                 if hasattr(ts, "group_key"):
@@ -88,10 +80,10 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                 with open(self._error_path, "a+") as ferr:
                     ferr.write(f"FullStateError={repr(e)}\n")
 
-            line += "\n"
-
-        msg["line"] = line
-        self.intercept(msg)
+            task_msg.custom_metadata = {"line": line}
+            task_msg.used = {}
+            task_msg.status = Status.FINISHED
+            self.intercept(task_msg)
 
 
 class DaskWorkerInterceptor(BaseInterceptor):
@@ -127,18 +119,12 @@ class DaskWorkerInterceptor(BaseInterceptor):
         self._worker = worker
         super().__init__(self._plugin_key)
 
-    def intercept(self, message: Dict):
-        intercepted_message = {
-            "task_id": message.get("task_id"),
-            "custom_metadata": message.get("line"),
-            "activity_id": "",
-            "status": "",
-            "used": {},
-        }
-        super().prepare_and_send(intercepted_message)
+    def intercept(self, message: TaskMessage):
+        super().prepare_and_send(message)
 
     def callback(self, task_id, start, finish, *args, **kwargs):
-        msg = {"task_id": task_id}
+        task_msg = TaskMessage()
+        task_msg.task_id = task_id
         line = ""
         if self._worker_should_get_input and start == "released":
             line = f"Worker={self._worker.worker_address}; Key={task_id}; Start={start}; Finish={finish};"
@@ -163,8 +149,10 @@ class DaskWorkerInterceptor(BaseInterceptor):
                 with open(self._error_path, "a+") as ferr:
                     ferr.write(f"should_get_output_error={repr(e)}\n")
         line += "\n"
-        msg["line"] = line
-        self.intercept(msg)
+        task_msg.custom_metadata = {"line": line}
+        task_msg.used = {}
+        task_msg.status = Status.FINISHED
+        self.intercept(task_msg)
 
     def observe(self):
         """
