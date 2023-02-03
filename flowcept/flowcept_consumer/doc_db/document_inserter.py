@@ -25,8 +25,9 @@ class DocumentInserter:
         self._buffer = list()
 
     def handle_message(self, intercepted_message: Dict):
-        dt = datetime.fromtimestamp(intercepted_message["utc_timestamp"])
-        intercepted_message["timestamp"] = dt.utcnow()
+        if "utc_timestamp" in intercepted_message:
+            dt = datetime.fromtimestamp(intercepted_message["utc_timestamp"])
+            intercepted_message["timestamp"] = dt.utcnow()
         self._buffer.append(intercepted_message)
         print("An intercepted message was received.")
         if len(self._buffer) >= MONGO_INSERTION_BUFFER_SIZE:
