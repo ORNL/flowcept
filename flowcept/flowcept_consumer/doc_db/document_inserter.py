@@ -8,6 +8,7 @@ from datetime import datetime
 from flowcept.configs import (
     MONGO_INSERTION_BUFFER_TIME,
     MONGO_INSERTION_BUFFER_SIZE,
+    DEBUG_MODE
 )
 from flowcept.commons.flowcept_data_classes import TaskMessage
 from flowcept.commons.mq_dao import MQDao
@@ -30,8 +31,9 @@ class DocumentInserter:
             dt = datetime.fromtimestamp(intercepted_message["utc_timestamp"])
             intercepted_message["timestamp"] = dt.utcnow()
 
-        # TODO: remove this
-        intercepted_message["debug"] = True
+        if DEBUG_MODE:
+            intercepted_message["debug"] = True
+
         self._buffer.append(intercepted_message)
         print("An intercepted message was received.")
         if len(self._buffer) >= MONGO_INSERTION_BUFFER_SIZE:

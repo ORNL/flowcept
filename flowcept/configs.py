@@ -14,7 +14,7 @@ _settings_path = os.path.join(PROJECT_DIR_PATH, "resources", "settings.yaml")
 SETTINGS_PATH = os.getenv("SETTINGS_PATH", _settings_path)
 
 FLOWCEPT_USER = os.getenv("FLOWCEPT_USER", "root")
-EXPERIMENT_ID = "super-experiment"
+EXPERIMENT_ID = os.getenv("EXPERIMENT_ID", "super-experiment")
 
 # REDIS SETTINGS
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
@@ -32,6 +32,9 @@ MONGO_INSERTION_BUFFER_TIME = int(os.getenv("MONGO_INSERTION_BUFFER_TIME", 5))
 MONGO_INSERTION_BUFFER_SIZE = int(
     os.getenv("MONGO_INSERTION_BUFFER_SIZE", 50)
 )
+
+DEBUG_MODE = True if os.getenv("DEBUG_MODE", "true").lower() in \
+                     ["true", "yes", "y", 1] else False
 
 # EXTRA MSG METADATA
 SYS_NAME = os.getenv("SYS_NAME", os.uname()[0])

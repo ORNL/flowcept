@@ -6,6 +6,7 @@ from flowcept.commons.flowcept_data_classes import TaskMessage, Status
 from flowcept.flowceptor.plugins.base_interceptor import (
     BaseInterceptor,
 )
+from flowcept.commons.utils import get_utc_now
 
 
 def get_run_spec_data(task_msg: TaskMessage, run_spec):
@@ -16,18 +17,19 @@ def get_run_spec_data(task_msg: TaskMessage, run_spec):
             return getattr(run_spec, arg_name)
         return None
 
-    arg_val = _get_arg("function")
-    # if arg_val is not None:
-    #     task_msg.activity_id = pickle.loads(arg_val)
+    task_msg.used = {}
     arg_val = _get_arg("args")
     if arg_val is not None:
         picked_args = pickle.loads(arg_val)
-        if len(picked_args) and task_msg.used is not None:
-            task_msg.used.update({"args": picked_args})
+        # pickled_args is always a tuple
+        i = 0
+        for arg in picked_args:
+            task_msg.used[f"arg{i}"] = arg
+            i += 1
     arg_val = _get_arg("kwargs")
     if arg_val is not None:
         picked_kwargs = pickle.loads(arg_val)
-        if len(picked_kwargs) and task_msg.used is not None:
+        if len(picked_kwargs):
             task_msg.used.update(picked_kwargs)
 
 #
@@ -43,13 +45,13 @@ def get_run_spec_data(task_msg: TaskMessage, run_spec):
 #         if len(picked_kwargs):
 #             task_msg.used.update(picked_kwargs)
 
+
 class DaskSchedulerInterceptor(BaseInterceptor):
     def __init__(self, scheduler, plugin_key="dask"):
         self._scheduler = scheduler
         self._error_path = "scheduler_error.log"
 
         # Scheduler-specific props
-        self._should_get_all_transitions = True
         self._should_get_input = True
 
         for f in [self._error_path]:
@@ -68,27 +70,25 @@ class DaskSchedulerInterceptor(BaseInterceptor):
         pass
 
     def callback(self, task_id, start, finish, *args, **kwargs):
-        line = ""
-        if self._should_get_input:
+        try:
             task_msg = TaskMessage()
             task_msg.task_id = task_id
-            task_msg.used = {}
-            try:
+            task_msg.custom_metadata = {"scheduler": self._scheduler.address_safe}
+            task_msg.status = Status.SUBMITTED
+            if task_id in self._scheduler.tasks:
                 ts = self._scheduler.tasks[task_id]
                 if hasattr(ts, "group_key"):
                     task_msg.activity_id = ts.group_key
-                if hasattr(ts, "run_spec"):
-                    get_run_spec_data(
-                        task_msg,
-                        ts.run_spec
-                    )
-            except Exception as e:
-                # TODO: use logger
-                with open(self._error_path, "a+") as ferr:
-                    ferr.write(f"FullStateError={repr(e)}\n")
 
-            task_msg.status = Status.SUBMITTED
+                if self._should_get_input:
+                    if hasattr(ts, "run_spec"):
+                        get_run_spec_data(task_msg, ts.run_spec)
             self.intercept(task_msg)
+
+        except Exception as e:
+            # TODO: use logger
+            with open(self._error_path, "a+") as ferr:
+                ferr.write(f"FullStateError={repr(e)}\n")
 
 
 class DaskWorkerInterceptor(BaseInterceptor):
@@ -118,36 +118,50 @@ class DaskWorkerInterceptor(BaseInterceptor):
         super().prepare_and_send(message)
 
     def callback(self, task_id, start, finish, *args, **kwargs):
-        task_msg = TaskMessage()
-        task_msg.task_id = task_id
-        #task_msg.used = {}
-        if self._worker_should_get_input and start == "released":
-            #task_msg.status = Status.SUBMITTED
-            task_msg.private_ip = self._worker.worker_address
-            # task_msg.start_time = start
-            # task_msg.end_time = finish
-            if task_id in self._worker.state.tasks:
-                try:
-                    ts = self._worker.state.tasks[task_id]
-                    if hasattr(ts, "run_spec"):
-                        get_run_spec_data(
-                            task_msg,
-                            ts.run_spec
-                        )
-                except Exception as e:
-                    with open(self._error_path, "a+") as ferr:
-                        ferr.write(f"\tFullStateError={repr(e)}\n")
+        try:
+            task_msg = TaskMessage()
+            task_msg.task_id = task_id
+            changed_task_msg = False  # TODO: ugly, try to do it in a better way
 
-        if self._worker_should_get_output and finish == "memory":
-            try:
+            ts = None
+            if task_id in self._worker.state.tasks:
+                ts = self._worker.state.tasks[task_id]
+
+            if start == "released":
+                changed_task_msg = True
+                task_msg.status = Status.RUNNING
+                task_msg.address = self._worker.worker_address
+                task_msg.start_time = get_utc_now()
+            elif finish == "memory":
+                changed_task_msg = True
+                task_msg.end_time = get_utc_now()
+                task_msg.status = Status.FINISHED
+            elif finish == "error":
+                changed_task_msg = True
+                task_msg.status = Status.ERROR
+                if task_id in self._worker.state.tasks:
+                    ts = self._worker.state.tasks[task_id]
+                    task_msg.stderr = {
+                        "exception": ts.exception_text,
+                        "traceback": ts.traceback_text
+                    }
+
+            if self._worker_should_get_input and ts:
+                if hasattr(ts, "run_spec"):
+                    get_run_spec_data(task_msg, ts.run_spec)
+
+            if self._worker_should_get_output:
                 if task_id in self._worker.data.memory:
-                    task_msg.generated = self._worker.data.memory[task_id]
-            except Exception as e:
-                with open(self._error_path, "a+") as ferr:
-                    ferr.write(f"should_get_output_error={repr(e)}\n")
-            task_msg.status = Status.FINISHED
-        task_msg.custom_metadata = {"worker": True}
-        self.intercept(task_msg)
+                    task_msg.generated = self._worker.data.memory[
+                        task_id]
+
+            if changed_task_msg:
+                self.intercept(task_msg)
+
+        except Exception as e:
+            with open(self._error_path, "a+") as ferr:
+                ferr.write(f"should_get_output_error={repr(e)}\n")
+
 
     def observe(self):
         """
