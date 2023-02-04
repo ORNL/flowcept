@@ -42,4 +42,7 @@ plugins:
     redis_port: 60379
     enrich_messages: false
     worker_should_get_input: false
+    worker_should_get_output: true
     scheduler_should_get_input: true
+    scheduler_create_timestamps: true
+    worker_create_timestamps: false
