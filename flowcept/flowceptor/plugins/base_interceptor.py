@@ -66,6 +66,9 @@ class BaseInterceptor(object, metaclass=ABCMeta):
     #     """
     #     raise NotImplementedError()
 
+    def prepare_task_msg(self, *args, **kwargs) -> TaskMessage:
+        raise NotImplementedError()
+
     @abstractmethod
     def observe(self):
         """
