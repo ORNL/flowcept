@@ -19,7 +19,7 @@ class Status(str, Enum):  # inheriting from str here for JSON serialization
 class TaskMessage:
 
     task_id: AnyStr = None  # Any way to identify a task
-    utc_timestamp: float = None  # TODO: remove this from all plugins
+    utc_timestamp: float = None
     plugin_id: AnyStr = None
     user: AnyStr = None
     msg_id: AnyStr = None  # TODO: Remove this from all plugins in the future

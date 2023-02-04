@@ -43,9 +43,6 @@ class DaskSchedulerInterceptor(BaseInterceptor):
 
         super().__init__(plugin_key)
 
-        # Scheduler-specific props
-        self._should_get_input = self.settings.scheduler_should_get_input
-
     def intercept(self, message: TaskMessage):
         super().prepare_and_send(message)
 
@@ -58,24 +55,38 @@ class DaskSchedulerInterceptor(BaseInterceptor):
 
     def callback(self, task_id, start, finish, *args, **kwargs):
         try:
-            task_msg = TaskMessage()
-            task_msg.task_id = task_id
-            task_msg.custom_metadata = {"scheduler": self._scheduler.address_safe}
-            task_msg.status = Status.SUBMITTED
             if task_id in self._scheduler.tasks:
                 ts = self._scheduler.tasks[task_id]
+
+            if ts.state == 'waiting':
+                task_msg = TaskMessage()
+                task_msg.task_id = task_id
+                task_msg.custom_metadata = {
+                    "scheduler": self._scheduler.address_safe
+                }
+                task_msg.status = Status.SUBMITTED
+                if self.settings.scheduler_create_timestamps:
+                    task_msg.utc_timestamp = get_utc_now()
+
                 if hasattr(ts, "group_key"):
                     task_msg.activity_id = ts.group_key
 
-                if self._should_get_input:
+                if self.settings.scheduler_should_get_input:
                     if hasattr(ts, "run_spec"):
                         get_run_spec_data(task_msg, ts.run_spec)
-            self.intercept(task_msg)
+                self.intercept(task_msg)
 
         except Exception as e:
             # TODO: use logger
             with open(self._error_path, "a+") as ferr:
                 ferr.write(f"FullStateError={repr(e)}\n")
+
+
+def get_times_from_task_state(task_msg, ts):
+    for times in ts.startstops:
+        if times["action"] == "compute":
+            task_msg.start_time = times["start"]
+            task_msg.end_time = times["stop"]
 
 
 class DaskWorkerInterceptor(BaseInterceptor):
@@ -86,8 +97,6 @@ class DaskWorkerInterceptor(BaseInterceptor):
 
         # Worker-specific props
         self._worker = None
-        self._worker_should_get_output = True
-        self._worker_should_get_input = False
 
         for f in [self._error_path]:
             if os.path.exists(f):
@@ -103,42 +112,49 @@ class DaskWorkerInterceptor(BaseInterceptor):
 
         # Note that both scheduler and worker get the exact same input.
         # Worker does not resolve intermediate inputs, just like the scheduler.
-        self._worker_should_get_input = self.settings.worker_should_get_input
 
     def intercept(self, message: TaskMessage):
         super().prepare_and_send(message)
 
     def callback(self, task_id, start, finish, *args, **kwargs):
         try:
+            if task_id not in self._worker.state.tasks:
+                return
+
+            ts = self._worker.state.tasks[task_id]
+
             task_msg = TaskMessage()
             task_msg.task_id = task_id
-            ts = None
-            if task_id in self._worker.state.tasks:
-                ts = self._worker.state.tasks[task_id]
 
-            if start == "released":
+            if ts.state == "executing":
                 task_msg.status = Status.RUNNING
                 task_msg.address = self._worker.worker_address
-                task_msg.start_time = get_utc_now()
-            elif finish == "memory":
-                task_msg.end_time = get_utc_now()
+                if self.settings.worker_create_timestamps:
+                    task_msg.start_time = get_utc_now()
+            elif ts.state == "memory":
                 task_msg.status = Status.FINISHED
-            elif finish == "error":
+                if self.settings.worker_create_timestamps:
+                    task_msg.end_time = get_utc_now()
+                else:
+                    get_times_from_task_state(task_msg, ts)
+            elif ts.state == "error":
                 task_msg.status = Status.ERROR
-                if task_id in self._worker.state.tasks:
-                    ts = self._worker.state.tasks[task_id]
-                    task_msg.stderr = {
-                        "exception": ts.exception_text,
-                        "traceback": ts.traceback_text
-                    }
+                if self.settings.worker_create_timestamps:
+                    task_msg.end_time = get_utc_now()
+                else:
+                    get_times_from_task_state(task_msg, ts)
+                task_msg.stderr = {
+                    "exception": ts.exception_text,
+                    "traceback": ts.traceback_text
+                }
             else:
                 return
 
-            if self._worker_should_get_input and ts:
+            if self.settings.worker_should_get_input:
                 if hasattr(ts, "run_spec"):
                     get_run_spec_data(task_msg, ts.run_spec)
 
-            if self._worker_should_get_output:
+            if self.settings.worker_should_get_output:
                 if task_id in self._worker.data.memory:
                     task_msg.generated = self._worker.data.memory[task_id]
 
