@@ -8,6 +8,7 @@ class Status(str, Enum):  # inheriting from str here for JSON serialization
     RUNNING = "RUNNING"
     FINISHED = "FINISHED"
     ERROR = "ERROR"
+    UNKNOWN = "UNKNOWN"
 
     @staticmethod
     def get_finished_statuses():

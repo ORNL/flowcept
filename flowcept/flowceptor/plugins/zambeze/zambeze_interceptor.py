@@ -3,37 +3,31 @@ import sys
 import json
 from typing import Dict
 
-from flowcept.commons.utils import get_utc_now
+from flowcept.commons.utils import get_utc_now, get_status_from_str
 from flowcept.commons.flowcept_data_classes import TaskMessage, Status
 from flowcept.flowceptor.plugins.base_interceptor import (
     BaseInterceptor,
 )
 
 
-def get_task_status(activity_status: str) -> Status:
-    if activity_status == "CREATED":
-        return Status.SUBMITTED
-
-
-def prepare_task_msg(zambeze_msg: Dict) -> TaskMessage:
-    task_msg = TaskMessage()
-    task_msg.utc_timestamp = get_utc_now()
-    task_msg.experiment_id = zambeze_msg.get("campaign_id")
-    task_msg.task_id = zambeze_msg.get("activity_id")
-    task_msg.activity_id = zambeze_msg.get("name")
-    task_msg.custom_metadata = {"command": zambeze_msg.get("command")}
-    task_msg.status = get_task_status(zambeze_msg.get("activity_status"))
-    task_msg.used = {
-        "args": zambeze_msg["arguments"],
-        "kwargs": zambeze_msg["kwargs"],
-        "files": zambeze_msg["files"],
-    }
-    return task_msg
-
-
 class ZambezeInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="zambeze"):
         super().__init__(plugin_key)
+
+    def prepare_task_msg(self, zambeze_msg: Dict) -> TaskMessage:
+        task_msg = TaskMessage()
+        task_msg.utc_timestamp = get_utc_now()
+        task_msg.experiment_id = zambeze_msg.get("campaign_id")
+        task_msg.task_id = zambeze_msg.get("activity_id")
+        task_msg.activity_id = zambeze_msg.get("name")
+        task_msg.custom_metadata = {"command": zambeze_msg.get("command")}
+        task_msg.status = get_status_from_str(zambeze_msg.get("activity_status"))
+        task_msg.used = {
+            "args": zambeze_msg["arguments"],
+            "kwargs": zambeze_msg["kwargs"],
+            "files": zambeze_msg["files"],
+        }
+        return task_msg
 
     def observe(self):
         connection = pika.BlockingConnection(
@@ -62,7 +56,7 @@ class ZambezeInterceptor(BaseInterceptor):
                         f"I'm an interceptor and I need to intercept this:"
                         f"\n\t{json.dumps(body_obj)}"
                     )
-                    task_msg = prepare_task_msg(body_obj)
+                    task_msg = self.prepare_task_msg(body_obj)
                     self.intercept(task_msg)
                     break
 
