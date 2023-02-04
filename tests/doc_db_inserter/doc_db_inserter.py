@@ -65,6 +65,35 @@ class TestDocDBInserter(unittest.TestCase):
             }
         ]
         self.doc_dao.insert_and_update_many("myid", docs)
-        # self.doc_dao.delete_keys("myid", [uid])
-        # c1 = self.doc_dao.count()
-        # assert c0 == c1
+        self.doc_dao.delete_keys("myid", [uid])
+        c1 = self.doc_dao.count()
+        assert c0 == c1
+
+    def test_status_updates(self):
+        c0 = self.doc_dao.count()
+        assert c0 >= 0
+        uid = str(uuid4())
+        docs = [
+            {
+                "myid": uid,
+                "debug": True,
+                "status": "SUBMITTED"
+            },
+            {
+                "myid": uid,
+                "debug": True,
+                "status": "RUNNING"
+            }
+        ]
+        self.doc_dao.insert_and_update_many("myid", docs)
+        docs = [
+            {
+                "myid": uid,
+                "debug": True,
+                "status": "FINISHED"
+            }
+        ]
+        self.doc_dao.insert_and_update_many("myid", docs)
+        self.doc_dao.delete_keys("myid", [uid])
+        c1 = self.doc_dao.count()
+        assert c0 == c1
