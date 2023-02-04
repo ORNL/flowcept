@@ -41,3 +41,5 @@ plugins:
     redis_host: localhost
     redis_port: 60379
     enrich_messages: false
+    worker_should_get_input: false
+    scheduler_should_get_input: true
