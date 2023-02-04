@@ -23,7 +23,7 @@ class DocumentInserter:
         self._previous_time = time()
 
     def _flush(self):
-        self._doc_dao.insert_and_update_many("task_id", self._buffer, TaskMessage.get_dict_field_names())
+        self._doc_dao.insert_and_update_many("task_id", self._buffer)
         self._buffer = list()
 
     def handle_message(self, intercepted_message: Dict):

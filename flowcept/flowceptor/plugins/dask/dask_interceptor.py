@@ -113,9 +113,6 @@ class DaskWorkerInterceptor(BaseInterceptor):
         # Note that both scheduler and worker get the exact same input.
         # Worker does not resolve intermediate inputs, just like the scheduler.
 
-    def intercept(self, message: TaskMessage):
-        super().prepare_and_send(message)
-
     def callback(self, task_id, start, finish, *args, **kwargs):
         try:
             if task_id not in self._worker.state.tasks:

@@ -1,11 +1,14 @@
+from time import sleep
 import unittest
 import json
 import threading
 import pika
+from uuid import uuid4
 
 from flowcept.flowcept_consumer.main import (
     main,
 )
+from flowcept.flowcept_consumer.doc_db.document_db_dao import DocumentDBDao
 from flowcept.flowceptor.plugins.zambeze.zambeze_interceptor import (
     ZambezeInterceptor,
 )
@@ -33,11 +36,12 @@ class TestZambeze(unittest.TestCase):
         threading.Thread(target=main, daemon=True).start()
 
     def test_send_message(self):
+        act_id = str(uuid4())
         msg = ZambezeMessage(
             **{
                 "name": "ImageMagick",
-                "activity_id": "xyz-uuid",
-                "campaign_id": "abc-uuid",
+                "activity_id": act_id,
+                "campaign_id": "campaign-uuid",
                 "origin_agent_id": "def-uuid",
                 "files": ["globus://Users/6o1/file.txt"],
                 "command": "convert",
@@ -63,9 +67,9 @@ class TestZambeze(unittest.TestCase):
 
         print(" [x] Sent msg")
         self._connection.close()
-        import time
-
-        time.sleep(10)
+        sleep(10)
+        doc_dao = DocumentDBDao()
+        assert len(doc_dao.find({"task_id": act_id})) > 0
 
 
 if __name__ == "__main__":
