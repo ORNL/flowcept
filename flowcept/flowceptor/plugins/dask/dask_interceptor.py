@@ -121,23 +121,18 @@ class DaskWorkerInterceptor(BaseInterceptor):
         try:
             task_msg = TaskMessage()
             task_msg.task_id = task_id
-            changed_task_msg = False  # TODO: ugly, try to do it in a better way
-
             ts = None
             if task_id in self._worker.state.tasks:
                 ts = self._worker.state.tasks[task_id]
 
             if start == "released":
-                changed_task_msg = True
                 task_msg.status = Status.RUNNING
                 task_msg.address = self._worker.worker_address
                 task_msg.start_time = get_utc_now()
             elif finish == "memory":
-                changed_task_msg = True
                 task_msg.end_time = get_utc_now()
                 task_msg.status = Status.FINISHED
             elif finish == "error":
-                changed_task_msg = True
                 task_msg.status = Status.ERROR
                 if task_id in self._worker.state.tasks:
                     ts = self._worker.state.tasks[task_id]
@@ -145,6 +140,8 @@ class DaskWorkerInterceptor(BaseInterceptor):
                         "exception": ts.exception_text,
                         "traceback": ts.traceback_text
                     }
+            else:
+                return
 
             if self._worker_should_get_input and ts:
                 if hasattr(ts, "run_spec"):
@@ -152,11 +149,9 @@ class DaskWorkerInterceptor(BaseInterceptor):
 
             if self._worker_should_get_output:
                 if task_id in self._worker.data.memory:
-                    task_msg.generated = self._worker.data.memory[
-                        task_id]
+                    task_msg.generated = self._worker.data.memory[task_id]
 
-            if changed_task_msg:
-                self.intercept(task_msg)
+            self.intercept(task_msg)
 
         except Exception as e:
             with open(self._error_path, "a+") as ferr:
