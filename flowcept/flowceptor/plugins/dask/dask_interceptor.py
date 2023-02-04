@@ -1,4 +1,3 @@
-from typing import Dict
 import os
 import pickle
 
@@ -32,32 +31,20 @@ def get_run_spec_data(task_msg: TaskMessage, run_spec):
         if len(picked_kwargs):
             task_msg.used.update(picked_kwargs)
 
-#
-# def get_run_spec_data_in_worker(task_msg: TaskMessage, run_spec):
-#     if hasattr(run_spec, "function"):
-#         task_msg.activity_id = pickle.loads(run_spec.function)
-#     if hasattr(run_spec, "args") and run_spec.args:
-#         picked_args = pickle.loads(run_spec.get('args'))
-#         if len(picked_args):
-#             task_msg.used.update({"args": picked_args})
-#     if hasattr(run_spec, "kwargs") and run_spec.kwargs:
-#         picked_kwargs = pickle.loads(run_spec.get('kwargs'))
-#         if len(picked_kwargs):
-#             task_msg.used.update(picked_kwargs)
-
 
 class DaskSchedulerInterceptor(BaseInterceptor):
     def __init__(self, scheduler, plugin_key="dask"):
         self._scheduler = scheduler
         self._error_path = "scheduler_error.log"
 
-        # Scheduler-specific props
-        self._should_get_input = True
-
         for f in [self._error_path]:
             if os.path.exists(f):
                 os.remove(f)
+
         super().__init__(plugin_key)
+
+        # Scheduler-specific props
+        self._should_get_input = self.settings.scheduler_should_get_input
 
     def intercept(self, message: TaskMessage):
         super().prepare_and_send(message)
@@ -99,8 +86,8 @@ class DaskWorkerInterceptor(BaseInterceptor):
 
         # Worker-specific props
         self._worker = None
-        self._worker_should_get_input = True
         self._worker_should_get_output = True
+        self._worker_should_get_input = False
 
         for f in [self._error_path]:
             if os.path.exists(f):
@@ -113,6 +100,10 @@ class DaskWorkerInterceptor(BaseInterceptor):
         """
         self._worker = worker
         super().__init__(self._plugin_key)
+
+        # Note that both scheduler and worker get the exact same input.
+        # Worker does not resolve intermediate inputs, just like the scheduler.
+        self._worker_should_get_input = self.settings.worker_should_get_input
 
     def intercept(self, message: TaskMessage):
         super().prepare_and_send(message)
@@ -156,7 +147,6 @@ class DaskWorkerInterceptor(BaseInterceptor):
         except Exception as e:
             with open(self._error_path, "a+") as ferr:
                 ferr.write(f"should_get_output_error={repr(e)}\n")
-
 
     def observe(self):
         """
