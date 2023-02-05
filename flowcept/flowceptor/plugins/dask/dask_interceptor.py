@@ -43,9 +43,6 @@ class DaskSchedulerInterceptor(BaseInterceptor):
 
         super().__init__(plugin_key)
 
-    def intercept(self, message: TaskMessage):
-        super().prepare_and_send(message)
-
     def observe(self):
         """
         Dask already observes task transitions,
@@ -87,7 +84,6 @@ def get_times_from_task_state(task_msg, ts):
         if times["action"] == "compute":
             task_msg.start_time = times["start"]
             task_msg.end_time = times["stop"]
-
 
 class DaskWorkerInterceptor(BaseInterceptor):
 
