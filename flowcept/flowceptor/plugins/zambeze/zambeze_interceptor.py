@@ -21,7 +21,9 @@ class ZambezeInterceptor(BaseInterceptor):
         task_msg.task_id = zambeze_msg.get("activity_id")
         task_msg.activity_id = zambeze_msg.get("name")
         task_msg.custom_metadata = {"command": zambeze_msg.get("command")}
-        task_msg.status = get_status_from_str(zambeze_msg.get("activity_status"))
+        task_msg.status = get_status_from_str(
+            zambeze_msg.get("activity_status")
+        )
         task_msg.used = {
             "args": zambeze_msg["arguments"],
             "kwargs": zambeze_msg["kwargs"],

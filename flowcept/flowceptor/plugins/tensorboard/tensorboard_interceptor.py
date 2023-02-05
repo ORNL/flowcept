@@ -62,7 +62,7 @@ class TensorboardInterceptor(BaseInterceptor):
                 task_msg.status = Status.FINISHED
                 task_msg.custom_metadata = {
                     "event_file": child_event_file,
-                    "log_path": child_event.log_path
+                    "log_path": child_event.log_path,
                 }
                 if os.path.isdir(child_event.log_path):
                     event_files = os.listdir(child_event.log_path)
