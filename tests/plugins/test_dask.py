@@ -5,7 +5,7 @@ import numpy as np
 
 from flowcept.flowcept_consumer.doc_db.document_db_dao import DocumentDBDao
 from flowcept.flowcept_consumer.doc_db.document_inserter import (
-    DocumentInserter
+    DocumentInserter,
 )
 
 
@@ -56,13 +56,13 @@ class TestDask(unittest.TestCase):
 
     def _init_consumption(self):
         self.consumer_thread = threading.Thread(
-            target=DocumentInserter().main,
-            daemon=True
+            target=DocumentInserter().main, daemon=True
         ).start()
         sleep(3)
 
     def test_pure_workflow(self):
         import numpy as np
+
         i1 = np.random.random()
         o1 = self.client.submit(dummy_func1, i1)
         o2 = self.client.submit(dummy_func2, o1)
@@ -111,8 +111,4 @@ class TestDask(unittest.TestCase):
         sleep(10)
         docs = doc_dao.find({"task_id": o2_task_id})
         assert len(docs) > 0
-        assert docs[0]['stderr']['exception']
-
-
-
-
+        assert docs[0]["stderr"]["exception"]

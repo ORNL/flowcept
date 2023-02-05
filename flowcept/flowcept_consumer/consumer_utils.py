@@ -30,8 +30,9 @@ def curate_task_msg(task_msg_dict: dict):
             task_msg_dict[field] = field_val_dict
 
 
-def curate_dict_task_messages(dict_task_messages: List[Dict],
-                              indexing_key: str):
+def curate_dict_task_messages(
+    dict_task_messages: List[Dict], indexing_key: str
+):
     """
        This function removes duplicates based on the
         indexing_key (e.g., task_id) locally before sending
@@ -49,7 +50,11 @@ def curate_dict_task_messages(dict_task_messages: List[Dict],
     indexed_buffer = {}
     for doc in dict_task_messages:
 
-        if (len(doc) == 1) and (indexing_key in doc) and (doc[indexing_key] in indexed_buffer):
+        if (
+            (len(doc) == 1)
+            and (indexing_key in doc)
+            and (doc[indexing_key] in indexed_buffer)
+        ):
             # This task_msg does not add any metadata
             continue
 
@@ -59,23 +64,26 @@ def curate_dict_task_messages(dict_task_messages: List[Dict],
             indexed_buffer[indexing_key_value] = doc
             continue
 
-        if 'finished' in indexed_buffer[indexing_key_value] and 'status' in doc:
-            doc.pop('status')
+        if (
+            "finished" in indexed_buffer[indexing_key_value]
+            and "status" in doc
+        ):
+            doc.pop("status")
 
-        if 'status' in doc:
+        if "status" in doc:
             for finished_status in Status.get_finished_statuses():
-                if finished_status == doc['status']:
-                    indexed_buffer[indexing_key_value]['finished'] = True
+                if finished_status == doc["status"]:
+                    indexed_buffer[indexing_key_value]["finished"] = True
 
         for field in TaskMessage.get_dict_field_names():
             if field in doc:
                 if doc[field] is not None and len(doc[field]):
                     if field in indexed_buffer[indexing_key_value]:
-                        indexed_buffer[indexing_key_value][
-                            field].update(doc[field])
+                        indexed_buffer[indexing_key_value][field].update(
+                            doc[field]
+                        )
                     else:
-                        indexed_buffer[indexing_key_value][field] = \
-                        doc[field]
+                        indexed_buffer[indexing_key_value][field] = doc[field]
                 doc.pop(field)
 
         indexed_buffer[indexing_key_value].update(**doc)

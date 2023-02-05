@@ -8,7 +8,7 @@ from datetime import datetime
 from flowcept.configs import (
     MONGO_INSERTION_BUFFER_TIME,
     MONGO_INSERTION_BUFFER_SIZE,
-    DEBUG_MODE
+    DEBUG_MODE,
 )
 from flowcept.commons.flowcept_data_classes import TaskMessage
 from flowcept.commons.mq_dao import MQDao

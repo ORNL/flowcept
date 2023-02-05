@@ -55,7 +55,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
             if task_id in self._scheduler.tasks:
                 ts = self._scheduler.tasks[task_id]
 
-            if ts.state == 'waiting':
+            if ts.state == "waiting":
                 task_msg = TaskMessage()
                 task_msg.task_id = task_id
                 task_msg.custom_metadata = {
@@ -85,8 +85,8 @@ def get_times_from_task_state(task_msg, ts):
             task_msg.start_time = times["start"]
             task_msg.end_time = times["stop"]
 
-class DaskWorkerInterceptor(BaseInterceptor):
 
+class DaskWorkerInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="dask"):
         self._error_path = "worker_error.log"
         self._plugin_key = plugin_key
@@ -138,7 +138,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
                     get_times_from_task_state(task_msg, ts)
                 task_msg.stderr = {
                     "exception": ts.exception_text,
-                    "traceback": ts.traceback_text
+                    "traceback": ts.traceback_text,
                 }
             else:
                 return

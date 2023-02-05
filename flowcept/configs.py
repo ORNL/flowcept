@@ -33,8 +33,11 @@ MONGO_INSERTION_BUFFER_SIZE = int(
     os.getenv("MONGO_INSERTION_BUFFER_SIZE", 50)
 )
 
-DEBUG_MODE = True if os.getenv("DEBUG_MODE", "true").lower() in \
-                     ["true", "yes", "y", 1] else False
+DEBUG_MODE = (
+    True
+    if os.getenv("DEBUG_MODE", "true").lower() in ["true", "yes", "y", 1]
+    else False
+)
 
 # EXTRA MSG METADATA
 SYS_NAME = os.getenv("SYS_NAME", os.uname()[0])
