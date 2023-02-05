@@ -57,15 +57,6 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         self.settings = get_settings(plugin_key)
         self._mq_dao = MQDao()
 
-    # @abstractmethod
-    # def intercept(self, message: TaskMessage):
-    #     """
-    #     Method that intercepts the identified data
-    #     :param message:
-    #     :return:
-    #     """
-    #     raise NotImplementedError()
-
     def prepare_task_msg(self, *args, **kwargs) -> TaskMessage:
         raise NotImplementedError()
 

@@ -8,8 +8,8 @@ def liveness():
     return "Server up!"
 
 
-@app.route("/interception", methods=["POST"])
-def interception():
+@app.route("/query/task_messages")
+def query():
     data = request.get_json()
     print(data)
     return jsonify(data), 200

@@ -5,6 +5,8 @@ import time
 from watchdog.observers import Observer
 from tbparse import SummaryReader
 
+from flowcept.commons.flowcept_data_classes import TaskMessage, Status
+from flowcept.commons.utils import get_utc_now
 from flowcept.flowceptor.plugins.interceptor_state_manager import (
     InterceptorStateManager,
 )
@@ -21,12 +23,6 @@ class TensorboardInterceptor(BaseInterceptor):
         super().__init__(plugin_key)
         self.state_manager = InterceptorStateManager(self.settings)
         self.log_metrics = set(self.settings.log_metrics)
-
-    def intercept(self, message: dict):
-        message["used"] = message.pop("hparams")
-        message["generated"] = message.pop("tensors")
-        print(f"Going to intercept: {message}")
-        super().prepare_and_send(message)
 
     def callback(self):
         """
@@ -48,24 +44,35 @@ class TensorboardInterceptor(BaseInterceptor):
                 continue
             event_tags = child_event.get_tags()
 
-            msg = {}
+            tracked_tags = {}
             for tag in self.settings.log_tags:
                 if len(event_tags[tag]):
                     df = child_event.__getattribute__(tag)
                     df_dict = dict(zip(df.tag, df.value))
-                    msg[tag] = df_dict
-            # Only intercept if we find a tracked metric in the event
-            if msg.get("tensors") and len(
-                self.log_metrics.intersection(msg["tensors"].keys())
+                    tracked_tags[tag] = df_dict
+
+            if tracked_tags.get("tensors") and len(
+                self.log_metrics.intersection(tracked_tags["tensors"].keys())
             ):
-                msg["custom_metadata"] = {}
-                msg["custom_metadata"]["event_file"] = child_event_file
-                msg["custom_metadata"]["log_path"] = child_event.log_path
+
+                task_msg = TaskMessage()
+                task_msg.used = tracked_tags.pop("hparams")
+                task_msg.generated = tracked_tags.pop("tensors")
+                task_msg.utc_timestamp = get_utc_now()
+                task_msg.status = Status.FINISHED
+                task_msg.custom_metadata = {
+                    "event_file": child_event_file,
+                    "log_path": child_event.log_path
+                }
                 if os.path.isdir(child_event.log_path):
                     event_files = os.listdir(child_event.log_path)
                     if len(event_files):
-                        msg["task_id"] = event_files[0]
-                self.intercept(msg)
+                        task_msg.task_id = event_files[0]
+
+                if task_msg.task_id is None:
+                    print("This is an error")  # TODO: logger
+
+                self.intercept(task_msg)
                 self.state_manager.add_element_id(child_event.log_path)
 
     def observe(self):
