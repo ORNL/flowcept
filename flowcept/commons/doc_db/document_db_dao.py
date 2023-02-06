@@ -20,27 +20,25 @@ class DocumentDBDao(object):
         db = client[MONGO_DB]
         self._collection = db[MONGO_COLLECTION]
 
-    def find(self, filter: dict,
-             projection=None,
-             limit=None,
-             sort=None,
-             remove_json_unserializables=True) -> List[Dict]:
+    def find(
+        self,
+        filter: dict,
+        projection=None,
+        limit=None,
+        sort=None,
+        remove_json_unserializables=True,
+    ) -> List[Dict]:
         if limit is None:
             limit = 0
 
         if remove_json_unserializables:
-            projection = {
-                "_id": 0,
-                "timestamp": 0
-            }
+            projection = {"_id": 0, "timestamp": 0}
 
         try:
             lst = list()
             for doc in self._collection.find(
-                    filter=filter,
-                    projection=projection,
-                    limit=limit,
-                    sort=sort):
+                filter=filter, projection=projection, limit=limit, sort=sort
+            ):
                 lst.append(doc)
             return lst
         except Exception as e:
