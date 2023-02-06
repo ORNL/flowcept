@@ -1,6 +1,7 @@
 import unittest
 import threading
 from time import sleep
+from uuid import uuid4
 import numpy as np
 
 from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
@@ -9,15 +10,15 @@ from flowcept.commons.doc_db.document_inserter import (
 )
 
 
-def dummy_func1(x):
+def dummy_func1(x, workflow_id=None):
     return x * 2
 
 
-def dummy_func2(y):
+def dummy_func2(y, workflow_id=None):
     return y + y
 
 
-def dummy_func3(z, w):
+def dummy_func3(z, w, workflow_id=None):
     print("This is a stdout message")
     return {"r": z + w}
 
@@ -64,10 +65,22 @@ class TestDask(unittest.TestCase):
         import numpy as np
 
         i1 = np.random.random()
-        o1 = self.client.submit(dummy_func1, i1)
-        o2 = self.client.submit(dummy_func2, o1)
+        wf_id = f"wf_{uuid4()}"
+        o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
+        o2 = self.client.submit(dummy_func2, o1, workflow_id=wf_id)
         print(o2.result())
         print(o2.key)
+        return o2.key
+
+    def test_long_workflow(self):
+        import numpy as np
+
+        i1 = np.random.random()
+        wf_id = f"wf_{uuid4()}"
+        o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
+        o2 = self.client.submit(dummy_func2, o1, workflow_id=wf_id)
+        o3 = self.client.submit(dummy_func3, o1, o2, workflow_id=wf_id)
+        print(o3.result())
         return o2.key
 
     def varying_args(self):
