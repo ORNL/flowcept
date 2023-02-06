@@ -2,7 +2,7 @@ name: Version Bumper
 on:
   pull_request:
     branches:
-      - dev
+      - disabled
 #      - '*'         # matches every branch that doesn't contain a '/'
 #      - '*/*'       # matches every branch containing a single '/'
 #      - '**'        # matches every branch
