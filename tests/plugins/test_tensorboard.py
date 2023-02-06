@@ -16,7 +16,7 @@ class TestTensorboard(unittest.TestCase):
         self.interceptor = TensorboardInterceptor()
         self.interceptor.state_manager.reset()
 
-    def run_tensorboard_hparam_tuning(self):
+    def test_run_tensorboard_hparam_tuning(self):
         """
         Code based on
          https://www.tensorflow.org/tensorboard/hyperparameter_tuning_with_hparams
@@ -26,6 +26,7 @@ class TestTensorboard(unittest.TestCase):
         import shutil
 
         logdir = self.interceptor.settings.file_path
+        print(logdir)
         if os.path.exists(logdir):
             print("Path exists, gonna delete")
             shutil.rmtree(logdir)
@@ -123,18 +124,18 @@ class TestTensorboard(unittest.TestCase):
 
     def _init_consumption(self):
         threading.Thread(target=self.interceptor.observe, daemon=True).start()
+        time.sleep(10)
         threading.Thread(target=main, daemon=True).start()
-        time.sleep(3)
+        time.sleep(10)
 
     def test_observer_and_consumption(self):
         self._init_consumption()
-        self.run_tensorboard_hparam_tuning()
-        time.sleep(20)
+        self.test_run_tensorboard_hparam_tuning()
+        time.sleep(60)
         assert self.interceptor.state_manager.count() == 16
 
     def test_read_tensorboard_hparam_tuning(self):
-
-        logdir = self.run_tensorboard_hparam_tuning()
+        logdir = self.test_run_tensorboard_hparam_tuning()
 
         from tbparse import SummaryReader
 
