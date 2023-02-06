@@ -10,19 +10,23 @@ from flowcept.flowcept_webserver.resources.query_rsrc import DocQuery
 
 from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 
-class QueryTest(unittest.TestCase):
 
+class QueryTest(unittest.TestCase):
     HOST = WEBSERVER_HOST
-    PORT = WEBSERVER_PORT+1
+    PORT = WEBSERVER_PORT + 1
     URL = f"http://{HOST}:{PORT}{BASE_ROUTE}{DocQuery.ROUTE}"
 
     def __init__(self, *args, **kwargs):
         super(QueryTest, self).__init__(*args, **kwargs)
-        Thread(target=app.run, kwargs={"host": QueryTest.HOST, "port": QueryTest.PORT}, daemon=True).start()
+        Thread(
+            target=app.run,
+            kwargs={"host": QueryTest.HOST, "port": QueryTest.PORT},
+            daemon=True,
+        ).start()
         sleep(2)
 
     def gen_some_mock_data(self, size=1):
-        with open('sample_data.json') as f:
+        with open("sample_data.json") as f:
             docs = json.load(f)
 
         i = 0

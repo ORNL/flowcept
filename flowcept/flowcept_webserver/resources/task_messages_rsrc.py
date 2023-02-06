@@ -9,7 +9,7 @@ class TaskMessages(Resource):
 
     def get(self):
         args = request.args
-        task_id = args.get('task_id', None)
+        task_id = args.get("task_id", None)
         filter = {}
         if task_id is not None:
             filter = {"task_id": task_id}

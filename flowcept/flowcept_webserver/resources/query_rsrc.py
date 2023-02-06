@@ -8,12 +8,11 @@ from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 class DocQuery(Resource):
     ROUTE = "/doc_query"
 
-
     def post(self):
         parser = reqparse.RequestParser()
-        req_args = ['filter', 'projection', 'sort', 'limit']
+        req_args = ["filter", "projection", "sort", "limit"]
         for arg in req_args:
-            parser.add_argument(arg, type=str, required=False, help='')
+            parser.add_argument(arg, type=str, required=False, help="")
         args = parser.parse_args()
 
         doc_args = {}
