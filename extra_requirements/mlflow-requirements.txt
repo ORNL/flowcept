@@ -1,6 +1,4 @@
-mlflow-skinny
-SQLAlchemy>=1.4.42
-alembic
-sqlparse
-watchdog>=2.1.9
-
+mlflow-skinny==2.1.1
+SQLAlchemy==1.4.42
+alembic==1.8.1
+watchdog==2.2.1

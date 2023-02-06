@@ -2,6 +2,9 @@ import sys
 import os
 import time
 from watchdog.observers import Observer
+
+from flowcept.commons.flowcept_data_classes import TaskMessage
+from flowcept.commons.utils import get_utc_now, get_status_from_str
 from flowcept.flowceptor.plugins.base_interceptor import (
     BaseInterceptor,
 )
@@ -13,6 +16,7 @@ from flowcept.flowceptor.plugins.mlflow.mlflow_dao import MLFlowDAO
 from flowcept.flowceptor.plugins.mlflow.interception_event_handler import (
     InterceptionEventHandler,
 )
+from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import RunData
 
 
 class MLFlowInterceptor(BaseInterceptor):
@@ -21,8 +25,14 @@ class MLFlowInterceptor(BaseInterceptor):
         self.state_manager = InterceptorStateManager(self.settings)
         self.dao = MLFlowDAO(self.settings)
 
-    def intercept(self, message: dict):
-        super().prepare_and_send(message)
+    def prepare_task_msg(self, mlflow_run_data: RunData) -> TaskMessage:
+        task_msg = TaskMessage()
+        task_msg.task_id = mlflow_run_data.task_id
+        task_msg.utc_timestamp = get_utc_now()
+        task_msg.status = get_status_from_str(mlflow_run_data.status)
+        task_msg.used = mlflow_run_data.used
+        task_msg.generated = mlflow_run_data.generated
+        return task_msg
 
     def callback(self):
         """
@@ -38,7 +48,8 @@ class MLFlowInterceptor(BaseInterceptor):
                 print(f"We need to intercept this Run: {run_uuid}")
                 run_data = self.dao.get_run_data(run_uuid)
                 self.state_manager.add_element_id(run_uuid)
-                self.intercept(run_data.__dict__)
+                task_msg = self.prepare_task_msg(run_data)
+                self.intercept(task_msg)
 
     def observe(self):
         event_handler = InterceptionEventHandler(

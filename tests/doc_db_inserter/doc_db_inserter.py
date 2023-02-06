@@ -1,6 +1,7 @@
 import unittest
+from uuid import uuid4
 
-from flowcept.flowcept_consumer.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 
 
 class TestDocDBInserter(unittest.TestCase):
@@ -20,7 +21,56 @@ class TestDocDBInserter(unittest.TestCase):
             ]
         )
         assert len(_ids) == 2
-        self.doc_dao.delete([_id])
-        self.doc_dao.delete(_ids)
+        self.doc_dao.delete_ids([_id])
+        self.doc_dao.delete_ids(_ids)
+        c1 = self.doc_dao.count()
+        assert c0 == c1
+
+    def test_db_insert_and_update_many(self):
+        c0 = self.doc_dao.count()
+        assert c0 >= 0
+        uid = str(uuid4())
+        docs = [
+            {"myid": uid, "debug": True, "name": "Renan"},
+            {"myid": uid, "debug": True, "name": "Francisco"},
+            {
+                "myid": uid,
+                "debug": True,
+                "last_name": "Souza",
+                "used": {"any": 1},
+            },
+            {
+                "myid": uid,
+                "debug": True,
+                "name": "Renan2",
+                "used": {"bla": 2},
+            },
+        ]
+        self.doc_dao.insert_and_update_many("myid", docs)
+        docs = [
+            {
+                "myid": uid,
+                "debug": True,
+                "name": "Renan2",
+                "used": {"blub": 3},
+            }
+        ]
+        self.doc_dao.insert_and_update_many("myid", docs)
+        self.doc_dao.delete_keys("myid", [uid])
+        c1 = self.doc_dao.count()
+        assert c0 == c1
+
+    def test_status_updates(self):
+        c0 = self.doc_dao.count()
+        assert c0 >= 0
+        uid = str(uuid4())
+        docs = [
+            {"myid": uid, "debug": True, "status": "SUBMITTED"},
+            {"myid": uid, "debug": True, "status": "RUNNING"},
+        ]
+        self.doc_dao.insert_and_update_many("myid", docs)
+        docs = [{"myid": uid, "debug": True, "status": "FINISHED"}]
+        self.doc_dao.insert_and_update_many("myid", docs)
+        self.doc_dao.delete_keys("myid", [uid])
         c1 = self.doc_dao.count()
         assert c0 == c1

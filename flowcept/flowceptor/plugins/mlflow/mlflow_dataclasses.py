@@ -6,7 +6,6 @@ from flowcept.flowceptor.plugins.base_settings_dataclasses import BaseSettings
 
 @dataclass
 class MLFlowSettings(BaseSettings):
-
     file_path: str
     log_params: List[str]
     log_metrics: List[str]
@@ -14,13 +13,14 @@ class MLFlowSettings(BaseSettings):
     redis_port: int
     redis_host: str
     kind = "mlflow"
-    observer_type = "file"
-    observer_subtype = "sqlite"
+
+    def __post_init__(self):
+        self.observer_type = "file"
+        self.observer_subtype = "sqlite"
 
 
 @dataclass
 class RunData:
-
     task_id: str
     start_time: int
     end_time: int
