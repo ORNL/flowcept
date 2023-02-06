@@ -1,4 +1,2 @@
-tensorboard==2.0.0
-tensorflow==2.10.0
 pandas==1.5.1
 tbparse==0.0.7
