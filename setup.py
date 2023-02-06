@@ -1,3 +1,4 @@
+from sys import platform
 from setuptools import setup, find_packages
 
 from flowcept import __version__
@@ -6,28 +7,41 @@ from flowcept.configs import PROJECT_NAME
 with open("README.md") as fh:
     long_description = fh.read()
 
-with open("requirements.txt") as f:
-    requirements = f.read().splitlines()
 
-with open("extra_requirements/zambeze-requirements.txt") as f:
-    zambeze_plugin_requirements = f.read().splitlines()
+def get_requirements(file_path):
+    with open(file_path) as f:
+        requirements = []
+        for line in f.read().splitlines():
+            if not line.startswith("#"):
+                requirements.append(line)
+    return requirements
 
-with open("extra_requirements/mlflow-requirements.txt") as f:
-    mlflow_plugin_requirements = f.read().splitlines()
 
-with open("extra_requirements/tensorboard-requirements.txt") as f:
-    tensorboard_plugin_requirements = f.read().splitlines()
+requirements = get_requirements("requirements.txt")
+full_requirements = requirements
 
-with open("extra_requirements/mongo-requirements.txt") as f:
-    mongo_requirements = f.read().splitlines()
+# We don't install dev requirements in the user lib.
+_EXTRA_REQUIREMENTS = [
+    "zambeze",
+    "mlflow",
+    "tensorboard",
+    "mongo",
+    "dask",
+    "webserver",
+]
 
-full_requirements = (
-    requirements
-    + zambeze_plugin_requirements
-    + mlflow_plugin_requirements
-    + tensorboard_plugin_requirements
-    + mongo_requirements
-)
+MAC_REQUIRES = []
+
+extras_requires = dict()
+for req in _EXTRA_REQUIREMENTS:
+    if req in MAC_REQUIRES and platform == "darwin":
+        req_path = f"extra_requirements/{req}-requirements-mac.txt"
+    else:
+        req_path = f"extra_requirements/{req}-requirements.txt"
+    extras_requires[req] = get_requirements(req_path)
+    full_requirements.extend(extras_requires[req])
+
+extras_requires["full"] = full_requirements
 
 setup(
     name=PROJECT_NAME,
@@ -41,12 +55,7 @@ setup(
     url="https://github.com/ORNL/flowcept",
     include_package_data=True,
     install_requires=requirements,
-    extras_require={
-        "full": full_requirements,
-        "mlflow": mlflow_plugin_requirements,
-        "zambeze": zambeze_plugin_requirements,
-        "tensorboard": tensorboard_plugin_requirements,
-    },
+    extras_require=extras_requires,
     packages=find_packages(),
     classifiers=[
         "License :: OSI Approved :: MIT License",
@@ -59,6 +68,6 @@ setup(
         "Topic :: Documentation :: Sphinx",
         "Topic :: System :: Distributed Computing",
     ],
-    python_requires=">=3.9",  # TODO: Do we really need py3.9?
+    python_requires=">=3.10",  # TODO: Do we really need py3.10?
     # scripts=["bin/flowcept"],
 )

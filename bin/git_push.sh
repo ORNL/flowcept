@@ -6,8 +6,11 @@ function help()
     exit 2
 }
 
-function code_check() {
+function code_check_black() {
   black --check .
+}
+
+function code_check_flake() {
   flake8 .
 }
 
@@ -25,7 +28,6 @@ function commit_and_push() {
   git add .
   git status
   git commit -m "${1}"
-  echo "${1}"
   git push
 }
 
@@ -34,23 +36,29 @@ if [ "$VALID_ARGUMENTS" -eq 0 ]; then
   help
 fi
 
-if ! code_check; then
-  echo "Sorry, code check did not pass"
+if ! code_check_black ; then
+  echo "Sorry, code check did not pass."
   exit 1
 fi
 
+if ! code_check_flake ; then
+  echo "Sorry, code check did not pass."
+  exit 1
+fi
+
+
 if ! pull_check; then
-  echo "Sorry, could not pull from repository"
+  echo "Sorry, could not pull from repository."
   exit 1
 fi
 
 if ! version_bump; then
-  echo "Sorry, could not bump version"
+  echo "Sorry, could not bump version."
   exit 1
 fi
 
 if ! commit_and_push "${1}"; then
-  echo "Sorry, could not commit and push"
+  echo "Sorry, could not commit and push."
   exit 1
 fi
 

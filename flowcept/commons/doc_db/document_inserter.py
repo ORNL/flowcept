@@ -8,9 +8,10 @@ from datetime import datetime
 from flowcept.configs import (
     MONGO_INSERTION_BUFFER_TIME,
     MONGO_INSERTION_BUFFER_SIZE,
+    DEBUG_MODE,
 )
 from flowcept.commons.mq_dao import MQDao
-from flowcept.flowcept_consumer.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 
 
 class DocumentInserter:
@@ -21,12 +22,17 @@ class DocumentInserter:
         self._previous_time = time()
 
     def _flush(self):
-        self._doc_dao.insert_many(self._buffer)
+        self._doc_dao.insert_and_update_many("task_id", self._buffer)
         self._buffer = list()
 
     def handle_message(self, intercepted_message: Dict):
-        dt = datetime.fromtimestamp(intercepted_message["utc_timestamp"])
-        intercepted_message["timestamp"] = dt.utcnow()
+        if "utc_timestamp" in intercepted_message:
+            dt = datetime.fromtimestamp(intercepted_message["utc_timestamp"])
+            intercepted_message["timestamp"] = dt.utcnow()
+
+        if DEBUG_MODE:
+            intercepted_message["debug"] = True
+
         self._buffer.append(intercepted_message)
         print("An intercepted message was received.")
         if len(self._buffer) >= MONGO_INSERTION_BUFFER_SIZE:

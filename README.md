@@ -54,15 +54,29 @@ $ docker run -p 60379:6379  --name local_interceptor_cache -d redis
 ```
 
 
-## RabbitMQ for Zambeze plugin
-```bash
-$ docker run -it --rm --name rabbitmq -d -p 5672:5672 -p 15672:15672 rabbitmq:3.11-management
-```
+
 
 ## MongoDB
 ```
 $ docker run --name mongo -d -p 27017:27017 mongo
 ```
+
+# Plugins-specific info
+
+You can run `pip install flowcept[plugin_name]` to install requirements for a specific plugin, instead of installing the
+whole package.
+
+### RabbitMQ for Zambeze plugin
+```bash
+$ docker run -it --rm --name rabbitmq -d -p 5672:5672 -p 15672:15672 rabbitmq:3.11-management
+```
+
+### Tensorboard
+
+If you're on mac, `pip install` may not work out of the box because of Tensorflow library. 
+You may need to `pip install tensorflow-macos` instead of the `tensorflow` lib available in the tensorboard-requirements.
+
+
 
 # See also
 
