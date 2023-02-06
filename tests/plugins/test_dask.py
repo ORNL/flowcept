@@ -3,8 +3,8 @@ import threading
 from time import sleep
 import numpy as np
 
-from flowcept.flowcept_consumer.doc_db.document_db_dao import DocumentDBDao
-from flowcept.flowcept_consumer.doc_db.document_inserter import (
+from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.doc_db.document_inserter import (
     DocumentInserter,
 )
 

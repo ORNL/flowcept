@@ -2,7 +2,7 @@ import unittest
 import threading
 import time
 
-from flowcept.flowcept_consumer.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 from flowcept.flowcept_consumer.main import (
     main,
 )

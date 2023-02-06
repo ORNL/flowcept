@@ -1,8 +1,7 @@
 import unittest
 from uuid import uuid4
-from bson import ObjectId
 
-from flowcept.flowcept_consumer.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 
 
 class TestDocDBInserter(unittest.TestCase):
