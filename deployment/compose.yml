@@ -1,4 +1,5 @@
 version: '3.8'
+name: flowcept
 services:
   flowcept_redis:
     container_name: flowcept_redis

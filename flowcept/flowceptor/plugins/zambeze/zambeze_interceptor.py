@@ -2,6 +2,9 @@ import pika
 import sys
 import json
 from typing import Dict
+
+from flowcept.commons.utils import get_utc_now, get_status_from_str
+from flowcept.commons.flowcept_data_classes import TaskMessage, Status
 from flowcept.flowceptor.plugins.base_interceptor import (
     BaseInterceptor,
 )
@@ -11,18 +14,22 @@ class ZambezeInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="zambeze"):
         super().__init__(plugin_key)
 
-    def intercept(self, message: Dict):
-        intercepted_message = {
-            "task_id": message.get("msg_id"),
-            "activity_id": message.get("activity_id"),
-            "status": message.get("activity_status"),
-            "used": {
-                "arguments": message["arguments"],
-                "kwargs": message["kwargs"],
-                "files": message["files"],
-            },
+    def prepare_task_msg(self, zambeze_msg: Dict) -> TaskMessage:
+        task_msg = TaskMessage()
+        task_msg.utc_timestamp = get_utc_now()
+        task_msg.experiment_id = zambeze_msg.get("campaign_id")
+        task_msg.task_id = zambeze_msg.get("activity_id")
+        task_msg.activity_id = zambeze_msg.get("name")
+        task_msg.custom_metadata = {"command": zambeze_msg.get("command")}
+        task_msg.status = get_status_from_str(
+            zambeze_msg.get("activity_status")
+        )
+        task_msg.used = {
+            "args": zambeze_msg["arguments"],
+            "kwargs": zambeze_msg["kwargs"],
+            "files": zambeze_msg["files"],
         }
-        super().prepare_and_send(intercepted_message)
+        return task_msg
 
     def observe(self):
         connection = pika.BlockingConnection(
@@ -42,12 +49,6 @@ class ZambezeInterceptor(BaseInterceptor):
         channel.start_consuming()
 
     def callback(self, ch, method, properties, body):
-        # TODO: consider making it a superclass method
-        """
-        function that decides what do to when a change is identified.
-        If it's an interesting change, it calls self.intercept; otherwise,
-        let it go....
-        """
         body_obj = json.loads(body)
 
         for key_value in self.settings.key_values_to_filter:
@@ -57,7 +58,8 @@ class ZambezeInterceptor(BaseInterceptor):
                         f"I'm an interceptor and I need to intercept this:"
                         f"\n\t{json.dumps(body_obj)}"
                     )
-                    self.intercept(message=body_obj)
+                    task_msg = self.prepare_task_msg(body_obj)
+                    self.intercept(task_msg)
                     break
 
 
