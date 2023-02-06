@@ -10,9 +10,8 @@ from flowcept.configs import (
     MONGO_INSERTION_BUFFER_SIZE,
     DEBUG_MODE,
 )
-from flowcept.commons.flowcept_data_classes import TaskMessage
 from flowcept.commons.mq_dao import MQDao
-from flowcept.flowcept_consumer.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 
 
 class DocumentInserter:

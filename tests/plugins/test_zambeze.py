@@ -8,7 +8,7 @@ from uuid import uuid4
 from flowcept.flowcept_consumer.main import (
     main,
 )
-from flowcept.flowcept_consumer.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 from flowcept.flowceptor.plugins.zambeze.zambeze_interceptor import (
     ZambezeInterceptor,
 )

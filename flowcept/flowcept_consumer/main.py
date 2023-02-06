@@ -1,7 +1,7 @@
 import sys
 from threading import Thread
 
-from flowcept.flowcept_consumer.doc_db.document_inserter import (
+from flowcept.commons.doc_db.document_inserter import (
     DocumentInserter,
 )
 
