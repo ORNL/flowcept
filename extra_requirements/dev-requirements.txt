@@ -1,6 +1,4 @@
-pytest>=6.2.4
-flake8
-black
-tensorflow
-tensorboard
-numpy
+pytest==6.2.4
+flake8==5.0.4
+black==23.1.0
+numpy==1.23.4

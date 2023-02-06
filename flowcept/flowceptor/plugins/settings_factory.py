@@ -34,7 +34,6 @@ SETTINGS_CLASSES = {
 
 
 def _build_base_settings(kind: str, settings_dict: dict) -> BaseSettings:
-
     settings_obj = SETTINGS_CLASSES[kind](**settings_dict)
     if hasattr(settings_obj, "file_path") and not os.path.isabs(
         settings_obj.file_path

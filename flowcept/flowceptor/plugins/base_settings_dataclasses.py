@@ -11,7 +11,6 @@ class KeyValue:
 
 @dataclass
 class BaseSettings(abc.ABC):
-
     key: str
     kind: str
     enrich_messages: bool

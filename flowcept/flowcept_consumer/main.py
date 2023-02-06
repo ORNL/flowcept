@@ -7,7 +7,6 @@ from flowcept.commons.doc_db.document_inserter import (
 
 
 def main():
-
     document_inserter = DocumentInserter()
 
     Thread(

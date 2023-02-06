@@ -1,1 +1,2 @@
-dask[distributed]
+tomli==1.1.0
+dask[distributed]==2022.12.0

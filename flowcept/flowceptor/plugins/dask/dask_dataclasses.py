@@ -5,7 +5,6 @@ from flowcept.flowceptor.plugins.base_settings_dataclasses import BaseSettings
 
 @dataclass
 class DaskSettings(BaseSettings):
-
     redis_port: int
     redis_host: str
     worker_should_get_input: bool

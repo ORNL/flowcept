@@ -1,3 +1,4 @@
+from sys import platform
 from setuptools import setup, find_packages
 
 from flowcept import __version__
@@ -6,9 +7,17 @@ from flowcept.configs import PROJECT_NAME
 with open("README.md") as fh:
     long_description = fh.read()
 
-with open("requirements.txt") as f:
-    requirements = f.read().splitlines()
 
+def get_requirements(file_path):
+    with open(file_path) as f:
+        requirements = []
+        for line in f.read().splitlines():
+            if not line.startswith("#"):
+                requirements.append(line)
+    return requirements
+
+
+requirements = get_requirements("requirements.txt")
 full_requirements = requirements
 
 _EXTRA_REQUIREMENTS = [
@@ -20,11 +29,16 @@ _EXTRA_REQUIREMENTS = [
     "webserver",
 ]
 
+MAC_REQUIRES = ["tensorboard"]
+
 extras_requires = dict()
 for req in _EXTRA_REQUIREMENTS:
-    with open(f"extra_requirements/{req}-requirements.txt") as f:
-        extras_requires[req] = f.read().splitlines()
-        full_requirements.extend(extras_requires[req])
+    if req in MAC_REQUIRES and platform == "darwin":
+        req_path = f"extra_requirements/{req}-requirements-mac.txt"
+    else:
+        req_path = f"extra_requirements/{req}-requirements.txt"
+    extras_requires[req] = get_requirements(req_path)
+    full_requirements.extend(extras_requires[req])
 
 extras_requires["full"] = full_requirements
 
@@ -53,6 +67,6 @@ setup(
         "Topic :: Documentation :: Sphinx",
         "Topic :: System :: Distributed Computing",
     ],
-    python_requires=">=3.9",  # TODO: Do we really need py3.9?
+    python_requires=">=3.10",  # TODO: Do we really need py3.10?
     # scripts=["bin/flowcept"],
 )

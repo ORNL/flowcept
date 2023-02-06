@@ -9,7 +9,6 @@ from flowcept.flowceptor.plugins.base_settings_dataclasses import (
 
 @dataclass
 class ZambezeMessage:
-
     name: str
     activity_id: str
     campaign_id: str
@@ -24,7 +23,6 @@ class ZambezeMessage:
 
 @dataclass
 class ZambezeSettings(BaseSettings):
-
     host: str
     port: int
     queue_name: str

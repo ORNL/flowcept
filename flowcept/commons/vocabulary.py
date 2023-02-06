@@ -1,6 +1,5 @@
 class Vocabulary:
     class Settings:
-
         PLUGINS = "plugins"
         KIND = "kind"
 

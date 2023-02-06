@@ -5,7 +5,6 @@ from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 
 
 class TaskMessages(Resource):
-
     ROUTE = "/task_messages"
 
     def get(self):
