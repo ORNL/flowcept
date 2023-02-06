@@ -49,7 +49,6 @@ def curate_dict_task_messages(
     """
     indexed_buffer = {}
     for doc in dict_task_messages:
-
         if (
             (len(doc) == 1)
             and (indexing_key in doc)

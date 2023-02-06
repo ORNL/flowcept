@@ -84,7 +84,6 @@ class BaseInterceptor(object, metaclass=ABCMeta):
     #     raise NotImplementedError()
 
     def intercept(self, task_msg: TaskMessage):
-
         if self.settings.enrich_messages:
             _enrich_task_message(self.settings.key, task_msg)
 

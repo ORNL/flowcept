@@ -124,8 +124,9 @@ class TestTensorboard(unittest.TestCase):
 
     def _init_consumption(self):
         threading.Thread(target=self.interceptor.observe, daemon=True).start()
+        time.sleep(10)
         threading.Thread(target=main, daemon=True).start()
-        time.sleep(3)
+        time.sleep(10)
 
     def test_observer_and_consumption(self):
         self._init_consumption()
@@ -134,7 +135,6 @@ class TestTensorboard(unittest.TestCase):
         assert self.interceptor.state_manager.count() == 16
 
     def test_read_tensorboard_hparam_tuning(self):
-
         logdir = self.test_run_tensorboard_hparam_tuning()
 
         from tbparse import SummaryReader

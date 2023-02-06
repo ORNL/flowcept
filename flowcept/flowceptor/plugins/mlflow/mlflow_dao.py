@@ -8,7 +8,6 @@ from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import (
 
 
 class MLFlowDAO:
-
     _LIMIT = 10
     # TODO: This should not at all be hard coded.
     # This value needs to be greater than the amount of

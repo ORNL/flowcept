@@ -1,1 +1,1 @@
-flask_restful
+flask_restful==0.3.9

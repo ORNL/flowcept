@@ -18,7 +18,6 @@ class Status(str, Enum):  # inheriting from str here for JSON serialization
 # Not a dataclass because a dataclass stores keys even when there's no value,
 # adding unnecessary overhead.
 class TaskMessage:
-
     task_id: AnyStr = None  # Any way to identify a task
     utc_timestamp: float = None
     plugin_id: AnyStr = None

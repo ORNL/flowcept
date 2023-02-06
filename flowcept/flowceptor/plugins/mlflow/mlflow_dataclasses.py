@@ -6,7 +6,6 @@ from flowcept.flowceptor.plugins.base_settings_dataclasses import BaseSettings
 
 @dataclass
 class MLFlowSettings(BaseSettings):
-
     file_path: str
     log_params: List[str]
     log_metrics: List[str]
@@ -22,7 +21,6 @@ class MLFlowSettings(BaseSettings):
 
 @dataclass
 class RunData:
-
     task_id: str
     start_time: int
     end_time: int

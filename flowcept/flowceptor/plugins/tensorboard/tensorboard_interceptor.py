@@ -54,7 +54,6 @@ class TensorboardInterceptor(BaseInterceptor):
             if tracked_tags.get("tensors") and len(
                 self.log_metrics.intersection(tracked_tags["tensors"].keys())
             ):
-
                 task_msg = TaskMessage()
                 task_msg.used = tracked_tags.pop("hparams")
                 task_msg.generated = tracked_tags.pop("tensors")
