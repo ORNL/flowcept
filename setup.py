@@ -20,6 +20,7 @@ def get_requirements(file_path):
 requirements = get_requirements("requirements.txt")
 full_requirements = requirements
 
+# We don't install dev requirements in the user lib.
 _EXTRA_REQUIREMENTS = [
     "zambeze",
     "mlflow",
@@ -29,7 +30,7 @@ _EXTRA_REQUIREMENTS = [
     "webserver",
 ]
 
-MAC_REQUIRES = ["tensorboard"]
+MAC_REQUIRES = []
 
 extras_requires = dict()
 for req in _EXTRA_REQUIREMENTS:
