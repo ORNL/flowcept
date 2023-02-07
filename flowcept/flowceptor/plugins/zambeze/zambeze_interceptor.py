@@ -20,6 +20,7 @@ class ZambezeInterceptor(BaseInterceptor):
         task_msg.experiment_id = zambeze_msg.get("campaign_id")
         task_msg.task_id = zambeze_msg.get("activity_id")
         task_msg.activity_id = zambeze_msg.get("name")
+        task_msg.dependencies = zambeze_msg.get("depends_on")
         task_msg.custom_metadata = {"command": zambeze_msg.get("command")}
         task_msg.status = get_status_from_str(
             zambeze_msg.get("activity_status")

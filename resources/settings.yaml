@@ -40,7 +40,7 @@ plugins:
     kind: dask
     redis_host: localhost
     redis_port: 60379
-    enrich_messages: false
+    enrich_messages: true
     worker_should_get_input: false
     worker_should_get_output: true
     scheduler_should_get_input: true
