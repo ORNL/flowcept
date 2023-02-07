@@ -19,7 +19,6 @@ def dummy_func2(y, workflow_id=None):
 
 
 def dummy_func3(z, w, workflow_id=None):
-    print("This is a stdout message")
     return {"r": z + w}
 
 
@@ -81,7 +80,7 @@ class TestDask(unittest.TestCase):
         o2 = self.client.submit(dummy_func2, o1, workflow_id=wf_id)
         o3 = self.client.submit(dummy_func3, o1, o2, workflow_id=wf_id)
         print(o3.result())
-        return o2.key
+        return o3.key
 
     def varying_args(self):
         i1 = np.random.random()

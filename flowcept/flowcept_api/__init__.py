@@ -1,3 +1,8 @@
+from threading import Thread
+from time import sleep
+
+from flowcept.commons.doc_db.document_inserter import DocumentInserter
+
 import json
 from typing import List, Dict
 import requests
@@ -5,6 +10,22 @@ import requests
 from flowcept.configs import WEBSERVER_PORT, WEBSERVER_HOST
 from flowcept.flowcept_webserver.app import BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
+
+
+class FlowceptConsumerAPI(object):
+
+    def __init__(self):
+        self._consumer_thread: Thread = None
+
+    def start(self):
+        self._consumer_thread = Thread(target=DocumentInserter().main)
+        self._consumer_thread.start()
+        print("Flowcept Consumer starting...")
+        sleep(2)
+        print("Ok, we're consuming messages!")
+
+    # def close(self):
+    #     self._consumer_thread.join()
 
 
 class TaskQueryAPI(object):
