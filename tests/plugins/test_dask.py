@@ -4,6 +4,8 @@ from time import sleep
 from uuid import uuid4
 import numpy as np
 
+from dask.distributed import Client
+
 from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 from flowcept.commons.doc_db.document_inserter import (
     DocumentInserter,
@@ -27,6 +29,9 @@ def forced_error_func(x):
 
 
 class TestDask(unittest.TestCase):
+
+    client: Client = None
+
     @classmethod
     def setUpClass(cls):
         TestDask.client = TestDask._setup_local_dask_cluster()
@@ -88,6 +93,14 @@ class TestDask(unittest.TestCase):
         print(o1.result())
         print(o1.key)
         return o1.key
+
+    def test_map_workflow(self):
+        i1 = np.random.random(3)
+        wf_id = f"wf_{uuid4()}"
+        o1 = TestDask.client.map(dummy_func1, i1, workflow_id=wf_id)
+        [print(o.key, o.result()) for o in o1]
+        return o1
+
 
     def error_task_submission(self):
         i1 = np.random.random()
