@@ -26,7 +26,7 @@ def curate_task_msg(task_msg_dict: dict):
                     field_val_dict[f"arg{i}"] = arg
                     i += 1
             else:  # Scalar value
-                field_val_dict["arg1"] = field_val
+                field_val_dict["arg0"] = field_val
             task_msg_dict[field] = field_val_dict
 
 

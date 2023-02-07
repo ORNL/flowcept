@@ -28,8 +28,17 @@ def get_run_spec_data(task_msg: TaskMessage, run_spec):
     arg_val = _get_arg("kwargs")
     if arg_val is not None:
         picked_kwargs = pickle.loads(arg_val)
+        if "workflow_id" in picked_kwargs:
+            task_msg.workflow_id = picked_kwargs.pop("workflow_id")
         if len(picked_kwargs):
             task_msg.used.update(picked_kwargs)
+
+
+def get_task_deps(task_state, task_msg: TaskMessage):
+    if len(task_state.dependencies):
+        task_msg.dependencies = [t.key for t in task_state.dependencies]
+    if len(task_state.dependents):
+        task_msg.dependents = [t.key for t in task_state.dependents]
 
 
 class DaskSchedulerInterceptor(BaseInterceptor):
@@ -59,11 +68,15 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                 task_msg = TaskMessage()
                 task_msg.task_id = task_id
                 task_msg.custom_metadata = {
-                    "scheduler": self._scheduler.address_safe
+                    "scheduler": self._scheduler.address_safe,
+                    "scheduler_id": self._scheduler.id,
+                    "scheduler_pid": self._scheduler.proc.pid,
                 }
                 task_msg.status = Status.SUBMITTED
                 if self.settings.scheduler_create_timestamps:
                     task_msg.utc_timestamp = get_utc_now()
+
+                get_task_deps(ts, task_msg)
 
                 if hasattr(ts, "group_key"):
                     task_msg.activity_id = ts.group_key

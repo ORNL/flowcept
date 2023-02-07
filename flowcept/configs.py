@@ -55,3 +55,9 @@ except Exception as e:
 PUBLIC_IP = os.getenv("PUBLIC_IP", external_ip)
 
 PRIVATE_IP = os.getenv("PRIVATE_IP", socket.gethostbyname(socket.getfqdn()))
+
+
+#### Web Server
+
+WEBSERVER_HOST = os.getenv("WEBSERVER_HOST", "0.0.0.0")
+WEBSERVER_PORT = int(os.getenv("WEBSERVER_PORT", "5000"))
