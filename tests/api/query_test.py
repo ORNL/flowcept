@@ -6,7 +6,7 @@ from threading import Thread
 import requests
 from time import sleep
 from uuid import uuid4
-from flowcept.configs import WEBSERVER_PORT, WEBSERVER_HOST, TESTS_DIR_PATH
+from flowcept.configs import WEBSERVER_PORT, WEBSERVER_HOST
 from flowcept.flowcept_api import TaskQueryAPI
 from flowcept.flowcept_webserver.app import app, BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
