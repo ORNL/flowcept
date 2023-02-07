@@ -9,9 +9,7 @@ from flowcept.flowcept_consumer.main import (
     main,
 )
 from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
-from flowcept.flowceptor.plugins.zambeze.zambeze_interceptor import (
-    ZambezeInterceptor,
-)
+from flowcept import ZambezeInterceptor
 from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
     ZambezeMessage,
 )
