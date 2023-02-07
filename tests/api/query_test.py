@@ -42,8 +42,8 @@ def gen_some_mock_data(size=1):
 class QueryTest(unittest.TestCase):
     URL = f"http://{WEBSERVER_HOST}:{WEBSERVER_PORT}{BASE_ROUTE}{TaskQuery.ROUTE}"
 
-    def __init__(self, *args, **kwargs):
-        super(QueryTest, self).__init__(*args, **kwargs)
+    @classmethod
+    def setUpClass(cls):
         Thread(
             target=app.run,
             kwargs={"host": WEBSERVER_HOST, "port": WEBSERVER_PORT},

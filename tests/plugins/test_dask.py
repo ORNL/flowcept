@@ -27,10 +27,10 @@ def forced_error_func(x):
 
 
 class TestDask(unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        super(TestDask, self).__init__(*args, **kwargs)
-        self.client = TestDask._setup_local_dask_cluster()
-        self.consumer_thread = None
+    @classmethod
+    def setUpClass(cls):
+        TestDask.client = TestDask._setup_local_dask_cluster()
+        TestDask.consumer_thread = None
 
     @staticmethod
     def _setup_local_dask_cluster():
@@ -55,7 +55,7 @@ class TestDask(unittest.TestCase):
         return client
 
     def _init_consumption(self):
-        self.consumer_thread = threading.Thread(
+        TestDask.consumer_thread = threading.Thread(
             target=DocumentInserter().main, daemon=True
         ).start()
         sleep(3)
@@ -66,7 +66,7 @@ class TestDask(unittest.TestCase):
         i1 = np.random.random()
         wf_id = f"wf_{uuid4()}"
         o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
-        o2 = self.client.submit(dummy_func2, o1, workflow_id=wf_id)
+        o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
         print(o2.result())
         print(o2.key)
         return o2.key
@@ -76,22 +76,22 @@ class TestDask(unittest.TestCase):
 
         i1 = np.random.random()
         wf_id = f"wf_{uuid4()}"
-        o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
-        o2 = self.client.submit(dummy_func2, o1, workflow_id=wf_id)
-        o3 = self.client.submit(dummy_func3, o1, o2, workflow_id=wf_id)
+        o1 = TestDask.client.submit(dummy_func1, i1, workflow_id=wf_id)
+        o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
+        o3 = TestDask.client.submit(dummy_func3, o1, o2, workflow_id=wf_id)
         print(o3.result())
         return o3.key
 
     def varying_args(self):
         i1 = np.random.random()
-        o1 = self.client.submit(dummy_func3, i1, w=2)
+        o1 = TestDask.client.submit(dummy_func3, i1, w=2)
         print(o1.result())
         print(o1.key)
         return o1.key
 
     def error_task_submission(self):
         i1 = np.random.random()
-        o1 = self.client.submit(forced_error_func, i1)
+        o1 = TestDask.client.submit(forced_error_func, i1)
         try:
             print(o1.result())
         except:
@@ -101,7 +101,7 @@ class TestDask(unittest.TestCase):
 
     def test_observer_and_consumption(self):
         doc_dao = DocumentDBDao()
-        if self.consumer_thread is None:
+        if TestDask.consumer_thread is None:
             self._init_consumption()
         o2_task_id = self.test_pure_workflow()
         sleep(10)
@@ -109,7 +109,7 @@ class TestDask(unittest.TestCase):
 
     def test_observer_and_consumption_varying_args(self):
         doc_dao = DocumentDBDao()
-        if self.consumer_thread is None:
+        if TestDask.consumer_thread is None:
             self._init_consumption()
         o2_task_id = self.varying_args()
         sleep(10)
@@ -117,7 +117,7 @@ class TestDask(unittest.TestCase):
 
     def test_observer_and_consumption_error_task(self):
         doc_dao = DocumentDBDao()
-        if self.consumer_thread is None:
+        if TestDask.consumer_thread is None:
             self._init_consumption()
         o2_task_id = self.error_task_submission()
         sleep(10)
