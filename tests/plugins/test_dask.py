@@ -35,7 +35,7 @@ class TestDask(unittest.TestCase):
     @staticmethod
     def _setup_local_dask_cluster():
         from dask.distributed import Client, LocalCluster
-        from flowcept.flowceptor.plugins.dask.dask_plugins import (
+        from flowcept import (
             FlowceptDaskSchedulerPlugin,
             FlowceptDaskWorkerPlugin,
         )
