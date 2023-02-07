@@ -1,15 +1,42 @@
+import os.path
+import pathlib
 import unittest
 import json
 from threading import Thread
 import requests
 from time import sleep
 from uuid import uuid4
-from flowcept.configs import WEBSERVER_PORT, WEBSERVER_HOST
+from flowcept.configs import WEBSERVER_PORT, WEBSERVER_HOST, TESTS_DIR_PATH
 from flowcept.flowcept_python_api.task_query import TaskQueryAPI
 from flowcept.flowcept_webserver.app import app, BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
 from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
+
+
+def gen_some_mock_data(size=1):
+    fpath = os.path.join(
+        pathlib.Path(__file__).parent.resolve(), "sample_data.json"
+    )
+    with open(fpath) as f:
+        docs = json.load(f)
+
+    i = 0
+    new_docs = []
+    new_ids = []
+    for doc in docs:
+        if i >= size:
+            break
+
+        new_doc = doc.copy()
+        new_id = str(uuid4())
+        new_doc["task_id"] = new_id
+        new_doc.pop("_id")
+        new_docs.append(new_doc)
+        new_ids.append(new_id)
+        i += 1
+
+    return new_docs, new_ids
 
 
 class QueryTest(unittest.TestCase):
@@ -24,27 +51,6 @@ class QueryTest(unittest.TestCase):
         ).start()
         sleep(2)
 
-    def gen_some_mock_data(self, size=1):
-        with open("sample_data.json") as f:
-            docs = json.load(f)
-
-        i = 0
-        new_docs = []
-        new_ids = []
-        for doc in docs:
-            if i >= size:
-                break
-
-            new_doc = doc.copy()
-            new_id = str(uuid4())
-            new_doc["task_id"] = new_id
-            new_doc.pop("_id")
-            new_docs.append(new_doc)
-            new_ids.append(new_id)
-            i += 1
-
-        return new_docs, new_ids
-
     def test_query(self):
         _filter = {"task_id": "1234"}
         request_data = {"filter": json.dumps(_filter)}
@@ -52,7 +58,7 @@ class QueryTest(unittest.TestCase):
         r = requests.post(QueryTest.URL, json=request_data)
         assert r.status_code == 404
 
-        docs, ids = self.gen_some_mock_data(size=1)
+        docs, ids = gen_some_mock_data(size=1)
 
         dao = DocumentDBDao()
         c0 = dao.count()
@@ -68,7 +74,7 @@ class QueryTest(unittest.TestCase):
         assert c0 == c1
 
     def test_query_api(self):
-        docs, ids = self.gen_some_mock_data(size=1)
+        docs, ids = gen_some_mock_data(size=1)
 
         dao = DocumentDBDao()
         c0 = dao.count()
