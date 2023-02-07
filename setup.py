@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 with open("flowcept/version.py") as f:
     exec(f.read())
-    version = locals()['__version__']
+    version = locals()["__version__"]
 
 with open("README.md") as fh:
     long_description = fh.read()
@@ -71,7 +71,7 @@ setup(
         "Topic :: System :: Distributed Computing",
     ],
     python_requires=">=3.10",  # TODO: We don't really need py3.10,
-                               # but if we change it now,
-                               # we'll need to change CI/CD tests
+    # but if we change it now,
+    # we'll need to change CI/CD tests
     # scripts=["bin/flowcept"],
 )
