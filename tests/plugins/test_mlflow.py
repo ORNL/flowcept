@@ -6,9 +6,7 @@ from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 from flowcept.flowcept_consumer.main import (
     main,
 )
-from flowcept.flowceptor.plugins.mlflow.mlflow_interceptor import (
-    MLFlowInterceptor,
-)
+from flowcept import MLFlowInterceptor
 
 
 class TestMLFlow(unittest.TestCase):
