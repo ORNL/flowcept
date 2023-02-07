@@ -20,10 +20,25 @@ class DocumentDBDao(object):
         db = client[MONGO_DB]
         self._collection = db[MONGO_COLLECTION]
 
-    def find(self, filter_: Dict) -> List[Dict]:
+    def find(
+        self,
+        filter: dict,
+        projection=None,
+        limit=None,
+        sort=None,
+        remove_json_unserializables=True,
+    ) -> List[Dict]:
+        if limit is None:
+            limit = 0
+
+        if remove_json_unserializables:
+            projection = {"_id": 0, "timestamp": 0}
+
         try:
             lst = list()
-            for doc in self._collection.find(filter_):
+            for doc in self._collection.find(
+                filter=filter, projection=projection, limit=limit, sort=sort
+            ):
                 lst.append(doc)
             return lst
         except Exception as e:
@@ -69,12 +84,16 @@ class DocumentDBDao(object):
             return False
 
     def delete_ids(self, ids_list: List[ObjectId]):
+        if type(ids_list) != list:
+            ids_list = [ids_list]
         try:
             self._collection.delete_many({"_id": {"$in": ids_list}})
         except Exception as e:
             print("Error when deleting documents.", e)
 
     def delete_keys(self, key_name, keys_list: List[ObjectId]):
+        if type(keys_list) != list:
+            keys_list = [keys_list]
         try:
             self._collection.delete_many({key_name: {"$in": keys_list}})
         except Exception as e:
