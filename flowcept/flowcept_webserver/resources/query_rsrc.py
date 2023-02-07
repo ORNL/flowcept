@@ -1,12 +1,11 @@
 import json
-from flask import jsonify
 from flask_restful import Resource, reqparse
 
 from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 
 
-class DocQuery(Resource):
-    ROUTE = "/doc_query"
+class TaskQuery(Resource):
+    ROUTE = "/task_query"
 
     def post(self):
         parser = reqparse.RequestParser()
@@ -22,15 +21,12 @@ class DocQuery(Resource):
             try:
                 doc_args[arg] = json.loads(args[arg])
             except Exception as e:
-                return f"Could not parse {arg} argument: {e}", 400
+                return (f"Could not parse {arg} argument: {e}"), 400
 
         dao = DocumentDBDao()
         docs = dao.find(**doc_args)
 
-        try:
-            if docs is not None and len(docs):
-                return docs, 201
-            else:
-                return f"Could not find matching docs", 404
-        except Exception as e:
-            return f"Sorry, could not jsonify: {e}", 500
+        if docs is not None and len(docs):
+            return docs, 201
+        else:
+            return (f"Could not find matching docs"), 404

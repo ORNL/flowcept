@@ -10,11 +10,11 @@ with open("README.md") as fh:
 
 def get_requirements(file_path):
     with open(file_path) as f:
-        requirements = []
+        _requirements = []
         for line in f.read().splitlines():
             if not line.startswith("#"):
-                requirements.append(line)
-    return requirements
+                _requirements.append(line)
+    return _requirements
 
 
 requirements = get_requirements("requirements.txt")
@@ -28,6 +28,7 @@ _EXTRA_REQUIREMENTS = [
     "mongo",
     "dask",
     "webserver",
+    "api",
 ]
 
 MAC_REQUIRES = []
