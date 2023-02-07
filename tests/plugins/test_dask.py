@@ -29,7 +29,6 @@ def forced_error_func(x):
 
 
 class TestDask(unittest.TestCase):
-
     client: Client = None
 
     @classmethod
@@ -100,7 +99,6 @@ class TestDask(unittest.TestCase):
         o1 = TestDask.client.map(dummy_func1, i1, workflow_id=wf_id)
         [print(o.key, o.result()) for o in o1]
         return o1
-
 
     def error_task_submission(self):
         i1 = np.random.random()
