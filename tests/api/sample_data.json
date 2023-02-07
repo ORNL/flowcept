@@ -1,0 +1,6589 @@
+[{
+  "_id": {
+    "$oid": "63d06a8975be8f74e56f40e1"
+  },
+  "task_id": "a9a08ba1f7f1412ba9a1dd9ecab7478b",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "start_time": {
+    "$numberLong": "1674603140215"
+  },
+  "end_time": {
+    "$numberLong": "1674603140228"
+  },
+  "status": "FINISHED",
+  "utc_timestamp": 1674621143.292152,
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "4abd8339-bb22-41b7-85f4-2de47b95c686",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603143298"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06a8975be8f74e56f40e2"
+  },
+  "task_id": "81260f61b9f34006b1eacf630d389391",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "start_time": {
+    "$numberLong": "1674603143257"
+  },
+  "end_time": {
+    "$numberLong": "1674603143269"
+  },
+  "status": "FINISHED",
+  "utc_timestamp": 1674621143.308017,
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "bb34772f-f0cc-4070-94bc-fd7fa6db9a1b",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603143309"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06a9375be8f74e56f40e4"
+  },
+  "task_id": "a52c39e223df4f8080b33dee418f1c0e",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "start_time": {
+    "$numberLong": "1674603153322"
+  },
+  "end_time": {
+    "$numberLong": "1674603153340"
+  },
+  "status": "FINISHED",
+  "utc_timestamp": 1674621153.351033,
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "4100e2b4-87fa-485d-ac02-1138527d080d",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603153353"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06a9d75be8f74e56f40e5"
+  },
+  "task_id": "events.out.tfevents.1674603156.MAC132633.29362.1.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8253999948501587
+  },
+  "custom_metadata": {
+    "event_file": "run-0",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-0"
+  },
+  "utc_timestamp": 1674621164.180434,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "817bee0b-6485-489e-8ed9-9619de8d4466",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603164189"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06a9d75be8f74e56f40e6"
+  },
+  "task_id": "events.out.tfevents.1674603159.MAC132633.29362.4.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8331000208854675
+  },
+  "custom_metadata": {
+    "event_file": "run-1",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-1"
+  },
+  "utc_timestamp": 1674621164.194663,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "12ddcbee-c2b2-41f0-903d-c9ce5ad557a6",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603164196"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06a9d75be8f74e56f40e7"
+  },
+  "task_id": "events.out.tfevents.1674603161.MAC132633.29362.7.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8023999929428101
+  },
+  "custom_metadata": {
+    "event_file": "run-2",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-2"
+  },
+  "utc_timestamp": 1674621164.20243,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "2dfd8b50-8fc2-4bad-9f91-675c99699f79",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603164204"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aa075be8f74e56f40e8"
+  },
+  "task_id": "events.out.tfevents.1674603156.MAC132633.29362.1.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8253999948501587
+  },
+  "custom_metadata": {
+    "event_file": "run-0",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-0"
+  },
+  "utc_timestamp": 1674621164.180434,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "817bee0b-6485-489e-8ed9-9619de8d4466",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603164189"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aa075be8f74e56f40e9"
+  },
+  "task_id": "events.out.tfevents.1674603159.MAC132633.29362.4.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8331000208854675
+  },
+  "custom_metadata": {
+    "event_file": "run-1",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-1"
+  },
+  "utc_timestamp": 1674621164.194663,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "12ddcbee-c2b2-41f0-903d-c9ce5ad557a6",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603164196"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aa075be8f74e56f40ea"
+  },
+  "task_id": "events.out.tfevents.1674603161.MAC132633.29362.7.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8023999929428101
+  },
+  "custom_metadata": {
+    "event_file": "run-2",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-2"
+  },
+  "utc_timestamp": 1674621164.20243,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "2dfd8b50-8fc2-4bad-9f91-675c99699f79",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603164204"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aa275be8f74e56f40eb"
+  },
+  "task_id": "events.out.tfevents.1674603162.MAC132633.29362.10.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7671999931335449
+  },
+  "custom_metadata": {
+    "event_file": "run-3",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-3"
+  },
+  "utc_timestamp": 1674621169.306157,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "b77b7518-9916-4d67-9606-81a7ff0e0b1b",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603169315"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aa275be8f74e56f40ec"
+  },
+  "task_id": "events.out.tfevents.1674603164.MAC132633.29362.13.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8364999890327454
+  },
+  "custom_metadata": {
+    "event_file": "run-4",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-4"
+  },
+  "utc_timestamp": 1674621169.322215,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "4425850e-5919-4967-bc9d-003c4559ecd3",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603169324"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aa275be8f74e56f40ed"
+  },
+  "task_id": "events.out.tfevents.1674603166.MAC132633.29362.16.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8235999941825867
+  },
+  "custom_metadata": {
+    "event_file": "run-5",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-5"
+  },
+  "utc_timestamp": 1674621169.334404,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "285f0415-23a7-4ad4-ae87-1442cc35d870",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603169336"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aa575be8f74e56f40ee"
+  },
+  "task_id": "events.out.tfevents.1674603162.MAC132633.29362.10.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7671999931335449
+  },
+  "custom_metadata": {
+    "event_file": "run-3",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-3"
+  },
+  "utc_timestamp": 1674621169.306157,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "b77b7518-9916-4d67-9606-81a7ff0e0b1b",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603169315"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aa575be8f74e56f40ef"
+  },
+  "task_id": "events.out.tfevents.1674603164.MAC132633.29362.13.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8364999890327454
+  },
+  "custom_metadata": {
+    "event_file": "run-4",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-4"
+  },
+  "utc_timestamp": 1674621169.322215,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "4425850e-5919-4967-bc9d-003c4559ecd3",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603169324"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aa575be8f74e56f40f0"
+  },
+  "task_id": "events.out.tfevents.1674603166.MAC132633.29362.16.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8235999941825867
+  },
+  "custom_metadata": {
+    "event_file": "run-5",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-5"
+  },
+  "utc_timestamp": 1674621169.334404,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "285f0415-23a7-4ad4-ae87-1442cc35d870",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603169336"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aa775be8f74e56f40f1"
+  },
+  "task_id": "events.out.tfevents.1674603168.MAC132633.29362.19.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7979000210762024
+  },
+  "custom_metadata": {
+    "event_file": "run-6",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-6"
+  },
+  "utc_timestamp": 1674621174.438929,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "9b634a32-064c-40ba-abef-53d8244d3c3a",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603174441"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aa775be8f74e56f40f2"
+  },
+  "task_id": "events.out.tfevents.1674603170.MAC132633.29362.22.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7710999846458435
+  },
+  "custom_metadata": {
+    "event_file": "run-7",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-7"
+  },
+  "utc_timestamp": 1674621174.445282,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "ee356b0d-5a89-46dc-bc63-e524f9405576",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603174446"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aaa75be8f74e56f40f3"
+  },
+  "task_id": "events.out.tfevents.1674603168.MAC132633.29362.19.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7979000210762024
+  },
+  "custom_metadata": {
+    "event_file": "run-6",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-6"
+  },
+  "utc_timestamp": 1674621174.438929,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "9b634a32-064c-40ba-abef-53d8244d3c3a",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603174440"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aaa75be8f74e56f40f4"
+  },
+  "task_id": "events.out.tfevents.1674603170.MAC132633.29362.22.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7710999846458435
+  },
+  "custom_metadata": {
+    "event_file": "run-7",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-7"
+  },
+  "utc_timestamp": 1674621174.445282,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "ee356b0d-5a89-46dc-bc63-e524f9405576",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603174446"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aac75be8f74e56f40f5"
+  },
+  "task_id": "events.out.tfevents.1674603176.MAC132633.29362.31.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8140000104904175
+  },
+  "custom_metadata": {
+    "event_file": "run-10",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-10"
+  },
+  "utc_timestamp": 1674621179.577789,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "d7122b01-9174-4d1a-a20b-5f7dd0c7bbc4",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603179580"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aac75be8f74e56f40f6"
+  },
+  "task_id": "events.out.tfevents.1674603172.MAC132633.29362.25.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.840499997138977
+  },
+  "custom_metadata": {
+    "event_file": "run-8",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-8"
+  },
+  "utc_timestamp": 1674621179.596468,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "8b624e6b-6b8d-4ad3-8176-d7ddd74778ab",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603179601"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aac75be8f74e56f40f7"
+  },
+  "task_id": "events.out.tfevents.1674603174.MAC132633.29362.28.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8432000279426575
+  },
+  "custom_metadata": {
+    "event_file": "run-9",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-9"
+  },
+  "utc_timestamp": 1674621179.60576,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "de0742c4-3cef-4d02-b164-8426ec51ef3d",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603179608"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aaf75be8f74e56f40f8"
+  },
+  "task_id": "events.out.tfevents.1674603176.MAC132633.29362.31.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8140000104904175
+  },
+  "custom_metadata": {
+    "event_file": "run-10",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-10"
+  },
+  "utc_timestamp": 1674621179.577789,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "d7122b01-9174-4d1a-a20b-5f7dd0c7bbc4",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603179579"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aaf75be8f74e56f40f9"
+  },
+  "task_id": "events.out.tfevents.1674603172.MAC132633.29362.25.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.840499997138977
+  },
+  "custom_metadata": {
+    "event_file": "run-8",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-8"
+  },
+  "utc_timestamp": 1674621179.596468,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "8b624e6b-6b8d-4ad3-8176-d7ddd74778ab",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603179601"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06aaf75be8f74e56f40fa"
+  },
+  "task_id": "events.out.tfevents.1674603174.MAC132633.29362.28.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8432000279426575
+  },
+  "custom_metadata": {
+    "event_file": "run-9",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-9"
+  },
+  "utc_timestamp": 1674621179.60576,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "de0742c4-3cef-4d02-b164-8426ec51ef3d",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603179608"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06ab175be8f74e56f40fb"
+  },
+  "task_id": "events.out.tfevents.1674603179.MAC132633.29362.34.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7851999998092651
+  },
+  "custom_metadata": {
+    "event_file": "run-11",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-11"
+  },
+  "utc_timestamp": 1674621184.744436,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "6d663634-99e2-4b0a-86e3-12b3614d587e",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603184746"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06ab175be8f74e56f40fc"
+  },
+  "task_id": "events.out.tfevents.1674603180.MAC132633.29362.37.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8449000120162964
+  },
+  "custom_metadata": {
+    "event_file": "run-12",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-12"
+  },
+  "utc_timestamp": 1674621184.754645,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "b3ebcad3-ee24-4b03-a156-991b9eec2f59",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603184756"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06ab475be8f74e56f40fd"
+  },
+  "task_id": "events.out.tfevents.1674603179.MAC132633.29362.34.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7851999998092651
+  },
+  "custom_metadata": {
+    "event_file": "run-11",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-11"
+  },
+  "utc_timestamp": 1674621184.744436,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "6d663634-99e2-4b0a-86e3-12b3614d587e",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603184746"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06ab475be8f74e56f40fe"
+  },
+  "task_id": "events.out.tfevents.1674603180.MAC132633.29362.37.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8449000120162964
+  },
+  "custom_metadata": {
+    "event_file": "run-12",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-12"
+  },
+  "utc_timestamp": 1674621184.754645,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "b3ebcad3-ee24-4b03-a156-991b9eec2f59",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603184756"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06ab675be8f74e56f40ff"
+  },
+  "task_id": "events.out.tfevents.1674603183.MAC132633.29362.40.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8331999778747559
+  },
+  "custom_metadata": {
+    "event_file": "run-13",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-13"
+  },
+  "utc_timestamp": 1674621189.894607,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "11211def-6ca1-4ffc-b82b-ccf701b641e0",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603189897"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06ab675be8f74e56f4100"
+  },
+  "task_id": "events.out.tfevents.1674603185.MAC132633.29362.43.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8133999705314636
+  },
+  "custom_metadata": {
+    "event_file": "run-14",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-14"
+  },
+  "utc_timestamp": 1674621189.900723,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "830df996-d313-438d-8371-14b65d2a4a8f",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603189902"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06ab675be8f74e56f4101"
+  },
+  "task_id": "events.out.tfevents.1674603187.MAC132633.29362.46.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7907000184059143
+  },
+  "custom_metadata": {
+    "event_file": "run-15",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-15"
+  },
+  "utc_timestamp": 1674621189.905867,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "2a9fa292-6f11-4123-82aa-711a796d411a",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603189909"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06ab975be8f74e56f4102"
+  },
+  "task_id": "events.out.tfevents.1674603183.MAC132633.29362.40.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8331999778747559
+  },
+  "custom_metadata": {
+    "event_file": "run-13",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-13"
+  },
+  "utc_timestamp": 1674621189.894607,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "11211def-6ca1-4ffc-b82b-ccf701b641e0",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603189897"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06ab975be8f74e56f4103"
+  },
+  "task_id": "events.out.tfevents.1674603185.MAC132633.29362.43.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8133999705314636
+  },
+  "custom_metadata": {
+    "event_file": "run-14",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-14"
+  },
+  "utc_timestamp": 1674621189.900723,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "830df996-d313-438d-8371-14b65d2a4a8f",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603189902"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06ab975be8f74e56f4104"
+  },
+  "task_id": "events.out.tfevents.1674603187.MAC132633.29362.46.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7907000184059143
+  },
+  "custom_metadata": {
+    "event_file": "run-15",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-15"
+  },
+  "utc_timestamp": 1674621189.905867,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "2a9fa292-6f11-4123-82aa-711a796d411a",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603189909"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06ad275be8f74e56f4105"
+  },
+  "task_id": "events.out.tfevents.1674603209.MAC132633.29362.50.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8317999839782715
+  },
+  "custom_metadata": {
+    "event_file": "run-0",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-0"
+  },
+  "utc_timestamp": 1674621215.464699,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "75b7f412-6596-48f5-a4b5-db6184b8feca",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603215479"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06ad275be8f74e56f4106"
+  },
+  "task_id": "events.out.tfevents.1674603212.MAC132633.29362.53.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8345999717712402
+  },
+  "custom_metadata": {
+    "event_file": "run-1",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-1"
+  },
+  "utc_timestamp": 1674621215.483304,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "d89b8513-5c26-4d95-bf85-3f4e8ba39676",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674603215485"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06f22f65eed48e0a36dd2"
+  },
+  "task_id": "540c11c163724acab17c75a080effaa3",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "start_time": {
+    "$numberLong": "1674604317125"
+  },
+  "end_time": {
+    "$numberLong": "1674604317135"
+  },
+  "status": "FINISHED",
+  "utc_timestamp": 1674622320.207024,
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "ed81c795-6ce2-4bfe-a198-540030e154f1",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604320210"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06f22f65eed48e0a36dd3"
+  },
+  "task_id": "3d199fd3f81644d1ba128d927736fe35",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "start_time": {
+    "$numberLong": "1674604320169"
+  },
+  "end_time": {
+    "$numberLong": "1674604320191"
+  },
+  "status": "FINISHED",
+  "utc_timestamp": 1674622320.224093,
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "becebb15-3c30-4e92-8954-a03b7c493a34",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604320225"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06f2cf65eed48e0a36dd5"
+  },
+  "task_id": "10a2196d1e0243b98a3acdba166c8176",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "start_time": {
+    "$numberLong": "1674604330259"
+  },
+  "end_time": {
+    "$numberLong": "1674604330275"
+  },
+  "status": "FINISHED",
+  "utc_timestamp": 1674622330.285064,
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "b9325417-4cfe-4d2a-80f0-e743781e6c03",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604330287"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fcf412f1bc8f3433fce"
+  },
+  "task_id": "events.out.tfevents.1674604488.MAC132633.31840.1.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8319000005722046
+  },
+  "custom_metadata": {
+    "event_file": "run-0",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-0"
+  },
+  "utc_timestamp": 1674622493.253231,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "55cf9b66-a161-4fff-8fe7-eeffc30c9176",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604493257"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fcf412f1bc8f3433fcf"
+  },
+  "task_id": "events.out.tfevents.1674604490.MAC132633.31840.4.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.830299973487854
+  },
+  "custom_metadata": {
+    "event_file": "run-1",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-1"
+  },
+  "utc_timestamp": 1674622493.262013,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "60672337-71e7-436a-a73b-817981b29720",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604493263"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fd4412f1bc8f3433fd0"
+  },
+  "task_id": "events.out.tfevents.1674604492.MAC132633.31840.7.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8102999925613403
+  },
+  "custom_metadata": {
+    "event_file": "run-2",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-2"
+  },
+  "utc_timestamp": 1674622498.373751,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "66c8a4fb-92f5-4882-9e56-56b47e825cbd",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604498375"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fd4412f1bc8f3433fd1"
+  },
+  "task_id": "events.out.tfevents.1674604494.MAC132633.31840.10.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7738000154495239
+  },
+  "custom_metadata": {
+    "event_file": "run-3",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-3"
+  },
+  "utc_timestamp": 1674622498.381814,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "ef04b180-a90b-4056-87d7-3f1946339a34",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604498383"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fd4412f1bc8f3433fd2"
+  },
+  "task_id": "events.out.tfevents.1674604495.MAC132633.31840.13.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8324000239372253
+  },
+  "custom_metadata": {
+    "event_file": "run-4",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-4"
+  },
+  "utc_timestamp": 1674622498.394187,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "11bf177d-bfe0-4e01-8041-1b11fb313f76",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604498397"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fd9412f1bc8f3433fd3"
+  },
+  "task_id": "events.out.tfevents.1674604497.MAC132633.31840.16.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8310999870300293
+  },
+  "custom_metadata": {
+    "event_file": "run-5",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-5"
+  },
+  "utc_timestamp": 1674622503.669191,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "e6974929-d424-41af-94ba-0d0efc76ec25",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604503671"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fd9412f1bc8f3433fd4"
+  },
+  "task_id": "events.out.tfevents.1674604499.MAC132633.31840.19.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7903000116348267
+  },
+  "custom_metadata": {
+    "event_file": "run-6",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-6"
+  },
+  "utc_timestamp": 1674622503.676407,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "71dc8a07-d9d6-4603-933f-1c48cd4e2c1e",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604503677"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fde412f1bc8f3433fd5"
+  },
+  "task_id": "events.out.tfevents.1674604502.MAC132633.31840.22.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.766700029373169
+  },
+  "custom_metadata": {
+    "event_file": "run-7",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-7"
+  },
+  "utc_timestamp": 1674622508.803391,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "66209409-8904-41dc-83bc-c4e16acd9ae8",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604508805"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fde412f1bc8f3433fd6"
+  },
+  "task_id": "events.out.tfevents.1674604503.MAC132633.31840.25.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8367000222206116
+  },
+  "custom_metadata": {
+    "event_file": "run-8",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-8"
+  },
+  "utc_timestamp": 1674622508.809639,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "4647c213-b18e-4eec-a390-4a5dcd3f0447",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604508811"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fde412f1bc8f3433fd7"
+  },
+  "task_id": "events.out.tfevents.1674604506.MAC132633.31840.28.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8440999984741211
+  },
+  "custom_metadata": {
+    "event_file": "run-9",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-9"
+  },
+  "utc_timestamp": 1674622508.816672,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "6fe09d21-13c8-40da-aac7-2a9d956b25ae",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604508818"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fe3412f1bc8f3433fd8"
+  },
+  "task_id": "events.out.tfevents.1674604508.MAC132633.31840.31.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8113999962806702
+  },
+  "custom_metadata": {
+    "event_file": "run-10",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-10"
+  },
+  "utc_timestamp": 1674622513.962744,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "f8ad5648-edca-4471-82aa-646e7d6797fd",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604513965"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fe3412f1bc8f3433fd9"
+  },
+  "task_id": "events.out.tfevents.1674604510.MAC132633.31840.34.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7893000245094299
+  },
+  "custom_metadata": {
+    "event_file": "run-11",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-11"
+  },
+  "utc_timestamp": 1674622513.970891,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "8146ae48-b8c0-433f-82c7-776829798fe7",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604513973"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fe8412f1bc8f3433fda"
+  },
+  "task_id": "events.out.tfevents.1674604512.MAC132633.31840.37.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8489000201225281
+  },
+  "custom_metadata": {
+    "event_file": "run-12",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-12"
+  },
+  "utc_timestamp": 1674622519.23485,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "08b088b8-e600-4970-b67a-0ebf7d34eee5",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604519237"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fe8412f1bc8f3433fdb"
+  },
+  "task_id": "events.out.tfevents.1674604514.MAC132633.31840.40.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8374999761581421
+  },
+  "custom_metadata": {
+    "event_file": "run-13",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-13"
+  },
+  "utc_timestamp": 1674622519.242724,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "43c574a2-e990-4e4e-9a4b-0fc0eddeaa17",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604519244"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fe8412f1bc8f3433fdc"
+  },
+  "task_id": "events.out.tfevents.1674604516.MAC132633.31840.43.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8119999766349792
+  },
+  "custom_metadata": {
+    "event_file": "run-14",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-14"
+  },
+  "utc_timestamp": 1674622519.249736,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "86509f05-a194-4a81-88fa-a8cfc822e276",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604519251"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63d06fed412f1bc8f3433fdd"
+  },
+  "task_id": "events.out.tfevents.1674604518.MAC132633.31840.46.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.789900004863739
+  },
+  "custom_metadata": {
+    "event_file": "run-15",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-15"
+  },
+  "utc_timestamp": 1674622524.37394,
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "msg_id": "d9a078ff-25f0-4988-ba0e-59bf14848701",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c0c7:1fed:43fd:7574",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1674604524375"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dd3732c3c9df65b36420fe"
+  },
+  "task_id": "dummy_func1-c4147560f79513999bf91e43f5be62e9",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e166"
+  },
+  "task_id": "dummy_func1-c4147560f79513999bf91e43f5be62e9",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e167"
+  },
+  "task_id": "dummy_func1-c4147560f79513999bf91e43f5be62e9",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e168"
+  },
+  "task_id": "dummy_func2-44332325857e37ccf3fab94140d83be1",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e169"
+  },
+  "task_id": "dummy_func1-c4147560f79513999bf91e43f5be62e9",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e16a"
+  },
+  "task_id": "dummy_func1-c4147560f79513999bf91e43f5be62e9",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e16b"
+  },
+  "task_id": "dummy_func1-c4147560f79513999bf91e43f5be62e9",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e16c"
+  },
+  "task_id": "dummy_func1-c4147560f79513999bf91e43f5be62e9",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e16d"
+  },
+  "task_id": "dummy_func1-c4147560f79513999bf91e43f5be62e9",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e16e"
+  },
+  "task_id": "dummy_func2-44332325857e37ccf3fab94140d83be1",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e16f"
+  },
+  "task_id": "dummy_func2-44332325857e37ccf3fab94140d83be1",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e170"
+  },
+  "task_id": "dummy_func2-44332325857e37ccf3fab94140d83be1",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e171"
+  },
+  "task_id": "dummy_func2-44332325857e37ccf3fab94140d83be1",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e172"
+  },
+  "task_id": "dummy_func2-44332325857e37ccf3fab94140d83be1",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e173"
+  },
+  "task_id": "dummy_func2-44332325857e37ccf3fab94140d83be1",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e174"
+  },
+  "task_id": "dummy_func1-c4147560f79513999bf91e43f5be62e9",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e175"
+  },
+  "task_id": "dummy_func2-44332325857e37ccf3fab94140d83be1",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e176"
+  },
+  "task_id": "dummy_func1-c4147560f79513999bf91e43f5be62e9",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e177"
+  },
+  "task_id": "dummy_func1-c4147560f79513999bf91e43f5be62e9",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e178"
+  },
+  "task_id": "dummy_func2-44332325857e37ccf3fab94140d83be1",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e179"
+  },
+  "task_id": "dummy_func2-44332325857e37ccf3fab94140d83be1",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd375023c36b115253e17a"
+  },
+  "task_id": "dummy_func1-c4147560f79513999bf91e43f5be62e9",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4e12cf2a99116828b2ee"
+  },
+  "task_id": "dummy_func1-3bf0519324fe8298919757dab0f6d86c",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4e12cf2a99116828b2ef"
+  },
+  "task_id": "dummy_func1-3bf0519324fe8298919757dab0f6d86c",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4e12cf2a99116828b2f0"
+  },
+  "task_id": "dummy_func1-3bf0519324fe8298919757dab0f6d86c",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4e12cf2a99116828b2f1"
+  },
+  "task_id": "dummy_func1-3bf0519324fe8298919757dab0f6d86c",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4e12cf2a99116828b2f4"
+  },
+  "task_id": "dummy_func2-7187b19d229de6416d9b28523fbf9a2b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4e12cf2a99116828b2f5"
+  },
+  "task_id": "dummy_func2-7187b19d229de6416d9b28523fbf9a2b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4e12cf2a99116828b2f6"
+  },
+  "task_id": "dummy_func2-7187b19d229de6416d9b28523fbf9a2b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4e12cf2a99116828b2f7"
+  },
+  "task_id": "dummy_func2-7187b19d229de6416d9b28523fbf9a2b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4e12cf2a99116828b2fc"
+  },
+  "task_id": "dummy_func1-3bf0519324fe8298919757dab0f6d86c",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4e12cf2a99116828b2fd"
+  },
+  "task_id": "dummy_func2-7187b19d229de6416d9b28523fbf9a2b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4e12cf2a99116828b2fe"
+  },
+  "task_id": "dummy_func2-7187b19d229de6416d9b28523fbf9a2b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4e12cf2a99116828b2ff"
+  },
+  "task_id": "dummy_func1-3bf0519324fe8298919757dab0f6d86c",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4eb711c2fac1b70c920f"
+  },
+  "task_id": "dummy_func1-3bf0519324fe8298919757dab0f6d86c",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4eb711c2fac1b70c9210"
+  },
+  "task_id": "dummy_func1-3bf0519324fe8298919757dab0f6d86c",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4eb711c2fac1b70c9211"
+  },
+  "task_id": "dummy_func1-3bf0519324fe8298919757dab0f6d86c",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4eb711c2fac1b70c9212"
+  },
+  "task_id": "dummy_func1-3bf0519324fe8298919757dab0f6d86c",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4eb711c2fac1b70c9215"
+  },
+  "task_id": "dummy_func2-7187b19d229de6416d9b28523fbf9a2b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4eb711c2fac1b70c9216"
+  },
+  "task_id": "dummy_func2-7187b19d229de6416d9b28523fbf9a2b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4eb711c2fac1b70c9217"
+  },
+  "task_id": "dummy_func2-7187b19d229de6416d9b28523fbf9a2b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4eb711c2fac1b70c9218"
+  },
+  "task_id": "dummy_func2-7187b19d229de6416d9b28523fbf9a2b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4eb711c2fac1b70c921d"
+  },
+  "task_id": "dummy_func1-3bf0519324fe8298919757dab0f6d86c",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4eb711c2fac1b70c921e"
+  },
+  "task_id": "dummy_func2-7187b19d229de6416d9b28523fbf9a2b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4eb711c2fac1b70c921f"
+  },
+  "task_id": "dummy_func2-7187b19d229de6416d9b28523fbf9a2b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": {
+    "$oid": "63dd4eb711c2fac1b70c9220"
+  },
+  "task_id": "dummy_func1-3bf0519324fe8298919757dab0f6d86c",
+  "custom_metadata": {},
+  "used": {},
+  "status": "FINISHED"
+},{
+  "_id": "dummy_func1-7504c8e3d01248ed9122ffe65d6e575e",
+  "task_id": "dummy_func1-7504c8e3d01248ed9122ffe65d6e575e",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:61407",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func2-309b6be2944add74f9153de40f63f328",
+  "task_id": "dummy_func2-309b6be2944add74f9153de40f63f328",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:61407",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func1-61c3c8170d6a32217a29aab466a1cebf",
+  "task_id": "dummy_func1-61c3c8170d6a32217a29aab466a1cebf",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:61477",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func2-2a0184784828bd5d7228dd3e671ccd41",
+  "task_id": "dummy_func2-2a0184784828bd5d7228dd3e671ccd41",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:61477",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func1-0844c84434b54f8c8434a2818d3ce6c2",
+  "task_id": "dummy_func1-0844c84434b54f8c8434a2818d3ce6c2",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:61623",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func2-bb275e7557fbc29eafd669ec14e312e6",
+  "task_id": "dummy_func2-bb275e7557fbc29eafd669ec14e312e6",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:61623",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func1-530649e9a7673001b1efcb4e86f4ca10",
+  "task_id": "dummy_func1-530649e9a7673001b1efcb4e86f4ca10",
+  "used": {},
+  "status": "FINISHED",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func1-b5a423fda8b8857c4fffdd9d384383bb",
+  "task_id": "dummy_func1-b5a423fda8b8857c4fffdd9d384383bb",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:61747",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func2-578fd1ca93637eb9901ebab8bdc7ac23",
+  "task_id": "dummy_func2-578fd1ca93637eb9901ebab8bdc7ac23",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:61747",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func1-fe3e0433c35742575c06346e8a3ac795",
+  "task_id": "dummy_func1-fe3e0433c35742575c06346e8a3ac795",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:61792",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func2-6ca6caab7326876dd9bccd1fae1e3607",
+  "task_id": "dummy_func2-6ca6caab7326876dd9bccd1fae1e3607",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:61792",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func1-e2030d22736cfe8a570353c622ae4518",
+  "task_id": "dummy_func1-e2030d22736cfe8a570353c622ae4518",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:61911",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func2-9f268ff3ad391fb6f8b09cf8b33e885c",
+  "task_id": "dummy_func2-9f268ff3ad391fb6f8b09cf8b33e885c",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:61911",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func1-14c66fadb672a27a35a358b23bc618b0",
+  "task_id": "dummy_func1-14c66fadb672a27a35a358b23bc618b0",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:62075",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func2-ac5895ce99abea011a31931c6d56f972",
+  "task_id": "dummy_func2-ac5895ce99abea011a31931c6d56f972",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:62075",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func1-59e8f185b8e8d8ec803692158a72c6de",
+  "task_id": "dummy_func1-59e8f185b8e8d8ec803692158a72c6de",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:62126",
+  "custom_metadata": {}
+},{
+  "_id": "dummy_func2-58493336dfc2b5c37f228c381f5ead41",
+  "task_id": "dummy_func2-58493336dfc2b5c37f228c381f5ead41",
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:62126",
+  "custom_metadata": {}
+},{
+  "_id": {
+    "$oid": "63dd6c72eb15181e7921dd02"
+  },
+  "task_id": "dummy_func1-42da0165d344de2c4b81ed1c67ab91b1",
+  "custom_metadata": {},
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:63437"
+},{
+  "_id": {
+    "$oid": "63dd6c72eb15181e7921dd03"
+  },
+  "task_id": "dummy_func2-e4c4bb0418428a573462171e0afcec63",
+  "custom_metadata": {},
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:63437"
+},{
+  "_id": {
+    "$oid": "63dd6ce5eb15181e7921dd82"
+  },
+  "task_id": "dummy_func1-18a83f30f1970ff70ec4d37713ae5e5b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:63520"
+},{
+  "_id": {
+    "$oid": "63dd6ce5eb15181e7921dd83"
+  },
+  "task_id": "dummy_func2-69d642be96672ebbdbbe39c8721bf129",
+  "custom_metadata": {},
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:63520"
+},{
+  "_id": {
+    "$oid": "63dd6dc3eb15181e7921de2e"
+  },
+  "task_id": "dummy_func1-c69ed0195dbe56448ddbc2ef458c7a5b",
+  "custom_metadata": {},
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:63628"
+},{
+  "_id": {
+    "$oid": "63dd6dc3eb15181e7921de2f"
+  },
+  "task_id": "dummy_func2-cd8b2c9e228b8453cf3d1dcd24b16652",
+  "custom_metadata": {},
+  "used": {},
+  "status": "SUBMITTED",
+  "private_ip": "tcp://127.0.0.1:63628"
+},{
+  "_id": {
+    "$oid": "63dedaf1eb15181e7922693f"
+  },
+  "task_id": "4d64a9f4a3934a318bd0d68ec393a5d3",
+  "utc_timestamp": 1675567424.617196,
+  "status": "FINISHED",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675549424620"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dedb2deb15181e79226975"
+  },
+  "task_id": "447d227b0e8f48f6bbdee3035e9cdf1e",
+  "utc_timestamp": 1675567483.143584,
+  "status": "FINISHED",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675549483149"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dedb2deb15181e79226976"
+  },
+  "task_id": "6714a63e15764e67886dd18f6381fbf1",
+  "utc_timestamp": 1675567483.169748,
+  "status": "FINISHED",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675549483171"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dedb59eb15181e7922699e"
+  },
+  "task_id": "1dab0369-4b2c-47e4-a8c0-8731bebeef80",
+  "utc_timestamp": 1675567524.115134,
+  "experiment_id": "campaign-uuid",
+  "custom_metadata": {},
+  "status": "SUBMITTED",
+  "used": {},
+  "plugin_id": "zambeze",
+  "user": "root",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675549524118"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3615eb15181e79229e30"
+  },
+  "task_id": "events.out.tfevents.1675572750.MAC132633.18994.1.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8306000232696533
+  },
+  "utc_timestamp": 1675590755.551824,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-0",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-0"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572755556"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3615eb15181e79229e31"
+  },
+  "task_id": "events.out.tfevents.1675572753.MAC132633.18994.4.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8398000001907349
+  },
+  "utc_timestamp": 1675590755.560669,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-1",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-1"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572755562"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df361aeb15181e79229e37"
+  },
+  "task_id": "events.out.tfevents.1675572754.MAC132633.18994.7.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7990999817848206
+  },
+  "utc_timestamp": 1675590760.680407,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-2",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-2"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572760688"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df361aeb15181e79229e38"
+  },
+  "task_id": "events.out.tfevents.1675572756.MAC132633.18994.10.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7680000066757202
+  },
+  "utc_timestamp": 1675590760.711629,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-3",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-3"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572760714"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df361aeb15181e79229e39"
+  },
+  "task_id": "events.out.tfevents.1675572758.MAC132633.18994.13.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.82669997215271
+  },
+  "utc_timestamp": 1675590760.719314,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-4",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-4"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572760721"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df361feb15181e79229e42"
+  },
+  "task_id": "events.out.tfevents.1675572760.MAC132633.18994.16.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8277999758720398
+  },
+  "utc_timestamp": 1675590765.966786,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-5",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-5"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572765969"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df361feb15181e79229e43"
+  },
+  "task_id": "events.out.tfevents.1675572762.MAC132633.18994.19.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7890999913215637
+  },
+  "utc_timestamp": 1675590765.973446,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-6",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-6"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572765975"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df361feb15181e79229e44"
+  },
+  "task_id": "events.out.tfevents.1675572764.MAC132633.18994.22.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7595000267028809
+  },
+  "utc_timestamp": 1675590765.979937,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-7",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-7"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572765982"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3624eb15181e79229e4d"
+  },
+  "task_id": "events.out.tfevents.1675572765.MAC132633.18994.25.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8478000164031982
+  },
+  "utc_timestamp": 1675590771.1133,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-8",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-8"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572771115"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3624eb15181e79229e4e"
+  },
+  "task_id": "events.out.tfevents.1675572768.MAC132633.18994.28.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8409000039100647
+  },
+  "utc_timestamp": 1675590771.120698,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-9",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-9"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572771122"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3629eb15181e79229e54"
+  },
+  "task_id": "events.out.tfevents.1675572770.MAC132633.18994.31.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8069999814033508
+  },
+  "utc_timestamp": 1675590776.262858,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-10",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-10"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572776265"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3629eb15181e79229e55"
+  },
+  "task_id": "events.out.tfevents.1675572772.MAC132633.18994.34.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7789000272750854
+  },
+  "utc_timestamp": 1675590776.270304,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-11",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-11"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572776273"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df362eeb15181e79229e5b"
+  },
+  "task_id": "events.out.tfevents.1675572774.MAC132633.18994.37.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8409000039100647
+  },
+  "utc_timestamp": 1675590781.426826,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-12",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-12"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572781429"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df362eeb15181e79229e5c"
+  },
+  "task_id": "events.out.tfevents.1675572776.MAC132633.18994.40.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.84170001745224
+  },
+  "utc_timestamp": 1675590781.433052,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-13",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-13"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572781434"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df362eeb15181e79229e5d"
+  },
+  "task_id": "events.out.tfevents.1675572778.MAC132633.18994.43.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.805899977684021
+  },
+  "utc_timestamp": 1675590781.439153,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-14",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-14"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572781440"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3633eb15181e79229e63"
+  },
+  "task_id": "events.out.tfevents.1675572780.MAC132633.18994.46.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7857999801635742
+  },
+  "utc_timestamp": 1675590786.632832,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-15",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-15"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572786634"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df367feb15181e79229ea2"
+  },
+  "task_id": "events.out.tfevents.1675572856.MAC132633.19125.1.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.822700023651123
+  },
+  "utc_timestamp": 1675590861.185732,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-0",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-0"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572861194"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df367feb15181e79229ea3"
+  },
+  "task_id": "events.out.tfevents.1675572858.MAC132633.19125.4.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8325999975204468
+  },
+  "utc_timestamp": 1675590861.198391,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-1",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-1"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572861200"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3684eb15181e79229ea9"
+  },
+  "task_id": "events.out.tfevents.1675572860.MAC132633.19125.7.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8065000176429749
+  },
+  "utc_timestamp": 1675590866.416892,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-2",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-2"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572866419"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3684eb15181e79229eaa"
+  },
+  "task_id": "events.out.tfevents.1675572862.MAC132633.19125.10.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7770000100135803
+  },
+  "utc_timestamp": 1675590866.426248,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-3",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-3"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572866428"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3684eb15181e79229eab"
+  },
+  "task_id": "events.out.tfevents.1675572863.MAC132633.19125.13.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8335000276565552
+  },
+  "utc_timestamp": 1675590866.433303,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-4",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-4"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572866435"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3689eb15181e79229eb4"
+  },
+  "task_id": "events.out.tfevents.1675572866.MAC132633.19125.16.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8233000040054321
+  },
+  "utc_timestamp": 1675590871.719359,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-5",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-5"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572871722"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3689eb15181e79229eb5"
+  },
+  "task_id": "events.out.tfevents.1675572867.MAC132633.19125.19.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8001000285148621
+  },
+  "utc_timestamp": 1675590871.725967,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-6",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-6"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572871727"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3689eb15181e79229eb6"
+  },
+  "task_id": "events.out.tfevents.1675572869.MAC132633.19125.22.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7620999813079834
+  },
+  "utc_timestamp": 1675590871.732337,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-7",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-7"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572871734"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df368eeb15181e79229ebf"
+  },
+  "task_id": "events.out.tfevents.1675572871.MAC132633.19125.25.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8478999733924866
+  },
+  "utc_timestamp": 1675590876.877198,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-8",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-8"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572876880"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df368eeb15181e79229ec0"
+  },
+  "task_id": "events.out.tfevents.1675572874.MAC132633.19125.28.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8450999855995178
+  },
+  "utc_timestamp": 1675590876.884786,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-9",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-9"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572876887"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3693eb15181e79229ec9"
+  },
+  "task_id": "events.out.tfevents.1675572875.MAC132633.19125.31.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8086000084877014
+  },
+  "utc_timestamp": 1675590881.989922,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-10",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-10"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572881992"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3693eb15181e79229eca"
+  },
+  "task_id": "events.out.tfevents.1675572878.MAC132633.19125.34.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7944999933242798
+  },
+  "utc_timestamp": 1675590881.997448,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-11",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-11"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572881999"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3698eb15181e79229ed0"
+  },
+  "task_id": "events.out.tfevents.1675572879.MAC132633.19125.37.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8429999947547913
+  },
+  "utc_timestamp": 1675590887.266536,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-12",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-12"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572887269"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3698eb15181e79229ed1"
+  },
+  "task_id": "events.out.tfevents.1675572882.MAC132633.19125.40.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8446999788284302
+  },
+  "utc_timestamp": 1675590887.272894,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-13",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-13"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572887274"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3698eb15181e79229ed2"
+  },
+  "task_id": "events.out.tfevents.1675572884.MAC132633.19125.43.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8119000196456909
+  },
+  "utc_timestamp": 1675590887.278892,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-14",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-14"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572887282"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df369deb15181e79229ed8"
+  },
+  "task_id": "events.out.tfevents.1675572886.MAC132633.19125.46.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.788100004196167
+  },
+  "utc_timestamp": 1675590892.437691,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-15",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-15"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675572892439"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3897eb15181e7922a03b"
+  },
+  "task_id": "events.out.tfevents.1675573367.MAC132633.19851.1.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8338000178337097
+  },
+  "utc_timestamp": 1675591388.32672,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-0",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-0"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573388344"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3897eb15181e7922a03c"
+  },
+  "task_id": "events.out.tfevents.1675573371.MAC132633.19851.4.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8292999863624573
+  },
+  "utc_timestamp": 1675591388.350726,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-1",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-1"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573388353"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3897eb15181e7922a03d"
+  },
+  "task_id": "events.out.tfevents.1675573374.MAC132633.19851.7.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8047000169754028
+  },
+  "utc_timestamp": 1675591388.360482,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-2",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-2"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573388363"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3897eb15181e7922a03e"
+  },
+  "task_id": "events.out.tfevents.1675573378.MAC132633.19851.10.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7734000086784363
+  },
+  "utc_timestamp": 1675591388.369265,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-3",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-3"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573388371"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3897eb15181e7922a03f"
+  },
+  "task_id": "events.out.tfevents.1675573380.MAC132633.19851.13.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8278999924659729
+  },
+  "utc_timestamp": 1675591393.589721,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-4",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-4"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573393593"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3897eb15181e7922a040"
+  },
+  "task_id": "events.out.tfevents.1675573384.MAC132633.19851.16.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8190000057220459
+  },
+  "utc_timestamp": 1675591393.598853,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-5",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-5"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573393601"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3897eb15181e7922a041"
+  },
+  "task_id": "events.out.tfevents.1675573387.MAC132633.19851.19.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7854999899864197
+  },
+  "utc_timestamp": 1675591393.609113,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-6",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-6"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573393611"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3922eb15181e7922a0ab"
+  },
+  "task_id": "events.out.tfevents.1675573531.MAC132633.20071.1.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8255000114440918
+  },
+  "utc_timestamp": 1675591536.286591,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-0",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-0"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573536319"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3922eb15181e7922a0ac"
+  },
+  "task_id": "events.out.tfevents.1675573533.MAC132633.20071.4.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8331000208854675
+  },
+  "utc_timestamp": 1675591536.325175,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-1",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-1"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573536327"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3927eb15181e7922a0b2"
+  },
+  "task_id": "events.out.tfevents.1675573535.MAC132633.20071.7.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8090999722480774
+  },
+  "utc_timestamp": 1675591541.395083,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-2",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-2"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573541399"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3927eb15181e7922a0b3"
+  },
+  "task_id": "events.out.tfevents.1675573537.MAC132633.20071.10.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7764999866485596
+  },
+  "utc_timestamp": 1675591541.416396,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-3",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-3"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573541418"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3927eb15181e7922a0b4"
+  },
+  "task_id": "events.out.tfevents.1675573538.MAC132633.20071.13.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8259000182151794
+  },
+  "utc_timestamp": 1675591541.423516,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-4",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-4"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573541426"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df392ceb15181e7922a0ba"
+  },
+  "task_id": "events.out.tfevents.1675573541.MAC132633.20071.16.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8256999850273132
+  },
+  "utc_timestamp": 1675591546.519194,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-5",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-5"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573546521"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df392ceb15181e7922a0bb"
+  },
+  "task_id": "events.out.tfevents.1675573542.MAC132633.20071.19.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7929999828338623
+  },
+  "utc_timestamp": 1675591546.526215,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-6",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-6"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573546528"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df392ceb15181e7922a0bc"
+  },
+  "task_id": "events.out.tfevents.1675573544.MAC132633.20071.22.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7775999903678894
+  },
+  "utc_timestamp": 1675591546.532348,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-7",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-7"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573546534"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3931eb15181e7922a0c2"
+  },
+  "task_id": "events.out.tfevents.1675573545.MAC132633.20071.25.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8421000242233276
+  },
+  "utc_timestamp": 1675591551.659118,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-8",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-8"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573551661"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3931eb15181e7922a0c3"
+  },
+  "task_id": "events.out.tfevents.1675573548.MAC132633.20071.28.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.847000002861023
+  },
+  "utc_timestamp": 1675591551.665715,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-9",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-9"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573551668"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3936eb15181e7922a0c9"
+  },
+  "task_id": "events.out.tfevents.1675573549.MAC132633.20071.31.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8100000023841858
+  },
+  "utc_timestamp": 1675591556.786221,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-10",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-10"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573556788"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3936eb15181e7922a0ca"
+  },
+  "task_id": "events.out.tfevents.1675573551.MAC132633.20071.34.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7965999841690063
+  },
+  "utc_timestamp": 1675591556.793382,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-11",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-11"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573556795"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df3936eb15181e7922a0cb"
+  },
+  "task_id": "events.out.tfevents.1675573553.MAC132633.20071.37.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8501999974250793
+  },
+  "utc_timestamp": 1675591556.798809,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-12",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-12"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573556800"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df393beb15181e7922a0d1"
+  },
+  "task_id": "events.out.tfevents.1675573555.MAC132633.20071.40.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8378000259399414
+  },
+  "utc_timestamp": 1675591561.949688,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-13",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-13"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573561951"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df393beb15181e7922a0d2"
+  },
+  "task_id": "events.out.tfevents.1675573557.MAC132633.20071.43.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8167999982833862
+  },
+  "utc_timestamp": 1675591561.958857,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-14",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-14"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573561960"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63df393beb15181e7922a0d3"
+  },
+  "task_id": "events.out.tfevents.1675573559.MAC132633.20071.46.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7742999792098999
+  },
+  "utc_timestamp": 1675591561.965241,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-15",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-15"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675573561967"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbf98eb15181e7922a1d6"
+  },
+  "task_id": "dummy_func1-1e3223f677cd0fb79eee3a9c87cec15c",
+  "status": "FINISHED",
+  "generated": {},
+  "start_time": 1675607958.5144105,
+  "end_time": 1675607958.5144165
+},{
+  "_id": {
+    "$oid": "63dfbf98eb15181e7922a1d7"
+  },
+  "task_id": "dummy_func2-0b6c8e454be3e6a4639ebe2f0914dbd2",
+  "status": "FINISHED",
+  "generated": {},
+  "start_time": 1675607958.5181165,
+  "end_time": 1675607958.5181196
+},{
+  "_id": {
+    "$oid": "63dfbfa6eb15181e7922a1f0"
+  },
+  "task_id": "forced_error_func-7b48233ddc09676f6fc79ebc656acedc",
+  "status": "ERROR",
+  "start_time": 1675607972.9803324,
+  "end_time": 1675607973.0590105
+},{
+  "_id": {
+    "$oid": "63dfbfb5eb15181e7922a20c"
+  },
+  "task_id": "dummy_func3-853d92bf5de7e0bc5880f2ca91577db1",
+  "status": "FINISHED",
+  "generated": {},
+  "start_time": 1675607987.5201175,
+  "end_time": 1675607987.5202575
+},{
+  "_id": {
+    "$oid": "63dfbfbfeb15181e7922a222"
+  },
+  "task_id": "dummy_func1-baa9804ca9c22cc22a7a1d4c58ad1c3a",
+  "status": "FINISHED",
+  "generated": {},
+  "start_time": 1675607999.0434542,
+  "end_time": 1675607999.043462
+},{
+  "_id": {
+    "$oid": "63dfbfbfeb15181e7922a223"
+  },
+  "task_id": "dummy_func2-e31f835d210f5aa363322d3bb43737c3",
+  "status": "FINISHED",
+  "generated": {},
+  "start_time": 1675607999.0510502,
+  "end_time": 1675607999.0510523
+},{
+  "_id": {
+    "$oid": "63dfbfc4eb15181e7922a236"
+  },
+  "task_id": "1a1bb214ac07404f9f9abec2d9425d34",
+  "utc_timestamp": 1675626002.916159,
+  "status": "FINISHED",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608002921"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbfc4eb15181e7922a237"
+  },
+  "task_id": "abbf4c56b53e4653948f13a5981eea64",
+  "utc_timestamp": 1675626002.938445,
+  "status": "FINISHED",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608002940"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbfceeb15181e7922a254"
+  },
+  "task_id": "4d559b606ef04a7c89b2084a1ccac7f8",
+  "utc_timestamp": 1675626013.02857,
+  "status": "FINISHED",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608013030"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbfd7eb15181e7922a26b"
+  },
+  "task_id": "events.out.tfevents.1675608016.MAC132633.24422.1.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8446000218391418
+  },
+  "utc_timestamp": 1675626021.125639,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-0",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-0"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608021140"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbfd7eb15181e7922a26c"
+  },
+  "task_id": "events.out.tfevents.1675608019.MAC132633.24422.4.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8353999853134155
+  },
+  "utc_timestamp": 1675626021.146982,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-1",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-1"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608021149"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbfdceb15181e7922a279"
+  },
+  "task_id": "events.out.tfevents.1675608020.MAC132633.24422.7.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7975999712944031
+  },
+  "utc_timestamp": 1675626026.253689,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-2",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-2"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608026258"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbfdceb15181e7922a27a"
+  },
+  "task_id": "events.out.tfevents.1675608022.MAC132633.24422.10.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7742999792098999
+  },
+  "utc_timestamp": 1675626026.265818,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-3",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-3"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608026269"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbfe1eb15181e7922a28b"
+  },
+  "task_id": "events.out.tfevents.1675608024.MAC132633.24422.13.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8328999876976013
+  },
+  "utc_timestamp": 1675626031.415022,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-4",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-4"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608031418"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbfe1eb15181e7922a28c"
+  },
+  "task_id": "events.out.tfevents.1675608027.MAC132633.24422.16.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8235999941825867
+  },
+  "utc_timestamp": 1675626031.423234,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-5",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-5"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608031427"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbfe6eb15181e7922a299"
+  },
+  "task_id": "events.out.tfevents.1675608029.MAC132633.24422.19.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7950000166893005
+  },
+  "utc_timestamp": 1675626036.544129,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-6",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-6"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608036547"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbfe6eb15181e7922a29a"
+  },
+  "task_id": "events.out.tfevents.1675608031.MAC132633.24422.22.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7617999911308289
+  },
+  "utc_timestamp": 1675626036.550798,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-7",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-7"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608036554"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbfe6eb15181e7922a29b"
+  },
+  "task_id": "events.out.tfevents.1675608033.MAC132633.24422.25.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8485999703407288
+  },
+  "utc_timestamp": 1675626036.562005,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-8",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-8"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608036577"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbfebeb15181e7922a2ac"
+  },
+  "task_id": "events.out.tfevents.1675608037.MAC132633.24422.31.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8148000240325928
+  },
+  "utc_timestamp": 1675626041.768266,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-10",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-10"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608041772"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbfebeb15181e7922a2ad"
+  },
+  "task_id": "events.out.tfevents.1675608035.MAC132633.24422.28.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.84579998254776
+  },
+  "utc_timestamp": 1675626041.793092,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-9",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-9"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608041796"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbff0eb15181e7922a2ba"
+  },
+  "task_id": "events.out.tfevents.1675608040.MAC132633.24422.34.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7918000221252441
+  },
+  "utc_timestamp": 1675626047.017617,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-11",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-11"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608047021"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbff0eb15181e7922a2bb"
+  },
+  "task_id": "events.out.tfevents.1675608041.MAC132633.24422.37.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8450999855995178
+  },
+  "utc_timestamp": 1675626047.025359,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-12",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-12"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608047028"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbff0eb15181e7922a2bc"
+  },
+  "task_id": "events.out.tfevents.1675608044.MAC132633.24422.40.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.84579998254776
+  },
+  "utc_timestamp": 1675626047.033356,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-13",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-13"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608047036"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbff5eb15181e7922a2cd"
+  },
+  "task_id": "events.out.tfevents.1675608046.MAC132633.24422.43.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8087999820709229
+  },
+  "utc_timestamp": 1675626052.219315,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-14",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-14"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608052222"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfbff5eb15181e7922a2ce"
+  },
+  "task_id": "events.out.tfevents.1675608049.MAC132633.24422.46.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7853999733924866
+  },
+  "utc_timestamp": 1675626052.22746,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-15",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-15"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608052230"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfc06feb15181e7922a3b3"
+  },
+  "task_id": "f9a04fb0-c168-4150-ad02-5ca198bf7f60",
+  "utc_timestamp": 1675626175.538557,
+  "experiment_id": "campaign-uuid",
+  "custom_metadata": {},
+  "status": "SUBMITTED",
+  "used": {},
+  "plugin_id": "zambeze",
+  "user": "root",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2600:6c5d:5b00:143e:c015:a3c4:8188:80c6",
+  "private_ip": "192.168.1.130",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608175541"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63dfc121eb15181e7922a443"
+  },
+  "task_id": "dummy_func1-845be77fdf60b64d9bb4c6cf25e7518d",
+  "custom_metadata": {},
+  "status": "FINISHED",
+  "utc_timestamp": 1675626351.440982,
+  "used": {},
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608351453"
+    }
+  },
+  "generated": {},
+  "start_time": 1675608351.5315304,
+  "end_time": 1675608351.5315363
+},{
+  "_id": {
+    "$oid": "63dfc121eb15181e7922a444"
+  },
+  "task_id": "dummy_func2-f8ba38cb2b09b8b4ab3d032d334a055d",
+  "custom_metadata": {},
+  "status": "FINISHED",
+  "utc_timestamp": 1675626351.453784,
+  "used": {},
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608351455"
+    }
+  },
+  "generated": {},
+  "start_time": 1675608351.5359273,
+  "end_time": 1675608351.5359304
+},{
+  "_id": {
+    "$oid": "63dfc130eb15181e7922a45c"
+  },
+  "task_id": "forced_error_func-e6a8e5be6d6a87e108caa86a80062bb6",
+  "custom_metadata": {},
+  "status": "ERROR",
+  "utc_timestamp": 1675626365.981108,
+  "used": {},
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608365998"
+    }
+  },
+  "start_time": 1675608366.110278,
+  "end_time": 1675608366.158953
+},{
+  "_id": {
+    "$oid": "63dfc13eeb15181e7922a478"
+  },
+  "task_id": "dummy_func3-e8b23746d038c3b23c5e1da053d83ec1",
+  "custom_metadata": {},
+  "status": "FINISHED",
+  "utc_timestamp": 1675626380.591396,
+  "used": {},
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608380612"
+    }
+  },
+  "generated": {},
+  "start_time": 1675608380.7047207,
+  "end_time": 1675608380.7048328
+},{
+  "_id": {
+    "$oid": "63dfc148eb15181e7922a48e"
+  },
+  "task_id": "dummy_func1-b1e588d18af18624feec1a8341d65d1b",
+  "custom_metadata": {},
+  "status": "FINISHED",
+  "utc_timestamp": 1675626392.163107,
+  "used": {},
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608392182"
+    }
+  },
+  "generated": {},
+  "start_time": 1675608392.3580053,
+  "end_time": 1675608392.3580122
+},{
+  "_id": {
+    "$oid": "63dfc148eb15181e7922a48f"
+  },
+  "task_id": "dummy_func2-ff5b11d5523e0974bbc0af4050860b06",
+  "custom_metadata": {},
+  "status": "FINISHED",
+  "utc_timestamp": 1675626392.181918,
+  "used": {},
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675608392185"
+    }
+  },
+  "generated": {},
+  "start_time": 1675608392.377118,
+  "end_time": 1675608392.377124
+},{
+  "_id": {
+    "$oid": "63e10ec3eb15181e7922ffc4"
+  },
+  "task_id": "dummy_func1-72eb54584712a51dd8a7efd48b4e771f",
+  "custom_metadata": {},
+  "status": "FINISHED",
+  "utc_timestamp": 1675711762.078017,
+  "used": {},
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693762095"
+    }
+  },
+  "generated": {},
+  "start_time": 1675693762.173374,
+  "end_time": 1675693762.173379
+},{
+  "_id": {
+    "$oid": "63e10ec3eb15181e7922ffc5"
+  },
+  "task_id": "dummy_func2-6a3822d5fb863ba46222b3eab7ffc479",
+  "custom_metadata": {},
+  "status": "FINISHED",
+  "utc_timestamp": 1675711762.095704,
+  "used": {},
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693762099"
+    }
+  },
+  "generated": {},
+  "start_time": 1675693762.1843038,
+  "end_time": 1675693762.184306
+},{
+  "_id": {
+    "$oid": "63e10ed2eb15181e7922ffda"
+  },
+  "task_id": "forced_error_func-80ee1775a7b88ef60e97c64bc86152eb",
+  "custom_metadata": {},
+  "status": "ERROR",
+  "utc_timestamp": 1675711776.716728,
+  "used": {},
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693776740"
+    }
+  },
+  "start_time": 1675693776.8453832,
+  "end_time": 1675693776.894258
+},{
+  "_id": {
+    "$oid": "63e10ee1eb15181e7922fffa"
+  },
+  "task_id": "dummy_func3-b47828647751160ccffc7dd5fd458e33",
+  "custom_metadata": {},
+  "status": "FINISHED",
+  "utc_timestamp": 1675711791.385395,
+  "used": {},
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693791413"
+    }
+  },
+  "generated": {},
+  "start_time": 1675693791.5267708,
+  "end_time": 1675693791.5268936
+},{
+  "_id": {
+    "$oid": "63e10eebeb15181e79230010"
+  },
+  "task_id": "dummy_func1-0edb5cc2845d543489642aeda66957c7",
+  "custom_metadata": {},
+  "status": "FINISHED",
+  "utc_timestamp": 1675711803.003486,
+  "used": {},
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693803016"
+    }
+  },
+  "generated": {},
+  "start_time": 1675693803.17805,
+  "end_time": 1675693803.1780562
+},{
+  "_id": {
+    "$oid": "63e10eebeb15181e79230011"
+  },
+  "task_id": "dummy_func2-1775a6d23c82e1d5010beb1635ee2b3f",
+  "custom_metadata": {},
+  "status": "FINISHED",
+  "utc_timestamp": 1675711803.017173,
+  "used": {},
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693803019"
+    }
+  },
+  "generated": {},
+  "start_time": 1675693803.1861792,
+  "end_time": 1675693803.1861854
+},{
+  "_id": {
+    "$oid": "63e10ef0eb15181e79230020"
+  },
+  "task_id": "d752f865d4ed46a89e33a35465ae5246",
+  "utc_timestamp": 1675711806.97092,
+  "status": "FINISHED",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693806980"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e10ef0eb15181e79230021"
+  },
+  "task_id": "b8003bbb930b4a959cf6a1cb09b663c2",
+  "utc_timestamp": 1675711807.049049,
+  "status": "FINISHED",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693807051"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e10efaeb15181e7923003e"
+  },
+  "task_id": "f87bab635acb4e6fac48aa4dbb7ad9b2",
+  "utc_timestamp": 1675711817.129983,
+  "status": "FINISHED",
+  "used": {
+    "batch_size": "64",
+    "number_epochs": "10"
+  },
+  "generated": {
+    "loss": 0.04
+  },
+  "plugin_id": "mlflow",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693817131"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e10f03eb15181e79230055"
+  },
+  "task_id": "events.out.tfevents.1675693820.MAC132633.74830.1.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8389999866485596
+  },
+  "utc_timestamp": 1675711825.16502,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-0",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-0"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693825176"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e10f03eb15181e79230056"
+  },
+  "task_id": "events.out.tfevents.1675693823.MAC132633.74830.4.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.836899995803833
+  },
+  "utc_timestamp": 1675711825.181766,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-1",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-1"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693825185"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e10f08eb15181e79230067"
+  },
+  "task_id": "events.out.tfevents.1675693824.MAC132633.74830.7.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.795199990272522
+  },
+  "utc_timestamp": 1675711830.296689,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-2",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-2"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693830300"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e10f08eb15181e79230068"
+  },
+  "task_id": "events.out.tfevents.1675693826.MAC132633.74830.10.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7760000228881836
+  },
+  "utc_timestamp": 1675711830.304255,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-3",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-3"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693830306"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e10f0deb15181e79230075"
+  },
+  "task_id": "events.out.tfevents.1675693828.MAC132633.74830.13.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8353000283241272
+  },
+  "utc_timestamp": 1675711835.398981,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-4",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-4"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693835401"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e10f0deb15181e79230076"
+  },
+  "task_id": "events.out.tfevents.1675693830.MAC132633.74830.16.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.819599986076355
+  },
+  "utc_timestamp": 1675711835.407561,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-5",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-5"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693835409"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e10f0deb15181e79230077"
+  },
+  "task_id": "events.out.tfevents.1675693832.MAC132633.74830.19.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7853999733924866
+  },
+  "utc_timestamp": 1675711835.414452,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-6",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-6"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693835416"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e10f99eb15181e7923017c"
+  },
+  "task_id": "2571ab5e-5c05-4dd5-a6fe-30ee1cf38b5d",
+  "utc_timestamp": 1675711975.971821,
+  "experiment_id": "campaign-uuid",
+  "custom_metadata": {},
+  "status": "SUBMITTED",
+  "used": {},
+  "plugin_id": "zambeze",
+  "user": "root",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675693975975"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e11082eb15181e79230229"
+  },
+  "task_id": "events.out.tfevents.1675694203.MAC132633.75548.1.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8389000296592712
+  },
+  "utc_timestamp": 1675712208.327801,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-0",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-0"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694208353"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e11082eb15181e7923022a"
+  },
+  "task_id": "events.out.tfevents.1675694205.MAC132633.75548.4.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8281000256538391
+  },
+  "utc_timestamp": 1675712208.360007,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-1",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-1"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694208362"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e11087eb15181e79230233"
+  },
+  "task_id": "events.out.tfevents.1675694207.MAC132633.75548.7.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7996000051498413
+  },
+  "utc_timestamp": 1675712213.469512,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-2",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-2"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694213471"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e11087eb15181e79230234"
+  },
+  "task_id": "events.out.tfevents.1675694209.MAC132633.75548.10.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7838000059127808
+  },
+  "utc_timestamp": 1675712213.475607,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-3",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-3"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694213477"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e11087eb15181e79230235"
+  },
+  "task_id": "events.out.tfevents.1675694210.MAC132633.75548.13.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8359000086784363
+  },
+  "utc_timestamp": 1675712213.48218,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-4",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-4"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694213484"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e1108ceb15181e79230238"
+  },
+  "task_id": "events.out.tfevents.1675694213.MAC132633.75548.16.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8198999762535095
+  },
+  "utc_timestamp": 1675712218.596717,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-5",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-5"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694218599"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e1108ceb15181e79230239"
+  },
+  "task_id": "events.out.tfevents.1675694214.MAC132633.75548.19.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7972999811172485
+  },
+  "utc_timestamp": 1675712218.60827,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-6",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-6"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694218610"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e1108ceb15181e7923023a"
+  },
+  "task_id": "events.out.tfevents.1675694216.MAC132633.75548.22.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7742000222206116
+  },
+  "utc_timestamp": 1675712218.614063,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-7",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-7"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694218617"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e11091eb15181e79230243"
+  },
+  "task_id": "events.out.tfevents.1675694217.MAC132633.75548.25.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8474000096321106
+  },
+  "utc_timestamp": 1675712223.808649,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-8",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-8"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694223812"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e11091eb15181e79230244"
+  },
+  "task_id": "events.out.tfevents.1675694220.MAC132633.75548.28.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8513000011444092
+  },
+  "utc_timestamp": 1675712223.816437,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-9",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-9"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694223821"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e11096eb15181e79230247"
+  },
+  "task_id": "events.out.tfevents.1675694221.MAC132633.75548.31.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8127999901771545
+  },
+  "utc_timestamp": 1675712229.011597,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-10",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-10"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694229016"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e11096eb15181e79230248"
+  },
+  "task_id": "events.out.tfevents.1675694224.MAC132633.75548.34.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7900000214576721
+  },
+  "utc_timestamp": 1675712229.025662,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-11",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-11"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694229032"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e11096eb15181e79230249"
+  },
+  "task_id": "events.out.tfevents.1675694226.MAC132633.75548.37.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8515999913215637
+  },
+  "utc_timestamp": 1675712229.040111,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-12",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-12"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694229046"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e1109beb15181e79230252"
+  },
+  "task_id": "events.out.tfevents.1675694228.MAC132633.75548.40.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.843999981880188
+  },
+  "utc_timestamp": 1675712234.21675,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-13",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-13"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694234219"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e1109beb15181e79230253"
+  },
+  "task_id": "events.out.tfevents.1675694230.MAC132633.75548.43.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8123999834060669
+  },
+  "utc_timestamp": 1675712234.223617,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-14",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-14"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694234225"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e110a0eb15181e79230256"
+  },
+  "task_id": "events.out.tfevents.1675694232.MAC132633.75548.46.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7888000011444092
+  },
+  "utc_timestamp": 1675712239.386513,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-15",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-15"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675694239388"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e1159eeb15181e79230579"
+  },
+  "task_id": "events.out.tfevents.1675695508.MAC132633.78529.1.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8360000252723694
+  },
+  "utc_timestamp": 1675713513.354111,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-0",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-0"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695513365"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115a3eb15181e79230582"
+  },
+  "task_id": "events.out.tfevents.1675695511.MAC132633.78529.4.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8343999981880188
+  },
+  "utc_timestamp": 1675713518.426442,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-1",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-1"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695518428"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115a3eb15181e79230583"
+  },
+  "task_id": "events.out.tfevents.1675695513.MAC132633.78529.7.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8102999925613403
+  },
+  "utc_timestamp": 1675713518.433204,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-2",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-2"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695518435"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115a3eb15181e79230584"
+  },
+  "task_id": "events.out.tfevents.1675695515.MAC132633.78529.10.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.779699981212616
+  },
+  "utc_timestamp": 1675713518.440522,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-3",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-3"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695518469"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115a8eb15181e79230587"
+  },
+  "task_id": "events.out.tfevents.1675695517.MAC132633.78529.13.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8317999839782715
+  },
+  "utc_timestamp": 1675713523.609987,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-4",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-4"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695523612"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115a8eb15181e79230588"
+  },
+  "task_id": "events.out.tfevents.1675695519.MAC132633.78529.16.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8285999894142151
+  },
+  "utc_timestamp": 1675713523.616523,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-5",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-5"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695523618"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115a8eb15181e79230589"
+  },
+  "task_id": "events.out.tfevents.1675695521.MAC132633.78529.19.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7993999719619751
+  },
+  "utc_timestamp": 1675713523.622576,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-6",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-6"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695523624"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115adeb15181e79230592"
+  },
+  "task_id": "events.out.tfevents.1675695523.MAC132633.78529.22.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 16,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7558000087738037
+  },
+  "utc_timestamp": 1675713528.77832,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-7",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-7"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695528785"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115adeb15181e79230593"
+  },
+  "task_id": "events.out.tfevents.1675695524.MAC132633.78529.25.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8478999733924866
+  },
+  "utc_timestamp": 1675713528.791144,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-8",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-8"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695528793"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115b2eb15181e79230597"
+  },
+  "task_id": "events.out.tfevents.1675695528.MAC132633.78529.31.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8100000023841858
+  },
+  "utc_timestamp": 1675713533.899885,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-10",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-10"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695533902"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115b2eb15181e79230598"
+  },
+  "task_id": "events.out.tfevents.1675695531.MAC132633.78529.34.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7860999703407288
+  },
+  "utc_timestamp": 1675713533.905943,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-11",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-11"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695533907"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115b2eb15181e79230599"
+  },
+  "task_id": "events.out.tfevents.1675695527.MAC132633.78529.28.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.1,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8460999727249146
+  },
+  "utc_timestamp": 1675713533.922679,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-9",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-9"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695533924"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115b7eb15181e792305a1"
+  },
+  "task_id": "events.out.tfevents.1675695532.MAC132633.78529.37.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8452000021934509
+  },
+  "utc_timestamp": 1675713539.238555,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-12",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-12"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695539246"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115b7eb15181e792305a2"
+  },
+  "task_id": "events.out.tfevents.1675695535.MAC132633.78529.40.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "adam"
+  },
+  "generated": {
+    "accuracy": 0.8400999903678894
+  },
+  "utc_timestamp": 1675713539.256747,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-13",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-13"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695539265"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115b7eb15181e792305a3"
+  },
+  "task_id": "events.out.tfevents.1675695536.MAC132633.78529.43.v2",
+  "used": {
+    "batch_size": 32,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.8083999752998352
+  },
+  "utc_timestamp": 1675713539.274561,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-14",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-14"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695539290"
+    }
+  }
+},{
+  "_id": {
+    "$oid": "63e115bceb15181e792305a7"
+  },
+  "task_id": "events.out.tfevents.1675695538.MAC132633.78529.46.v2",
+  "used": {
+    "batch_size": 64,
+    "dropout": 0.2,
+    "num_units": 32,
+    "optimizer": "sgd"
+  },
+  "generated": {
+    "accuracy": 0.7771000266075134
+  },
+  "utc_timestamp": 1675713544.470955,
+  "status": "FINISHED",
+  "custom_metadata": {
+    "event_file": "run-15",
+    "log_path": "/Users/rsr/Library/CloudStorage/OneDrive-OakRidgeNationalLaboratory/ORNL_Pendrive/dev/flowcept/tensorboard_events/run-15"
+  },
+  "plugin_id": "tensorboard",
+  "user": "root",
+  "experiment_id": "super-experiment",
+  "sys_name": "Darwin",
+  "node_name": "MAC132633",
+  "login_name": "rsr",
+  "public_ip": "2620:0:2b30:e0::4b9",
+  "private_ip": "10.158.26.233",
+  "timestamp": {
+    "$date": {
+      "$numberLong": "1675695544478"
+    }
+  }
+}]

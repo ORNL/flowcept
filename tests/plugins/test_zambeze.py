@@ -36,6 +36,7 @@ class TestZambeze(unittest.TestCase):
         threading.Thread(target=main, daemon=True).start()
 
     def test_send_message(self):
+        another_act_id = str(uuid4())
         act_id = str(uuid4())
         msg = ZambezeMessage(
             **{
@@ -55,7 +56,7 @@ class TestZambeze(unittest.TestCase):
                     "a.gif",
                 ],
                 "kwargs": {},
-                "depends_on": [],
+                "depends_on": [another_act_id],
             }
         )
 

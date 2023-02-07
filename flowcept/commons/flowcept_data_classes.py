@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, AnyStr, Any, Union
+from typing import Dict, AnyStr, Any, Union, List
 
 
 class Status(str, Enum):  # inheriting from str here for JSON serialization
@@ -40,6 +40,8 @@ class TaskMessage:
     private_ip: AnyStr = None
     sys_name: AnyStr = None
     address: AnyStr = None
+    dependencies: List = None
+    dependents: List = None
 
     # def __init__(self,
     #     task_id: AnyStr = None,  # Any way to identify a task
