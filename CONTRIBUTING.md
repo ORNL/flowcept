@@ -44,10 +44,11 @@ This will create a [tagged release](https://github.com/ORNL/flowcept/releases) a
 # Checklist for Creating a new Flowcept Plugin
 
 1. Create a new package directory under `flowcept/flowceptor/plugins`
-2. Create a new class that inherits from `AbstractFlowceptor`, and implement the abstract methods:
+2. Create a new class that inherits from `BaseInterceptor`, and consider implementing the abstract methods:
     - Observe
     - Intercept
     - Callback
+    - Prepare_task_msg
     
 See the existing plugins for a reference.
 3. [Optional] You may need extra classes, such as 
@@ -57,6 +58,7 @@ See the existing plugins for a reference.
 5. Create a new `requirements.txt` file under the directory [extra_requirements](extra_requirements) and
 adjust the [setup.py](setup.py).
 6. [Optional] Add a new constant to [vocabulary.py](flowcept/commons/vocabulary.py).
+7. [Optional] Ajust flowcept.__init__.py.
 
 
 # Issue Labels
