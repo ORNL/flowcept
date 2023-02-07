@@ -13,7 +13,6 @@ from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
 
 class FlowceptConsumerAPI(object):
-
     def __init__(self):
         self._consumer_thread: Thread = None
 
