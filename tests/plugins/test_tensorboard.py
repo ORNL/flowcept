@@ -5,9 +5,7 @@ import time
 from flowcept.flowcept_consumer.main import (
     main,
 )
-from flowcept.flowceptor.plugins.tensorboard.tensorboard_interceptor import (
-    TensorboardInterceptor,
-)
+from flowcept import TensorboardInterceptor
 
 
 class TestTensorboard(unittest.TestCase):
@@ -124,9 +122,9 @@ class TestTensorboard(unittest.TestCase):
 
     def _init_consumption(self):
         threading.Thread(target=self.interceptor.observe, daemon=True).start()
-        time.sleep(10)
+        time.sleep(15)
         threading.Thread(target=main, daemon=True).start()
-        time.sleep(10)
+        time.sleep(15)
 
     def test_observer_and_consumption(self):
         self._init_consumption()
