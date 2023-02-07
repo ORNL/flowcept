@@ -5,22 +5,21 @@ import requests
 from time import sleep
 from uuid import uuid4
 from flowcept.configs import WEBSERVER_PORT, WEBSERVER_HOST
+from flowcept.flowcept_python_api.task_query import TaskQueryAPI
 from flowcept.flowcept_webserver.app import app, BASE_ROUTE
-from flowcept.flowcept_webserver.resources.query_rsrc import DocQuery
+from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
 from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 
 
 class QueryTest(unittest.TestCase):
-    HOST = WEBSERVER_HOST
-    PORT = WEBSERVER_PORT + 1
-    URL = f"http://{HOST}:{PORT}{BASE_ROUTE}{DocQuery.ROUTE}"
+    URL = f"http://{WEBSERVER_HOST}:{WEBSERVER_PORT}{BASE_ROUTE}{TaskQuery.ROUTE}"
 
     def __init__(self, *args, **kwargs):
         super(QueryTest, self).__init__(*args, **kwargs)
         Thread(
             target=app.run,
-            kwargs={"host": QueryTest.HOST, "port": QueryTest.PORT},
+            kwargs={"host": WEBSERVER_HOST, "port": WEBSERVER_PORT},
             daemon=True,
         ).start()
         sleep(2)
@@ -64,6 +63,22 @@ class QueryTest(unittest.TestCase):
         r = requests.post(QueryTest.URL, json=request_data)
         assert r.status_code == 201
         assert docs[0]["task_id"] == r.json()[0]["task_id"]
+        dao.delete_keys("task_id", docs[0]["task_id"])
+        c1 = dao.count()
+        assert c0 == c1
+
+    def test_query_api(self):
+        docs, ids = self.gen_some_mock_data(size=1)
+
+        dao = DocumentDBDao()
+        c0 = dao.count()
+        dao.insert_many(docs)
+
+        api = TaskQueryAPI()
+        _filter = {"task_id": ids[0]}
+        res = api.query(_filter)
+        assert len(res) > 0
+        assert docs[0]["task_id"] == res[0]["task_id"]
         dao.delete_keys("task_id", docs[0]["task_id"])
         c1 = dao.count()
         assert c0 == c1
