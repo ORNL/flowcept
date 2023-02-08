@@ -1,4 +1,4 @@
-tests/log_tests.pyfrom flowcept.commons.flowcept_logger import logger
+from flowcept.commons.flowcept_logger import logger
 
 try:
     logger.debug("debug")
