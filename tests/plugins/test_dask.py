@@ -10,6 +10,7 @@ from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 from flowcept.commons.doc_db.document_inserter import (
     DocumentInserter,
 )
+from flowcept.commons.flowcept_logger import FlowceptLogger
 
 
 def dummy_func1(x, workflow_id=None):
@@ -35,6 +36,9 @@ def forced_error_func(x):
 class TestDask(unittest.TestCase):
     client: Client = None
     consumer_thread: Thread = None
+
+    def __init__(self):
+        self.logger = FlowceptLogger().get_logger()
 
     @staticmethod
     def _init_consumption():
@@ -75,8 +79,8 @@ class TestDask(unittest.TestCase):
         wf_id = f"wf_{uuid4()}"
         o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
         o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
-        print(o2.result())
-        print(o2.key)
+        self.logger.debug(o2.result())
+        self.logger.debug(o2.key)
         return o2.key
 
     def test_long_workflow(self):
@@ -85,7 +89,7 @@ class TestDask(unittest.TestCase):
         o1 = TestDask.client.submit(dummy_func1, i1, workflow_id=wf_id)
         o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
         o3 = TestDask.client.submit(dummy_func3, o1, o2, workflow_id=wf_id)
-        print(o3.result())
+        self.logger.debug(o3.result())
         return o3.key
 
     def varying_args(self):
@@ -93,8 +97,8 @@ class TestDask(unittest.TestCase):
         o1 = TestDask.client.submit(dummy_func3, i1, w=2)
         result = o1.result()
         assert result["r"] > 0
-        print(result)
-        print(o1.key)
+        self.logger.debug(result)
+        self.logger.debug(o1.key)
         return o1.key
 
     def test_map_workflow(self):
@@ -104,7 +108,7 @@ class TestDask(unittest.TestCase):
         for o in o1:
             result = o.result()
             assert result > 0
-            print(o.key, result)
+            self.logger.debug(o.key, result)
         return o1
 
     def test_map_workflow_kwargs(self):
@@ -117,14 +121,14 @@ class TestDask(unittest.TestCase):
         for o in o1:
             result = o.result()
             assert result["z"] > 0
-            print(o.key, result)
+            self.logger.debug(o.key, result)
         return o1
 
     def error_task_submission(self):
         i1 = np.random.random()
         o1 = TestDask.client.submit(forced_error_func, i1)
         try:
-            print(o1.result())
+            self.logger.debug(o1.result())
         except:
             pass
         return o1.key

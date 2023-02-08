@@ -5,11 +5,13 @@ from flowcept.commons.doc_db.document_inserter import DocumentInserter
 
 from typing import List
 
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.plugins.base_interceptor import BaseInterceptor
 
 
 class FlowceptConsumerAPI(object):
     def __init__(self, interceptors: List[BaseInterceptor] = None):
+        self.logger = FlowceptLogger().get_logger()
         self._consumer_thread: Thread = None
         if interceptors is not None and type(interceptors) != list:
             interceptors = [interceptors]
@@ -18,12 +20,14 @@ class FlowceptConsumerAPI(object):
     def start(self):
         if self._interceptors and len(self._interceptors):
             for interceptor in self._interceptors:
-                print(f"Flowceptor {interceptor.settings.key} starting...")
+                self.logger.debug(
+                    f"Flowceptor {interceptor.settings.key} starting..."
+                )
                 Thread(target=interceptor.observe).start()
-                print("... ok!")
+                self.logger.debug("... ok!")
 
-        print("Flowcept Consumer starting...")
+        self.logger.debug("Flowcept Consumer starting...")
         self._consumer_thread = Thread(target=DocumentInserter().main)
         self._consumer_thread.start()
         sleep(2)
-        print("Ok, we're consuming messages!")
+        self.logger.debug("Ok, we're consuming messages!")
