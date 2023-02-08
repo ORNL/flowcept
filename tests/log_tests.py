@@ -1,10 +1,15 @@
-from flowcept.commons.flowcept_logger import logger
+from flowcept.commons.flowcept_logger import FlowceptLogger
 
+_logger = FlowceptLogger().logger
 try:
-    logger.debug("debug")
-    logger.info("info")
-    logger.error("info")
-    x = 2/0
+    _logger.debug("debug")
+    _logger.info("info")
+    _logger.error("info")
+    x = 2 / 0
 except Exception as e:
-    logger.exception(e)
-    logger.info("It's ok")
+    _logger.exception(e)
+    _logger.info("It's ok")
+
+_logger2 = FlowceptLogger().logger
+
+assert id(_logger) == id(_logger2)
