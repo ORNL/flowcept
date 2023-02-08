@@ -82,6 +82,7 @@ class TestDask(unittest.TestCase):
         o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
         self.logger.debug(o2.result())
         self.logger.debug(o2.key)
+        sleep(10)
         return o2.key
 
     def test_long_workflow(self):
@@ -91,6 +92,7 @@ class TestDask(unittest.TestCase):
         o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
         o3 = TestDask.client.submit(dummy_func3, o1, o2, workflow_id=wf_id)
         self.logger.debug(o3.result())
+        sleep(10)
         return o3.key
 
     def varying_args(self):
@@ -100,6 +102,7 @@ class TestDask(unittest.TestCase):
         assert result["r"] > 0
         self.logger.debug(result)
         self.logger.debug(o1.key)
+        sleep(10)
         return o1.key
 
     def test_map_workflow(self):
@@ -124,6 +127,7 @@ class TestDask(unittest.TestCase):
             result = o.result()
             assert result["z"] > 0
             self.logger.debug(o.key, result)
+        sleep(10)
         return o1
 
     def error_task_submission(self):
