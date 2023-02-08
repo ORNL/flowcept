@@ -1,5 +1,5 @@
 import unittest
-import threading
+from threading import Thread
 from time import sleep
 from uuid import uuid4
 import numpy as np
@@ -34,6 +34,14 @@ def forced_error_func(x):
 
 class TestDask(unittest.TestCase):
     client: Client = None
+    consumer_thread: Thread = None
+
+    @staticmethod
+    def _init_consumption():
+        TestDask.consumer_thread = Thread(
+            target=DocumentInserter().main, daemon=True
+        ).start()
+        sleep(3)
 
     @classmethod
     def setUpClass(cls):
@@ -62,15 +70,7 @@ class TestDask(unittest.TestCase):
 
         return client
 
-    def _init_consumption(self):
-        TestDask.consumer_thread = threading.Thread(
-            target=DocumentInserter().main, daemon=True
-        ).start()
-        sleep(3)
-
     def test_pure_workflow(self):
-        import numpy as np
-
         i1 = np.random.random()
         wf_id = f"wf_{uuid4()}"
         o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
@@ -80,8 +80,6 @@ class TestDask(unittest.TestCase):
         return o2.key
 
     def test_long_workflow(self):
-        import numpy as np
-
         i1 = np.random.random()
         wf_id = f"wf_{uuid4()}"
         o1 = TestDask.client.submit(dummy_func1, i1, workflow_id=wf_id)
@@ -93,7 +91,9 @@ class TestDask(unittest.TestCase):
     def varying_args(self):
         i1 = np.random.random()
         o1 = TestDask.client.submit(dummy_func3, i1, w=2)
-        print(o1.result())
+        result = o1.result()
+        assert result["r"] > 0
+        print(result)
         print(o1.key)
         return o1.key
 
@@ -101,7 +101,10 @@ class TestDask(unittest.TestCase):
         i1 = np.random.random(3)
         wf_id = f"wf_{uuid4()}"
         o1 = TestDask.client.map(dummy_func1, i1, workflow_id=wf_id)
-        [print(o.key, o.result()) for o in o1]
+        for o in o1:
+            result = o.result()
+            assert result > 0
+            print(o.key, result)
         return o1
 
     def test_map_workflow_kwargs(self):
@@ -111,7 +114,10 @@ class TestDask(unittest.TestCase):
         ]
         wf_id = f"wf_{uuid4()}"
         o1 = TestDask.client.map(dummy_func4, i1, workflow_id=wf_id)
-        [print(o.key, o.result()) for o in o1]
+        for o in o1:
+            result = o.result()
+            assert result["z"] > 0
+            print(o.key, result)
         return o1
 
     def error_task_submission(self):
@@ -121,13 +127,12 @@ class TestDask(unittest.TestCase):
             print(o1.result())
         except:
             pass
-        print(o1.key)
         return o1.key
 
     def test_observer_and_consumption(self):
         doc_dao = DocumentDBDao()
         if TestDask.consumer_thread is None:
-            self._init_consumption()
+            TestDask._init_consumption()
         o2_task_id = self.test_pure_workflow()
         sleep(10)
         assert len(doc_dao.find({"task_id": o2_task_id})) > 0
@@ -135,7 +140,7 @@ class TestDask(unittest.TestCase):
     def test_observer_and_consumption_varying_args(self):
         doc_dao = DocumentDBDao()
         if TestDask.consumer_thread is None:
-            self._init_consumption()
+            TestDask._init_consumption()
         o2_task_id = self.varying_args()
         sleep(10)
         assert len(doc_dao.find({"task_id": o2_task_id})) > 0
@@ -143,7 +148,7 @@ class TestDask(unittest.TestCase):
     def test_observer_and_consumption_error_task(self):
         doc_dao = DocumentDBDao()
         if TestDask.consumer_thread is None:
-            self._init_consumption()
+            TestDask._init_consumption()
         o2_task_id = self.error_task_submission()
         sleep(10)
         docs = doc_dao.find({"task_id": o2_task_id})
