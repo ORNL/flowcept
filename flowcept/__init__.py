@@ -1,6 +1,5 @@
-from . import version
-
-__version__ = version.__version__
+# from flowcept.commons.flowcept_logger import get_logger
+from flowcept.version import __version__
 
 from flowcept.flowcept_api.consumer_api import FlowceptConsumerAPI
 from flowcept.flowcept_api.task_query_api import TaskQueryAPI
