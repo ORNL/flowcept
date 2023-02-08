@@ -128,7 +128,7 @@ class TestDask(unittest.TestCase):
         except:
             pass
         return o1.key
-        
+
     def test_observer_and_consumption(self):
         doc_dao = DocumentDBDao()
         if TestDask.consumer_thread is None:
