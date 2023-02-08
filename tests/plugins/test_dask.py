@@ -24,6 +24,10 @@ def dummy_func3(z, w, workflow_id=None):
     return {"r": z + w}
 
 
+def dummy_func4(x_obj, workflow_id=None):
+    return {"z": x_obj["x"] * 2}
+
+
 def forced_error_func(x):
     raise Exception(f"This is a forced error: {x}")
 
@@ -97,6 +101,16 @@ class TestDask(unittest.TestCase):
         i1 = np.random.random(3)
         wf_id = f"wf_{uuid4()}"
         o1 = TestDask.client.map(dummy_func1, i1, workflow_id=wf_id)
+        [print(o.key, o.result()) for o in o1]
+        return o1
+
+    def test_map_workflow_kwargs(self):
+        i1 = [
+            {"x": np.random.random(), "y": np.random.random()},
+            {"x": np.random.random()},
+        ]
+        wf_id = f"wf_{uuid4()}"
+        o1 = TestDask.client.map(dummy_func4, i1, workflow_id=wf_id)
         [print(o.key, o.result()) for o in o1]
         return o1
 

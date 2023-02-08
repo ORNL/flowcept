@@ -16,15 +16,36 @@ def get_run_spec_data(task_msg: TaskMessage, run_spec):
             return getattr(run_spec, arg_name)
         return None
 
+    def _parse_dask_tuple(_tuple: tuple):
+        forth_elem = None
+        if len(_tuple) == 3:
+            _, _, value_tuple = _tuple
+        elif len(_tuple) == 4:
+            _, _, value_tuple, forth_elem = _tuple
+
+        _, value = value_tuple
+        if len(value) == 1:  # Value is always an array here
+            value = value[0]
+        ret_obj = {"value": value}
+
+        if forth_elem is not None and type(forth_elem) == dict:
+            ret_obj.update(forth_elem)
+        else:
+            pass  # We don't know yet what to do if this happens. So just pass.
+
+        return ret_obj
+
     task_msg.used = {}
     arg_val = _get_arg("args")
     if arg_val is not None:
         picked_args = pickle.loads(arg_val)
         # pickled_args is always a tuple
+        task_msg.used = list(picked_args)
         i = 0
         for arg in picked_args:
             task_msg.used[f"arg{i}"] = arg
             i += 1
+
     arg_val = _get_arg("kwargs")
     if arg_val is not None:
         picked_kwargs = pickle.loads(arg_val)
@@ -32,6 +53,13 @@ def get_run_spec_data(task_msg: TaskMessage, run_spec):
             task_msg.workflow_id = picked_kwargs.pop("workflow_id")
         if len(picked_kwargs):
             task_msg.used.update(picked_kwargs)
+
+    arg_val = _get_arg("task")  # This happens in case of client.map
+    if arg_val is not None and type(arg_val) == tuple:
+        task_obj = _parse_dask_tuple(arg_val)
+        if "workflow_id" in task_obj:
+            task_msg.workflow_id = task_obj.pop("workflow_id")
+        task_msg.used = task_obj["value"]
 
 
 def get_task_deps(task_state, task_msg: TaskMessage):
