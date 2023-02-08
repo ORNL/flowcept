@@ -8,8 +8,8 @@ from flowcept.configs import (
 )
 
 # Create a custom logger
-_logger = logging.getLogger(PROJECT_NAME)
-_logger.setLevel(logging.DEBUG)
+logger = logging.getLogger(PROJECT_NAME)
+logger.setLevel(logging.DEBUG)
 # Create handlers
 stream_handler = logging.StreamHandler()
 file_handler = logging.FileHandler(LOG_FILE_PATH, mode="a+")
@@ -28,11 +28,11 @@ stream_handler.setFormatter(c_format)
 file_handler.setFormatter(f_format)
 
 # Add handlers to the logger
-_logger.addHandler(stream_handler)
-_logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
+logger.addHandler(file_handler)
 
-_logger.debug(f"{PROJECT_NAME}'s base log is set up!")
+logger.debug(f"{PROJECT_NAME}'s base log is set up!")
 
 
 def get_logger():
-    return _logger
+    return logger
