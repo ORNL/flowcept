@@ -2,6 +2,9 @@ import unittest
 from uuid import uuid4
 
 from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.flowcept_logger import get_logger
+
+logger = get_logger()
 
 
 class TestDocDBInserter(unittest.TestCase):
