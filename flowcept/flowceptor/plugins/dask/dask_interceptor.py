@@ -149,6 +149,8 @@ class DaskWorkerInterceptor(BaseInterceptor):
 
         # Note that both scheduler and worker get the exact same input.
         # Worker does not resolve intermediate inputs, just like the scheduler.
+        # But careful: we are only able to capture inputs in client.map on
+        # workers.
 
     def callback(self, task_id, start, finish, *args, **kwargs):
         try:
