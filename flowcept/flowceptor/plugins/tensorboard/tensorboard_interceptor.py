@@ -31,7 +31,7 @@ class TensorboardInterceptor(BaseInterceptor):
         If it's an interesting change, it calls self.intercept; otherwise,
         let it go....
         """
-        print("New tensorboard event file changed!")
+        self.logger.debug("New tensorboard event file changed!")
         # TODO: now we're waiting for the file to be completely written.
         # Is there a better way to inform when the file writing is finished?
         time.sleep(self.settings.watch_interval_sec)
@@ -40,7 +40,9 @@ class TensorboardInterceptor(BaseInterceptor):
         for child_event_file in reader.children:
             child_event = reader.children[child_event_file]
             if self.state_manager.has_element_id(child_event.log_path):
-                print(f"Already extracted metric from {child_event_file}.")
+                self.logger.debug(
+                    f"Already extracted metric from {child_event_file}."
+                )
                 continue
             event_tags = child_event.get_tags()
 
@@ -69,7 +71,7 @@ class TensorboardInterceptor(BaseInterceptor):
                         task_msg.task_id = event_files[0]
 
                 if task_msg.task_id is None:
-                    print("This is an error")  # TODO: logger
+                    self.logger.error("This is an error")  # TODO: logger
 
                 self.intercept(task_msg)
                 self.state_manager.add_element_id(child_event.log_path)
@@ -79,11 +81,11 @@ class TensorboardInterceptor(BaseInterceptor):
             self, self.__class__.callback
         )
         while not os.path.isdir(self.settings.file_path):
-            print(
+            self.logger.debug(
                 f"I can't watch the file {self.settings.file_path},"
                 f" as it does not exist."
             )
-            print(
+            self.logger.debug(
                 f"\tI will sleep for {self.settings.watch_interval_sec} sec."
                 f" to see if it appears."
             )
@@ -94,7 +96,7 @@ class TensorboardInterceptor(BaseInterceptor):
             event_handler, self.settings.file_path, recursive=True
         )
         observer.start()
-        print(f"Watching {self.settings.file_path}")
+        self.logger.debug(f"Watching {self.settings.file_path}")
 
 
 if __name__ == "__main__":
@@ -104,5 +106,4 @@ if __name__ == "__main__":
         while True:
             time.sleep(interceptor.settings.watch_interval_sec)
     except KeyboardInterrupt:
-        print("Interrupted")
         sys.exit(0)

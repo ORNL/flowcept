@@ -78,12 +78,6 @@ def get_times_from_task_state(task_msg, ts):
 class DaskSchedulerInterceptor(BaseInterceptor):
     def __init__(self, scheduler, plugin_key="dask"):
         self._scheduler = scheduler
-        self._error_path = "scheduler_error.log"
-
-        for f in [self._error_path]:
-            if os.path.exists(f):
-                os.remove(f)
-
         super().__init__(plugin_key)
 
     def callback(self, task_id, start, finish, *args, **kwargs):
@@ -114,22 +108,14 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                 self.intercept(task_msg)
 
         except Exception as e:
-            # TODO: use logger
-            with open(self._error_path, "a+") as ferr:
-                ferr.write(f"FullStateError={repr(e)}\n")
+            self.logger.error("Error with dask scheduler!")
+            self.logger.exception(e)
 
 
 class DaskWorkerInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="dask"):
-        self._error_path = "worker_error.log"
         self._plugin_key = plugin_key
-
-        # Worker-specific props
         self._worker = None
-
-        for f in [self._error_path]:
-            if os.path.exists(f):
-                os.remove(f)
 
     def setup_worker(self, worker):
         """
@@ -138,7 +124,6 @@ class DaskWorkerInterceptor(BaseInterceptor):
         """
         self._worker = worker
         super().__init__(self._plugin_key)
-
         # Note that both scheduler and worker get the exact same input.
         # Worker does not resolve intermediate inputs, just like the scheduler.
         # But careful: we are only able to capture inputs in client.map on
@@ -189,5 +174,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
             self.intercept(task_msg)
 
         except Exception as e:
-            with open(self._error_path, "a+") as ferr:
-                ferr.write(f"should_get_output_error={repr(e)}\n")
+            self.logger.error(
+                f"Error with dask worker: {self._worker.worker_address}"
+            )
+            self.logger.exception(e)
