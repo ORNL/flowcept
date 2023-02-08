@@ -26,9 +26,12 @@ class FlowceptLogger(object):
         file_handler.setLevel(file_level)
 
         # Create formatters and add it to handlers
-        c_format = logging.Formatter("[%(name)s][%(levelname)s][%(message)s]")
+        c_format = logging.Formatter(
+            "[%(name)s][%(levelname)s][pid=%(process)d][%(message)s]"
+        )
         f_format = logging.Formatter(
-            "[%(asctime)s][%(name)s][%(levelname)s][%(message)s]"
+            "[%(asctime)s][%(name)s][%(levelname)s]"
+            "[pid=%(process)d][%(message)s]"
         )
         stream_handler.setFormatter(c_format)
         file_handler.setFormatter(f_format)
