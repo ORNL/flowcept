@@ -67,6 +67,7 @@ def get_task_deps(task_state, task_msg: TaskMessage):
     if len(task_state.dependents):
         task_msg.dependents = [t.key for t in task_state.dependents]
 
+
 def get_times_from_task_state(task_msg, ts):
     for times in ts.startstops:
         if times["action"] == "compute":
@@ -116,7 +117,6 @@ class DaskSchedulerInterceptor(BaseInterceptor):
             # TODO: use logger
             with open(self._error_path, "a+") as ferr:
                 ferr.write(f"FullStateError={repr(e)}\n")
-
 
 
 class DaskWorkerInterceptor(BaseInterceptor):
