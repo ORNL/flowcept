@@ -45,7 +45,9 @@ class MLFlowInterceptor(BaseInterceptor):
         for run_uuid_tuple in runs:
             run_uuid = run_uuid_tuple[0]
             if not self.state_manager.has_element_id(run_uuid):
-                print(f"We need to intercept this Run: {run_uuid}")
+                self.logger.debug(
+                    f"We need to intercept this Run: {run_uuid}"
+                )
                 run_data = self.dao.get_run_data(run_uuid)
                 self.state_manager.add_element_id(run_uuid)
                 task_msg = self.prepare_task_msg(run_data)
@@ -56,11 +58,9 @@ class MLFlowInterceptor(BaseInterceptor):
             self, self.__class__.callback
         )
         while not os.path.isfile(self.settings.file_path):
-            print(
+            self.logger.warning(
                 f"I can't watch the file {self.settings.file_path},"
                 f" as it does not exist."
-            )
-            print(
                 f"\tI will sleep for {self.settings.watch_interval_sec} sec."
                 f" to see if it appears."
             )
@@ -71,7 +71,7 @@ class MLFlowInterceptor(BaseInterceptor):
             event_handler, self.settings.file_path, recursive=True
         )
         observer.start()
-        print(f"Watching {self.settings.file_path}")
+        self.logger.info(f"Watching {self.settings.file_path}")
 
 
 if __name__ == "__main__":
@@ -81,5 +81,4 @@ if __name__ == "__main__":
         while True:
             time.sleep(interceptor.settings.watch_interval_sec)
     except KeyboardInterrupt:
-        print("Interrupted")
         sys.exit(0)

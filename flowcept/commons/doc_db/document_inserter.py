@@ -4,12 +4,12 @@ from time import time, sleep
 from threading import Thread
 from typing import Dict
 from datetime import datetime
-
 from flowcept.configs import (
     MONGO_INSERTION_BUFFER_TIME,
     MONGO_INSERTION_BUFFER_SIZE,
     DEBUG_MODE,
 )
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.mq_dao import MQDao
 from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 
@@ -20,6 +20,7 @@ class DocumentInserter:
         self._mq_dao = MQDao()
         self._doc_dao = DocumentDBDao()
         self._previous_time = time()
+        self.logger = FlowceptLogger().get_logger()
 
     def _flush(self):
         self._doc_dao.insert_and_update_many("task_id", self._buffer)
@@ -34,9 +35,9 @@ class DocumentInserter:
             intercepted_message["debug"] = True
 
         self._buffer.append(intercepted_message)
-        print("An intercepted message was received.")
+        self.logger.debug("An intercepted message was received.")
         if len(self._buffer) >= MONGO_INSERTION_BUFFER_SIZE:
-            print("Buffer exceeded, flushing...")
+            self.logger.debug("Buffer exceeded, flushing...")
             self._flush()
 
     def time_based_flushing(self):
@@ -45,7 +46,7 @@ class DocumentInserter:
                 now = time()
                 timediff = now - self._previous_time
                 if timediff >= MONGO_INSERTION_BUFFER_TIME:
-                    print("Time to flush!")
+                    self.logger.debug("Time to flush!")
                     self._previous_time = now
                     self._flush()
             sleep(MONGO_INSERTION_BUFFER_TIME)
@@ -63,5 +64,4 @@ if __name__ == "__main__":
     try:
         DocumentInserter().main()
     except KeyboardInterrupt:
-        print("Interrupted")
         sys.exit(0)
