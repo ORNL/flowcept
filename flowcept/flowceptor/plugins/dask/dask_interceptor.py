@@ -40,7 +40,6 @@ def get_run_spec_data(task_msg: TaskMessage, run_spec):
     if arg_val is not None:
         picked_args = pickle.loads(arg_val)
         # pickled_args is always a tuple
-        task_msg.used = list(picked_args)
         i = 0
         for arg in picked_args:
             task_msg.used[f"arg{i}"] = arg
@@ -68,6 +67,12 @@ def get_task_deps(task_state, task_msg: TaskMessage):
     if len(task_state.dependents):
         task_msg.dependents = [t.key for t in task_state.dependents]
 
+def get_times_from_task_state(task_msg, ts):
+    for times in ts.startstops:
+        if times["action"] == "compute":
+            task_msg.start_time = times["start"]
+            task_msg.end_time = times["stop"]
+
 
 class DaskSchedulerInterceptor(BaseInterceptor):
     def __init__(self, scheduler, plugin_key="dask"):
@@ -79,13 +84,6 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                 os.remove(f)
 
         super().__init__(plugin_key)
-
-    def observe(self):
-        """
-        Dask already observes task transitions,
-        so we don't need to implement another observation.
-        """
-        pass
 
     def callback(self, task_id, start, finish, *args, **kwargs):
         try:
@@ -119,12 +117,6 @@ class DaskSchedulerInterceptor(BaseInterceptor):
             with open(self._error_path, "a+") as ferr:
                 ferr.write(f"FullStateError={repr(e)}\n")
 
-
-def get_times_from_task_state(task_msg, ts):
-    for times in ts.startstops:
-        if times["action"] == "compute":
-            task_msg.start_time = times["start"]
-            task_msg.end_time = times["stop"]
 
 
 class DaskWorkerInterceptor(BaseInterceptor):
@@ -199,10 +191,3 @@ class DaskWorkerInterceptor(BaseInterceptor):
         except Exception as e:
             with open(self._error_path, "a+") as ferr:
                 ferr.write(f"should_get_output_error={repr(e)}\n")
-
-    def observe(self):
-        """
-        Dask already observes task transitions,
-        so we don't need to implement another observation.
-        """
-        pass
