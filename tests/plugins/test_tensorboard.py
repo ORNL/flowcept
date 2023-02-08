@@ -2,6 +2,7 @@ import unittest
 import threading
 import time
 
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowcept_consumer.main import (
     main,
 )
@@ -13,6 +14,7 @@ class TestTensorboard(unittest.TestCase):
         super(TestTensorboard, self).__init__(*args, **kwargs)
         self.interceptor = TensorboardInterceptor()
         self.interceptor.state_manager.reset()
+        self.logger = FlowceptLogger().get_logger()
 
     def test_run_tensorboard_hparam_tuning(self):
         """
@@ -24,9 +26,9 @@ class TestTensorboard(unittest.TestCase):
         import shutil
 
         logdir = self.interceptor.settings.file_path
-        print(logdir)
+        self.logger.debug(logdir)
         if os.path.exists(logdir):
-            print("Path exists, gonna delete")
+            self.logger.debug("Path exists, gonna delete")
             shutil.rmtree(logdir)
 
         import tensorflow as tf
@@ -113,8 +115,10 @@ class TestTensorboard(unittest.TestCase):
                             HP_BATCHSIZES: batch_size,
                         }
                         run_name = "run-%d" % session_num
-                        print("--- Starting trial: %s" % run_name)
-                        print({h.name: hparams[h] for h in hparams})
+                        self.logger.debug("--- Starting trial: %s" % run_name)
+                        self.logger.debug(
+                            {h.name: hparams[h] for h in hparams}
+                        )
                         run(f"{logdir}/" + run_name, hparams)
                         session_num += 1
 
@@ -163,7 +167,7 @@ class TestTensorboard(unittest.TestCase):
                         for tracked_metric in TRACKED_METRICS:
                             if tracked_metric in df_dict:
                                 found_metric = True
-                                print("Found metric!")
+                                self.logger.debug("Found metric!")
                                 break
 
             if found_metric:
