@@ -37,7 +37,8 @@ class TestDask(unittest.TestCase):
     client: Client = None
     consumer_thread: Thread = None
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super(TestDask, self).__init__(*args, **kwargs)
         self.logger = FlowceptLogger().get_logger()
 
     @staticmethod
@@ -108,7 +109,8 @@ class TestDask(unittest.TestCase):
         for o in o1:
             result = o.result()
             assert result > 0
-            self.logger.debug(o.key, result)
+            self.logger.debug(f"{o.key}, {result}")
+        sleep(10)
         return o1
 
     def test_map_workflow_kwargs(self):
