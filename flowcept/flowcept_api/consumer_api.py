@@ -1,10 +1,7 @@
-from threading import Thread
-from time import sleep
-
-from flowcept.commons.doc_db.document_inserter import DocumentInserter
-
 from typing import List
-
+from threading import Thread, Event
+from time import sleep
+from flowcept.commons.doc_db.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.plugins.base_interceptor import BaseInterceptor
 
@@ -26,8 +23,13 @@ class FlowceptConsumerAPI(object):
                 Thread(target=interceptor.observe).start()
                 self.logger.debug("... ok!")
 
+        # self._stop_event = Event()
         self.logger.debug("Flowcept Consumer starting...")
-        self._consumer_thread = Thread(target=DocumentInserter().main)
+        self._document_inserter = DocumentInserter()
+        self._consumer_thread = Thread(target=self._document_inserter._start)
         self._consumer_thread.start()
         sleep(2)
         self.logger.debug("Ok, we're consuming messages!")
+
+    def stop(self):
+        self._document_inserter._mq_dao.stop_document_inserter()

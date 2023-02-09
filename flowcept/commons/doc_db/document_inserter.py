@@ -1,7 +1,7 @@
 import sys
 import json
 from time import time, sleep
-from threading import Thread
+from threading import Thread, Event
 from typing import Dict
 from datetime import datetime
 from flowcept.configs import (
@@ -21,27 +21,29 @@ class DocumentInserter:
         self._doc_dao = DocumentDBDao()
         self._previous_time = time()
         self.logger = FlowceptLogger().get_logger()
+        self._main_thread: Thread = None
 
     def _flush(self):
-        self._doc_dao.insert_and_update_many("task_id", self._buffer)
-        self._buffer = list()
+        if len(self._buffer):
+            self._doc_dao.insert_and_update_many("task_id", self._buffer)
+            self._buffer = list()
 
-    def handle_message(self, intercepted_message: Dict):
-        if "utc_timestamp" in intercepted_message:
-            dt = datetime.fromtimestamp(intercepted_message["utc_timestamp"])
-            intercepted_message["timestamp"] = dt.utcnow()
+    def handle_task_message(self, message: Dict):
+        if "utc_timestamp" in message:
+            dt = datetime.fromtimestamp(message["utc_timestamp"])
+            message["timestamp"] = dt.utcnow()
 
         if DEBUG_MODE:
-            intercepted_message["debug"] = True
+            message["debug"] = True
 
-        self._buffer.append(intercepted_message)
+        self._buffer.append(message)
         self.logger.debug("An intercepted message was received.")
         if len(self._buffer) >= MONGO_INSERTION_BUFFER_SIZE:
             self.logger.debug("Buffer exceeded, flushing...")
             self._flush()
 
-    def time_based_flushing(self):
-        while True:
+    def time_based_flushing(self, event: Event):
+        while not event.is_set():
             if len(self._buffer):
                 now = time()
                 timediff = now - self._previous_time
@@ -51,17 +53,37 @@ class DocumentInserter:
                     self._flush()
             sleep(MONGO_INSERTION_BUFFER_TIME)
 
-    def main(self):
-        Thread(target=self.time_based_flushing).start()
+    def start(self):
+        self._main_thread = Thread(target=self._start)
+        self._main_thread.start()
+        return self
+
+    def _start(self):
+        stop_event = Event()
+        time_thread = Thread(
+            target=self.time_based_flushing, args=(stop_event,)
+        )
+        time_thread.start()
         pubsub = self._mq_dao.subscribe()
         for message in pubsub.listen():
-            if message["type"] not in {"psubscribe"}:
-                _dict_obj = json.loads(json.loads(message["data"]))
-                self.handle_message(_dict_obj)
+            if message["type"] in MQDao.MESSAGE_TYPES_IGNORE:
+                continue
+            _dict_obj = json.loads(message["data"])
+            if (
+                "type" in _dict_obj
+                and _dict_obj["type"] == "flowcept_control"
+            ):
+                if _dict_obj["info"] == "stop_document_inserter":
+                    self.logger.info("Document Inserter is stopping...")
+                    stop_event.set()
+                    self._flush()
+                    break
+            else:
+                self.handle_task_message(_dict_obj)
 
+        time_thread.join()
 
-if __name__ == "__main__":
-    try:
-        DocumentInserter().main()
-    except KeyboardInterrupt:
-        sys.exit(0)
+    def stop(self):
+        self._mq_dao.stop_document_inserter()
+        self._main_thread.join()
+        self.logger.info("Document Inserter is stopped.")
