@@ -24,7 +24,7 @@ LOG_FILE_PATH = os.getenv(
     "LOG_PATH", os.path.join(PROJECT_DIR_PATH, f"{PROJECT_NAME}.log")
 )
 # Possible values below are the typical python logging levels.
-LOG_FILE_LEVEL = os.getenv("LOG_FILE_LEVEL", "error").upper()
+LOG_FILE_LEVEL = os.getenv("LOG_FILE_LEVEL", "debug").upper()
 LOG_STREAM_LEVEL = os.getenv("LOG_STREAM_LEVEL", "debug").upper()
 
 ##########################

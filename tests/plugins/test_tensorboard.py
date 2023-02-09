@@ -1,20 +1,39 @@
 import unittest
-import threading
-import time
+from time import sleep
+from uuid import uuid4
 
+from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.flowcept_consumer.main import (
-    main,
-)
-from flowcept import TensorboardInterceptor
+from flowcept import TensorboardInterceptor, FlowceptConsumerAPI
 
 
 class TestTensorboard(unittest.TestCase):
+    consumer: FlowceptConsumerAPI = None
+
     def __init__(self, *args, **kwargs):
         super(TestTensorboard, self).__init__(*args, **kwargs)
-        self.interceptor = TensorboardInterceptor()
-        self.interceptor.state_manager.reset()
+        self.interceptor: TensorboardInterceptor = TensorboardInterceptor()
         self.logger = FlowceptLogger().get_logger()
+
+    def _init_consumption(self):
+        TestTensorboard.consumer = FlowceptConsumerAPI(self.interceptor)
+        TestTensorboard.consumer.start()
+        sleep(15)
+
+    def reset_log_dir(self):
+        logdir = self.interceptor.settings.file_path
+        import os
+        import shutil
+
+        if os.path.exists(logdir):
+            self.logger.debug("Path exists, gonna delete")
+            shutil.rmtree(logdir)
+            sleep(1)
+        os.mkdir(logdir)
+        self.logger.debug("Exists?" + str(os.path.exists(logdir)))
+        watch_interval_sec = self.interceptor.settings.watch_interval_sec
+        # Making sure we'll wait until next watch cycle
+        sleep(watch_interval_sec * 2)
 
     def test_run_tensorboard_hparam_tuning(self):
         """
@@ -22,15 +41,8 @@ class TestTensorboard(unittest.TestCase):
          https://www.tensorflow.org/tensorboard/hyperparameter_tuning_with_hparams
         :return:
         """
-        import os
-        import shutil
-
         logdir = self.interceptor.settings.file_path
-        self.logger.debug(logdir)
-        if os.path.exists(logdir):
-            self.logger.debug("Path exists, gonna delete")
-            shutil.rmtree(logdir)
-
+        wf_id = str(uuid4())
         import tensorflow as tf
         from tensorboard.plugins.hparams import api as hp
 
@@ -82,7 +94,7 @@ class TestTensorboard(unittest.TestCase):
             model.fit(
                 x_train,
                 y_train,
-                epochs=2,
+                epochs=1,
                 callbacks=[
                     tf.keras.callbacks.TensorBoard(logdir),
                     # log metrics
@@ -108,39 +120,48 @@ class TestTensorboard(unittest.TestCase):
             ):
                 for optimizer in HP_OPTIMIZER.domain.values:
                     for batch_size in HP_BATCHSIZES.domain.values:
+                        # These two added ids below are optional and useful
+                        # just to contextualize this run.
                         hparams = {
+                            "workflow_id": wf_id,
+                            "activity_id": "hyperparam_evaluation",
                             HP_NUM_UNITS: num_units,
                             HP_DROPOUT: dropout_rate,
                             HP_OPTIMIZER: optimizer,
                             HP_BATCHSIZES: batch_size,
                         }
-                        run_name = "run-%d" % session_num
+                        run_name = f"wf_id_{wf_id}_{session_num}"
                         self.logger.debug("--- Starting trial: %s" % run_name)
-                        self.logger.debug(
-                            {h.name: hparams[h] for h in hparams}
-                        )
+                        self.logger.debug(f"{hparams}")
                         run(f"{logdir}/" + run_name, hparams)
                         session_num += 1
 
-        return logdir
-
-    def _init_consumption(self):
-        threading.Thread(target=self.interceptor.observe, daemon=True).start()
-        time.sleep(15)
-        threading.Thread(target=main, daemon=True).start()
-        time.sleep(15)
+        return wf_id
 
     def test_observer_and_consumption(self):
+        self.reset_log_dir()
         self._init_consumption()
-        self.test_run_tensorboard_hparam_tuning()
-        time.sleep(60)
+        wf_id = self.test_run_tensorboard_hparam_tuning()
+        self.logger.debug("Done training. Sleeping some time...")
+
+        watch_interval_sec = self.interceptor.settings.watch_interval_sec
+        # Making sure we'll wait until next watch cycle
+        sleep(watch_interval_sec * 2)
+
         assert self.interceptor.state_manager.count() == 16
+        doc_dao = DocumentDBDao()
+        docs = doc_dao.find({"workflow_id": wf_id})
+        assert len(docs) == 16
+
+        TestTensorboard.consumer.stop()
+        sleep(2)
 
     def test_read_tensorboard_hparam_tuning(self):
-        logdir = self.test_run_tensorboard_hparam_tuning()
-
+        self.reset_log_dir()
+        self.test_run_tensorboard_hparam_tuning()
         from tbparse import SummaryReader
 
+        logdir = self.interceptor.settings.file_path
         reader = SummaryReader(logdir)
 
         TRACKED_TAGS = {"scalars", "hparams", "tensors"}
@@ -174,3 +195,9 @@ class TestTensorboard(unittest.TestCase):
                 # Only append if we find a tracked metric in the event
                 output.append(msg)
         assert len(output) == 16
+
+    @classmethod
+    def tearDownClass(cls):
+        if TestTensorboard.consumer is not None:
+            TestTensorboard.consumer.stop()
+            sleep(2)
