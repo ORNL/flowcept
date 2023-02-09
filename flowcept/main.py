@@ -1,7 +1,7 @@
 import sys
 from threading import Thread
 
-from flowcept.commons.doc_db.document_inserter import (
+from flowcept.flowceptor.consumers.document_inserter import (
     DocumentInserter,
 )
 
@@ -13,9 +13,6 @@ def main():
         target=document_inserter._start,
     ).start()
 
-    # Next step:
-    # kg_inserter = KGInserter()
-    # Thread(target=kg_inserter.main,).start()
 
 
 if __name__ == "__main__":

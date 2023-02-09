@@ -1,7 +1,7 @@
 import json
 from flask_restful import Resource, reqparse
 
-from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.daos.document_db_dao import DocumentDBDao
 
 
 class TaskQuery(Resource):

@@ -9,7 +9,7 @@ from flowcept.configs import (
     MONGO_DB,
     MONGO_COLLECTION,
 )
-from flowcept.commons.consumer_utils import (
+from flowcept.flowceptor.consumers.consumer_utils import (
     curate_dict_task_messages,
 )
 
