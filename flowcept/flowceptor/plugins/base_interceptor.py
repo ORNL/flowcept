@@ -59,7 +59,7 @@ class BaseInterceptor(object, metaclass=ABCMeta):
     def prepare_task_msg(self, *args, **kwargs) -> TaskMessage:
         raise NotImplementedError()
 
-    def observe(self):
+    def observe(self, *args, **kwargs):
         """
         This method implements data observability over a data channel
          (e.g., a file, a DBMS, an MQ)
