@@ -1,15 +1,12 @@
 import unittest
-from threading import Thread
 from time import sleep
 from uuid import uuid4
 import numpy as np
 
 from dask.distributed import Client
 
-from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
-from flowcept.commons.doc_db.document_inserter import (
-    DocumentInserter,
-)
+from flowcept import FlowceptConsumerAPI
+from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 
@@ -35,7 +32,7 @@ def forced_error_func(x):
 
 class TestDask(unittest.TestCase):
     client: Client = None
-    consumer_thread: Thread = None
+    consumer: FlowceptConsumerAPI = None
 
     def __init__(self, *args, **kwargs):
         super(TestDask, self).__init__(*args, **kwargs)
@@ -43,15 +40,12 @@ class TestDask(unittest.TestCase):
 
     @staticmethod
     def _init_consumption():
-        TestDask.consumer_thread = Thread(
-            target=DocumentInserter().main, daemon=True
-        ).start()
+        TestDask.consumer = FlowceptConsumerAPI().start()
         sleep(3)
 
     @classmethod
     def setUpClass(cls):
         TestDask.client = TestDask._setup_local_dask_cluster()
-        TestDask.consumer_thread = None
 
     @staticmethod
     def _setup_local_dask_cluster():
@@ -141,7 +135,7 @@ class TestDask(unittest.TestCase):
 
     def test_observer_and_consumption(self):
         doc_dao = DocumentDBDao()
-        if TestDask.consumer_thread is None:
+        if TestDask.consumer is None or not TestDask.consumer.is_started:
             TestDask._init_consumption()
         o2_task_id = self.test_pure_workflow()
         sleep(10)
@@ -149,7 +143,7 @@ class TestDask(unittest.TestCase):
 
     def test_observer_and_consumption_varying_args(self):
         doc_dao = DocumentDBDao()
-        if TestDask.consumer_thread is None:
+        if TestDask.consumer is None or not TestDask.consumer.is_started:
             TestDask._init_consumption()
         o2_task_id = self.varying_args()
         sleep(10)
@@ -157,10 +151,15 @@ class TestDask(unittest.TestCase):
 
     def test_observer_and_consumption_error_task(self):
         doc_dao = DocumentDBDao()
-        if TestDask.consumer_thread is None:
+        if TestDask.consumer is None or not TestDask.consumer.is_started:
             TestDask._init_consumption()
         o2_task_id = self.error_task_submission()
         sleep(10)
         docs = doc_dao.find({"task_id": o2_task_id})
         assert len(docs) > 0
         assert docs[0]["stderr"]["exception"]
+
+    @classmethod
+    def tearDownClass(cls):
+        TestDask.consumer.stop()
+        sleep(5)

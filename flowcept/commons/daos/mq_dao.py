@@ -10,6 +10,8 @@ from flowcept.configs import (
 
 
 class MQDao:
+    MESSAGE_TYPES_IGNORE = {"psubscribe"}
+
     def __init__(self):
         self._redis = Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 
@@ -18,7 +20,9 @@ class MQDao:
         pubsub.psubscribe(REDIS_CHANNEL)
         return pubsub
 
-    def publish(self, json_formatted_str_message: str):
-        self._redis.publish(
-            REDIS_CHANNEL, json.dumps(json_formatted_str_message)
-        )
+    def publish(self, message: dict):
+        self._redis.publish(REDIS_CHANNEL, json.dumps(message))
+
+    def stop_document_inserter(self):
+        msg = {"type": "flowcept_control", "info": "stop_document_inserter"}
+        self._redis.publish(REDIS_CHANNEL, json.dumps(msg))

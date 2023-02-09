@@ -1,6 +1,8 @@
 import sys
 import os
 import time
+from threading import Thread, Event
+
 from watchdog.observers import Observer
 
 from flowcept.commons.flowcept_data_classes import TaskMessage
@@ -22,6 +24,7 @@ from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import RunData
 class MLFlowInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="mlflow"):
         super().__init__(plugin_key)
+        self._observer = None
         self.state_manager = InterceptorStateManager(self.settings)
         self.dao = MLFlowDAO(self.settings)
 
@@ -53,6 +56,16 @@ class MLFlowInterceptor(BaseInterceptor):
                 task_msg = self.prepare_task_msg(run_data)
                 self.intercept(task_msg)
 
+    def start(self) -> "MLFlowInterceptor":
+        self.observe()
+        return self
+
+    def stop(self) -> bool:
+        self.logger.debug("Interceptor stopping...")
+        self._observer.stop()
+        self.logger.debug("Interceptor stopped.")
+        return True
+
     def observe(self):
         event_handler = InterceptionEventHandler(
             self, self.__class__.callback
@@ -66,19 +79,9 @@ class MLFlowInterceptor(BaseInterceptor):
             )
             time.sleep(self.settings.watch_interval_sec)
 
-        observer = Observer()
-        observer.schedule(
+        self._observer = Observer()
+        self._observer.schedule(
             event_handler, self.settings.file_path, recursive=True
         )
-        observer.start()
+        self._observer.start()
         self.logger.info(f"Watching {self.settings.file_path}")
-
-
-if __name__ == "__main__":
-    try:
-        interceptor = MLFlowInterceptor()
-        interceptor.observe()
-        while True:
-            time.sleep(interceptor.settings.watch_interval_sec)
-    except KeyboardInterrupt:
-        sys.exit(0)
