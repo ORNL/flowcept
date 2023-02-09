@@ -3,7 +3,7 @@ import threading
 import time
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.flowcept_consumer.main import (
+from flowcept.main import (
     main,
 )
 from flowcept import TensorboardInterceptor

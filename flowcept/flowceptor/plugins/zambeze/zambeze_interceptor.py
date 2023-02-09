@@ -90,12 +90,3 @@ class ZambezeInterceptor(BaseInterceptor):
                     task_msg = self.prepare_task_msg(body_obj)
                     self.intercept(task_msg)
                     break
-
-
-if __name__ == "__main__":
-    try:
-        # TODO: allow passing the interceptor key in the argv
-        interceptor = ZambezeInterceptor("zambeze1")
-        interceptor.observe()
-    except KeyboardInterrupt:
-        sys.exit(0)

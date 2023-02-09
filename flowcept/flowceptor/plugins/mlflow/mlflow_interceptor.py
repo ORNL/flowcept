@@ -84,13 +84,3 @@ class MLFlowInterceptor(BaseInterceptor):
         )
         self._observer.start()
         self.logger.info(f"Watching {self.settings.file_path}")
-
-
-if __name__ == "__main__":
-    try:
-        interceptor = MLFlowInterceptor()
-        interceptor.observe()
-        while True:
-            time.sleep(interceptor.settings.watch_interval_sec)
-    except KeyboardInterrupt:
-        sys.exit(0)
