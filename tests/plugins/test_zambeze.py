@@ -1,16 +1,12 @@
 from time import sleep
 import unittest
 import json
-import threading
 import pika
 from uuid import uuid4
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.flowcept_consumer.main import (
-    main,
-)
-from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
-from flowcept import ZambezeInterceptor
+from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept import ZambezeInterceptor, FlowceptConsumerAPI
 from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
     ZambezeMessage,
 )
@@ -20,20 +16,20 @@ class TestZambeze(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestZambeze, self).__init__(*args, **kwargs)
         self.logger = FlowceptLogger().get_logger()
-        self.interceptor = ZambezeInterceptor()
+        interceptor = ZambezeInterceptor()
+        self.consumer = FlowceptConsumerAPI(interceptor)
 
         self._connection = pika.BlockingConnection(
             pika.ConnectionParameters(
-                self.interceptor.settings.host,
-                self.interceptor.settings.port,
+                interceptor.settings.host,
+                interceptor.settings.port,
             )
         )
         self._channel = self._connection.channel()
-        self._channel.queue_declare(
-            queue=self.interceptor.settings.queue_name
-        )
-        threading.Thread(target=self.interceptor.observe, daemon=True).start()
-        threading.Thread(target=main, daemon=True).start()
+        self._queue_name = interceptor.settings.queue_name
+        self._channel.queue_declare(queue=self._queue_name)
+
+        self.consumer.start()
 
     def test_send_message(self):
         another_act_id = str(uuid4())
@@ -62,7 +58,7 @@ class TestZambeze(unittest.TestCase):
 
         self._channel.basic_publish(
             exchange="",
-            routing_key=self.interceptor.settings.queue_name,
+            routing_key=self._queue_name,
             body=json.dumps(msg.__dict__),
         )
 
@@ -71,6 +67,8 @@ class TestZambeze(unittest.TestCase):
         sleep(10)
         doc_dao = DocumentDBDao()
         assert len(doc_dao.find({"task_id": act_id})) > 0
+        self.consumer.stop()
+        sleep(2)
 
 
 if __name__ == "__main__":

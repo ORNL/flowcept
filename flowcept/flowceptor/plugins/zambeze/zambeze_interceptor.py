@@ -1,10 +1,11 @@
+from threading import Thread
+from time import sleep
 import pika
-import sys
 import json
 from typing import Dict
 
 from flowcept.commons.utils import get_utc_now, get_status_from_str
-from flowcept.commons.flowcept_data_classes import TaskMessage, Status
+from flowcept.commons.flowcept_data_classes import TaskMessage
 from flowcept.flowceptor.plugins.base_interceptor import (
     BaseInterceptor,
 )
@@ -13,6 +14,9 @@ from flowcept.flowceptor.plugins.base_interceptor import (
 class ZambezeInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="zambeze"):
         super().__init__(plugin_key)
+        self._consumer_tag = None
+        self._channel = None
+        self._observer_thread: Thread = None
 
     def prepare_task_msg(self, zambeze_msg: Dict) -> TaskMessage:
         task_msg = TaskMessage()
@@ -32,24 +36,46 @@ class ZambezeInterceptor(BaseInterceptor):
         }
         return task_msg
 
+    def start(self) -> "ZambezeInterceptor":
+        self._observer_thread = Thread(target=self.observe)
+        self._observer_thread.start()
+        return self
+
+    def stop(self) -> bool:
+        self.logger.debug("Interceptor stopping...")
+        try:
+            self._channel.basic_cancel(self._consumer_tag)
+        except Exception as e:
+            self.logger.warn(
+                f"This exception is expected to occur after "
+                f"channel.basic_cancel: {e}"
+            )
+        sleep(2)
+        self._observer_thread.join()
+        self.logger.debug("Interceptor stopped.")
+        return True
+
     def observe(self):
         connection = pika.BlockingConnection(
             pika.ConnectionParameters(
                 host=self.settings.host, port=self.settings.port
             )
         )
-        channel = connection.channel()
-        channel.queue_declare(queue=self.settings.queue_name)
-        channel.basic_consume(
+        self._channel = connection.channel()
+        self._channel.queue_declare(queue=self.settings.queue_name)
+        self._consumer_tag = self._channel.basic_consume(
             queue=self.settings.queue_name,
             on_message_callback=self.callback,
             auto_ack=True,
         )
-
-        self.logger.debug(
-            " [*] Waiting for Zambeze messages. To exit press CTRL+C"
-        )
-        channel.start_consuming()
+        self.logger.debug("Waiting for Zambeze messages.")
+        try:
+            self._channel.start_consuming()
+        except Exception as e:
+            self.logger.warn(
+                f"This exception is expected to occur after "
+                f"channel.start_consuming finishes: {e}"
+            )
 
     def callback(self, ch, method, properties, body):
         body_obj = json.loads(body)
@@ -64,12 +90,3 @@ class ZambezeInterceptor(BaseInterceptor):
                     task_msg = self.prepare_task_msg(body_obj)
                     self.intercept(task_msg)
                     break
-
-
-if __name__ == "__main__":
-    try:
-        # TODO: allow passing the interceptor key in the argv
-        interceptor = ZambezeInterceptor("zambeze1")
-        interceptor.observe()
-    except KeyboardInterrupt:
-        sys.exit(0)
