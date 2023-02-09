@@ -1,15 +1,10 @@
 from time import sleep
 import unittest
 import json
-import threading
 import pika
 from uuid import uuid4
 
-from flowcept.commons.doc_db.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.flowcept_consumer.main import (
-    main,
-)
 from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
 from flowcept import ZambezeInterceptor, FlowceptConsumerAPI
 from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
