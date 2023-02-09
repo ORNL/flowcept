@@ -24,7 +24,7 @@ from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import RunData
 class MLFlowInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="mlflow"):
         super().__init__(plugin_key)
-        self._observer_thread = None
+        self._observer = None
         self.state_manager = InterceptorStateManager(self.settings)
         self.dao = MLFlowDAO(self.settings)
 
@@ -58,6 +58,7 @@ class MLFlowInterceptor(BaseInterceptor):
 
     def start(self):
         self.observe()
+        return self
 
     def stop(self):
         self.logger.debug("Interceptor stopping...")
