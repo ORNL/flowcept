@@ -3,18 +3,18 @@ import threading
 import time
 
 from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowcept_consumer.main import (
     main,
 )
-from flowcept.flowceptor.plugins.mlflow.mlflow_interceptor import (
-    MLFlowInterceptor,
-)
+from flowcept import MLFlowInterceptor
 
 
 class TestMLFlow(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestMLFlow, self).__init__(*args, **kwargs)
         self.interceptor = MLFlowInterceptor()
+        self.logger = FlowceptLogger().get_logger()
 
     def test_pure_run_mlflow(self):
         import uuid
@@ -33,7 +33,7 @@ class TestMLFlow(unittest.TestCase):
             mlflow.log_params({"number_epochs": 10})
             mlflow.log_params({"batch_size": 64})
 
-            print("\nTrained model")
+            self.logger.debug("\nTrained model")
             mlflow.log_metric("loss", 0.04)
 
             return run.info.run_uuid
@@ -43,7 +43,7 @@ class TestMLFlow(unittest.TestCase):
         assert len(runs) > 0
         for run in runs:
             assert type(run[0]) == str
-            print(run[0])
+            self.logger.debug(run[0])
 
     def test_get_run_data(self):
         run_uuid = self.test_pure_run_mlflow()
@@ -60,7 +60,7 @@ class TestMLFlow(unittest.TestCase):
             run_uuid = run_tuple[0]
             assert type(run_uuid) == str
             if not self.interceptor.state_manager.has_element_id(run_uuid):
-                print(f"We need to intercept {run_uuid}")
+                self.logger.debug(f"We need to intercept {run_uuid}")
                 self.interceptor.state_manager.add_element_id(run_uuid)
 
     def _init_consumption(self):

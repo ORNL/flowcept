@@ -1,8 +1,9 @@
 from sys import platform
 from setuptools import setup, find_packages
 
-from flowcept import __version__
-from flowcept.configs import PROJECT_NAME
+with open("flowcept/version.py") as f:
+    exec(f.read())
+    version = locals()["__version__"]
 
 with open("README.md") as fh:
     long_description = fh.read()
@@ -45,8 +46,8 @@ for req in _EXTRA_REQUIREMENTS:
 extras_requires["full"] = full_requirements
 
 setup(
-    name=PROJECT_NAME,
-    version=__version__,
+    name="flowcept",
+    version=version,
     license="MIT",
     author="Oak Ridge National Laboratory",
     author_email="support@flowcept.org",
@@ -69,6 +70,8 @@ setup(
         "Topic :: Documentation :: Sphinx",
         "Topic :: System :: Distributed Computing",
     ],
-    python_requires=">=3.10",  # TODO: Do we really need py3.10?
+    python_requires=">=3.10",  # TODO: We don't really need py3.10,
+    # but if we change it now,
+    # we'll need to change CI/CD tests
     # scripts=["bin/flowcept"],
 )

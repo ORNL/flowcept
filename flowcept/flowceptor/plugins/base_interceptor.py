@@ -1,8 +1,6 @@
 from abc import ABCMeta, abstractmethod
-from typing import Dict
 import json
 from datetime import datetime
-from uuid import uuid4
 
 from flowcept.configs import (
     FLOWCEPT_USER,
@@ -13,7 +11,7 @@ from flowcept.configs import (
     PRIVATE_IP,
     EXPERIMENT_ID,
 )
-
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.mq_dao import MQDao
 from flowcept.commons.flowcept_data_classes import TaskMessage
 from flowcept.flowceptor.plugins.settings_factory import get_settings
@@ -54,13 +52,13 @@ def _enrich_task_message(settings_key, task_msg: TaskMessage):
 
 class BaseInterceptor(object, metaclass=ABCMeta):
     def __init__(self, plugin_key):
+        self.logger = FlowceptLogger().get_logger()
         self.settings = get_settings(plugin_key)
         self._mq_dao = MQDao()
 
     def prepare_task_msg(self, *args, **kwargs) -> TaskMessage:
         raise NotImplementedError()
 
-    @abstractmethod
     def observe(self):
         """
         This method implements data observability over a data channel
@@ -79,16 +77,12 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         """
         raise NotImplementedError()
 
-    # @abstractmethod
-    # def prepare_task_message(self, original_msg) -> TaskMessage:
-    #     raise NotImplementedError()
-
     def intercept(self, task_msg: TaskMessage):
         if self.settings.enrich_messages:
             _enrich_task_message(self.settings.key, task_msg)
 
         dumped_task_msg = json.dumps(task_msg.__dict__)
-        print(
+        self.logger.debug(
             f"Going to send to Redis an intercepted message:"
             f"\n\t{dumped_task_msg}"
         )
