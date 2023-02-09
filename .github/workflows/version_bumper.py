@@ -32,4 +32,3 @@ with open(version_file_path, "w") as f:
 __version__ = "{new_version}"
 """
     )
-
