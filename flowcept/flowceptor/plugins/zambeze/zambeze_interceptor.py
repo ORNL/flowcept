@@ -1,7 +1,6 @@
 from threading import Thread
 from time import sleep
 import pika
-import sys
 import json
 from typing import Dict
 

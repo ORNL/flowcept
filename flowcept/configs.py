@@ -86,10 +86,3 @@ PRIVATE_IP = os.getenv("PRIVATE_IP", socket.gethostbyname(socket.getfqdn()))
 
 WEBSERVER_HOST = os.getenv("WEBSERVER_HOST", "0.0.0.0")
 WEBSERVER_PORT = int(os.getenv("WEBSERVER_PORT", "5000"))
-
-
-######################
-#    Consumer      #
-######################
-
-EMBEDDED_OBSERVERS = ["dask"]
