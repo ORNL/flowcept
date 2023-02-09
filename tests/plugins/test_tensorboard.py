@@ -2,6 +2,7 @@ import unittest
 from time import sleep
 from uuid import uuid4
 
+from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import TensorboardInterceptor, FlowceptConsumerAPI
 
@@ -30,6 +31,9 @@ class TestTensorboard(unittest.TestCase):
             sleep(1)
         os.mkdir(logdir)
         self.logger.debug("Exists?" + str(os.path.exists(logdir)))
+        watch_interval_sec = self.interceptor.settings.watch_interval_sec
+        # Making sure we'll wait until next watch cycle
+        sleep(watch_interval_sec * 2)
 
     def test_run_tensorboard_hparam_tuning(self):
         """
@@ -128,30 +132,36 @@ class TestTensorboard(unittest.TestCase):
                         }
                         run_name = f"wf_id_{wf_id}_{session_num}"
                         self.logger.debug("--- Starting trial: %s" % run_name)
-                        # self.logger.debug(
-                        #     {h.name: hparams[h] for h in hparams}
-                        # )
+                        self.logger.debug(f"{hparams}")
                         run(f"{logdir}/" + run_name, hparams)
                         session_num += 1
 
-        return logdir
+        return wf_id
 
     def test_observer_and_consumption(self):
         self.reset_log_dir()
         self._init_consumption()
-        self.test_run_tensorboard_hparam_tuning()
+        wf_id = self.test_run_tensorboard_hparam_tuning()
         self.logger.debug("Done training. Sleeping some time...")
-        sleep(3)
+
+        watch_interval_sec = self.interceptor.settings.watch_interval_sec
+        # Making sure we'll wait until next watch cycle
+        sleep(watch_interval_sec * 2)
 
         assert self.interceptor.state_manager.count() == 16
+        doc_dao = DocumentDBDao()
+        docs = doc_dao.find({"workflow_id": wf_id})
+        assert len(docs) == 16
+
         TestTensorboard.consumer.stop()
         sleep(2)
 
     def test_read_tensorboard_hparam_tuning(self):
         self.reset_log_dir()
-        logdir = self.test_run_tensorboard_hparam_tuning()
+        self.test_run_tensorboard_hparam_tuning()
         from tbparse import SummaryReader
 
+        logdir = self.interceptor.settings.file_path
         reader = SummaryReader(logdir)
 
         TRACKED_TAGS = {"scalars", "hparams", "tensors"}
