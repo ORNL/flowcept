@@ -56,14 +56,15 @@ class MLFlowInterceptor(BaseInterceptor):
                 task_msg = self.prepare_task_msg(run_data)
                 self.intercept(task_msg)
 
-    def start(self):
+    def start(self) -> "MLFlowInterceptor":
         self.observe()
         return self
 
-    def stop(self):
+    def stop(self) -> bool:
         self.logger.debug("Interceptor stopping...")
         self._observer.stop()
         self.logger.debug("Interceptor stopped.")
+        return True
 
     def observe(self):
         event_handler = InterceptionEventHandler(

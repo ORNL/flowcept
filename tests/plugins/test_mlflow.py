@@ -2,18 +2,21 @@ import unittest
 from time import sleep
 
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
-from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept import MLFlowInterceptor
+from flowcept import MLFlowInterceptor, FlowceptConsumerAPI
+
+
+def _init_consumption():
+    TestMLFlow.consumer.start()
+    sleep(3)
 
 
 class TestMLFlow(unittest.TestCase):
-    doc_inserter: DocumentInserter = None
     interceptor = MLFlowInterceptor()
+    consumer: FlowceptConsumerAPI = FlowceptConsumerAPI(interceptor)
 
     def __init__(self, *args, **kwargs):
         super(TestMLFlow, self).__init__(*args, **kwargs)
-
         self.logger = FlowceptLogger().get_logger()
 
     def test_pure_run_mlflow(self):
@@ -63,14 +66,9 @@ class TestMLFlow(unittest.TestCase):
                 self.logger.debug(f"We need to intercept {run_uuid}")
                 self.interceptor.state_manager.add_element_id(run_uuid)
 
-    def _init_consumption(self):
-        TestMLFlow.interceptor.start()
-        TestMLFlow.doc_inserter = DocumentInserter().start()
-        sleep(3)
-
     def test_observer_and_consumption(self):
         doc_dao = DocumentDBDao()
-        self._init_consumption()
+        _init_consumption()
         run_uuid = self.test_pure_run_mlflow()
         sleep(10)
         assert self.interceptor.state_manager.has_element_id(run_uuid) is True
@@ -78,9 +76,9 @@ class TestMLFlow(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        TestMLFlow.interceptor.stop()
-        TestMLFlow.doc_inserter.stop()
-        sleep(5)
+        if TestMLFlow.consumer is not None:
+            TestMLFlow.consumer.stop()
+            sleep(5)
 
 
 if __name__ == "__main__":

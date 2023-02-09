@@ -37,12 +37,12 @@ class ZambezeInterceptor(BaseInterceptor):
         }
         return task_msg
 
-    def start(self):
+    def start(self) -> "ZambezeInterceptor":
         self._observer_thread = Thread(target=self.observe)
         self._observer_thread.start()
         return self
 
-    def stop(self):
+    def stop(self) -> bool:
         self.logger.debug("Interceptor stopping...")
         try:
             self._channel.basic_cancel(self._consumer_tag)
@@ -54,6 +54,7 @@ class ZambezeInterceptor(BaseInterceptor):
         sleep(2)
         self._observer_thread.join()
         self.logger.debug("Interceptor stopped.")
+        return True
 
     def observe(self):
         connection = pika.BlockingConnection(
