@@ -31,10 +31,8 @@ jobs:
           git push --force
       - name: Get Latest PR and Create Release
         run: |
-            export PYTHONPATH=$PYTHONPATH:flowcept
-            export CURRENT_VERSION=`python -c "from flowcept import __version__; print(__version__)"`
+            export CURRENT_VERSION=`python -c "f = open('flowcept/version.py'); exec(f.read()); print(locals()['__version__']); f.close()"`
             echo $CURRENT_VERSION
-            
             REPOSITORY=${{ github.repository }}
             ACCESS_TOKEN=${{ secrets.GITHUB_TOKEN  }}
             TARGET=${{ steps.branch-name.outputs.current_branch }}

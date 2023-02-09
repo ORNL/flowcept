@@ -1,14 +1,11 @@
-import os
 import re
-from flowcept.version import __version__
-from flowcept.configs import SRC_DIR_PATH
 
-version_file_path = os.path.join(SRC_DIR_PATH, "version.py")
+version_file_path = "flowcept/version.py"
+with open(version_file_path) as f:
+    exec(f.read())
+    version = locals()["__version__"]
 
-# BRANCH_NAME = os.getenv("BRANCH_NAME", "dev")
-# print("Branch Name: " + BRANCH_NAME)
-
-split_version = __version__.split(".")
+split_version = version.split(".")
 old_patch_str = split_version[2]
 re_found = re.findall(r"(\d+)(.*)", old_patch_str)[0]
 old_patch_number = re_found[0]
@@ -17,11 +14,6 @@ old_patch_number = re_found[0]
 new_patch_str = old_patch_str.replace(
     old_patch_number, str(int(old_patch_number) + 1)
 )
-
-# if BRANCH_NAME == "main":
-#     new_patch_str = new_patch_str.replace(old_branch, "")
-# else:
-#     new_patch_str = new_patch_str.replace(old_branch, BRANCH_NAME)
 
 split_version[2] = new_patch_str
 new_version = ".".join(split_version)
