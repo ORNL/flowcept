@@ -1,12 +1,12 @@
-from threading import Thread, Event
-
+from threading import Thread
+from time import sleep
 import pika
 import sys
 import json
 from typing import Dict
 
 from flowcept.commons.utils import get_utc_now, get_status_from_str
-from flowcept.commons.flowcept_data_classes import TaskMessage, Status
+from flowcept.commons.flowcept_data_classes import TaskMessage
 from flowcept.flowceptor.plugins.base_interceptor import (
     BaseInterceptor,
 )
@@ -17,7 +17,6 @@ class ZambezeInterceptor(BaseInterceptor):
         super().__init__(plugin_key)
         self._consumer_tag = None
         self._channel = None
-        self._stop_event: Event = None
         self._observer_thread: Thread = None
 
     def prepare_task_msg(self, zambeze_msg: Dict) -> TaskMessage:
@@ -39,7 +38,6 @@ class ZambezeInterceptor(BaseInterceptor):
         return task_msg
 
     def start(self):
-        # self._stop_event = Event()
         self._observer_thread = Thread(target=self.observe)
         self._observer_thread.start()
         return self
@@ -53,9 +51,7 @@ class ZambezeInterceptor(BaseInterceptor):
                 f"This exception is expected to occur after "
                 f"channel.basic_cancel: {e}"
             )
-        from time import sleep
-
-        sleep(5)
+        sleep(2)
         self._observer_thread.join()
         self.logger.debug("Interceptor stopped.")
 
