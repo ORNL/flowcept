@@ -5,7 +5,7 @@ import pika
 from uuid import uuid4
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept import ZambezeInterceptor, FlowceptConsumerAPI
 from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
     ZambezeMessage,

@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-import json
 from datetime import datetime
 
 from flowcept.configs import (
@@ -12,7 +11,7 @@ from flowcept.configs import (
     EXPERIMENT_ID,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.mq_dao import MQDao
+from flowcept.commons.daos.mq_dao import MQDao
 from flowcept.commons.flowcept_data_classes import TaskMessage
 from flowcept.flowceptor.plugins.settings_factory import get_settings
 

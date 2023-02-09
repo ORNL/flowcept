@@ -1,7 +1,7 @@
 from typing import List
-from threading import Thread, Event
+from threading import Thread
 from time import sleep
-from flowcept.commons.doc_db.document_inserter import DocumentInserter
+from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.plugins.base_interceptor import BaseInterceptor
 

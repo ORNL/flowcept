@@ -1,4 +1,3 @@
-import sys
 import json
 from time import time, sleep
 from threading import Thread, Event
@@ -10,8 +9,8 @@ from flowcept.configs import (
     DEBUG_MODE,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.mq_dao import MQDao
-from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.daos.mq_dao import MQDao
+from flowcept.commons.daos.document_db_dao import DocumentDBDao
 
 
 class DocumentInserter:

@@ -11,7 +11,7 @@ from flowcept.flowcept_api.task_query_api import TaskQueryAPI
 from flowcept.flowcept_webserver.app import app, BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
-from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.daos.document_db_dao import DocumentDBDao
 
 
 def gen_some_mock_data(size=1):

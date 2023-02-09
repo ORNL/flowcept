@@ -1,9 +1,8 @@
 import unittest
-import threading
 from time import sleep
 
-from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
-from flowcept.commons.doc_db.document_inserter import DocumentInserter
+from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import MLFlowInterceptor
 
