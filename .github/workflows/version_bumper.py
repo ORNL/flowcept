@@ -1,10 +1,7 @@
 import re
-# from flowcept.version import __version__
-# from flowcept.configs import SRC_DIR_PATH
-#
-# version_file_path = os.path.join(SRC_DIR_PATH, "version.py")
 
-with open("flowcept/version.py") as f:
+version_file_path = "flowcept/version.py"
+with open(version_file_path) as f:
     exec(f.read())
     version = locals()["__version__"]
 
@@ -21,11 +18,6 @@ new_patch_str = old_patch_str.replace(
     old_patch_number, str(int(old_patch_number) + 1)
 )
 
-# if BRANCH_NAME == "main":
-#     new_patch_str = new_patch_str.replace(old_branch, "")
-# else:
-#     new_patch_str = new_patch_str.replace(old_branch, BRANCH_NAME)
-
 split_version[2] = new_patch_str
 new_version = ".".join(split_version)
 
@@ -40,3 +32,4 @@ with open(version_file_path, "w") as f:
 __version__ = "{new_version}"
 """
     )
+
