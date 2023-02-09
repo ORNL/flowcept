@@ -5,13 +5,12 @@ import threading
 import pika
 from uuid import uuid4
 
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowcept_consumer.main import (
     main,
 )
 from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
-from flowcept.flowceptor.plugins.zambeze.zambeze_interceptor import (
-    ZambezeInterceptor,
-)
+from flowcept import ZambezeInterceptor
 from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
     ZambezeMessage,
 )
@@ -20,6 +19,7 @@ from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
 class TestZambeze(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestZambeze, self).__init__(*args, **kwargs)
+        self.logger = FlowceptLogger().get_logger()
         self.interceptor = ZambezeInterceptor()
 
         self._connection = pika.BlockingConnection(
@@ -66,7 +66,7 @@ class TestZambeze(unittest.TestCase):
             body=json.dumps(msg.__dict__),
         )
 
-        print(" [x] Sent msg")
+        self.logger.debug(" [x] Sent msg")
         self._connection.close()
         sleep(10)
         doc_dao = DocumentDBDao()

@@ -46,7 +46,9 @@ class ZambezeInterceptor(BaseInterceptor):
             auto_ack=True,
         )
 
-        print(" [*] Waiting for Zambeze messages. To exit press CTRL+C")
+        self.logger.debug(
+            " [*] Waiting for Zambeze messages. To exit press CTRL+C"
+        )
         channel.start_consuming()
 
     def callback(self, ch, method, properties, body):
@@ -55,7 +57,7 @@ class ZambezeInterceptor(BaseInterceptor):
         for key_value in self.settings.key_values_to_filter:
             if key_value.key in body_obj:
                 if body_obj[key_value.key] == key_value.value:
-                    print(
+                    self.logger.debug(
                         f"I'm an interceptor and I need to intercept this:"
                         f"\n\t{json.dumps(body_obj)}"
                     )
@@ -70,5 +72,4 @@ if __name__ == "__main__":
         interceptor = ZambezeInterceptor("zambeze1")
         interceptor.observe()
     except KeyboardInterrupt:
-        print("Interrupted")
         sys.exit(0)
