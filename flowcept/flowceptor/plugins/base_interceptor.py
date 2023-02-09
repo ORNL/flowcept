@@ -58,14 +58,14 @@ class BaseInterceptor(object, metaclass=ABCMeta):
     def prepare_task_msg(self, *args, **kwargs) -> TaskMessage:
         raise NotImplementedError()
 
-    def start(self):
+    def start(self) -> "BaseInterceptor":
         """
         Starts an interceptor
         :return:
         """
         raise NotImplementedError()
 
-    def stop(self):
+    def stop(self) -> bool:
         """
         Gracefully stops an interceptor
         :return:
