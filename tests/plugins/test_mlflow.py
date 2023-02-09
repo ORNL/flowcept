@@ -10,10 +10,11 @@ from flowcept import MLFlowInterceptor
 
 class TestMLFlow(unittest.TestCase):
     doc_inserter: DocumentInserter = None
+    interceptor = MLFlowInterceptor()
 
     def __init__(self, *args, **kwargs):
         super(TestMLFlow, self).__init__(*args, **kwargs)
-        self.interceptor = MLFlowInterceptor()
+
         self.logger = FlowceptLogger().get_logger()
 
     def test_pure_run_mlflow(self):
@@ -23,7 +24,7 @@ class TestMLFlow(unittest.TestCase):
         # from mlflow.tracking import MlflowClient
         # client = MlflowClient()
         mlflow.set_tracking_uri(
-            f"sqlite:///" f"{self.interceptor.settings.file_path}"
+            f"sqlite:///" f"{TestMLFlow.interceptor.settings.file_path}"
         )
         experiment_name = "LinearRegression"
         experiment_id = mlflow.create_experiment(
@@ -64,7 +65,7 @@ class TestMLFlow(unittest.TestCase):
                 self.interceptor.state_manager.add_element_id(run_uuid)
 
     def _init_consumption(self):
-        threading.Thread(target=self.interceptor.observe, daemon=True).start()
+        TestMLFlow.interceptor.start()
         TestMLFlow.doc_inserter = DocumentInserter().start()
         sleep(3)
 
@@ -78,6 +79,7 @@ class TestMLFlow(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        TestMLFlow.interceptor.stop()
         TestMLFlow.doc_inserter.stop()
         sleep(5)
 
