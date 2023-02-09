@@ -1,7 +1,7 @@
 from flask import jsonify, request
 from flask_restful import Resource
 
-from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.daos.document_db_dao import DocumentDBDao
 
 
 class TaskMessages(Resource):

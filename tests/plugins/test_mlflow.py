@@ -1,19 +1,22 @@
 import unittest
-import threading
-import time
+from time import sleep
 
-from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.flowcept_consumer.main import (
-    main,
-)
-from flowcept import MLFlowInterceptor
+from flowcept import MLFlowInterceptor, FlowceptConsumerAPI
+
+
+def _init_consumption():
+    TestMLFlow.consumer.start()
+    sleep(3)
 
 
 class TestMLFlow(unittest.TestCase):
+    interceptor = MLFlowInterceptor()
+    consumer: FlowceptConsumerAPI = FlowceptConsumerAPI(interceptor)
+
     def __init__(self, *args, **kwargs):
         super(TestMLFlow, self).__init__(*args, **kwargs)
-        self.interceptor = MLFlowInterceptor()
         self.logger = FlowceptLogger().get_logger()
 
     def test_pure_run_mlflow(self):
@@ -23,7 +26,7 @@ class TestMLFlow(unittest.TestCase):
         # from mlflow.tracking import MlflowClient
         # client = MlflowClient()
         mlflow.set_tracking_uri(
-            f"sqlite:///" f"{self.interceptor.settings.file_path}"
+            f"sqlite:///" f"{TestMLFlow.interceptor.settings.file_path}"
         )
         experiment_name = "LinearRegression"
         experiment_id = mlflow.create_experiment(
@@ -63,18 +66,19 @@ class TestMLFlow(unittest.TestCase):
                 self.logger.debug(f"We need to intercept {run_uuid}")
                 self.interceptor.state_manager.add_element_id(run_uuid)
 
-    def _init_consumption(self):
-        threading.Thread(target=self.interceptor.observe, daemon=True).start()
-        threading.Thread(target=main, daemon=True).start()
-        time.sleep(3)
-
     def test_observer_and_consumption(self):
         doc_dao = DocumentDBDao()
-        self._init_consumption()
+        _init_consumption()
         run_uuid = self.test_pure_run_mlflow()
-        time.sleep(10)
+        sleep(10)
         assert self.interceptor.state_manager.has_element_id(run_uuid) is True
         assert len(doc_dao.find({"task_id": run_uuid})) > 0
+
+    @classmethod
+    def tearDownClass(cls):
+        if TestMLFlow.consumer is not None:
+            TestMLFlow.consumer.stop()
+            sleep(5)
 
 
 if __name__ == "__main__":
