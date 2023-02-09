@@ -1,5 +1,4 @@
 from typing import List, Union
-from threading import Thread
 from time import sleep
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -13,7 +12,6 @@ class FlowceptConsumerAPI(object):
     ):
         self.logger = FlowceptLogger().get_logger()
         self._document_inserter: DocumentInserter = None
-        self._consumer_thread: Thread = None
         if interceptors is not None and type(interceptors) != list:
             interceptors = [interceptors]
         self._interceptors: List[BaseInterceptor] = interceptors
@@ -32,7 +30,6 @@ class FlowceptConsumerAPI(object):
                 interceptor.start()
                 self.logger.debug("... ok!")
 
-        # self._stop_event = Event()
         self.logger.debug("Flowcept Consumer starting...")
         self._document_inserter = DocumentInserter().start()
         sleep(2)

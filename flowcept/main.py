@@ -9,7 +9,7 @@ from flowcept import (
     TensorboardInterceptor,
 )
 from flowcept.commons.vocabulary import Vocabulary
-from flowcept.configs import SETTINGS_PATH, EMBEDDED_OBSERVERS
+from flowcept.configs import SETTINGS_PATH
 
 
 INTERCEPTORS = {
@@ -25,6 +25,7 @@ def main():
     with open(SETTINGS_PATH) as f:
         yaml_data = yaml.load(f, Loader=yaml.FullLoader)
 
+    interceptors = []
     for plugin_key in yaml_data["plugins"]:
         plugin_settings_obj = yaml_data["plugins"][plugin_key]
         if (
@@ -35,13 +36,14 @@ def main():
 
         kind = plugin_settings_obj["kind"]
 
-        interceptor = None
         if kind in INTERCEPTORS:
             interceptor = INTERCEPTORS[plugin_settings_obj["kind"]](
                 plugin_key
             )
-        consumer = FlowceptConsumerAPI(interceptor)
-        consumer.start()
+            interceptors.append(interceptor)
+
+    consumer = FlowceptConsumerAPI(interceptors)
+    consumer.start()
 
 
 if __name__ == "__main__":
