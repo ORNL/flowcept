@@ -5,9 +5,6 @@ with open(version_file_path) as f:
     exec(f.read())
     version = locals()["__version__"]
 
-# BRANCH_NAME = os.getenv("BRANCH_NAME", "dev")
-# print("Branch Name: " + BRANCH_NAME)
-
 split_version = version.split(".")
 old_patch_str = split_version[2]
 re_found = re.findall(r"(\d+)(.*)", old_patch_str)[0]
