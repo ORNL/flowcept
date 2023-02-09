@@ -81,9 +81,9 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         if self.settings.enrich_messages:
             _enrich_task_message(self.settings.key, task_msg)
 
-        dumped_task_msg = json.dumps(task_msg.__dict__)
+        # dumped_task_msg = json.dumps(task_msg.__dict__)
         self.logger.debug(
             f"Going to send to Redis an intercepted message:"
-            f"\n\t{dumped_task_msg}"
+            f"\n\t{task_msg.__dict__}"
         )
-        self._mq_dao.publish(dumped_task_msg)
+        self._mq_dao.publish(task_msg.__dict__)

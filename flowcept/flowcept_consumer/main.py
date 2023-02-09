@@ -10,7 +10,7 @@ def main():
     document_inserter = DocumentInserter()
 
     Thread(
-        target=document_inserter.main,
+        target=document_inserter._start,
     ).start()
 
     # Next step:

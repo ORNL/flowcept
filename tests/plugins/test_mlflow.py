@@ -1,16 +1,16 @@
 import unittest
 import threading
-import time
+from time import sleep
 
 from flowcept.commons.doc_db.document_db_dao import DocumentDBDao
+from flowcept.commons.doc_db.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.flowcept_consumer.main import (
-    main,
-)
 from flowcept import MLFlowInterceptor
 
 
 class TestMLFlow(unittest.TestCase):
+    doc_inserter: DocumentInserter = None
+
     def __init__(self, *args, **kwargs):
         super(TestMLFlow, self).__init__(*args, **kwargs)
         self.interceptor = MLFlowInterceptor()
@@ -65,16 +65,21 @@ class TestMLFlow(unittest.TestCase):
 
     def _init_consumption(self):
         threading.Thread(target=self.interceptor.observe, daemon=True).start()
-        threading.Thread(target=main, daemon=True).start()
-        time.sleep(3)
+        TestMLFlow.doc_inserter = DocumentInserter().start()
+        sleep(3)
 
     def test_observer_and_consumption(self):
         doc_dao = DocumentDBDao()
         self._init_consumption()
         run_uuid = self.test_pure_run_mlflow()
-        time.sleep(10)
+        sleep(10)
         assert self.interceptor.state_manager.has_element_id(run_uuid) is True
         assert len(doc_dao.find({"task_id": run_uuid})) > 0
+
+    @classmethod
+    def tearDownClass(cls):
+        TestMLFlow.doc_inserter.stop()
+        sleep(5)
 
 
 if __name__ == "__main__":

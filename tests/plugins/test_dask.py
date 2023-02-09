@@ -44,7 +44,7 @@ class TestDask(unittest.TestCase):
     @staticmethod
     def _init_consumption():
         TestDask.consumer_thread = Thread(
-            target=DocumentInserter().main, daemon=True
+            target=DocumentInserter()._start, daemon=True
         ).start()
         sleep(3)
 
