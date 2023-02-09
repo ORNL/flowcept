@@ -64,7 +64,7 @@ class TestZambeze(unittest.TestCase):
         self._channel.basic_publish(
             exchange="",
             routing_key=self._queue_name,
-            body=json.dumps(msg.__dict__)
+            body=json.dumps(msg.__dict__),
         )
 
         self.logger.debug(" [x] Sent msg")
