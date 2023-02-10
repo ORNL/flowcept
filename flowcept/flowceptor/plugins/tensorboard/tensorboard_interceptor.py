@@ -1,4 +1,3 @@
-dimport sys
 import os
 import time
 
