@@ -1,4 +1,3 @@
-import sys
 import os
 import time
 
@@ -33,7 +32,7 @@ class TensorboardInterceptor(BaseInterceptor):
         If it's an interesting change, it calls self.intercept; otherwise,
         let it go....
         """
-        self.logger.debug("New tensorboard event file changed!")
+        self.logger.debug("New tensorboard directory event!")
         # TODO: now we're waiting for the file to be completely written.
         # Is there a better way to inform when the file writing is finished?
         time.sleep(self.settings.watch_interval_sec)

@@ -26,3 +26,8 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+    - name: Test notebooks
+      run: |
+        python flowcept/flowcept_webserver/app.py &
+        sleep 3
+        pytest --nbmake "notebooks/"

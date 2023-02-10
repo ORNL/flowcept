@@ -11,3 +11,4 @@ tensorboard_events/
 **/*.DS_Store*
 **/*.log*
 notebooks/.ipynb_checkpoints
+notebooks/tb_*

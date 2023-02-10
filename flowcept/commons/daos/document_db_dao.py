@@ -25,13 +25,10 @@ class DocumentDBDao(object):
         self,
         filter: dict,
         projection=None,
-        limit=None,
+        limit=0,
         sort=None,
         remove_json_unserializables=True,
     ) -> List[Dict]:
-        if limit is None:
-            limit = 0
-
         if remove_json_unserializables:
             projection = {"_id": 0, "timestamp": 0}
 
