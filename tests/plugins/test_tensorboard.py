@@ -153,8 +153,8 @@ class TestTensorboard(unittest.TestCase):
         docs = doc_dao.find({"workflow_id": wf_id})
         assert len(docs) == 16
 
+        sleep(99999)
         TestTensorboard.consumer.stop()
-        sleep(2)
 
     def test_read_tensorboard_hparam_tuning(self):
         self.reset_log_dir()
