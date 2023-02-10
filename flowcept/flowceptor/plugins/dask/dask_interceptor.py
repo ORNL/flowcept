@@ -116,6 +116,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="dask"):
         self._plugin_key = plugin_key
         self._worker = None
+        # super().__init__ goes to setup_worker.
 
     def setup_worker(self, worker):
         """
