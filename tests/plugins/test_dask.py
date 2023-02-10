@@ -162,4 +162,6 @@ class TestDask(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         TestDask.consumer.stop()
+        TestDask.client.shutdown()
+        TestDask.client.close()
         sleep(5)
