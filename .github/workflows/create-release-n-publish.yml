@@ -1,6 +1,6 @@
 name: Release and Publish
 on:
-  push:
+  push:  # It has to be push, otherwise error happens in code below.
     branches: [ "main" ]
 jobs:
   build:
@@ -9,10 +9,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Set up Python 3.10
+      - name: Set up Python 3.8
         uses: actions/setup-python@v3
         with:
-          python-version: "3.10"
+          python-version: "3.8"
       - name: Get branch names
         id: branch-name
         uses: tj-actions/branch-names@v6
