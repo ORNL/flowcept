@@ -1,6 +1,6 @@
 [![Build](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml)
 [![PyPI](https://badge.fury.io/py/flowcept.svg)](https://pypi.org/project/flowcept)
-[![Unit Tests](https://github.com/ORNL/flowcept/actions/workflows/run-unit-tests.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-unit-tests.yml)
+[![Tests](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml)
 [![Code Formatting](https://github.com/ORNL/flowcept/actions/workflows/code-formatting.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/code-formatting.yml)
 [![License: MIT](https://img.shields.io/github/license/ORNL/flowcept)](LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
