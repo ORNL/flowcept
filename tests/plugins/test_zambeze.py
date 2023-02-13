@@ -63,6 +63,7 @@ class TestZambeze(unittest.TestCase):
         )
 
         self.logger.debug(" [x] Sent msg")
+        sleep(5)
         self._connection.close()
         sleep(10)
         doc_dao = DocumentDBDao()
