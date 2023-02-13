@@ -30,7 +30,8 @@ jobs:
     - name: Test notebooks
       run: |
         python flowcept/flowcept_webserver/app.py &
-        WEB_PID=$!
+        export WEB_PID=$!
+        echo "WEB_PID=${WEB_PID}"
         sleep 3
         pytest --nbmake "notebooks/"
     - name: Set up Python 3.9
@@ -47,7 +48,9 @@ jobs:
     - name: Run Docker Compose
       run: docker compose -f deployment/compose.yml up -d
     - name: Kill previous webserver
-      run: kill -9 $WEB_PID
+      run: |
+        echo "WEB_PID=${WEB_PID}"
+        kill -9 $WEB_PID
     - name: Test with pytest
       run: |
         pytest
