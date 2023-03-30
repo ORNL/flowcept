@@ -83,3 +83,5 @@ jobs:
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
           verbose: true
+      - name: Test pip install
+        run: pip install flowcept

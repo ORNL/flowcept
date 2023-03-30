@@ -2,7 +2,7 @@ import os
 import urllib.request
 import socket
 import getpass
-
+import yaml
 ########################
 #   Project Settings   #
 ########################
@@ -15,58 +15,56 @@ PROJECT_DIR_PATH = os.path.abspath(
 SRC_DIR_PATH = os.path.join(PROJECT_DIR_PATH, PROJECT_NAME)
 
 _settings_path = os.path.join(PROJECT_DIR_PATH, "resources", "settings.yaml")
-SETTINGS_PATH = os.getenv("SETTINGS_PATH", _settings_path)
+SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", _settings_path)
+
+with open(SETTINGS_PATH) as f:
+    settings = yaml.safe_load(f)
 
 ########################
 #   Log Settings       #
 ########################
-LOG_FILE_PATH = os.getenv(
-    "LOG_PATH", os.path.join(PROJECT_DIR_PATH, f"{PROJECT_NAME}.log")
+LOG_FILE_PATH = settings["log"].get(
+    "log_path", os.path.join(PROJECT_DIR_PATH, f"{PROJECT_NAME}.log")
 )
 # Possible values below are the typical python logging levels.
-LOG_FILE_LEVEL = os.getenv("LOG_FILE_LEVEL", "debug").upper()
-LOG_STREAM_LEVEL = os.getenv("LOG_STREAM_LEVEL", "debug").upper()
+LOG_FILE_LEVEL = settings["log"].get("log_file_level", "debug").upper()
+LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "debug").upper()
 
 ##########################
 #  Experiment Settings   #
 ##########################
 
-FLOWCEPT_USER = os.getenv("FLOWCEPT_USER", "root")
-EXPERIMENT_ID = os.getenv("EXPERIMENT_ID", "super-experiment")
+FLOWCEPT_USER = settings["experiment"].get("user", "root")
+EXPERIMENT_ID = settings["experiment"].get("experiment_id", "super-experiment")
 
 ######################
 #   Redis Settings   #
 ######################
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-REDIS_CHANNEL = "interception"
+REDIS_HOST = settings["main_redis"].get("host", "localhost")
+REDIS_PORT = int(settings["main_redis"].get("port", "6379"))
+REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
 
 ######################
 #  MongoDB Settings  #
 ######################
-MONGO_HOST = os.getenv("MONGO_HOST", "localhost")
-MONGO_PORT = int(os.getenv("MONGO_PORT", "27017"))
-MONGO_DB = os.getenv("MONGO_DB", "flowcept")
-MONGO_COLLECTION = os.getenv("MONGO_COLLECTION", "messages")
-
+MONGO_HOST = settings["mongodb"].get("host", "localhost")
+MONGO_PORT = int(settings["mongodb"].get("port", "27017"))
+MONGO_DB = settings["mongodb"].get("db", "flowcept")
+MONGO_COLLECTION = settings["mongodb"].get("collection", "tasks")
 # In seconds:
-MONGO_INSERTION_BUFFER_TIME = int(os.getenv("MONGO_INSERTION_BUFFER_TIME", 5))
+MONGO_INSERTION_BUFFER_TIME = int(settings["mongodb"].get("insertion_buffer_time_secs", 5))
 MONGO_INSERTION_BUFFER_SIZE = int(
-    os.getenv("MONGO_INSERTION_BUFFER_SIZE", 50)
+    settings["mongodb"].get("insertion_buffer_size", 50)
 )
 
-DEBUG_MODE = (
-    True
-    if os.getenv("DEBUG_MODE", "true").lower() in ["true", "yes", "y", 1]
-    else False
-)
+DEBUG_MODE = settings["project"].get("debug", False)
 
 ######################
 # EXTRA MSG METADATA #
 ######################
-SYS_NAME = os.getenv("SYS_NAME", os.uname()[0])
-NODE_NAME = os.getenv("NODE_NAME", os.uname()[1])
-LOGIN_NAME = os.getenv("LOGIN_NAME", getpass.getuser())
+SYS_NAME = settings["extra_metadata"].get("sys_name", os.uname()[0])
+NODE_NAME = settings["extra_metadata"].get("node_name", os.uname()[1])
+LOGIN_NAME = settings["extra_metadata"].get("login_name", getpass.getuser())
 
 try:
     external_ip = (
@@ -76,13 +74,13 @@ except Exception as e:
     print("Unable to retrieve external IP", e)
     external_ip = "unavailable"
 
-PUBLIC_IP = os.getenv("PUBLIC_IP", external_ip)
-PRIVATE_IP = os.getenv("PRIVATE_IP", socket.gethostbyname(socket.getfqdn()))
+PUBLIC_IP = settings["extra_metadata"].get("public_ip", external_ip)
+PRIVATE_IP = settings["extra_metadata"].get("private_ip", socket.gethostbyname(socket.getfqdn()))
 
 
 ######################
 #    Web Server      #
 ######################
 
-WEBSERVER_HOST = os.getenv("WEBSERVER_HOST", "0.0.0.0")
-WEBSERVER_PORT = int(os.getenv("WEBSERVER_PORT", "5000"))
+WEBSERVER_HOST = settings["web_server"].get("host", "0.0.0.0")
+WEBSERVER_PORT = int(settings["web_server"].get("port", "5000"))
