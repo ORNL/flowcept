@@ -47,9 +47,6 @@ for req in _EXTRA_REQUIREMENTS:
     else:
         req_path = f"extra_requirements/{req}-requirements.txt"
     extras_requires[req] = get_requirements(req_path)
-    full_requirements.extend(extras_requires[req])
-
-extras_requires["full"] = full_requirements
 
 setup(
     name="flowcept",

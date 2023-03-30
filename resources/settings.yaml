@@ -1,3 +1,42 @@
+project:
+  debug: true
+
+log:
+  log_path: flowcept.log
+  log_file_level: debug
+  log_stream_level: debug
+
+experiment:
+  user: renansouza
+  experiment_id: flowcept_experiment
+
+main_redis:
+  host: localhost
+  port: 6379
+  channel: interception
+
+mongodb:
+  host: localhost
+  port: 27017
+  db: flowcept
+  collection: tasks
+  insertion_buffer_time_secs: 5
+  insertion_buffer_size: 50
+
+web_server:
+  host: 0.0.0.0
+  port: 5000
+
+
+extra_metadata:
+  place_holder: ""
+#  sys_name: 0
+#  node_name: 0
+#  login_name: 0
+#  public_ip: 0
+#  private_ip: 0
+#
+
 plugins:
   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2.
   zambeze:

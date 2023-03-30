@@ -1,4 +1,3 @@
-import os
 import pickle
 
 from flowcept.commons.flowcept_data_classes import TaskMessage, Status
