@@ -7,7 +7,7 @@ log:
   log_stream_level: debug
 
 experiment:
-  user: renansouza
+  user: root
   experiment_id: flowcept_experiment
 
 main_redis:
