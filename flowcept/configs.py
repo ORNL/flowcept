@@ -1,7 +1,4 @@
 import os
-import urllib.request
-import socket
-import getpass
 import yaml
 ########################
 #   Project Settings   #
@@ -34,7 +31,7 @@ LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "debug").upper()
 #  Experiment Settings   #
 ##########################
 
-FLOWCEPT_USER = settings["experiment"].get("user", "root")
+FLOWCEPT_USER = settings["experiment"].get("user", os.getlogin())
 EXPERIMENT_ID = settings["experiment"].get("experiment_id", "super-experiment")
 
 ######################
@@ -64,18 +61,10 @@ DEBUG_MODE = settings["project"].get("debug", False)
 ######################
 SYS_NAME = settings["extra_metadata"].get("sys_name", os.uname()[0])
 NODE_NAME = settings["extra_metadata"].get("node_name", os.uname()[1])
-LOGIN_NAME = settings["extra_metadata"].get("login_name", getpass.getuser())
+LOGIN_NAME = settings["extra_metadata"].get("login_name", os.getlogin())
 
-try:
-    external_ip = (
-        urllib.request.urlopen("https://ident.me").read().decode("utf8")
-    )
-except Exception as e:
-    print("Unable to retrieve external IP", e)
-    external_ip = "unavailable"
-
-PUBLIC_IP = settings["extra_metadata"].get("public_ip", external_ip)
-PRIVATE_IP = settings["extra_metadata"].get("private_ip", socket.gethostbyname(socket.getfqdn()))
+PUBLIC_IP = settings["extra_metadata"].get("public_ip", None)
+PRIVATE_IP = settings["extra_metadata"].get("private_ip", None)
 
 
 ######################
