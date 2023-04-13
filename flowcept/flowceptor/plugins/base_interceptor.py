@@ -42,10 +42,10 @@ def _enrich_task_message(settings_key, task_msg: TaskMessage):
     if task_msg.login_name is None:
         task_msg.login_name = LOGIN_NAME
 
-    if task_msg.public_ip is None:
+    if task_msg.public_ip is None and PUBLIC_IP is not None:
         task_msg.public_ip = PUBLIC_IP
 
-    if task_msg.private_ip is None:
+    if task_msg.private_ip is None and PRIVATE_IP is not None:
         task_msg.private_ip = PRIVATE_IP
 
 
