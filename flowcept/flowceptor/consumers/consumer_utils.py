@@ -30,6 +30,17 @@ def curate_task_msg(task_msg_dict: dict):
             task_msg_dict[field] = field_val_dict
 
 
+def remove_empty_fields_from_dict(obj: dict):
+    """Remove empty fields from a dictionary recursively."""
+    for key, value in list(obj.items()):
+        if isinstance(value, dict):
+            remove_empty_fields_from_dict(value)
+            if not value:
+                del obj[key]
+        elif value in (None, ''):
+            del obj[key]
+
+
 def curate_dict_task_messages(
     dict_task_messages: List[Dict], indexing_key: str
 ):
