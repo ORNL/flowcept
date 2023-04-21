@@ -53,8 +53,11 @@ MONGO_INSERTION_BUFFER_TIME = int(settings["mongodb"].get("insertion_buffer_time
 MONGO_INSERTION_BUFFER_SIZE = int(
     settings["mongodb"].get("insertion_buffer_size", 50)
 )
+MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get("remove_empty_fields", False)
+
 
 DEBUG_MODE = settings["project"].get("debug", False)
+JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 
 ######################
 # EXTRA MSG METADATA #

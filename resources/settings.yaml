@@ -1,5 +1,6 @@
 project:
   debug: true
+  json_serializer: default # or complex. If "complex", FlowCept will deal with complex python dicts that may non-serializable JSON.
 
 log:
   log_path: flowcept.log
@@ -22,6 +23,7 @@ mongodb:
   collection: tasks
   insertion_buffer_time_secs: 5
   insertion_buffer_size: 50
+  remove_empty_fields: false
 
 web_server:
   host: 0.0.0.0

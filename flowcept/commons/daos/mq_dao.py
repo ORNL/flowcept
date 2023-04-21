@@ -6,7 +6,10 @@ from flowcept.configs import (
     REDIS_HOST,
     REDIS_PORT,
     REDIS_CHANNEL,
+    JSON_SERIALIZER
 )
+
+from flowcept.commons.utils import GenericJSONEncoder
 
 
 class MQDao:
@@ -21,7 +24,9 @@ class MQDao:
         return pubsub
 
     def publish(self, message: dict):
-        self._redis.publish(REDIS_CHANNEL, json.dumps(message))
+        cls = GenericJSONEncoder if JSON_SERIALIZER == "complex" else None
+        # TODO we don't have a unit test to cover complex dict! :(
+        self._redis.publish(REDIS_CHANNEL, json.dumps(message, cls=cls))
 
     def stop_document_inserter(self):
         msg = {"type": "flowcept_control", "info": "stop_document_inserter"}

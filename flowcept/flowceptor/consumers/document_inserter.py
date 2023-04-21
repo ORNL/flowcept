@@ -3,17 +3,23 @@ from time import time, sleep
 from threading import Thread, Event
 from typing import Dict
 from datetime import datetime
+
+from flowcept.commons.utils import GenericJSONDecoder
 from flowcept.configs import (
     MONGO_INSERTION_BUFFER_TIME,
     MONGO_INSERTION_BUFFER_SIZE,
-    DEBUG_MODE,
+    DEBUG_MODE, JSON_SERIALIZER,
+    MONGO_REMOVE_EMPTY_FIELDS
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao import MQDao
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept.flowceptor.consumers.consumer_utils import \
+    remove_empty_fields_from_dict
 
 
 class DocumentInserter:
+
     def __init__(self):
         self._buffer = list()
         self._mq_dao = MQDao()
@@ -35,8 +41,12 @@ class DocumentInserter:
         if DEBUG_MODE:
             message["debug"] = True
 
+        self.logger.debug("An intercepted msg was received in DocInserter:")
+        if MONGO_REMOVE_EMPTY_FIELDS:
+            remove_empty_fields_from_dict(message)
+        self.logger.debug("\t"+str(message))
         self._buffer.append(message)
-        self.logger.debug("An intercepted message was received.")
+
         if len(self._buffer) >= MONGO_INSERTION_BUFFER_SIZE:
             self.logger.debug("Buffer exceeded, flushing...")
             self._flush()
@@ -67,7 +77,8 @@ class DocumentInserter:
         for message in pubsub.listen():
             if message["type"] in MQDao.MESSAGE_TYPES_IGNORE:
                 continue
-            _dict_obj = json.loads(message["data"])
+            cls = GenericJSONDecoder if JSON_SERIALIZER == "complex" else None
+            _dict_obj = json.loads(message["data"], cls=cls)
             if (
                 "type" in _dict_obj
                 and _dict_obj["type"] == "flowcept_control"
