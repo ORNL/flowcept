@@ -22,7 +22,7 @@ class TaskMessage:
     utc_timestamp: float = None
     plugin_id: AnyStr = None
     user: AnyStr = None
-    msg_id: AnyStr = None  # TODO: Remove this from all plugins in the future
+    msg_id: AnyStr = None  # TODO: This is deprecated. Remove from all plugins
     used: Dict[AnyStr, Any] = None  # Used parameter and files
     experiment_id: AnyStr = None
     generated: Dict[AnyStr, Any] = None  # Generated results and files
@@ -38,6 +38,8 @@ class TaskMessage:
     login_name: AnyStr = None
     public_ip: AnyStr = None
     private_ip: AnyStr = None
+    hostname: AnyStr = None
+    extra_metadata: Dict = None
     sys_name: AnyStr = None
     address: AnyStr = None
     dependencies: List = None
