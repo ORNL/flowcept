@@ -9,6 +9,8 @@ from flowcept.configs import (
     PUBLIC_IP,
     PRIVATE_IP,
     EXPERIMENT_ID,
+    HOSTNAME,
+    EXTRA_METADATA
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao import MQDao
@@ -47,6 +49,12 @@ def _enrich_task_message(settings_key, task_msg: TaskMessage):
 
     if task_msg.private_ip is None and PRIVATE_IP is not None:
         task_msg.private_ip = PRIVATE_IP
+
+    if task_msg.hostname is None and HOSTNAME is not None:
+        task_msg.hostname = HOSTNAME
+
+    if task_msg.extra_metadata is None and EXTRA_METADATA is not None:
+        task_msg.extra_metadata = EXTRA_METADATA
 
 
 class BaseInterceptor(object, metaclass=ABCMeta):

@@ -9,10 +9,13 @@ from flowcept.configs import (
     MONGO_INSERTION_BUFFER_TIME,
     MONGO_INSERTION_BUFFER_SIZE,
     DEBUG_MODE, JSON_SERIALIZER,
+    MONGO_REMOVE_EMPTY_FIELDS
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao import MQDao
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept.flowceptor.consumers.consumer_utils import \
+    remove_empty_fields_from_dict
 
 
 class DocumentInserter:
@@ -51,8 +54,8 @@ class DocumentInserter:
             message["debug"] = True
 
         self.logger.debug("An intercepted msg was received in DocInserter:")
-        #self.logger.debug("\t"+json.dumps(message))
-        DocumentInserter.remove_empty_fields(message)
+        if MONGO_REMOVE_EMPTY_FIELDS:
+            remove_empty_fields_from_dict(message)
         self.logger.debug("\t"+str(message))
         self._buffer.append(message)
 
