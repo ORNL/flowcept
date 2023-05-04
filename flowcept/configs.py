@@ -53,6 +53,8 @@ MONGO_INSERTION_BUFFER_TIME = int(settings["mongodb"].get("insertion_buffer_time
 MONGO_INSERTION_BUFFER_SIZE = int(
     settings["mongodb"].get("insertion_buffer_size", 50)
 )
+MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get("remove_empty_fields", False)
+
 
 DEBUG_MODE = settings["project"].get("debug", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
@@ -60,14 +62,22 @@ JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 ######################
 # EXTRA MSG METADATA #
 ######################
-SYS_NAME = settings["extra_metadata"].get("sys_name", os.uname()[0])
-NODE_NAME = settings["extra_metadata"].get("node_name", os.uname()[1])
-# TODO: check login and user name later
-LOGIN_NAME = settings["extra_metadata"].get("login_name", "login_name")
 
-PUBLIC_IP = settings["extra_metadata"].get("public_ip", None)
-PRIVATE_IP = settings["extra_metadata"].get("private_ip", None)
+SYS_NAME = settings["sys_metadata"].get("sys_name", os.uname()[0])
+NODE_NAME = settings["sys_metadata"].get("node_name", os.uname()[1])
+LOGIN_NAME = settings["sys_metadata"].get("login_name", "login_name")
 
+PUBLIC_IP = settings["sys_metadata"].get("public_ip", None)
+PRIVATE_IP = settings["sys_metadata"].get("private_ip", None)
+
+try:
+    with open("/etc/hostname", "r") as f:
+        HOSTNAME = f.read()
+except:
+    HOSTNAME = None
+    pass
+
+EXTRA_METADATA = settings.get("extra_metadata", None)
 
 ######################
 #    Web Server      #

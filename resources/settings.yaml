@@ -1,7 +1,7 @@
 project:
   debug: true
-  json_serializer: complex # or complex. If "complex", FlowCept will deal with complex python dicts that may non-serializable JSON.
-
+  json_serializer: default # or complex. If "complex", FlowCept will deal with complex python dicts that may 
+  
 log:
   log_path: flowcept.log
   log_file_level: debug
@@ -23,13 +23,14 @@ mongodb:
   collection: tasks
   insertion_buffer_time_secs: 5
   insertion_buffer_size: 50
+  remove_empty_fields: false
 
 web_server:
   host: 0.0.0.0
   port: 5000
 
 
-extra_metadata:
+sys_metadata:
   place_holder: ""
 #  sys_name: 0
 #  node_name: 0
@@ -37,6 +38,9 @@ extra_metadata:
 #  public_ip: 0
 #  private_ip: 0
 #
+
+extra_metadata:
+  place_holder: ""
 
 plugins:
   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2.

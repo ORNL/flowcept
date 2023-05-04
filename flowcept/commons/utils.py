@@ -27,7 +27,7 @@ def get_status_from_str(status_str: str) -> Status:
     else:
         return Status.UNKNOWN
 
-    
+
 class GenericJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, (list, tuple)):
