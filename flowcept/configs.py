@@ -62,13 +62,21 @@ JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 ######################
 # EXTRA MSG METADATA #
 ######################
-SYS_NAME = settings["extra_metadata"].get("sys_name", os.uname()[0])
-NODE_NAME = settings["extra_metadata"].get("node_name", os.uname()[1])
-LOGIN_NAME = settings["extra_metadata"].get("login_name", os.getlogin())
+SYS_NAME = settings["sys_metadata"].get("sys_name", os.uname()[0])
+NODE_NAME = settings["sys_metadata"].get("node_name", os.uname()[1])
+LOGIN_NAME = settings["sys_metadata"].get("login_name", os.getlogin())
 
-PUBLIC_IP = settings["extra_metadata"].get("public_ip", None)
-PRIVATE_IP = settings["extra_metadata"].get("private_ip", None)
+PUBLIC_IP = settings["sys_metadata"].get("public_ip", None)
+PRIVATE_IP = settings["sys_metadata"].get("private_ip", None)
 
+try:
+    with open("/etc/hostname", "r") as f:
+        HOSTNAME = f.read()
+except:
+    HOSTNAME = None
+    pass
+
+EXTRA_METADATA = settings.get("extra_metadata", None)
 
 ######################
 #    Web Server      #
