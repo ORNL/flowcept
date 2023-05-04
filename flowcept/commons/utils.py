@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-
+import json
 from flowcept.commons.flowcept_data_classes import Status
 
 
@@ -26,3 +26,38 @@ def get_status_from_str(status_str: str) -> Status:
         return Status.SUBMITTED
     else:
         return Status.UNKNOWN
+
+    
+class GenericJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (list, tuple)):
+            return [self.default(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {self.default(key): self.default(value) for key, value in obj.items()}
+        elif hasattr(obj, '__dict__'):
+            return self.default(obj.__dict__)
+        elif isinstance(obj, object):
+            try:
+                return str(obj)
+            except:
+                return None
+        return super().default(obj)
+
+
+class GenericJSONDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+    def object_hook(self, dct):
+        if '__class__' in dct:
+            class_name = dct.pop('__class__')
+            module_name = dct.pop('__module__')
+            module = __import__(module_name)
+            class_ = getattr(module, class_name)
+            args = {}
+            for key, value in dct.items():
+                args[key] = self.object_hook(value)
+            inst = class_(**args)
+        else:
+            inst = dct
+        return inst

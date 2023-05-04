@@ -8,6 +8,8 @@ from flowcept.configs import (
     REDIS_CHANNEL,
 )
 
+from flowcept.commons.utils import GenericJSONEncoder
+
 
 class MQDao:
     MESSAGE_TYPES_IGNORE = {"psubscribe"}
@@ -21,7 +23,8 @@ class MQDao:
         return pubsub
 
     def publish(self, message: dict):
-        self._redis.publish(REDIS_CHANNEL, json.dumps(message))
+        self._redis.publish(REDIS_CHANNEL, json.dumps(message,
+                                                      cls=GenericJSONEncoder))
 
     def stop_document_inserter(self):
         msg = {"type": "flowcept_control", "info": "stop_document_inserter"}

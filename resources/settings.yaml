@@ -1,5 +1,6 @@
 project:
   debug: true
+  json_serializer: complex # or complex. If "complex", FlowCept will deal with complex python dicts that may non-serializable JSON.
 
 log:
   log_path: flowcept.log
@@ -16,7 +17,7 @@ main_redis:
   channel: interception
 
 mongodb:
-  host: localhost
+  host: batch5
   port: 27017
   db: flowcept
   collection: tasks
