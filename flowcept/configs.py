@@ -31,7 +31,7 @@ LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "debug").upper()
 #  Experiment Settings   #
 ##########################
 
-FLOWCEPT_USER = settings["experiment"].get("user", os.getlogin())
+FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 EXPERIMENT_ID = settings["experiment"].get("experiment_id", "super-experiment")
 
 ######################
@@ -55,13 +55,15 @@ MONGO_INSERTION_BUFFER_SIZE = int(
 )
 
 DEBUG_MODE = settings["project"].get("debug", False)
+JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 
 ######################
 # EXTRA MSG METADATA #
 ######################
 SYS_NAME = settings["extra_metadata"].get("sys_name", os.uname()[0])
 NODE_NAME = settings["extra_metadata"].get("node_name", os.uname()[1])
-LOGIN_NAME = settings["extra_metadata"].get("login_name", os.getlogin())
+# TODO: check login and user name later
+LOGIN_NAME = settings["extra_metadata"].get("login_name", "login_name")
 
 PUBLIC_IP = settings["extra_metadata"].get("public_ip", None)
 PRIVATE_IP = settings["extra_metadata"].get("private_ip", None)
