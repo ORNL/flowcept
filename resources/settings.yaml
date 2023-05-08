@@ -17,7 +17,7 @@ main_redis:
   channel: interception
 
 mongodb:
-  host: batch5
+  host: localhost
   port: 27017
   db: flowcept
   collection: tasks
