@@ -1,6 +1,8 @@
 from typing import List
 from sqlalchemy.engine import Row, create_engine
 from textwrap import dedent
+
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import (
     RunData,
     MLFlowSettings,
@@ -15,6 +17,7 @@ class MLFlowDAO:
 
     def __init__(self, mlflow_settings: MLFlowSettings):
         self._engine = MLFlowDAO._get_db_engine(mlflow_settings.file_path)
+        self.logger = FlowceptLogger().get_logger()
 
     @staticmethod
     def _get_db_engine(sqlite_file):
@@ -43,7 +46,7 @@ class MLFlowDAO:
 
     def get_run_data(self, run_uuid: str) -> RunData:
         # TODO: consider outer joins to get the run data even if there's
-        #  no metric or param
+        #  no metric or param or if the task hasn't finished yet
         sql = dedent(
             f"""
             SELECT r.run_uuid, r.start_time, r.end_time, r.status,
@@ -57,7 +60,7 @@ class MLFlowDAO:
                 r.run_uuid = m.run_uuid AND
                 m.run_uuid = p.run_uuid AND
                 r.run_uuid = '{run_uuid}' AND
-                r.status = 'FINISHED'
+                r.status = 'FINISHED' 
             ORDER BY
                 end_time DESC,
                 metric_key, metric_value,
@@ -88,6 +91,10 @@ class MLFlowDAO:
             run_data_dict["start_time"] = tuple_dict["start_time"]
             run_data_dict["end_time"] = tuple_dict["end_time"]
             run_data_dict["status"] = tuple_dict["status"]
+        try:
+            run_data = RunData(**run_data_dict)
+            return run_data
+        except Exception as e:
+            self.logger.exception(e)
+            return None
 
-        run_data = RunData(**run_data_dict)
-        return run_data

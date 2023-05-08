@@ -41,6 +41,27 @@ class TestMLFlow(unittest.TestCase):
 
             return run.info.run_uuid
 
+    def test_pure_run_mlflow_no_ctx_mgr(self):
+        import uuid
+        import mlflow
+
+        # from mlflow.tracking import MlflowClient
+        # client = MlflowClient()
+        mlflow.set_tracking_uri(
+            f"sqlite:///" f"{TestMLFlow.interceptor.settings.file_path}"
+        )
+        experiment_name = "LinearRegression"
+        experiment_id = mlflow.create_experiment(
+            experiment_name + str(uuid.uuid4())
+        )
+        run = mlflow.start_run(experiment_id=experiment_id)
+        mlflow.log_params({"number_epochs": 10})
+        mlflow.log_params({"batch_size": 64})
+        self.logger.debug("\nTrained model")
+        mlflow.log_metric("loss", 0.04)
+        mlflow.end_run()
+        return run.info.run_uuid
+
     def test_get_runs(self):
         runs = self.interceptor.dao.get_finished_run_uuids()
         assert len(runs) > 0

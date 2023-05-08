@@ -56,6 +56,11 @@ MONGO_INSERTION_BUFFER_SIZE = int(
 MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get("remove_empty_fields", False)
 
 
+######################
+# PROJECT METADATA #
+######################
+
+MQ_TYPE = settings["project"].get("mq_type", "redis")
 DEBUG_MODE = settings["project"].get("debug", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 
