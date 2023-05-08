@@ -53,6 +53,8 @@ class MLFlowInterceptor(BaseInterceptor):
                     f"We need to intercept this Run: {run_uuid}"
                 )
                 run_data = self.dao.get_run_data(run_uuid)
+                if not run_data:
+                    continue
                 self.state_manager.add_element_id(run_uuid)
                 task_msg = self.prepare_task_msg(run_data)
                 self.intercept(task_msg)
