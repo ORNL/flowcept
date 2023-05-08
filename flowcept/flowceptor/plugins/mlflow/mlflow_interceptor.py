@@ -46,6 +46,8 @@ class MLFlowInterceptor(BaseInterceptor):
         """
         self.logger.debug("Sqlite db file changed!")
         runs = self.dao.get_finished_run_uuids()
+        if not runs:
+            return
         for run_uuid_tuple in runs:
             run_uuid = run_uuid_tuple[0]
             if not self.state_manager.has_element_id(run_uuid):
@@ -53,9 +55,9 @@ class MLFlowInterceptor(BaseInterceptor):
                     f"We need to intercept this Run: {run_uuid}"
                 )
                 run_data = self.dao.get_run_data(run_uuid)
+                self.state_manager.add_element_id(run_uuid)
                 if not run_data:
                     continue
-                self.state_manager.add_element_id(run_uuid)
                 task_msg = self.prepare_task_msg(run_data)
                 self.intercept(task_msg)
 

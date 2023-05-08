@@ -44,6 +44,7 @@ class DocumentInserter:
         if len(self._buffer):
             self._doc_dao.insert_and_update_many("task_id", self._buffer)
             self._buffer = list()
+            self.logger.debug("Flushed!")
 
     def handle_task_message(self, message: Dict):
         if "utc_timestamp" in message:

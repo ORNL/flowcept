@@ -40,9 +40,13 @@ class MLFlowDAO:
             LIMIT {MLFlowDAO._LIMIT}
             """
         )
-        conn = self._engine.connect()
-        results = conn.execute(sql).fetchall()
-        return results
+        try:
+            conn = self._engine.connect()
+            results = conn.execute(sql).fetchall()
+            return results
+        except Exception as e:
+            self.logger.debug(str(e))
+            return None
 
     def get_run_data(self, run_uuid: str) -> RunData:
         # TODO: consider outer joins to get the run data even if there's
@@ -68,8 +72,12 @@ class MLFlowDAO:
             LIMIT 30
 """
         )
-        conn = self._engine.connect()
-        result_set = conn.execute(sql).fetchall()
+        try:
+            conn = self._engine.connect()
+            result_set = conn.execute(sql).fetchall()
+        except Exception as e:
+            self.logger.warning(e)
+            return None
         run_data_dict = {"used": {}, "generated": {}}
         for tuple_ in result_set:
             tuple_dict = tuple_._asdict()
@@ -95,6 +103,6 @@ class MLFlowDAO:
             run_data = RunData(**run_data_dict)
             return run_data
         except Exception as e:
-            self.logger.exception(e)
+            self.logger.warning(e)
             return None
 
