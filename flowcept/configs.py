@@ -5,14 +5,18 @@ import yaml
 ########################
 
 PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
+SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
+if SETTINGS_PATH is None:
+    project_dir_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..")
+    )
+    SETTINGS_PATH = os.path.join(project_dir_path,
+                                 "resources", "settings.yaml")
 
-PROJECT_DIR_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..")
-)
-SRC_DIR_PATH = os.path.join(PROJECT_DIR_PATH, PROJECT_NAME)
+if not os.path.isabs(SETTINGS_PATH):
+    # TODO: check if we really need abs path
+    raise Exception("Please use an absolute path for the settings.yaml")
 
-_settings_path = os.path.join(PROJECT_DIR_PATH, "resources", "settings.yaml")
-SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", _settings_path)
 
 with open(SETTINGS_PATH) as f:
     settings = yaml.safe_load(f)
@@ -20,9 +24,8 @@ with open(SETTINGS_PATH) as f:
 ########################
 #   Log Settings       #
 ########################
-LOG_FILE_PATH = settings["log"].get(
-    "log_path", os.path.join(PROJECT_DIR_PATH, f"{PROJECT_NAME}.log")
-)
+LOG_FILE_PATH = settings["log"].get("log_path", f"{PROJECT_NAME}.log")
+
 # Possible values below are the typical python logging levels.
 LOG_FILE_LEVEL = settings["log"].get("log_file_level", "debug").upper()
 LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "debug").upper()
@@ -65,15 +68,22 @@ DEBUG_MODE = settings["project"].get("debug", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 
 ######################
-# EXTRA MSG METADATA #
+# SYS METADATA #
 ######################
 
-SYS_NAME = settings["sys_metadata"].get("sys_name", os.uname()[0])
-NODE_NAME = settings["sys_metadata"].get("node_name", os.uname()[1])
-LOGIN_NAME = settings["sys_metadata"].get("login_name", "login_name")
-
-PUBLIC_IP = settings["sys_metadata"].get("public_ip", None)
-PRIVATE_IP = settings["sys_metadata"].get("private_ip", None)
+sys_metadata = settings.get("sys_metadata", None)
+if sys_metadata is not None:
+    SYS_NAME = sys_metadata.get("sys_name", os.uname()[0])
+    NODE_NAME = sys_metadata.get("node_name", os.uname()[1])
+    LOGIN_NAME = sys_metadata.get("login_name", "login_name")
+    PUBLIC_IP = sys_metadata.get("public_ip", None)
+    PRIVATE_IP = sys_metadata.get("private_ip", None)
+else:
+    SYS_NAME = os.uname()[0]
+    NODE_NAME = os.uname()[1]
+    LOGIN_NAME = None
+    PUBLIC_IP = None
+    PRIVATE_IP = None
 
 try:
     with open("/etc/hostname", "r") as f:

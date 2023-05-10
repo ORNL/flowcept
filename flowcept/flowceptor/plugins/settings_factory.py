@@ -3,7 +3,6 @@ import yaml
 
 from flowcept.commons.vocabulary import Vocabulary
 from flowcept.configs import (
-    PROJECT_DIR_PATH,
     SETTINGS_PATH,
 )
 
@@ -38,9 +37,7 @@ def _build_base_settings(kind: str, settings_dict: dict) -> BaseSettings:
     if hasattr(settings_obj, "file_path") and not os.path.isabs(
         settings_obj.file_path
     ):
-        settings_obj.file_path = os.path.join(
-            PROJECT_DIR_PATH, settings_obj.file_path
-        )
+        settings_obj.file_path = SETTINGS_PATH
 
     # # Add default values for abstract settings here:
     # if settings_obj.enrich_messages is None:

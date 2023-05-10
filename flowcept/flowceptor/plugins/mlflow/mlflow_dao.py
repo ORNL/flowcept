@@ -47,6 +47,8 @@ class MLFlowDAO:
         except Exception as e:
             self.logger.debug(str(e))
             return None
+        finally:
+            conn.close()
 
     def get_run_data(self, run_uuid: str) -> RunData:
         # TODO: consider outer joins to get the run data even if there's
@@ -78,6 +80,8 @@ class MLFlowDAO:
         except Exception as e:
             self.logger.warning(e)
             return None
+        finally:
+            conn.close()
         run_data_dict = {"used": {}, "generated": {}}
         for tuple_ in result_set:
             tuple_dict = tuple_._asdict()
