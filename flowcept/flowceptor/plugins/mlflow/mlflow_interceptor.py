@@ -44,7 +44,6 @@ class MLFlowInterceptor(BaseInterceptor):
         If it's an interesting change, it calls self.intercept; otherwise,
         let it go....
         """
-        self.logger.debug("Sqlite db file changed!")
         runs = self.dao.get_finished_run_uuids()
         if not runs:
             return
