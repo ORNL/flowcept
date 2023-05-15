@@ -79,7 +79,7 @@ def curate_dict_task_messages(
 
         if doc[indexing_key] not in indexed_buffer:
             indexed_buffer[indexing_key_value] = doc
-            continue
+            #continue
 
         # if (
         #     "finished" in indexed_buffer[indexing_key_value]
