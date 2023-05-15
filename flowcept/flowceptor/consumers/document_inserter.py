@@ -55,10 +55,12 @@ class DocumentInserter:
         if DEBUG_MODE:
             message["debug"] = True
 
-        self.logger.debug("An intercepted msg was received in DocInserter:")
+        self.logger.debug(
+            f"Received following msg in DocInserter:"
+            f"\n\t[BEGINMSG]{message}\n\t[ENDMSG]"
+        )
         if MONGO_REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
-        self.logger.debug("\t"+str(message))
         self._buffer.append(message)
 
         if len(self._buffer) >= MONGO_INSERTION_BUFFER_SIZE:
