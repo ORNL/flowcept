@@ -71,7 +71,7 @@ class DocumentInserter:
                 now = time()
                 timediff = now - self._previous_time
                 if timediff >= MONGO_INSERTION_BUFFER_TIME:
-                    self.logger.debug("Time to flush!")
+                    self.logger.debug("Time to flush to doc db!")
                     self._previous_time = now
                     self._flush()
             sleep(MONGO_INSERTION_BUFFER_TIME)

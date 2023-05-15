@@ -48,10 +48,10 @@ def curate_dict_task_messages(
        This function removes duplicates based on the
         indexing_key (e.g., task_id) locally before sending
         to MongoDB.
-        It also avoids tasks changing states once they go into finished state.
-        This is needed because we can't guarantee MQ orders, and finished
-        states have higher priority in status changes, as we don't expect a
-        status change once a task goes into finished state.
+        # It also avoids tasks changing states once they go into finished state.
+        This is needed because we can't guarantee MQ orders.
+        # Finished states have higher priority in status changes, as we don't expect a
+        # status change once a task goes into finished state.
         It also resolves updates (instead of replacement) of
         inner nested fields in a JSON object.
     :param dict_task_messages:
@@ -70,20 +70,28 @@ def curate_dict_task_messages(
 
         curate_task_msg(doc)
         indexing_key_value = doc[indexing_key]
+
+        # Reformatting the task msg so to append statuses, as updating them was
+        # causing inconsistencies in the DB.
+        if "status" in doc:
+            doc[doc["status"].lower()] = True
+            doc.pop("status")
+
         if doc[indexing_key] not in indexed_buffer:
             indexed_buffer[indexing_key_value] = doc
             continue
 
-        if (
-            "finished" in indexed_buffer[indexing_key_value]
-            and "status" in doc
-        ):
-            doc.pop("status")
-
-        if "status" in doc:
-            for finished_status in Status.get_finished_statuses():
-                if finished_status == doc["status"]:
-                    indexed_buffer[indexing_key_value]["finished"] = True
+        # if (
+        #     "finished" in indexed_buffer[indexing_key_value]
+        #     and "status" in doc
+        # ):
+        #     doc.pop("status")
+        #
+        # if "status" in doc:
+        #     for finished_status in Status.get_finished_statuses():
+        #         if finished_status == doc["status"]:
+        #             indexed_buffer[indexing_key_value]["finished"] = True
+        #             break
 
         for field in TaskMessage.get_dict_field_names():
             if field in doc:
