@@ -52,7 +52,7 @@ class MQDao:
                                     json.dumps(message, cls=MQDao.ENCODER))
             pipe.execute()
             self._buffer = list()
-            self.logger.debug("Flushed!")
+            self.logger.debug("Redis msgs flushed!")
 
     def subscribe(self) -> PubSub:
         pubsub = self._redis.pubsub()
@@ -71,7 +71,7 @@ class MQDao:
                 now = time()
                 timediff = now - self._previous_time
                 if timediff >= REDIS_INSERTION_BUFFER_TIME:
-                    self.logger.debug("Time to flush!")
+                    self.logger.debug("Time to flush to redis!")
                     self._previous_time = now
                     self._flush()
             sleep(REDIS_INSERTION_BUFFER_TIME)

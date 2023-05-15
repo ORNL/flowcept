@@ -45,7 +45,7 @@ class DocumentInserter:
         if len(self._buffer):
             self._doc_dao.insert_and_update_many("task_id", self._buffer)
             self._buffer = list()
-            self.logger.debug("Flushed!")
+            self.logger.debug("Flushed to doc db!")
 
     def handle_task_message(self, message: Dict):
         if "utc_timestamp" in message:
@@ -62,7 +62,7 @@ class DocumentInserter:
         self._buffer.append(message)
 
         if len(self._buffer) >= MONGO_INSERTION_BUFFER_SIZE:
-            self.logger.debug("Buffer exceeded, flushing...")
+            self.logger.debug("Docs buffer exceeded, flushing...")
             self._flush()
 
     def time_based_flushing(self, event: Event):
@@ -88,21 +88,29 @@ class DocumentInserter:
         )
         time_thread.start()
         pubsub = self._mq_dao.subscribe()
-        for message in pubsub.listen():
-            if message["type"] in MQDao.MESSAGE_TYPES_IGNORE:
-                continue
-            _dict_obj = json.loads(message["data"], cls=DocumentInserter.DECODER)
-            if (
-                "type" in _dict_obj
-                and _dict_obj["type"] == "flowcept_control"
-            ):
-                if _dict_obj["info"] == "stop_document_inserter":
-                    self.logger.info("Document Inserter is stopping...")
-                    stop_event.set()
-                    self._flush()
-                    break
-            else:
-                self.handle_task_message(_dict_obj)
+
+        should_continue = True
+        while should_continue:
+            try:
+                for message in pubsub.listen():
+                    if message["type"] in MQDao.MESSAGE_TYPES_IGNORE:
+                        continue
+                    _dict_obj = json.loads(message["data"], cls=DocumentInserter.DECODER)
+                    if (
+                        "type" in _dict_obj
+                        and _dict_obj["type"] == "flowcept_control"
+                    ):
+                        if _dict_obj["info"] == "stop_document_inserter":
+                            self.logger.info("Document Inserter is stopping...")
+                            stop_event.set()
+                            self._flush()
+                            should_continue = False
+                            break
+                    else:
+                        self.handle_task_message(_dict_obj)
+            except Exception as e:
+                self.logger.exception(e)
+                sleep(2)
 
         time_thread.join()
 
