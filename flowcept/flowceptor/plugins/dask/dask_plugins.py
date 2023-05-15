@@ -15,6 +15,8 @@ class FlowceptDaskSchedulerPlugin(SchedulerPlugin):
     def transition(self, key, start, finish, *args, **kwargs):
         self.interceptor.callback(key, start, finish, args, kwargs)
 
+    def close(self):
+        self.interceptor.stop()
 
 class FlowceptDaskWorkerPlugin(WorkerPlugin):
     def __init__(self):
@@ -25,3 +27,6 @@ class FlowceptDaskWorkerPlugin(WorkerPlugin):
 
     def transition(self, key, start, finish, *args, **kwargs):
         self.interceptor.callback(key, start, finish, args, kwargs)
+
+    def teardown(self, worker):
+        self.interceptor.stop()

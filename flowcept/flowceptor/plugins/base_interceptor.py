@@ -78,7 +78,7 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         Gracefully stops an interceptor
         :return:
         """
-        raise NotImplementedError()
+        self._mq_dao.stop()
 
     def observe(self, *args, **kwargs):
         """

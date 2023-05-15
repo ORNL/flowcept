@@ -8,15 +8,14 @@ from flowcept import TensorboardInterceptor, FlowceptConsumerAPI
 
 
 class TestTensorboard(unittest.TestCase):
-    consumer: FlowceptConsumerAPI = None
+    interceptor = TensorboardInterceptor()
+    consumer = FlowceptConsumerAPI(interceptor)
 
     def __init__(self, *args, **kwargs):
         super(TestTensorboard, self).__init__(*args, **kwargs)
-        self.interceptor: TensorboardInterceptor = TensorboardInterceptor()
         self.logger = FlowceptLogger().get_logger()
 
     def _init_consumption(self):
-        TestTensorboard.consumer = FlowceptConsumerAPI(self.interceptor)
         TestTensorboard.consumer.start()
         sleep(15)
 

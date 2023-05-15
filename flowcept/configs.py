@@ -43,6 +43,9 @@ EXPERIMENT_ID = settings["experiment"].get("experiment_id", "super-experiment")
 REDIS_HOST = settings["main_redis"].get("host", "localhost")
 REDIS_PORT = int(settings["main_redis"].get("port", "6379"))
 REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
+REDIS_BUFFER_SIZE = int(settings["main_redis"].get("buffer_size", 50))
+REDIS_INSERTION_BUFFER_TIME = int(settings["main_redis"].get("insertion_buffer_time_secs", 5))
+
 
 ######################
 #  MongoDB Settings  #
@@ -87,7 +90,7 @@ else:
 
 try:
     with open("/etc/hostname", "r") as f:
-        HOSTNAME = f.read()
+        HOSTNAME = f.read().strip()
 except:
     HOSTNAME = None
     pass

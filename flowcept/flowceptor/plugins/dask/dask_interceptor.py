@@ -117,6 +117,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
         self._worker = None
         # super().__init__ goes to setup_worker.
 
+
     def setup_worker(self, worker):
         """
         Dask Worker's constructor happens actually in this setup method.
@@ -178,3 +179,6 @@ class DaskWorkerInterceptor(BaseInterceptor):
                 f"Error with dask worker: {self._worker.worker_address}"
             )
             self.logger.exception(e)
+
+    def stop(self) -> bool:
+        super().stop()
