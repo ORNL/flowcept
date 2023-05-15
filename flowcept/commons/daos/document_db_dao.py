@@ -66,8 +66,8 @@ class DocumentDBDao(object):
             indexed_buffer = curate_dict_task_messages(doc_list, indexing_key)
             requests = []
             for indexing_key_value in indexed_buffer:
-                if "finished" in indexed_buffer[indexing_key_value]:
-                    indexed_buffer[indexing_key_value].pop("finished")
+                # if "finished" in indexed_buffer[indexing_key_value]:
+                #     indexed_buffer[indexing_key_value].pop("finished")
                 requests.append(
                     UpdateOne(
                         filter={indexing_key: indexing_key_value},
