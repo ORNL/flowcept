@@ -76,7 +76,20 @@ $ docker run -it --rm --name rabbitmq -d -p 5672:5672 -p 15672:15672 rabbitmq:3.
 If you're on mac, `pip install` may not work out of the box because of Tensorflow library. 
 You may need to `pip install tensorflow-macos` instead of the `tensorflow` lib available in the tensorboard-requirements.
 
+# Performance Tuning for Performance Evaluation
 
+In the settings.yaml file, the following variables might impact interception performance:
+
+```yaml
+main_redis:
+  buffer_size: 50
+  insertion_buffer_time_secs: 5
+
+plugin:
+  enrich_messages: true
+```
+
+And other variables depending on the Plugin. For instance, in Dask, timestamp creation by workers add interception overhead.
 
 # See also
 

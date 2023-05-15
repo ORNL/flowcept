@@ -19,7 +19,8 @@ from flowcept.flowceptor.consumers.consumer_utils import \
 
 
 class DocumentInserter:
-    
+
+    DECODER = GenericJSONDecoder if JSON_SERIALIZER == "complex" else None
     
     @staticmethod
     def remove_empty_fields(d):
@@ -90,8 +91,7 @@ class DocumentInserter:
         for message in pubsub.listen():
             if message["type"] in MQDao.MESSAGE_TYPES_IGNORE:
                 continue
-            cls = GenericJSONDecoder if JSON_SERIALIZER == "complex" else None
-            _dict_obj = json.loads(message["data"], cls=cls)
+            _dict_obj = json.loads(message["data"], cls=DocumentInserter.DECODER)
             if (
                 "type" in _dict_obj
                 and _dict_obj["type"] == "flowcept_control"
@@ -108,5 +108,6 @@ class DocumentInserter:
 
     def stop(self):
         self._mq_dao.stop_document_inserter()
+        self._mq_dao.stop()
         self._main_thread.join()
         self.logger.info("Document Inserter is stopped.")

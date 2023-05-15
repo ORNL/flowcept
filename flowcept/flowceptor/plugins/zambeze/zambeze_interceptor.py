@@ -43,6 +43,7 @@ class ZambezeInterceptor(BaseInterceptor):
 
     def stop(self) -> bool:
         self.logger.debug("Interceptor stopping...")
+        super().stop()
         try:
             self._channel.basic_cancel(self._consumer_tag)
         except Exception as e:
