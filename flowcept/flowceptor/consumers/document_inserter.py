@@ -41,12 +41,27 @@ class DocumentInserter:
         self._previous_time = time()
         self.logger = FlowceptLogger().get_logger()
         self._main_thread: Thread = None
+        self._curr_max_buffer_size = MONGO_INSERTION_BUFFER_SIZE
         self._lock = Lock()
 
     def _flush(self):
         if len(self._buffer):
+            # Adaptive buffer size to increase/decrease depending on the flow
+            # of messages (#messages/unit of time)
+            if len(self._buffer) >= MONGO_INSERTION_BUFFER_SIZE:
+                self._curr_max_buffer_size = MONGO_INSERTION_BUFFER_SIZE
+            elif len(self._buffer) <= self._curr_max_buffer_size:
+                # decrease buffer size by 10%, lower-bounded by 10
+                self._curr_max_buffer_size = max(10,
+                                                 int(len(self._buffer) * 0.9))
+            else:
+                # increase buffer size by 10%, upper-bounded by MONGO_INSERTION_BUFFER_SIZE
+                self._curr_max_buffer_size = min(MONGO_INSERTION_BUFFER_SIZE,
+                                                 int(len(self._buffer) * 1.1))
+
             with self._lock:
                 self.logger.debug(
+                    f"Current buffer size: {len(self._buffer)}, "
                     f"Gonna flush {len(self._buffer)} msgs to DocDB!")
                 inserted = self._doc_dao.insert_and_update_many(TaskMessage.get_index_field(), self._buffer)
                 if not inserted:
@@ -72,7 +87,7 @@ class DocumentInserter:
             remove_empty_fields_from_dict(message)
         self._buffer.append(message)
 
-        if len(self._buffer) >= MONGO_INSERTION_BUFFER_SIZE:
+        if len(self._buffer) >= self._curr_max_buffer_size:
             self.logger.debug("Docs buffer exceeded, flushing...")
             self._flush()
 
