@@ -5,11 +5,12 @@ from typing import Dict
 from datetime import datetime
 
 from flowcept.commons.utils import GenericJSONDecoder
+from flowcept.commons.flowcept_data_classes import TaskMessage
 from flowcept.configs import (
     MONGO_INSERTION_BUFFER_TIME,
     MONGO_INSERTION_BUFFER_SIZE,
     DEBUG_MODE, JSON_SERIALIZER,
-    MONGO_REMOVE_EMPTY_FIELDS
+    MONGO_REMOVE_EMPTY_FIELDS,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao import MQDao
@@ -45,7 +46,9 @@ class DocumentInserter:
     def _flush(self):
         if len(self._buffer):
             with self._lock:
-                self._doc_dao.insert_and_update_many("task_id", self._buffer)
+                self.logger.debug(
+                    f"Gonna flush {len(self._buffer)} msgs to DocDB!")
+                self._doc_dao.insert_and_update_many(TaskMessage.get_index_field(), self._buffer)
                 self.logger.debug(
                     f"Flushed {len(self._buffer)} msgs to DocDB!")
                 self._buffer = list()
@@ -79,7 +82,7 @@ class DocumentInserter:
                     self.logger.debug("Time to flush to doc db!")
                     self._previous_time = now
                     self._flush()
-            self.logger.debug(f"DocInserter going to wait {MONGO_INSERTION_BUFFER_TIME}")
+            self.logger.debug(f"DocInserter going to wait for {MONGO_INSERTION_BUFFER_TIME} s.")
             sleep(MONGO_INSERTION_BUFFER_TIME)
 
     def start(self):

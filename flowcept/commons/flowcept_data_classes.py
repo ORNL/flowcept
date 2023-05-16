@@ -95,3 +95,7 @@ class TaskMessage:
     @staticmethod
     def get_dict_field_names():
         return ["used", "generated", "custom_metadata"]
+
+    @staticmethod
+    def get_index_field():
+        return "task_id"

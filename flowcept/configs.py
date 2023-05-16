@@ -55,6 +55,7 @@ MONGO_HOST = settings["mongodb"].get("host", "localhost")
 MONGO_PORT = int(settings["mongodb"].get("port", "27017"))
 MONGO_DB = settings["mongodb"].get("db", "flowcept")
 MONGO_COLLECTION = settings["mongodb"].get("collection", "tasks")
+MONGO_CREATE_INDEX = settings["mongodb"].get("create_collection_index", True)
 # In seconds:
 MONGO_INSERTION_BUFFER_TIME = int(settings["mongodb"].get("insertion_buffer_time_secs", 5))
 MONGO_INSERTION_BUFFER_TIME = random.randint(int(MONGO_INSERTION_BUFFER_TIME*0.9), int(MONGO_INSERTION_BUFFER_TIME*1.4))
@@ -66,11 +67,12 @@ MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get("remove_empty_fields", False
 
 
 ######################
-# PROJECT METADATA #
+# SYSTEM SETTINGS #
 ######################
 
 MQ_TYPE = settings["project"].get("mq_type", "redis")
 DEBUG_MODE = settings["project"].get("debug", False)
+PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 
 ######################
@@ -106,3 +108,5 @@ EXTRA_METADATA = settings.get("extra_metadata", None)
 
 WEBSERVER_HOST = settings["web_server"].get("host", "0.0.0.0")
 WEBSERVER_PORT = int(settings["web_server"].get("port", "5000"))
+
+

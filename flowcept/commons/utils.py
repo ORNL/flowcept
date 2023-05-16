@@ -1,5 +1,8 @@
 from datetime import datetime, timedelta
 import json
+from time import time
+from flowcept.configs import PERF_LOG
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_data_classes import Status
 
 
@@ -16,6 +19,16 @@ def get_utc_minutes_ago(minutes_ago=1):
         microseconds=now.microsecond,
     )
     return rounded.timestamp()
+
+
+def perf_log(func_name, t0: float):
+    if PERF_LOG:
+        t1 = time()
+        logger = FlowceptLogger().get_logger()
+        logger.debug(
+            f"[PERFEVAL][{func_name}]={t1 - t0}")
+        return t1
+    return None
 
 
 def get_status_from_str(status_str: str) -> Status:
