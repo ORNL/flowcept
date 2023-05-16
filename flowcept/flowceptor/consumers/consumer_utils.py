@@ -42,7 +42,7 @@ def remove_empty_fields_from_dict(obj: dict):
 
 
 def curate_dict_task_messages(
-    doc_list: List[Dict], indexing_key: str
+    doc_list: List[Dict], indexing_key: str, utc_time_at_insertion:float=0
 ):
     """
        This function removes duplicates based on the
@@ -73,6 +73,10 @@ def curate_dict_task_messages(
         if "status" in doc:
             doc[doc["status"].lower()] = True
             doc.pop("status")
+
+        if utc_time_at_insertion > 0:
+            doc["utc_time_at_insertion"] = utc_time_at_insertion
+
         curate_task_msg(doc)
         indexing_key_value = doc[indexing_key]
 
