@@ -48,9 +48,12 @@ class DocumentInserter:
             with self._lock:
                 self.logger.debug(
                     f"Gonna flush {len(self._buffer)} msgs to DocDB!")
-                self._doc_dao.insert_and_update_many(TaskMessage.get_index_field(), self._buffer)
-                self.logger.debug(
-                    f"Flushed {len(self._buffer)} msgs to DocDB!")
+                inserted = self._doc_dao.insert_and_update_many(TaskMessage.get_index_field(), self._buffer)
+                if not inserted:
+                    self.logger.error(f"Could not insert the buffer correctly. Buffer content={self._buffer}")
+                else:
+                    self.logger.debug(
+                        f"Flushed {len(self._buffer)} msgs to DocDB!")
                 self._buffer = list()
 
     def handle_task_message(self, message: Dict):
@@ -82,7 +85,8 @@ class DocumentInserter:
                     self.logger.debug("Time to flush to doc db!")
                     self._previous_time = now
                     self._flush()
-            self.logger.debug(f"DocInserter going to wait for {MONGO_INSERTION_BUFFER_TIME} s.")
+            self.logger.debug(
+                f"Time-based DocDB inserter going to wait for {MONGO_INSERTION_BUFFER_TIME} s.")
             sleep(MONGO_INSERTION_BUFFER_TIME)
 
     def start(self):
