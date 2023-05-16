@@ -42,6 +42,9 @@ class FlowceptConsumerAPI(object):
             self.logger.warning("Consumer is already stopped!")
             return
 
+        sleep_time = 30
+        self.logger.debug(f"Received the stop signal. We're going to wait {sleep_time} s before gracefully stopping...")
+        sleep(sleep_time)
         if self._interceptors and len(self._interceptors):
             for interceptor in self._interceptors:
                 self.logger.debug(
