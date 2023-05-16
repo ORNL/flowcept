@@ -1,5 +1,6 @@
 from typing import List, Union
 from time import sleep
+from flowcept.configs import REDIS_INSERTION_BUFFER_TIME, MONGO_INSERTION_BUFFER_TIME
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.plugins.base_interceptor import BaseInterceptor
@@ -42,7 +43,9 @@ class FlowceptConsumerAPI(object):
             self.logger.warning("Consumer is already stopped!")
             return
 
-        sleep_time = 120 # TODO: we should not need to wait that long, but I couldn't solve it properly yet. Currently, it has to be greater than mongo_insertion_sleep.
+        # TODO: we should not need to wait that long, but I couldn't solve it
+        #  properly yet. Currently, it has to be greater the insertion sleeps
+        sleep_time = max(MONGO_INSERTION_BUFFER_TIME, REDIS_INSERTION_BUFFER_TIME) * 2
         self.logger.debug(f"Received the stop signal. We're going to wait {sleep_time} s before gracefully stopping...")
         sleep(sleep_time)
         if self._interceptors and len(self._interceptors):
