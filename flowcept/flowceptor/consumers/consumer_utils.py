@@ -1,6 +1,5 @@
 from typing import List, Dict
 
-from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_data_classes import TaskMessage
 
 
@@ -59,7 +58,6 @@ def curate_dict_task_messages(
     :param indexing_key: #the key we want to index. E.g., task_id in tasks collection
     :return:
     """
-    logger = FlowceptLogger().get_logger()
     indexed_buffer = {}
     for doc in doc_list:
         if (

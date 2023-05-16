@@ -4,6 +4,7 @@ from redis.client import PubSub
 from threading import Thread, Lock
 from time import time, sleep
 
+from flowcept.commons.utils import perf_log
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
     REDIS_HOST,
@@ -11,8 +12,8 @@ from flowcept.configs import (
     REDIS_CHANNEL,
     JSON_SERIALIZER,
     REDIS_BUFFER_SIZE,
-    REDIS_INSERTION_BUFFER_TIME
-
+    REDIS_INSERTION_BUFFER_TIME,
+    PERF_LOG
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -52,7 +53,10 @@ class MQDao:
                 for message in self._buffer:
                     pipe.publish(REDIS_CHANNEL,
                                         json.dumps(message, cls=MQDao.ENCODER))
+                if PERF_LOG:
+                    t0 = time()
                 pipe.execute()
+                perf_log("mq_pipe_execute", t0)
                 self.logger.debug(f"Flushed {len(self._buffer)} msgs to Redis!")
                 self._buffer = list()
 
@@ -76,7 +80,7 @@ class MQDao:
                     self.logger.debug("Time to flush to redis!")
                     self._previous_time = now
                     self._flush()
-            self.logger.debug(f"Time-based Redis inserter going to wait for {REDIS_INSERTION_BUFFER_TIME}")
+            self.logger.debug(f"Time-based Redis inserter going to wait for {REDIS_INSERTION_BUFFER_TIME} s.")
             sleep(REDIS_INSERTION_BUFFER_TIME)
 
     def stop_document_inserter(self):

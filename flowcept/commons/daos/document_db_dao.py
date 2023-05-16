@@ -3,15 +3,19 @@ from bson import ObjectId
 from pymongo import MongoClient, UpdateOne
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.commons.flowcept_data_classes import TaskMessage
+from flowcept.commons.utils import perf_log
 from flowcept.configs import (
     MONGO_HOST,
     MONGO_PORT,
     MONGO_DB,
     MONGO_COLLECTION,
+    PERF_LOG
 )
 from flowcept.flowceptor.consumers.consumer_utils import (
     curate_dict_task_messages,
 )
+from time import time
 
 
 class DocumentDBDao(object):
@@ -20,6 +24,7 @@ class DocumentDBDao(object):
         client = MongoClient(MONGO_HOST, MONGO_PORT)
         db = client[MONGO_DB]
         self._collection = db[MONGO_COLLECTION]
+        self._collection.create_index(TaskMessage.get_index_field())
 
     def find(
         self,
@@ -63,7 +68,10 @@ class DocumentDBDao(object):
         self, indexing_key, doc_list: List[Dict]
     ) -> bool:
         try:
+            if PERF_LOG:
+                t0 = time()
             indexed_buffer = curate_dict_task_messages(doc_list, indexing_key)
+            t1 = perf_log("doc_curate_dict_task_messages", t0)
             requests = []
             for indexing_key_value in indexed_buffer:
                 # if "finished" in indexed_buffer[indexing_key_value]:
@@ -75,7 +83,9 @@ class DocumentDBDao(object):
                         upsert=True,
                     )
                 )
+            t2 = perf_log("indexing_buffer", t1)
             self._collection.bulk_write(requests)
+            perf_log("bulk_write", t2)
             return True
         except Exception as e:
             self.logger.exception(e)
