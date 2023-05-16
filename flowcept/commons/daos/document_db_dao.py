@@ -68,7 +68,6 @@ class DocumentDBDao(object):
             for indexing_key_value in indexed_buffer:
                 # if "finished" in indexed_buffer[indexing_key_value]:
                 #     indexed_buffer[indexing_key_value].pop("finished")
-                self.logger.debug(f"\tUPSERT_APPEND_DOC={indexed_buffer[indexing_key_value]}")
                 requests.append(
                     UpdateOne(
                         filter={indexing_key: indexing_key_value},
