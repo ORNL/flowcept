@@ -1,6 +1,6 @@
 import json
 from time import time, sleep
-from threading import Thread, Event
+from threading import Thread, Event, Lock
 from typing import Dict
 from datetime import datetime
 
@@ -40,12 +40,14 @@ class DocumentInserter:
         self._previous_time = time()
         self.logger = FlowceptLogger().get_logger()
         self._main_thread: Thread = None
+        self._lock = Lock()
 
     def _flush(self):
         if len(self._buffer):
-            self._doc_dao.insert_and_update_many("task_id", self._buffer)
-            self._buffer = list()
-            self.logger.debug("Flushed to doc db!")
+            with self._lock:
+                self._doc_dao.insert_and_update_many("task_id", self._buffer)
+                self._buffer = list()
+                self.logger.debug("Flushed to doc db!")
 
     def handle_task_message(self, message: Dict):
         if "utc_timestamp" in message:
@@ -76,6 +78,7 @@ class DocumentInserter:
                     self.logger.debug("Time to flush to doc db!")
                     self._previous_time = now
                     self._flush()
+            self.logger.debug(f"DocInserter going to wait {MONGO_INSERTION_BUFFER_TIME}")
             sleep(MONGO_INSERTION_BUFFER_TIME)
 
     def start(self):
@@ -120,4 +123,5 @@ class DocumentInserter:
         self._mq_dao.stop_document_inserter()
         self._mq_dao.stop()
         self._main_thread.join()
+        self._flush()
         self.logger.info("Document Inserter is stopped.")

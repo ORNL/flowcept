@@ -1,7 +1,7 @@
 import json
 from redis import Redis
 from redis.client import PubSub
-from threading import Thread, Event
+from threading import Thread, Lock
 from time import time, sleep
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -31,6 +31,7 @@ class MQDao:
         self._previous_time = time()
         self._stop_flag = False
         self._start()
+        self._lock = Lock()
 
     def _start(self):
         self._time_thread = Thread(
@@ -46,13 +47,14 @@ class MQDao:
 
     def _flush(self):
         if len(self._buffer):
-            pipe = self._redis.pipeline()
-            for message in self._buffer:
-                pipe.publish(REDIS_CHANNEL,
-                                    json.dumps(message, cls=MQDao.ENCODER))
-            pipe.execute()
-            self._buffer = list()
-            self.logger.debug("Redis msgs flushed!")
+            with self._lock:
+                pipe = self._redis.pipeline()
+                for message in self._buffer:
+                    pipe.publish(REDIS_CHANNEL,
+                                        json.dumps(message, cls=MQDao.ENCODER))
+                pipe.execute()
+                self._buffer = list()
+                self.logger.debug("Redis msgs flushed!")
 
     def subscribe(self) -> PubSub:
         pubsub = self._redis.pubsub()
