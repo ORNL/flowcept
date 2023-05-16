@@ -94,7 +94,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                 }
                 task_msg.status = Status.SUBMITTED
                 if self.settings.scheduler_create_timestamps:
-                    task_msg.utc_timestamp = get_utc_now()
+                    task_msg.submission_time = get_utc_now()
 
                 get_task_deps(ts, task_msg)
 

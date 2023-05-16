@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
 
+from flowcept.commons.utils import get_utc_now
 from flowcept.configs import (
     FLOWCEPT_USER,
     SYS_NAME,
@@ -20,8 +21,7 @@ from flowcept.flowceptor.plugins.settings_factory import get_settings
 
 def _enrich_task_message(settings_key, task_msg: TaskMessage):
     if task_msg.utc_timestamp is None:
-        now = datetime.utcnow()
-        task_msg.utc_timestamp = now.timestamp()
+        task_msg.utc_timestamp = get_utc_now()
 
     if task_msg.plugin_id is None:
         task_msg.plugin_id = settings_key

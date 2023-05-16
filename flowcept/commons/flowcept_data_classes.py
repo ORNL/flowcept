@@ -26,6 +26,7 @@ class TaskMessage:
     used: Dict[AnyStr, Any] = None  # Used parameter and files
     experiment_id: AnyStr = None
     generated: Dict[AnyStr, Any] = None  # Generated results and files
+    submission_time: float = None
     start_time: float = None
     end_time: float = None
     workflow_id: AnyStr = None

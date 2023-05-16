@@ -4,7 +4,7 @@ from pymongo import MongoClient, UpdateOne
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_data_classes import TaskMessage
-from flowcept.commons.utils import perf_log
+from flowcept.commons.utils import perf_log, get_utc_now
 from flowcept.configs import (
     MONGO_HOST,
     MONGO_PORT,
@@ -71,14 +71,12 @@ class DocumentDBDao(object):
             t0 = 0
             if PERF_LOG:
                 t0 = time()
-            indexed_buffer = curate_dict_task_messages(doc_list, indexing_key)
+            indexed_buffer = curate_dict_task_messages(doc_list, indexing_key, t0)
             t1 = perf_log("doc_curate_dict_task_messages", t0)
             if len(indexed_buffer) == 0:
                 return False
             requests = []
             for indexing_key_value in indexed_buffer:
-                # if "finished" in indexed_buffer[indexing_key_value]:
-                #     indexed_buffer[indexing_key_value].pop("finished")
                 requests.append(
                     UpdateOne(
                         filter={indexing_key: indexing_key_value},

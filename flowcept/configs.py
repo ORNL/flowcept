@@ -1,4 +1,6 @@
 import os
+import socket
+
 import yaml
 import random
 ########################
@@ -94,11 +96,17 @@ else:
     PRIVATE_IP = None
 
 try:
-    with open("/etc/hostname", "r") as f:
-        HOSTNAME = f.read().strip()
+    HOSTNAME = socket.getfqdn()
 except:
-    HOSTNAME = "unknown_hostname"
-    pass
+    try:
+        HOSTNAME = socket.gethostname()
+    except:
+        try:
+            with open("/etc/hostname", "r") as f:
+                HOSTNAME = f.read().strip()
+        except:
+            HOSTNAME = "unknown_hostname"
+
 
 EXTRA_METADATA = settings.get("extra_metadata", None)
 
