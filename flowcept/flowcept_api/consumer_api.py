@@ -42,7 +42,7 @@ class FlowceptConsumerAPI(object):
             self.logger.warning("Consumer is already stopped!")
             return
 
-        sleep_time = 30
+        sleep_time = 120 # TODO: we should not need to wait that long, but I couldn't solve it properly yet. Currently, it has to be greater than mongo_insertion_sleep.
         self.logger.debug(f"Received the stop signal. We're going to wait {sleep_time} s before gracefully stopping...")
         sleep(sleep_time)
         if self._interceptors and len(self._interceptors):
