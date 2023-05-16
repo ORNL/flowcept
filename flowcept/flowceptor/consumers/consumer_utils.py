@@ -62,7 +62,6 @@ def curate_dict_task_messages(
     logger = FlowceptLogger().get_logger()
     indexed_buffer = {}
     for doc in doc_list:
-        logger.debug(f"\t[BEGIN_DOC CURATE 1]{str(doc)}\n")
         if (
             (len(doc) == 1)
             and (indexing_key in doc)
@@ -77,7 +76,6 @@ def curate_dict_task_messages(
             doc[doc["status"].lower()] = True
             doc.pop("status")
         curate_task_msg(doc)
-        logger.debug(f"\t[BEGIN_DOC CURATE 2]{str(doc)}\n")
         indexing_key_value = doc[indexing_key]
 
         if indexing_key_value not in indexed_buffer:
@@ -107,5 +105,4 @@ def curate_dict_task_messages(
                         indexed_buffer[indexing_key_value][field] = doc[field]
                 doc.pop(field)
         indexed_buffer[indexing_key_value].update(**doc)
-        logger.debug(f"\t[BEGIN_DOC CURATE 3]{str(indexed_buffer[indexing_key_value])}\n")
     return indexed_buffer
