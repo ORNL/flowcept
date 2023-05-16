@@ -97,7 +97,7 @@ try:
     with open("/etc/hostname", "r") as f:
         HOSTNAME = f.read().strip()
 except:
-    HOSTNAME = None
+    HOSTNAME = "unknown_hostname"
     pass
 
 EXTRA_METADATA = settings.get("extra_metadata", None)
