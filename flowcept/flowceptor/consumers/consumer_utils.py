@@ -42,7 +42,7 @@ def remove_empty_fields_from_dict(obj: dict):
 
 
 def curate_dict_task_messages(
-    dict_task_messages: List[Dict], indexing_key: str
+    doc_list: List[Dict], indexing_key: str
 ):
     """
        This function removes duplicates based on the
@@ -54,12 +54,12 @@ def curate_dict_task_messages(
         # status change once a task goes into finished state.
         It also resolves updates (instead of replacement) of
         inner nested fields in a JSON object.
-    :param dict_task_messages:
-    :param indexing_key:
+    :param doc_list:
+    :param indexing_key: #the key we want to index. E.g., task_id in tasks collection
     :return:
     """
     indexed_buffer = {}
-    for doc in dict_task_messages:
+    for doc in doc_list:
         if (
             (len(doc) == 1)
             and (indexing_key in doc)
@@ -68,18 +68,18 @@ def curate_dict_task_messages(
             # This task_msg does not add any metadata
             continue
 
-        curate_task_msg(doc)
-        indexing_key_value = doc[indexing_key]
-
         # Reformatting the task msg so to append statuses, as updating them was
         # causing inconsistencies in the DB.
         if "status" in doc:
             doc[doc["status"].lower()] = True
             doc.pop("status")
+        curate_task_msg(doc)
 
-        if doc[indexing_key] not in indexed_buffer:
+        indexing_key_value = doc[indexing_key]
+
+        if indexing_key_value not in indexed_buffer:
             indexed_buffer[indexing_key_value] = doc
-            #continue
+            continue
 
         # if (
         #     "finished" in indexed_buffer[indexing_key_value]
