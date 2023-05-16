@@ -53,6 +53,7 @@ class MQDao:
                 for message in self._buffer:
                     pipe.publish(REDIS_CHANNEL,
                                         json.dumps(message, cls=MQDao.ENCODER))
+                t0 = 0
                 if PERF_LOG:
                     t0 = time()
                 pipe.execute()

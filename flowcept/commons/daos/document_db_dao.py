@@ -68,6 +68,7 @@ class DocumentDBDao(object):
         self, indexing_key, doc_list: List[Dict]
     ) -> bool:
         try:
+            t0 = 0
             if PERF_LOG:
                 t0 = time()
             indexed_buffer = curate_dict_task_messages(doc_list, indexing_key)
