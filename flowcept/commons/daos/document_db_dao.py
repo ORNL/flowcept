@@ -72,6 +72,8 @@ class DocumentDBDao(object):
                 t0 = time()
             indexed_buffer = curate_dict_task_messages(doc_list, indexing_key)
             t1 = perf_log("doc_curate_dict_task_messages", t0)
+            if len(indexed_buffer) == 0:
+                return False
             requests = []
             for indexing_key_value in indexed_buffer:
                 # if "finished" in indexed_buffer[indexing_key_value]:
