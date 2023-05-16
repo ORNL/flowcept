@@ -1,5 +1,6 @@
 import os
 import yaml
+import random
 ########################
 #   Project Settings   #
 ########################
@@ -45,7 +46,7 @@ REDIS_PORT = int(settings["main_redis"].get("port", "6379"))
 REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
 REDIS_BUFFER_SIZE = int(settings["main_redis"].get("buffer_size", 50))
 REDIS_INSERTION_BUFFER_TIME = int(settings["main_redis"].get("insertion_buffer_time_secs", 5))
-
+REDIS_INSERTION_BUFFER_TIME = random.randint(int(REDIS_INSERTION_BUFFER_TIME*0.9), int(REDIS_INSERTION_BUFFER_TIME*1.4))
 
 ######################
 #  MongoDB Settings  #
@@ -56,6 +57,8 @@ MONGO_DB = settings["mongodb"].get("db", "flowcept")
 MONGO_COLLECTION = settings["mongodb"].get("collection", "tasks")
 # In seconds:
 MONGO_INSERTION_BUFFER_TIME = int(settings["mongodb"].get("insertion_buffer_time_secs", 5))
+MONGO_INSERTION_BUFFER_TIME = random.randint(int(MONGO_INSERTION_BUFFER_TIME*0.9), int(MONGO_INSERTION_BUFFER_TIME*1.4))
+
 MONGO_INSERTION_BUFFER_SIZE = int(
     settings["mongodb"].get("insertion_buffer_size", 50)
 )
