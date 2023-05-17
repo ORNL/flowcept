@@ -37,6 +37,7 @@ class ZambezeInterceptor(BaseInterceptor):
         return task_msg
 
     def start(self) -> "ZambezeInterceptor":
+        super().start()
         self._observer_thread = Thread(target=self.observe)
         self._observer_thread.start()
         return self

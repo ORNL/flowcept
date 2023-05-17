@@ -36,7 +36,7 @@ class DocumentInserter:
             elif value in (None, ''):
                 del d[key]
     
-    def __init__(self):
+    def __init__(self, check_safe_stops=True):
         self._buffer = list()
         self._mq_dao = MQDao()
         self._doc_dao = DocumentDBDao()
@@ -45,6 +45,7 @@ class DocumentInserter:
         self._main_thread: Thread = None
         self._curr_max_buffer_size = MONGO_MAX_BUFFER_SIZE
         self._lock = Lock()
+        self._safe_to_stop = not check_safe_stops
 
     def _set_buffer_size(self):
         if not MONGO_ADAPTIVE_BUFFER_SIZE:
@@ -124,7 +125,7 @@ class DocumentInserter:
         )
         time_thread.start()
         pubsub = self._mq_dao.subscribe()
-
+        stoped_mq_threads = 0
         should_continue = True
         while should_continue:
             try:
@@ -136,7 +137,16 @@ class DocumentInserter:
                         "type" in _dict_obj
                         and _dict_obj["type"] == "flowcept_control"
                     ):
-                        if _dict_obj["info"] == "stop_document_inserter":
+                        if _dict_obj["info"] == "mq_dao_thread_stopped":
+                            self.logger.debug("Received mq_dao_thread_stopped message in DocInserter!")
+                            stoped_mq_threads += 1
+                            started_mq_threads = self._mq_dao.get_started_mq_threads()
+                            self.logger.debug(f"stoped_mq_threads={stoped_mq_threads}; REDIS_STARTED_MQ_THREADS_KEY={started_mq_threads}")
+                            if stoped_mq_threads == started_mq_threads:
+                                self._safe_to_stop = True
+                                self.logger.debug("It is safe to stop.")
+
+                        elif _dict_obj["info"] == "stop_document_inserter":
                             self.logger.info("Document Inserter is stopping...")
                             stop_event.set()
                             self._flush()
@@ -151,8 +161,11 @@ class DocumentInserter:
         time_thread.join()
 
     def stop(self):
+        while not self._safe_to_stop:
+            sleep_time = 5
+            self.logger.debug(f"It's still not safe to stop DocInserter. Checking again in {sleep_time} secs.")
+            sleep(sleep_time)
+
         self._mq_dao.stop_document_inserter()
-        self._mq_dao.stop()
         self._main_thread.join()
-        self._flush()
         self.logger.info("Document Inserter is stopped.")
