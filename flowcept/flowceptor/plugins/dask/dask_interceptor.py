@@ -78,6 +78,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
     def __init__(self, scheduler, plugin_key="dask"):
         self._scheduler = scheduler
         super().__init__(plugin_key)
+        super().start()
 
     def callback(self, task_id, start, finish, *args, **kwargs):
         try:
@@ -125,6 +126,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
         """
         self._worker = worker
         super().__init__(self._plugin_key)
+        super().start()
         # Note that both scheduler and worker get the exact same input.
         # Worker does not resolve intermediate inputs, just like the scheduler.
         # But careful: we are only able to capture inputs in client.map on

@@ -25,7 +25,8 @@ mongodb:
   db: flowcept
   collection: tasks
   insertion_buffer_time_secs: 5
-  insertion_buffer_size: 50
+  max_buffer_size: 50
+  min_buffer_size: 10
   remove_empty_fields: false
   create_collection_index: true
 
@@ -80,14 +81,14 @@ plugins:
     log_tags: ['scalars', 'hparams', 'tensors']
     log_metrics: ['accuracy']
     redis_host: localhost
-    redis_port: 60379
+    redis_port: 6379
     watch_interval_sec: 5
     enrich_messages: true
 
   dask:
     kind: dask
     redis_host: localhost
-    redis_port: 60379
+    redis_port: 6379
     enrich_messages: true
     worker_should_get_input: true
     scheduler_should_get_input: true

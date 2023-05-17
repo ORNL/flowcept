@@ -16,7 +16,9 @@ class FlowceptDaskSchedulerPlugin(SchedulerPlugin):
         self.interceptor.callback(key, start, finish, args, kwargs)
 
     def close(self):
+        self.interceptor.logger.debug("Going to close scheduler!")
         self.interceptor.stop()
+
 
 class FlowceptDaskWorkerPlugin(WorkerPlugin):
     def __init__(self):
@@ -29,4 +31,5 @@ class FlowceptDaskWorkerPlugin(WorkerPlugin):
         self.interceptor.callback(key, start, finish, args, kwargs)
 
     def teardown(self, worker):
+        self.interceptor.logger.debug("Going to close worker!")
         self.interceptor.stop()

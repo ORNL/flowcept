@@ -71,7 +71,8 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         Starts an interceptor
         :return:
         """
-        raise NotImplementedError()
+        self._mq_dao.start_time_based_flushing()
+        return self
 
     def stop(self) -> bool:
         """
