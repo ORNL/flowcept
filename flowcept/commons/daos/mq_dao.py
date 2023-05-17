@@ -47,8 +47,8 @@ class MQDao:
         self.logger.info("MQ listener stopped.")
 
     def _flush(self):
-        if len(self._buffer):
-            with self._lock:
+        with self._lock:
+            if len(self._buffer):
                 pipe = self._redis.pipeline()
                 for message in self._buffer:
                     pipe.publish(REDIS_CHANNEL,
