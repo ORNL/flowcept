@@ -8,7 +8,9 @@ from flowcept.commons.utils import GenericJSONDecoder
 from flowcept.commons.flowcept_data_classes import TaskMessage
 from flowcept.configs import (
     MONGO_INSERTION_BUFFER_TIME,
-    MONGO_INSERTION_BUFFER_SIZE,
+    MONGO_MAX_BUFFER_SIZE,
+    MONGO_MIN_BUFFER_SIZE,
+    MONGO_ADAPTIVE_BUFFER_SIZE,
     DEBUG_MODE, JSON_SERIALIZER,
     MONGO_REMOVE_EMPTY_FIELDS,
 )
@@ -41,27 +43,34 @@ class DocumentInserter:
         self._previous_time = time()
         self.logger = FlowceptLogger().get_logger()
         self._main_thread: Thread = None
-        self._curr_max_buffer_size = MONGO_INSERTION_BUFFER_SIZE
+        self._curr_max_buffer_size = MONGO_MAX_BUFFER_SIZE
         self._lock = Lock()
+
+    def _set_buffer_size(self):
+        if not MONGO_ADAPTIVE_BUFFER_SIZE:
+            self._curr_max_buffer_size = MONGO_MAX_BUFFER_SIZE
+            return
+        else:
+            # Adaptive buffer size to increase/decrease depending on the flow
+            # of messages (#messages/unit of time)
+            if len(self._buffer) >= MONGO_MAX_BUFFER_SIZE:
+                self._curr_max_buffer_size = MONGO_MAX_BUFFER_SIZE
+            elif len(self._buffer) < self._curr_max_buffer_size:
+                # decrease buffer size by 10%, lower-bounded by 10
+                self._curr_max_buffer_size = max(MONGO_MIN_BUFFER_SIZE,
+                                                 int(self._curr_max_buffer_size * 0.9))
+            else:
+                # increase buffer size by 10%, upper-bounded by MONGO_INSERTION_BUFFER_SIZE
+                self._curr_max_buffer_size = max(MONGO_MIN_BUFFER_SIZE,
+                                                 min(MONGO_MAX_BUFFER_SIZE,
+                                                     int(self._curr_max_buffer_size * 1.1)))
 
     def _flush(self):
         if len(self._buffer):
-            # Adaptive buffer size to increase/decrease depending on the flow
-            # of messages (#messages/unit of time)
-            if len(self._buffer) >= MONGO_INSERTION_BUFFER_SIZE:
-                self._curr_max_buffer_size = MONGO_INSERTION_BUFFER_SIZE
-            elif len(self._buffer) <= self._curr_max_buffer_size:
-                # decrease buffer size by 10%, lower-bounded by 10
-                self._curr_max_buffer_size = max(10,
-                                                 int(len(self._buffer) * 0.9))
-            else:
-                # increase buffer size by 10%, upper-bounded by MONGO_INSERTION_BUFFER_SIZE
-                self._curr_max_buffer_size = min(MONGO_INSERTION_BUFFER_SIZE,
-                                                 int(len(self._buffer) * 1.1))
-
+            self._set_buffer_size()
             with self._lock:
                 self.logger.debug(
-                    f"Current buffer size: {len(self._buffer)}, "
+                    f"Current Doc buffer size: {len(self._buffer)}, "
                     f"Gonna flush {len(self._buffer)} msgs to DocDB!")
                 inserted = self._doc_dao.insert_and_update_many(TaskMessage.get_index_field(), self._buffer)
                 if not inserted:

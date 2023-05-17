@@ -62,9 +62,13 @@ MONGO_CREATE_INDEX = settings["mongodb"].get("create_collection_index", True)
 MONGO_INSERTION_BUFFER_TIME = int(settings["mongodb"].get("insertion_buffer_time_secs", 5))
 MONGO_INSERTION_BUFFER_TIME = random.randint(int(MONGO_INSERTION_BUFFER_TIME*0.9), int(MONGO_INSERTION_BUFFER_TIME*1.4))
 
-MONGO_INSERTION_BUFFER_SIZE = int(
-    settings["mongodb"].get("insertion_buffer_size", 50)
+MONGO_ADAPTIVE_BUFFER_SIZE = settings["mongodb"].get("adaptive_buffer_size", True)
+MONGO_MAX_BUFFER_SIZE = int(
+    settings["mongodb"].get("max_buffer_size", 50)
 )
+MONGO_MIN_BUFFER_SIZE = max(1, int(
+    settings["mongodb"].get("min_buffer_size", 10)
+))
 MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get("remove_empty_fields", False)
 
 
