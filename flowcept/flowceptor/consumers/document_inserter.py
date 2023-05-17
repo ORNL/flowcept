@@ -48,7 +48,6 @@ class DocumentInserter:
 
     def _set_buffer_size(self):
         if not MONGO_ADAPTIVE_BUFFER_SIZE:
-            self._curr_max_buffer_size = MONGO_MAX_BUFFER_SIZE
             return
         else:
             # Adaptive buffer size to increase/decrease depending on the flow
@@ -66,15 +65,15 @@ class DocumentInserter:
                                                      int(self._curr_max_buffer_size * 1.1)))
 
     def _flush(self):
-        if len(self._buffer):
-            self._set_buffer_size()
-            with self._lock:
+        self._set_buffer_size()
+        with self._lock:
+            if len(self._buffer):
                 self.logger.debug(
                     f"Current Doc buffer size: {len(self._buffer)}, "
                     f"Gonna flush {len(self._buffer)} msgs to DocDB!")
                 inserted = self._doc_dao.insert_and_update_many(TaskMessage.get_index_field(), self._buffer)
                 if not inserted:
-                    self.logger.error(f"Could not insert the buffer correctly. Buffer content={self._buffer}")
+                    self.logger.warning(f"Could not insert the buffer correctly. Buffer content={self._buffer}")
                 else:
                     self.logger.debug(
                         f"Flushed {len(self._buffer)} msgs to DocDB!")

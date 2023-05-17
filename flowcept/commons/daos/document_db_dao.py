@@ -68,6 +68,8 @@ class DocumentDBDao(object):
         self, indexing_key, doc_list: List[Dict]
     ) -> bool:
         try:
+            if len(doc_list) == 0:
+                return False
             t0 = 0
             if PERF_LOG:
                 t0 = time()
