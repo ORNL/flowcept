@@ -49,9 +49,6 @@ class FlowceptConsumerAPI(object):
             self.logger.warning("Consumer is already stopped!")
             return
 
-        # TODO: we should not need to wait that long, but I couldn't solve it
-        #  properly yet. Currently, it has to be greater the insertion sleeps
-        #sleep_time = int(max(MONGO_INSERTION_BUFFER_TIME, REDIS_INSERTION_BUFFER_TIME) * 1.5)
         sleep_time = 5
         self.logger.debug(f"Received the stop signal. We're going to wait {sleep_time} secs. before gracefully stopping...")
         sleep(sleep_time)

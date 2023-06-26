@@ -5,8 +5,8 @@ project:
   
 log:
   log_path: flowcept.log
-  log_file_level: debug
-  log_stream_level: debug
+  log_file_level: error
+  log_stream_level: error
 
 experiment:
   user: root

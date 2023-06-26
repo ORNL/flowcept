@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from datetime import datetime
 
 from flowcept.commons.utils import get_utc_now
 from flowcept.configs import (
@@ -9,7 +8,7 @@ from flowcept.configs import (
     LOGIN_NAME,
     PUBLIC_IP,
     PRIVATE_IP,
-    EXPERIMENT_ID,
+    CAMPAIGN_ID,
     HOSTNAME,
     EXTRA_METADATA
 )
@@ -29,11 +28,8 @@ def _enrich_task_message(settings_key, task_msg: TaskMessage):
     if task_msg.user is None:
         task_msg.user = FLOWCEPT_USER
 
-    if task_msg.experiment_id is None:
-        task_msg.experiment_id = EXPERIMENT_ID
-
-    # if task_msg.msg_id is None:
-    #     task_msg.msg_id = str(uuid4())
+    if task_msg.campaign_id is None:
+        task_msg.campaign_id = CAMPAIGN_ID
 
     if task_msg.sys_name is None:
         task_msg.sys_name = SYS_NAME
