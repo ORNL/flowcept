@@ -1,6 +1,6 @@
 name: Unit, integration, and notebook tests
-#on: [push, pull_request]
-on: [pull_request]
+on: [push, pull_request]
+#on: [pull_request]
 
 jobs:
 
