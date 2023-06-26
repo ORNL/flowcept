@@ -41,7 +41,7 @@ $ flake8 .
 All commits to the `main` branch will launch the [automated publish and release GitHub Action](.github/workflows/create-release-n-publish.yml).
 This will create a [tagged release](https://github.com/ORNL/flowcept/releases) and publish the package to [pypi](https://pypi.org/project/flowcept).
 
-# Checklist for Creating a new Flowcept Plugin
+# Checklist for Creating a new FlowCept adapter
 
 1. Create a new package directory under `flowcept/flowceptor/plugins`
 2. Create a new class that inherits from `BaseInterceptor`, and consider implementing the abstract methods:

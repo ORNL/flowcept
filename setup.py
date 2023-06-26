@@ -54,7 +54,7 @@ setup(
     license="MIT",
     author="Oak Ridge National Laboratory",
     author_email="support@flowcept.org",
-    description="A tool to intercept dataflows",  # TODO: change later
+    description="A system to integrate data from multiple workflows.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ORNL/flowcept",
