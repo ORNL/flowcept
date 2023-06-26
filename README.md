@@ -29,16 +29,17 @@ term 'plugin' in the codebase as a synonym to adapter. Future releases should st
 
 1. Install FlowCept: 
 
-`pip install .` in this directory (or `pip install flowcept`).
+`pip install .[full]` in this directory (or `pip install flowcept[full]`).
 
 For convenience, this will install all dependencies for all adapters. But it can install
 dependencies for adapters you will not use. For this reason, you may want to install 
-like this: `pip install .[adapter_key]` for the adapters we have implemented, e.g., `pip install .[dask]`.
+like this: `pip install .[adapter_key1,adapter_key2]` for the adapters we have implemented, e.g., `pip install .[dask]`.
 See [extra_requirements](extra_requirements) if you want to install the dependencies individually.
  
-2. Start services FlowCept depends on: MongoDB and Redis
+2. Start MongoDB and Redis:
 
-The easiest way to start FlowCept services is by using its [docker-compose file](deployment/compose.yml) for its dependent services: 
+To enable the full advantages of FlowCept, the user needs to run Redis, as FlowCept's message queue system, and MongoDB, as FlowCept's main database system.
+The easiest way to start Redis and MongoDB is by using the [docker-compose file](deployment/compose.yml) for its dependent services: 
 MongoDB and Redis. You only need RabbitMQ if you want to observe Zambeze messages as well.
 
 3. Define the settings (e.g., routes and ports) accordingly in the [settings.yaml](resources/settings.yaml) file.
@@ -82,6 +83,12 @@ If you're on mac, `pip install` may not work out of the box because of Tensorflo
 You may need to `pip install tensorflow-macos` instead of the `tensorflow` lib available in the tensorboard-requirements.
 
 
-# See also
+## See also
 
 - [Zambeze Repository](https://github.com/ORNL/zambeze)
+
+## Acknowledgement
+
+This research uses resources of the Oak Ridge Leadership Computing Facility 
+at the Oak Ridge National Laboratory, which is supported by the Office of 
+Science of the U.S. Department of Energy under Contract No. DE-AC05-00OR22725.

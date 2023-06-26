@@ -85,3 +85,6 @@ jobs:
           verbose: true
       - name: Test pip install
         run: pip install flowcept
+      - name: Test pip install full
+        run: pip install flowcept[full]
+
