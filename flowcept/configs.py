@@ -40,7 +40,7 @@ LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "debug").upper()
 ##########################
 
 FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
-CAMPAIGN_ID = settings["experiment"].get("campaign_id", "super-experiment")
+CAMPAIGN_ID = settings["experiment"].get("campaign_id", "super_campaign")
 
 ######################
 #   Redis Settings   #
