@@ -50,4 +50,6 @@ class FlowceptLogger(object):
         return cls._instance
 
     def get_logger(self):
+        if FlowceptLogger._instance is None:
+            return FlowceptLogger()
         return self._logger

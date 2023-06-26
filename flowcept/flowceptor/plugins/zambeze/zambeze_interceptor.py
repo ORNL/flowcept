@@ -21,7 +21,7 @@ class ZambezeInterceptor(BaseInterceptor):
     def prepare_task_msg(self, zambeze_msg: Dict) -> TaskMessage:
         task_msg = TaskMessage()
         task_msg.utc_timestamp = get_utc_now()
-        task_msg.experiment_id = zambeze_msg.get("campaign_id")
+        task_msg.campaign_id = zambeze_msg.get("campaign_id")
         task_msg.task_id = zambeze_msg.get("activity_id")
         task_msg.activity_id = zambeze_msg.get("name")
         task_msg.dependencies = zambeze_msg.get("depends_on")

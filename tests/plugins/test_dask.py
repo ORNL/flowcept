@@ -54,7 +54,7 @@ class TestDask(unittest.TestCase):
         if TestDask.consumer is None or not TestDask.consumer.is_started:
             TestDask.consumer = FlowceptConsumerAPI().start()
 
-        cluster = LocalCluster(n_workers=1)
+        cluster = LocalCluster(n_workers=2)
         scheduler = cluster.scheduler
         client = Client(scheduler.address)
 
