@@ -154,6 +154,7 @@ class TestDask(unittest.TestCase):
         o2_task_id = self.error_task_submission()
         sleep(10)
         docs = doc_dao.find({"task_id": o2_task_id})
+
     #     assert len(docs) > 0
     #     assert docs[0]["stderr"]["exception"]
 

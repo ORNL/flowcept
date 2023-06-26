@@ -11,20 +11,21 @@ from flowcept.configs import (
     MONGO_MAX_BUFFER_SIZE,
     MONGO_MIN_BUFFER_SIZE,
     MONGO_ADAPTIVE_BUFFER_SIZE,
-    DEBUG_MODE, JSON_SERIALIZER,
+    DEBUG_MODE,
+    JSON_SERIALIZER,
     MONGO_REMOVE_EMPTY_FIELDS,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao import MQDao
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
-from flowcept.flowceptor.consumers.consumer_utils import \
-    remove_empty_fields_from_dict
+from flowcept.flowceptor.consumers.consumer_utils import (
+    remove_empty_fields_from_dict,
+)
 
 
 class DocumentInserter:
-
     DECODER = GenericJSONDecoder if JSON_SERIALIZER == "complex" else None
-    
+
     @staticmethod
     def remove_empty_fields(d):
         """Remove empty fields from a dictionary recursively."""
@@ -33,9 +34,9 @@ class DocumentInserter:
                 DocumentInserter.remove_empty_fields(value)
                 if not value:
                     del d[key]
-            elif value in (None, ''):
+            elif value in (None, ""):
                 del d[key]
-    
+
     def __init__(self, check_safe_stops=True):
         self._buffer = list()
         self._mq_dao = MQDao()
@@ -57,13 +58,19 @@ class DocumentInserter:
                 self._curr_max_buffer_size = MONGO_MAX_BUFFER_SIZE
             elif len(self._buffer) < self._curr_max_buffer_size:
                 # decrease buffer size by 10%, lower-bounded by 10
-                self._curr_max_buffer_size = max(MONGO_MIN_BUFFER_SIZE,
-                                                 int(self._curr_max_buffer_size * 0.9))
+                self._curr_max_buffer_size = max(
+                    MONGO_MIN_BUFFER_SIZE,
+                    int(self._curr_max_buffer_size * 0.9),
+                )
             else:
                 # increase buffer size by 10%, upper-bounded by MONGO_INSERTION_BUFFER_SIZE
-                self._curr_max_buffer_size = max(MONGO_MIN_BUFFER_SIZE,
-                                                 min(MONGO_MAX_BUFFER_SIZE,
-                                                     int(self._curr_max_buffer_size * 1.1)))
+                self._curr_max_buffer_size = max(
+                    MONGO_MIN_BUFFER_SIZE,
+                    min(
+                        MONGO_MAX_BUFFER_SIZE,
+                        int(self._curr_max_buffer_size * 1.1),
+                    ),
+                )
 
     def _flush(self):
         self._set_buffer_size()
@@ -71,13 +78,19 @@ class DocumentInserter:
             if len(self._buffer):
                 self.logger.debug(
                     f"Current Doc buffer size: {len(self._buffer)}, "
-                    f"Gonna flush {len(self._buffer)} msgs to DocDB!")
-                inserted = self._doc_dao.insert_and_update_many(TaskMessage.get_index_field(), self._buffer)
+                    f"Gonna flush {len(self._buffer)} msgs to DocDB!"
+                )
+                inserted = self._doc_dao.insert_and_update_many(
+                    TaskMessage.get_index_field(), self._buffer
+                )
                 if not inserted:
-                    self.logger.warning(f"Could not insert the buffer correctly. Buffer content={self._buffer}")
+                    self.logger.warning(
+                        f"Could not insert the buffer correctly. Buffer content={self._buffer}"
+                    )
                 else:
                     self.logger.debug(
-                        f"Flushed {len(self._buffer)} msgs to DocDB!")
+                        f"Flushed {len(self._buffer)} msgs to DocDB!"
+                    )
                 self._buffer = list()
 
     def handle_task_message(self, message: Dict):
@@ -110,7 +123,8 @@ class DocumentInserter:
                     self._previous_time = now
                     self._flush()
             self.logger.debug(
-                f"Time-based DocDB inserter going to wait for {MONGO_INSERTION_BUFFER_TIME} s.")
+                f"Time-based DocDB inserter going to wait for {MONGO_INSERTION_BUFFER_TIME} s."
+            )
             sleep(MONGO_INSERTION_BUFFER_TIME)
 
     def start(self):
@@ -132,22 +146,32 @@ class DocumentInserter:
                 for message in pubsub.listen():
                     if message["type"] in MQDao.MESSAGE_TYPES_IGNORE:
                         continue
-                    _dict_obj = json.loads(message["data"], cls=DocumentInserter.DECODER)
+                    _dict_obj = json.loads(
+                        message["data"], cls=DocumentInserter.DECODER
+                    )
                     if (
                         "type" in _dict_obj
                         and _dict_obj["type"] == "flowcept_control"
                     ):
                         if _dict_obj["info"] == "mq_dao_thread_stopped":
-                            self.logger.debug("Received mq_dao_thread_stopped message in DocInserter!")
+                            self.logger.debug(
+                                "Received mq_dao_thread_stopped message in DocInserter!"
+                            )
                             stoped_mq_threads += 1
-                            started_mq_threads = self._mq_dao.get_started_mq_threads()
-                            self.logger.debug(f"stoped_mq_threads={stoped_mq_threads}; REDIS_STARTED_MQ_THREADS_KEY={started_mq_threads}")
+                            started_mq_threads = (
+                                self._mq_dao.get_started_mq_threads()
+                            )
+                            self.logger.debug(
+                                f"stoped_mq_threads={stoped_mq_threads}; REDIS_STARTED_MQ_THREADS_KEY={started_mq_threads}"
+                            )
                             if stoped_mq_threads == started_mq_threads:
                                 self._safe_to_stop = True
                                 self.logger.debug("It is safe to stop.")
 
                         elif _dict_obj["info"] == "stop_document_inserter":
-                            self.logger.info("Document Inserter is stopping...")
+                            self.logger.info(
+                                "Document Inserter is stopping..."
+                            )
                             stop_event.set()
                             self._flush()
                             should_continue = False
@@ -163,7 +187,9 @@ class DocumentInserter:
     def stop(self):
         while not self._safe_to_stop:
             sleep_time = 5
-            self.logger.debug(f"It's still not safe to stop DocInserter. Checking again in {sleep_time} secs.")
+            self.logger.debug(
+                f"It's still not safe to stop DocInserter. Checking again in {sleep_time} secs."
+            )
             sleep(sleep_time)
 
         self._mq_dao.stop_document_inserter()

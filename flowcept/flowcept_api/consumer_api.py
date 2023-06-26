@@ -3,7 +3,10 @@ from time import sleep
 import random
 
 from flowcept.commons.daos.mq_dao import MQDao
-from flowcept.configs import REDIS_INSERTION_BUFFER_TIME, MONGO_INSERTION_BUFFER_TIME
+from flowcept.configs import (
+    REDIS_INSERTION_BUFFER_TIME,
+    MONGO_INSERTION_BUFFER_TIME,
+)
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.plugins.base_interceptor import BaseInterceptor
@@ -38,7 +41,9 @@ class FlowceptConsumerAPI(object):
                 self.logger.debug("... ok!")
 
         self.logger.debug("Flowcept Consumer starting...")
-        self._document_inserter = DocumentInserter(check_safe_stops=True).start()
+        self._document_inserter = DocumentInserter(
+            check_safe_stops=True
+        ).start()
         sleep(2)
         self.logger.debug("Ok, we're consuming messages!")
         self.is_started = True
@@ -50,7 +55,9 @@ class FlowceptConsumerAPI(object):
             return
 
         sleep_time = 5
-        self.logger.debug(f"Received the stop signal. We're going to wait {sleep_time} secs. before gracefully stopping...")
+        self.logger.debug(
+            f"Received the stop signal. We're going to wait {sleep_time} secs. before gracefully stopping..."
+        )
         sleep(sleep_time)
         if self._interceptors and len(self._interceptors):
             for interceptor in self._interceptors:

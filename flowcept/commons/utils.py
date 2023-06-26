@@ -25,8 +25,7 @@ def perf_log(func_name, t0: float):
     if PERF_LOG:
         t1 = time()
         logger = FlowceptLogger().get_logger()
-        logger.debug(
-            f"[PERFEVAL][{func_name}]={t1 - t0}")
+        logger.debug(f"[PERFEVAL][{func_name}]={t1 - t0}")
         return t1
     return None
 
@@ -46,8 +45,11 @@ class GenericJSONEncoder(json.JSONEncoder):
         if isinstance(obj, (list, tuple)):
             return [self.default(item) for item in obj]
         elif isinstance(obj, dict):
-            return {self.default(key): self.default(value) for key, value in obj.items()}
-        elif hasattr(obj, '__dict__'):
+            return {
+                self.default(key): self.default(value)
+                for key, value in obj.items()
+            }
+        elif hasattr(obj, "__dict__"):
             return self.default(obj.__dict__)
         elif isinstance(obj, object):
             try:
@@ -59,12 +61,14 @@ class GenericJSONEncoder(json.JSONEncoder):
 
 class GenericJSONDecoder(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
-        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+        json.JSONDecoder.__init__(
+            self, object_hook=self.object_hook, *args, **kwargs
+        )
 
     def object_hook(self, dct):
-        if '__class__' in dct:
-            class_name = dct.pop('__class__')
-            module_name = dct.pop('__module__')
+        if "__class__" in dct:
+            class_name = dct.pop("__class__")
+            module_name = dct.pop("__module__")
             module = __import__(module_name)
             class_ = getattr(module, class_name)
             args = {}

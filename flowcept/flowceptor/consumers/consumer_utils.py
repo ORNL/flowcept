@@ -37,12 +37,12 @@ def remove_empty_fields_from_dict(obj: dict):
             remove_empty_fields_from_dict(value)
             if not value:
                 del obj[key]
-        elif value in (None, ''):
+        elif value in (None, ""):
             del obj[key]
 
 
 def curate_dict_task_messages(
-    doc_list: List[Dict], indexing_key: str, utc_time_at_insertion:float=0
+    doc_list: List[Dict], indexing_key: str, utc_time_at_insertion: float = 0
 ):
     """
        This function removes duplicates based on the
