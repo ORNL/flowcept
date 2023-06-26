@@ -155,13 +155,16 @@ class TestDask(unittest.TestCase):
         sleep(10)
         docs = doc_dao.find({"task_id": o2_task_id})
 
-    #     assert len(docs) > 0
-    #     assert docs[0]["stderr"]["exception"]
+        assert len(docs) > 0
+        assert docs[0]["stderr"]["exception"]
 
     @classmethod
     def tearDownClass(cls):
         print("Closing scheduler and workers!")
-        TestDask.client.shutdown()
+        try:
+            TestDask.client.shutdown()
+        except:
+            pass
         print("Closing flowcept!")
         if TestDask.consumer:
             TestDask.consumer.stop()
