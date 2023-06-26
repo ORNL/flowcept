@@ -39,8 +39,12 @@ class TestDocDBInserter(unittest.TestCase):
                 "status": "FINISHED",
                 "used": {"any": 1},
             },
-            {"myid": uid, "debug": True, "name": "Renan",
-             "status": "SUBMITTED"},
+            {
+                "myid": uid,
+                "debug": True,
+                "name": "Renan",
+                "status": "SUBMITTED",
+            },
             {
                 "myid": uid,
                 "debug": True,
@@ -56,8 +60,13 @@ class TestDocDBInserter(unittest.TestCase):
                 "name": "Renan2",
                 "used": {"blub": 3},
             },
-            {"myid": uid, "debug": True, "name": "Francisco", "start_time": 2,
-             "status": "RUNNING"},
+            {
+                "myid": uid,
+                "debug": True,
+                "name": "Francisco",
+                "start_time": 2,
+                "status": "RUNNING",
+            },
         ]
         self.doc_dao.insert_and_update_many("myid", docs)
         print(uid)

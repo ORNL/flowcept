@@ -10,7 +10,7 @@ from flowcept.configs import (
     PRIVATE_IP,
     CAMPAIGN_ID,
     HOSTNAME,
-    EXTRA_METADATA
+    EXTRA_METADATA,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao import MQDao

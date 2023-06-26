@@ -5,7 +5,7 @@ from flowcept.configs import (
     LOG_FILE_PATH,
     LOG_STREAM_LEVEL,
     LOG_FILE_LEVEL,
-    HOSTNAME
+    HOSTNAME,
 )
 
 

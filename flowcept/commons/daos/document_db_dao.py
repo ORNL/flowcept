@@ -10,7 +10,7 @@ from flowcept.configs import (
     MONGO_PORT,
     MONGO_DB,
     MONGO_COLLECTION,
-    PERF_LOG
+    PERF_LOG,
 )
 from flowcept.flowceptor.consumers.consumer_utils import (
     curate_dict_task_messages,
@@ -73,7 +73,9 @@ class DocumentDBDao(object):
             t0 = 0
             if PERF_LOG:
                 t0 = time()
-            indexed_buffer = curate_dict_task_messages(doc_list, indexing_key, t0)
+            indexed_buffer = curate_dict_task_messages(
+                doc_list, indexing_key, t0
+            )
             t1 = perf_log("doc_curate_dict_task_messages", t0)
             if len(indexed_buffer) == 0:
                 return False

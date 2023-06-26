@@ -51,8 +51,13 @@ class TaskMessage:
 
     @staticmethod
     def get_dict_field_names():
-        return ["used", "generated", "custom_metadata", "start_telemetry",
-                "end_telemetry"]
+        return [
+            "used",
+            "generated",
+            "custom_metadata",
+            "start_telemetry",
+            "end_telemetry",
+        ]
 
     @staticmethod
     def get_index_field():

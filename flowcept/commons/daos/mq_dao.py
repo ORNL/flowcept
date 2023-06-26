@@ -14,7 +14,7 @@ from flowcept.configs import (
     JSON_SERIALIZER,
     REDIS_BUFFER_SIZE,
     REDIS_INSERTION_BUFFER_TIME,
-    PERF_LOG
+    PERF_LOG,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -43,11 +43,11 @@ class MQDao:
         self._time_based_flushing_started = False
         self._lock = Lock()
 
-        self._time_thread = Thread(
-            target=self.time_based_flushing
-        )
+        self._time_thread = Thread(target=self.time_based_flushing)
         self._redis.incr(REDIS_STARTED_MQ_THREADS_KEY)
-        self.logger.debug(f"Incrementing REDIS_STARTED_MQ_THREADS_KEY. Now: {self.get_started_mq_threads()}")
+        self.logger.debug(
+            f"Incrementing REDIS_STARTED_MQ_THREADS_KEY. Now: {self.get_started_mq_threads()}"
+        )
         self._time_based_flushing_started = True
         self._time_thread.start()
 
@@ -75,14 +75,17 @@ class MQDao:
             if len(self._buffer):
                 pipe = self._redis.pipeline()
                 for message in self._buffer:
-                    pipe.publish(REDIS_CHANNEL,
-                                        json.dumps(message, cls=MQDao.ENCODER))
+                    pipe.publish(
+                        REDIS_CHANNEL, json.dumps(message, cls=MQDao.ENCODER)
+                    )
                 t0 = 0
                 if PERF_LOG:
                     t0 = time()
                 pipe.execute()
                 perf_log("mq_pipe_execute", t0)
-                self.logger.debug(f"Flushed {len(self._buffer)} msgs to Redis!")
+                self.logger.debug(
+                    f"Flushed {len(self._buffer)} msgs to Redis!"
+                )
                 self._buffer = list()
 
     def subscribe(self) -> PubSub:
@@ -105,7 +108,9 @@ class MQDao:
                     self.logger.debug("Time to flush to redis!")
                     self._previous_time = now
                     self._flush()
-            self.logger.debug(f"Time-based Redis inserter going to wait for {REDIS_INSERTION_BUFFER_TIME} s.")
+            self.logger.debug(
+                f"Time-based Redis inserter going to wait for {REDIS_INSERTION_BUFFER_TIME} s."
+            )
             sleep(REDIS_INSERTION_BUFFER_TIME)
 
     def _send_stop_message(self):

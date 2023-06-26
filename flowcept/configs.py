@@ -3,6 +3,7 @@ import socket
 
 import yaml
 import random
+
 ########################
 #   Project Settings   #
 ########################
@@ -13,8 +14,9 @@ if SETTINGS_PATH is None:
     project_dir_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..")
     )
-    SETTINGS_PATH = os.path.join(project_dir_path,
-                                 "resources", "settings.yaml")
+    SETTINGS_PATH = os.path.join(
+        project_dir_path, "resources", "settings.yaml"
+    )
 
 if not os.path.isabs(SETTINGS_PATH):
     # TODO: check if we really need abs path
@@ -48,8 +50,13 @@ REDIS_PORT = int(settings["main_redis"].get("port", "6379"))
 REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
 REDIS_STARTED_MQ_THREADS_KEY = "started_mq_threads"
 REDIS_BUFFER_SIZE = int(settings["main_redis"].get("buffer_size", 50))
-REDIS_INSERTION_BUFFER_TIME = int(settings["main_redis"].get("insertion_buffer_time_secs", 5))
-REDIS_INSERTION_BUFFER_TIME = random.randint(int(REDIS_INSERTION_BUFFER_TIME*0.9), int(REDIS_INSERTION_BUFFER_TIME*1.4))
+REDIS_INSERTION_BUFFER_TIME = int(
+    settings["main_redis"].get("insertion_buffer_time_secs", 5)
+)
+REDIS_INSERTION_BUFFER_TIME = random.randint(
+    int(REDIS_INSERTION_BUFFER_TIME * 0.9),
+    int(REDIS_INSERTION_BUFFER_TIME * 1.4),
+)
 
 ######################
 #  MongoDB Settings  #
@@ -60,17 +67,24 @@ MONGO_DB = settings["mongodb"].get("db", "flowcept")
 MONGO_COLLECTION = settings["mongodb"].get("collection", "tasks")
 MONGO_CREATE_INDEX = settings["mongodb"].get("create_collection_index", True)
 # In seconds:
-MONGO_INSERTION_BUFFER_TIME = int(settings["mongodb"].get("insertion_buffer_time_secs", 5))
-MONGO_INSERTION_BUFFER_TIME = random.randint(int(MONGO_INSERTION_BUFFER_TIME*0.9), int(MONGO_INSERTION_BUFFER_TIME*1.4))
-
-MONGO_ADAPTIVE_BUFFER_SIZE = settings["mongodb"].get("adaptive_buffer_size", True)
-MONGO_MAX_BUFFER_SIZE = int(
-    settings["mongodb"].get("max_buffer_size", 50)
+MONGO_INSERTION_BUFFER_TIME = int(
+    settings["mongodb"].get("insertion_buffer_time_secs", 5)
 )
-MONGO_MIN_BUFFER_SIZE = max(1, int(
-    settings["mongodb"].get("min_buffer_size", 10)
-))
-MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get("remove_empty_fields", False)
+MONGO_INSERTION_BUFFER_TIME = random.randint(
+    int(MONGO_INSERTION_BUFFER_TIME * 0.9),
+    int(MONGO_INSERTION_BUFFER_TIME * 1.4),
+)
+
+MONGO_ADAPTIVE_BUFFER_SIZE = settings["mongodb"].get(
+    "adaptive_buffer_size", True
+)
+MONGO_MAX_BUFFER_SIZE = int(settings["mongodb"].get("max_buffer_size", 50))
+MONGO_MIN_BUFFER_SIZE = max(
+    1, int(settings["mongodb"].get("min_buffer_size", 10))
+)
+MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get(
+    "remove_empty_fields", False
+)
 
 
 ######################
@@ -121,5 +135,3 @@ EXTRA_METADATA = settings.get("extra_metadata", None)
 
 WEBSERVER_HOST = settings["web_server"].get("host", "0.0.0.0")
 WEBSERVER_PORT = int(settings["web_server"].get("port", "5000"))
-
-
