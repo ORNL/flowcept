@@ -102,6 +102,6 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         # dumped_task_msg = json.dumps(task_msg.__dict__)
         self.logger.debug(
             f"Going to send to Redis an intercepted message:"
-            f"\n\t[BEGINMSG]{task_msg.__dict__}\n\t[ENDMSG]"
+            f"\n\t[BEGIN_MSG]{task_msg.__dict__}\n[END_MSG]\t"
         )
         self._mq_dao.publish(task_msg.__dict__)
