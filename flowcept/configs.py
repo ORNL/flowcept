@@ -1,88 +1,137 @@
 import os
-import urllib.request
 import socket
-import getpass
+
+import yaml
+import random
 
 ########################
 #   Project Settings   #
 ########################
 
 PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
+SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
+if SETTINGS_PATH is None:
+    project_dir_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..")
+    )
+    SETTINGS_PATH = os.path.join(
+        project_dir_path, "resources", "settings.yaml"
+    )
 
-PROJECT_DIR_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..")
-)
-SRC_DIR_PATH = os.path.join(PROJECT_DIR_PATH, PROJECT_NAME)
+if not os.path.isabs(SETTINGS_PATH):
+    # TODO: check if we really need abs path
+    raise Exception("Please use an absolute path for the settings.yaml")
 
-_settings_path = os.path.join(PROJECT_DIR_PATH, "resources", "settings.yaml")
-SETTINGS_PATH = os.getenv("SETTINGS_PATH", _settings_path)
+
+with open(SETTINGS_PATH) as f:
+    settings = yaml.safe_load(f)
 
 ########################
 #   Log Settings       #
 ########################
-LOG_FILE_PATH = os.getenv(
-    "LOG_PATH", os.path.join(PROJECT_DIR_PATH, f"{PROJECT_NAME}.log")
-)
+LOG_FILE_PATH = settings["log"].get("log_path", f"{PROJECT_NAME}.log")
+
 # Possible values below are the typical python logging levels.
-LOG_FILE_LEVEL = os.getenv("LOG_FILE_LEVEL", "debug").upper()
-LOG_STREAM_LEVEL = os.getenv("LOG_STREAM_LEVEL", "debug").upper()
+LOG_FILE_LEVEL = settings["log"].get("log_file_level", "debug").upper()
+LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "debug").upper()
 
 ##########################
 #  Experiment Settings   #
 ##########################
 
-FLOWCEPT_USER = os.getenv("FLOWCEPT_USER", "root")
-EXPERIMENT_ID = os.getenv("EXPERIMENT_ID", "super-experiment")
+FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
+CAMPAIGN_ID = settings["experiment"].get("campaign_id", "super_campaign")
 
 ######################
 #   Redis Settings   #
 ######################
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-REDIS_CHANNEL = "interception"
+REDIS_HOST = settings["main_redis"].get("host", "localhost")
+REDIS_PORT = int(settings["main_redis"].get("port", "6379"))
+REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
+REDIS_STARTED_MQ_THREADS_KEY = "started_mq_threads"
+REDIS_BUFFER_SIZE = int(settings["main_redis"].get("buffer_size", 50))
+REDIS_INSERTION_BUFFER_TIME = int(
+    settings["main_redis"].get("insertion_buffer_time_secs", 5)
+)
+REDIS_INSERTION_BUFFER_TIME = random.randint(
+    int(REDIS_INSERTION_BUFFER_TIME * 0.9),
+    int(REDIS_INSERTION_BUFFER_TIME * 1.4),
+)
 
 ######################
 #  MongoDB Settings  #
 ######################
-MONGO_HOST = os.getenv("MONGO_HOST", "localhost")
-MONGO_PORT = int(os.getenv("MONGO_PORT", "27017"))
-MONGO_DB = os.getenv("MONGO_DB", "flowcept")
-MONGO_COLLECTION = os.getenv("MONGO_COLLECTION", "messages")
-
+MONGO_HOST = settings["mongodb"].get("host", "localhost")
+MONGO_PORT = int(settings["mongodb"].get("port", "27017"))
+MONGO_DB = settings["mongodb"].get("db", "flowcept")
+MONGO_COLLECTION = settings["mongodb"].get("collection", "tasks")
+MONGO_CREATE_INDEX = settings["mongodb"].get("create_collection_index", True)
 # In seconds:
-MONGO_INSERTION_BUFFER_TIME = int(os.getenv("MONGO_INSERTION_BUFFER_TIME", 5))
-MONGO_INSERTION_BUFFER_SIZE = int(
-    os.getenv("MONGO_INSERTION_BUFFER_SIZE", 50)
+MONGO_INSERTION_BUFFER_TIME = int(
+    settings["mongodb"].get("insertion_buffer_time_secs", 5)
+)
+MONGO_INSERTION_BUFFER_TIME = random.randint(
+    int(MONGO_INSERTION_BUFFER_TIME * 0.9),
+    int(MONGO_INSERTION_BUFFER_TIME * 1.4),
 )
 
-DEBUG_MODE = (
-    True
-    if os.getenv("DEBUG_MODE", "true").lower() in ["true", "yes", "y", 1]
-    else False
+MONGO_ADAPTIVE_BUFFER_SIZE = settings["mongodb"].get(
+    "adaptive_buffer_size", True
+)
+MONGO_MAX_BUFFER_SIZE = int(settings["mongodb"].get("max_buffer_size", 50))
+MONGO_MIN_BUFFER_SIZE = max(
+    1, int(settings["mongodb"].get("min_buffer_size", 10))
+)
+MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get(
+    "remove_empty_fields", False
 )
 
+
 ######################
-# EXTRA MSG METADATA #
+# SYSTEM SETTINGS #
 ######################
-SYS_NAME = os.getenv("SYS_NAME", os.uname()[0])
-NODE_NAME = os.getenv("NODE_NAME", os.uname()[1])
-LOGIN_NAME = os.getenv("LOGIN_NAME", getpass.getuser())
+
+MQ_TYPE = settings["project"].get("mq_type", "redis")
+DEBUG_MODE = settings["project"].get("debug", False)
+PERF_LOG = settings["project"].get("performance_logging", False)
+JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
+
+######################
+# SYS METADATA #
+######################
+
+sys_metadata = settings.get("sys_metadata", None)
+if sys_metadata is not None:
+    SYS_NAME = sys_metadata.get("sys_name", os.uname()[0])
+    NODE_NAME = sys_metadata.get("node_name", os.uname()[1])
+    LOGIN_NAME = sys_metadata.get("login_name", "login_name")
+    PUBLIC_IP = sys_metadata.get("public_ip", None)
+    PRIVATE_IP = sys_metadata.get("private_ip", None)
+else:
+    SYS_NAME = os.uname()[0]
+    NODE_NAME = os.uname()[1]
+    LOGIN_NAME = None
+    PUBLIC_IP = None
+    PRIVATE_IP = None
 
 try:
-    external_ip = (
-        urllib.request.urlopen("https://ident.me").read().decode("utf8")
-    )
-except Exception as e:
-    print("Unable to retrieve external IP", e)
-    external_ip = "unavailable"
+    HOSTNAME = socket.getfqdn()
+except:
+    try:
+        HOSTNAME = socket.gethostname()
+    except:
+        try:
+            with open("/etc/hostname", "r") as f:
+                HOSTNAME = f.read().strip()
+        except:
+            HOSTNAME = "unknown_hostname"
 
-PUBLIC_IP = os.getenv("PUBLIC_IP", external_ip)
-PRIVATE_IP = os.getenv("PRIVATE_IP", socket.gethostbyname(socket.getfqdn()))
 
+EXTRA_METADATA = settings.get("extra_metadata", None)
 
 ######################
 #    Web Server      #
 ######################
 
-WEBSERVER_HOST = os.getenv("WEBSERVER_HOST", "0.0.0.0")
-WEBSERVER_PORT = int(os.getenv("WEBSERVER_PORT", "5000"))
+WEBSERVER_HOST = settings["web_server"].get("host", "0.0.0.0")
+WEBSERVER_PORT = int(settings["web_server"].get("port", "5000"))

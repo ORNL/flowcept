@@ -31,13 +31,19 @@ class TestDocDBInserter(unittest.TestCase):
         assert c0 >= 0
         uid = str(uuid4())
         docs = [
-            {"myid": uid, "debug": True, "name": "Renan"},
-            {"myid": uid, "debug": True, "name": "Francisco"},
             {
                 "myid": uid,
                 "debug": True,
                 "last_name": "Souza",
+                "end_time": 4,
+                "status": "FINISHED",
                 "used": {"any": 1},
+            },
+            {
+                "myid": uid,
+                "debug": True,
+                "name": "Renan",
+                "status": "SUBMITTED",
             },
             {
                 "myid": uid,
@@ -53,9 +59,17 @@ class TestDocDBInserter(unittest.TestCase):
                 "debug": True,
                 "name": "Renan2",
                 "used": {"blub": 3},
-            }
+            },
+            {
+                "myid": uid,
+                "debug": True,
+                "name": "Francisco",
+                "start_time": 2,
+                "status": "RUNNING",
+            },
         ]
         self.doc_dao.insert_and_update_many("myid", docs)
+        print(uid)
         self.doc_dao.delete_keys("myid", [uid])
         c1 = self.doc_dao.count()
         assert c0 == c1

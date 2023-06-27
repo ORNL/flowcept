@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from flowcept.commons.flowcept_data_classes import TaskMessage, Status
+from flowcept.commons.flowcept_data_classes import TaskMessage
 
 
 def curate_task_msg(task_msg_dict: dict):
@@ -30,25 +30,36 @@ def curate_task_msg(task_msg_dict: dict):
             task_msg_dict[field] = field_val_dict
 
 
+def remove_empty_fields_from_dict(obj: dict):
+    """Remove empty fields from a dictionary recursively."""
+    for key, value in list(obj.items()):
+        if isinstance(value, dict):
+            remove_empty_fields_from_dict(value)
+            if not value:
+                del obj[key]
+        elif value in (None, ""):
+            del obj[key]
+
+
 def curate_dict_task_messages(
-    dict_task_messages: List[Dict], indexing_key: str
+    doc_list: List[Dict], indexing_key: str, utc_time_at_insertion: float = 0
 ):
     """
        This function removes duplicates based on the
         indexing_key (e.g., task_id) locally before sending
         to MongoDB.
-        It also avoids tasks changing states once they go into finished state.
-        This is needed because we can't guarantee MQ orders, and finished
-        states have higher priority in status changes, as we don't expect a
-        status change once a task goes into finished state.
+        # It also avoids tasks changing states once they go into finished state.
+        This is needed because we can't guarantee MQ orders.
+        # Finished states have higher priority in status changes, as we don't expect a
+        # status change once a task goes into finished state.
         It also resolves updates (instead of replacement) of
         inner nested fields in a JSON object.
-    :param dict_task_messages:
-    :param indexing_key:
+    :param doc_list:
+    :param indexing_key: #the key we want to index. E.g., task_id in tasks collection
     :return:
     """
     indexed_buffer = {}
-    for doc in dict_task_messages:
+    for doc in doc_list:
         if (
             (len(doc) == 1)
             and (indexing_key in doc)
@@ -57,22 +68,33 @@ def curate_dict_task_messages(
             # This task_msg does not add any metadata
             continue
 
+        # Reformatting the task msg so to append statuses, as updating them was
+        # causing inconsistencies in the DB.
+        if "status" in doc:
+            doc[doc["status"].lower()] = True
+            doc.pop("status")
+
+        if utc_time_at_insertion > 0:
+            doc["utc_time_at_insertion"] = utc_time_at_insertion
+
         curate_task_msg(doc)
         indexing_key_value = doc[indexing_key]
-        if doc[indexing_key] not in indexed_buffer:
+
+        if indexing_key_value not in indexed_buffer:
             indexed_buffer[indexing_key_value] = doc
             continue
 
-        if (
-            "finished" in indexed_buffer[indexing_key_value]
-            and "status" in doc
-        ):
-            doc.pop("status")
-
-        if "status" in doc:
-            for finished_status in Status.get_finished_statuses():
-                if finished_status == doc["status"]:
-                    indexed_buffer[indexing_key_value]["finished"] = True
+        # if (
+        #     "finished" in indexed_buffer[indexing_key_value]
+        #     and "status" in doc
+        # ):
+        #     doc.pop("status")
+        #
+        # if "status" in doc:
+        #     for finished_status in Status.get_finished_statuses():
+        #         if finished_status == doc["status"]:
+        #             indexed_buffer[indexing_key_value]["finished"] = True
+        #             break
 
         for field in TaskMessage.get_dict_field_names():
             if field in doc:
@@ -84,6 +106,5 @@ def curate_dict_task_messages(
                     else:
                         indexed_buffer[indexing_key_value][field] = doc[field]
                 doc.pop(field)
-
         indexed_buffer[indexing_key_value].update(**doc)
     return indexed_buffer

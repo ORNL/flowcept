@@ -85,11 +85,13 @@ class TensorboardInterceptor(BaseInterceptor):
                 self.state_manager.add_element_id(child_event.log_path)
 
     def start(self) -> "TensorboardInterceptor":
+        super().start()
         self.observe()
         return self
 
     def stop(self) -> bool:
         self.logger.debug("Interceptor stopping...")
+        super().stop()
         self._observer.stop()
         self.logger.debug("Interceptor stopped.")
         return True

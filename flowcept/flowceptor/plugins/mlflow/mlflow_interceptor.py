@@ -44,8 +44,9 @@ class MLFlowInterceptor(BaseInterceptor):
         If it's an interesting change, it calls self.intercept; otherwise,
         let it go....
         """
-        self.logger.debug("Sqlite db file changed!")
         runs = self.dao.get_finished_run_uuids()
+        if not runs:
+            return
         for run_uuid_tuple in runs:
             run_uuid = run_uuid_tuple[0]
             if not self.state_manager.has_element_id(run_uuid):
@@ -54,14 +55,18 @@ class MLFlowInterceptor(BaseInterceptor):
                 )
                 run_data = self.dao.get_run_data(run_uuid)
                 self.state_manager.add_element_id(run_uuid)
+                if not run_data:
+                    continue
                 task_msg = self.prepare_task_msg(run_data)
                 self.intercept(task_msg)
 
     def start(self) -> "MLFlowInterceptor":
+        super().start()
         self.observe()
         return self
 
     def stop(self) -> bool:
+        super().stop()
         self.logger.debug("Interceptor stopping...")
         self._observer.stop()
         self.logger.debug("Interceptor stopped.")
