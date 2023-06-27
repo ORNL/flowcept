@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Tuple, Any
 from bson import ObjectId
 from pymongo import MongoClient, UpdateOne
 
@@ -26,24 +26,126 @@ class DocumentDBDao(object):
         self._collection = db[MONGO_COLLECTION]
         self._collection.create_index(TaskMessage.get_index_field())
 
-    def find(
+    def query(
         self,
-        filter: dict,
-        projection=None,
-        limit=0,
-        sort=None,
+        filter: Dict = None,
+        projection: List[str] = None,
+        limit: int = 0,
+        sort: List[Tuple] = None,
+        aggregation: List[Tuple] = None,
         remove_json_unserializables=True,
     ) -> List[Dict]:
-        if remove_json_unserializables:
-            projection = {"_id": 0, "timestamp": 0}
+        """
+        Generates a MongoDB query pipeline based on the provided arguments.
+        Parameters:
+            filter (dict): The filter criteria for the $match stage.
+            projection (list, optional): List of fields to include in the $project stage. Defaults to None.
+            limit (int, optional): The maximum number of documents to return. Defaults to 0 (no limit).
+            sort (list of tuples, optional): List of (field, order) tuples specifying the sorting order. Defaults to None.
+            aggregation (list of tuples, optional): List of (aggregation_operator, field_name) tuples
+                specifying additional aggregation operations. Defaults to None.
+            remove_json_unserializables: removes fields that are not JSON serializable. Defaults to True
 
+        Returns:
+            list: A list with the result set.
+
+        Example:
+            # Create a pipeline with a filter, projection, sorting, and aggregation
+            rs = find(
+                filter={"campaign_id": "mycampaign1"},
+                projection=["workflow_id", "started_at", "ended_at"],
+                limit=10,
+                sort=[("workflow_id", 1), ("end_time", -1)],
+                aggregation=[("avg", "ended_at"), ("min", "started_at")]
+            )
+        """
+
+        if aggregation is not None:
+            try:
+                rs = self._pipeline(filter, projection, limit, sort,
+                                    aggregation)
+            except Exception as e:
+                self.logger.exception(e)
+                return None
+        else:
+            _projection = {}
+            if projection is not None:
+                for proj_field in projection:
+                    _projection[proj_field] = 1
+
+            if remove_json_unserializables:
+                _projection.update({"_id": 0, "timestamp": 0})
+            try:
+                rs = self._collection.find(
+                    filter=filter,
+                    projection=_projection,
+                    limit=limit,
+                    sort=sort,
+                )
+            except Exception as e:
+                self.logger.exception(e)
+                return None
         try:
-            lst = list()
-            for doc in self._collection.find(
-                filter=filter, projection=projection, limit=limit, sort=sort
-            ):
-                lst.append(doc)
+            lst = list(rs)
             return lst
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def _pipeline(
+        self,
+        filter: Dict = None,
+        projection: List[str] = None,
+        limit: int = 0,
+        sort: List[Tuple] = None,
+        aggregation: List[Tuple] = None,
+    ):
+        if projection is not None:
+            raise Exception("Sorry, query with both projection and "
+                            "aggregation is not yet supported. "
+                            "Please let the developers know you need it.")
+
+        pipeline = []
+        # Match stage
+        if filter is not None:
+            pipeline.append({"$match": filter})
+
+        # Projection stage
+        if projection is not None:
+            projection_stage = {}
+            for field in projection:
+                projection_stage[field] = 1
+            pipeline.append({"$project": projection_stage})
+
+        # Limit stage
+        if limit > 0:
+            pipeline.append({"$limit": limit})
+
+        # Sort stage
+        if sort is not None:
+            sort_stage = {}
+            for field, order in sort:
+                sort_stage[field] = order
+            pipeline.append({"$sort": sort_stage})
+
+        # Aggregation stages
+        if aggregation is not None:
+            stage = {
+                "$group": {
+                    "_id": None
+                }
+            }
+            for operator, field in aggregation:
+                fn = field.replace(".", "_")
+                fn = f"{operator}_{fn}"
+                field_agg = {
+                    fn: {f"${operator}": f"${field}"}
+                }
+                stage["$group"].update(field_agg)
+            pipeline.append(stage)
+        try:
+            _rs = self._collection.aggregate(pipeline)
+            return _rs
         except Exception as e:
             self.logger.exception(e)
             return None
@@ -106,7 +208,7 @@ class DocumentDBDao(object):
             self.logger.exception(e)
             return False
 
-    def delete_keys(self, key_name, keys_list: List[ObjectId]) -> bool:
+    def delete_keys(self, key_name, keys_list: List[Any]) -> bool:
         if type(keys_list) != list:
             keys_list = [keys_list]
         try:

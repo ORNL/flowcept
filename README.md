@@ -49,9 +49,7 @@ MongoDB and Redis. You only need RabbitMQ if you want to observe Zambeze message
 
 4. Start the observation using the Controller API, as shown in the [Jupyter Notebooks](notebooks).
 
-5. To use FlowCept's Query API, you need to start the flask webserver:
-`python flowcept/flowcept_webserver/app.py`. Query API utilization examples are 
-available in the notebooks.
+5. To use FlowCept's Query API, see utilization examples in the notebooks.
 
 
 ## Performance Tuning for Performance Evaluation

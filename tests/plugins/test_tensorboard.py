@@ -148,7 +148,7 @@ class TestTensorboard(unittest.TestCase):
         sleep(watch_interval_sec * 2)
         assert self.interceptor.state_manager.count() == 16
         doc_dao = DocumentDBDao()
-        docs = doc_dao.find({"workflow_id": wf_id})
+        docs = doc_dao.query({"workflow_id": wf_id})
         assert len(docs) == 16
         TestTensorboard.consumer.stop()
 

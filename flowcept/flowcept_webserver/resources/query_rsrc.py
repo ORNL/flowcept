@@ -9,9 +9,9 @@ class TaskQuery(Resource):
 
     def post(self):
         parser = reqparse.RequestParser()
-        req_args = ["filter", "projection", "sort", "limit"]
+        req_args = ["filter", "projection", "sort", "limit", "aggregation"]
         for arg in req_args:
-            parser.add_argument(arg, type=str, required=False, help="")
+            parser.add_argument(arg, type=str, required=False, help=arg)
         args = parser.parse_args()
 
         doc_args = {}
@@ -21,12 +21,12 @@ class TaskQuery(Resource):
             try:
                 doc_args[arg] = json.loads(args[arg])
             except Exception as e:
-                return (f"Could not parse {arg} argument: {e}"), 400
+                return f"Could not parse {arg} argument: {e}", 400
 
         dao = DocumentDBDao()
-        docs = dao.find(**doc_args)
+        docs = dao.query(**doc_args)
 
         if docs is not None and len(docs):
             return docs, 201
         else:
-            return (f"Could not find matching docs"), 404
+            return f"Could not find matching docs", 404
