@@ -63,7 +63,8 @@ class DocumentInserter:
                     int(self._curr_max_buffer_size * 0.9),
                 )
             else:
-                # increase buffer size by 10%, upper-bounded by MONGO_INSERTION_BUFFER_SIZE
+                # increase buffer size by 10%,
+                # upper-bounded by MONGO_INSERTION_BUFFER_SIZE
                 self._curr_max_buffer_size = max(
                     MONGO_MIN_BUFFER_SIZE,
                     min(
@@ -85,7 +86,8 @@ class DocumentInserter:
                 )
                 if not inserted:
                     self.logger.warning(
-                        f"Could not insert the buffer correctly. Buffer content={self._buffer}"
+                        f"Could not insert the buffer correctly. "
+                        f"Buffer content={self._buffer}"
                     )
                 else:
                     self.logger.debug(
@@ -103,7 +105,7 @@ class DocumentInserter:
 
         self.logger.debug(
             f"Received following msg in DocInserter:"
-            f"\n\t[BEGINMSG]{message}\n\t[ENDMSG]"
+            f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
         )
         if MONGO_REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
@@ -155,14 +157,16 @@ class DocumentInserter:
                     ):
                         if _dict_obj["info"] == "mq_dao_thread_stopped":
                             self.logger.debug(
-                                "Received mq_dao_thread_stopped message in DocInserter!"
+                                "Received mq_dao_thread_stopped message "
+                                "in DocInserter!"
                             )
                             stoped_mq_threads += 1
                             started_mq_threads = (
                                 self._mq_dao.get_started_mq_threads()
                             )
                             self.logger.debug(
-                                f"stoped_mq_threads={stoped_mq_threads}; REDIS_STARTED_MQ_THREADS_KEY={started_mq_threads}"
+                                f"stoped_mq_threads={stoped_mq_threads}; "
+                                f"REDIS_STARTED_MQ_THREADS_KEY={started_mq_threads}"
                             )
                             if stoped_mq_threads == started_mq_threads:
                                 self._safe_to_stop = True
@@ -188,7 +192,8 @@ class DocumentInserter:
         while not self._safe_to_stop:
             sleep_time = 5
             self.logger.debug(
-                f"It's still not safe to stop DocInserter. Checking again in {sleep_time} secs."
+                f"It's still not safe to stop DocInserter. "
+                f"Checking again in {sleep_time} secs."
             )
             sleep(sleep_time)
 

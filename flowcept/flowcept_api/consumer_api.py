@@ -56,7 +56,8 @@ class FlowceptConsumerAPI(object):
 
         sleep_time = 5
         self.logger.debug(
-            f"Received the stop signal. We're going to wait {sleep_time} secs. before gracefully stopping..."
+            f"Received the stop signal. We're going to wait {sleep_time} secs."
+            f" before gracefully stopping..."
         )
         sleep(sleep_time)
         if self._interceptors and len(self._interceptors):
