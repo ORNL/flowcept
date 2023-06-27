@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
-from datetime import datetime
 
+from flowcept.commons.utils import get_utc_now
 from flowcept.configs import (
     FLOWCEPT_USER,
     SYS_NAME,
@@ -8,7 +8,9 @@ from flowcept.configs import (
     LOGIN_NAME,
     PUBLIC_IP,
     PRIVATE_IP,
-    EXPERIMENT_ID,
+    CAMPAIGN_ID,
+    HOSTNAME,
+    EXTRA_METADATA,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao import MQDao
@@ -18,8 +20,7 @@ from flowcept.flowceptor.plugins.settings_factory import get_settings
 
 def _enrich_task_message(settings_key, task_msg: TaskMessage):
     if task_msg.utc_timestamp is None:
-        now = datetime.utcnow()
-        task_msg.utc_timestamp = now.timestamp()
+        task_msg.utc_timestamp = get_utc_now()
 
     if task_msg.plugin_id is None:
         task_msg.plugin_id = settings_key
@@ -27,11 +28,8 @@ def _enrich_task_message(settings_key, task_msg: TaskMessage):
     if task_msg.user is None:
         task_msg.user = FLOWCEPT_USER
 
-    if task_msg.experiment_id is None:
-        task_msg.experiment_id = EXPERIMENT_ID
-
-    # if task_msg.msg_id is None:
-    #     task_msg.msg_id = str(uuid4())
+    if task_msg.campaign_id is None:
+        task_msg.campaign_id = CAMPAIGN_ID
 
     if task_msg.sys_name is None:
         task_msg.sys_name = SYS_NAME
@@ -42,11 +40,17 @@ def _enrich_task_message(settings_key, task_msg: TaskMessage):
     if task_msg.login_name is None:
         task_msg.login_name = LOGIN_NAME
 
-    if task_msg.public_ip is None:
+    if task_msg.public_ip is None and PUBLIC_IP is not None:
         task_msg.public_ip = PUBLIC_IP
 
-    if task_msg.private_ip is None:
+    if task_msg.private_ip is None and PRIVATE_IP is not None:
         task_msg.private_ip = PRIVATE_IP
+
+    if task_msg.hostname is None and HOSTNAME is not None:
+        task_msg.hostname = HOSTNAME
+
+    if task_msg.extra_metadata is None and EXTRA_METADATA is not None:
+        task_msg.extra_metadata = EXTRA_METADATA
 
 
 class BaseInterceptor(object, metaclass=ABCMeta):
@@ -63,14 +67,15 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         Starts an interceptor
         :return:
         """
-        raise NotImplementedError()
+        self._mq_dao.start_time_based_flushing()
+        return self
 
     def stop(self) -> bool:
         """
         Gracefully stops an interceptor
         :return:
         """
-        raise NotImplementedError()
+        self._mq_dao.stop()
 
     def observe(self, *args, **kwargs):
         """
@@ -97,6 +102,6 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         # dumped_task_msg = json.dumps(task_msg.__dict__)
         self.logger.debug(
             f"Going to send to Redis an intercepted message:"
-            f"\n\t{task_msg.__dict__}"
+            f"\n\t[BEGIN_MSG]{task_msg.__dict__}\n[END_MSG]\t"
         )
         self._mq_dao.publish(task_msg.__dict__)

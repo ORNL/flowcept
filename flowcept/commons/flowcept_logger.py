@@ -5,6 +5,7 @@ from flowcept.configs import (
     LOG_FILE_PATH,
     LOG_STREAM_LEVEL,
     LOG_FILE_LEVEL,
+    HOSTNAME,
 )
 
 
@@ -26,7 +27,7 @@ class FlowceptLogger(object):
         file_handler.setLevel(file_level)
 
         # Create formatters and add it to handlers
-        base_format = "[%(name)s][%(levelname)s][pid=%(process)d][function=%(funcName)s][%(message)s]"
+        base_format = f"[%(name)s][%(levelname)s][{HOSTNAME}][pid=%(process)d][thread=%(thread)d][function=%(funcName)s][%(message)s]"
         stream_format = logging.Formatter(base_format)
         file_format = logging.Formatter(f"[%(asctime)s]{base_format}")
         stream_handler.setFormatter(stream_format)
@@ -49,4 +50,6 @@ class FlowceptLogger(object):
         return cls._instance
 
     def get_logger(self):
+        if FlowceptLogger._instance is None:
+            return FlowceptLogger()
         return self._logger

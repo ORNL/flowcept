@@ -21,7 +21,7 @@ class ZambezeInterceptor(BaseInterceptor):
     def prepare_task_msg(self, zambeze_msg: Dict) -> TaskMessage:
         task_msg = TaskMessage()
         task_msg.utc_timestamp = get_utc_now()
-        task_msg.experiment_id = zambeze_msg.get("campaign_id")
+        task_msg.campaign_id = zambeze_msg.get("campaign_id")
         task_msg.task_id = zambeze_msg.get("activity_id")
         task_msg.activity_id = zambeze_msg.get("name")
         task_msg.dependencies = zambeze_msg.get("depends_on")
@@ -37,12 +37,14 @@ class ZambezeInterceptor(BaseInterceptor):
         return task_msg
 
     def start(self) -> "ZambezeInterceptor":
+        super().start()
         self._observer_thread = Thread(target=self.observe)
         self._observer_thread.start()
         return self
 
     def stop(self) -> bool:
         self.logger.debug("Interceptor stopping...")
+        super().stop()
         try:
             self._channel.basic_cancel(self._consumer_tag)
         except Exception as e:

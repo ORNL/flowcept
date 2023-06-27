@@ -1,6 +1,8 @@
 from typing import List
 from sqlalchemy.engine import Row, create_engine
 from textwrap import dedent
+
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import (
     RunData,
     MLFlowSettings,
@@ -15,6 +17,7 @@ class MLFlowDAO:
 
     def __init__(self, mlflow_settings: MLFlowSettings):
         self._engine = MLFlowDAO._get_db_engine(mlflow_settings.file_path)
+        self.logger = FlowceptLogger().get_logger()
 
     @staticmethod
     def _get_db_engine(sqlite_file):
@@ -37,13 +40,19 @@ class MLFlowDAO:
             LIMIT {MLFlowDAO._LIMIT}
             """
         )
-        conn = self._engine.connect()
-        results = conn.execute(sql).fetchall()
-        return results
+        try:
+            conn = self._engine.connect()
+            results = conn.execute(sql).fetchall()
+            return results
+        except Exception as e:
+            self.logger.debug(str(e))
+            return None
+        finally:
+            conn.close()
 
     def get_run_data(self, run_uuid: str) -> RunData:
         # TODO: consider outer joins to get the run data even if there's
-        #  no metric or param
+        #  no metric or param or if the task hasn't finished yet
         sql = dedent(
             f"""
             SELECT r.run_uuid, r.start_time, r.end_time, r.status,
@@ -57,7 +66,7 @@ class MLFlowDAO:
                 r.run_uuid = m.run_uuid AND
                 m.run_uuid = p.run_uuid AND
                 r.run_uuid = '{run_uuid}' AND
-                r.status = 'FINISHED'
+                r.status = 'FINISHED' 
             ORDER BY
                 end_time DESC,
                 metric_key, metric_value,
@@ -65,8 +74,14 @@ class MLFlowDAO:
             LIMIT 30
 """
         )
-        conn = self._engine.connect()
-        result_set = conn.execute(sql).fetchall()
+        try:
+            conn = self._engine.connect()
+            result_set = conn.execute(sql).fetchall()
+        except Exception as e:
+            self.logger.warning(e)
+            return None
+        finally:
+            conn.close()
         run_data_dict = {"used": {}, "generated": {}}
         for tuple_ in result_set:
             tuple_dict = tuple_._asdict()
@@ -88,6 +103,9 @@ class MLFlowDAO:
             run_data_dict["start_time"] = tuple_dict["start_time"]
             run_data_dict["end_time"] = tuple_dict["end_time"]
             run_data_dict["status"] = tuple_dict["status"]
-
-        run_data = RunData(**run_data_dict)
-        return run_data
+        try:
+            run_data = RunData(**run_data_dict)
+            return run_data
+        except Exception as e:
+            self.logger.warning(e)
+            return None

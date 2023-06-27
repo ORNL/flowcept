@@ -1,4 +1,3 @@
-import os
 import pickle
 
 from flowcept.commons.flowcept_data_classes import TaskMessage, Status
@@ -79,6 +78,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
     def __init__(self, scheduler, plugin_key="dask"):
         self._scheduler = scheduler
         super().__init__(plugin_key)
+        super().start()
 
     def callback(self, task_id, start, finish, *args, **kwargs):
         try:
@@ -95,7 +95,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                 }
                 task_msg.status = Status.SUBMITTED
                 if self.settings.scheduler_create_timestamps:
-                    task_msg.utc_timestamp = get_utc_now()
+                    task_msg.submission_time = get_utc_now()
 
                 get_task_deps(ts, task_msg)
 
@@ -125,6 +125,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
         """
         self._worker = worker
         super().__init__(self._plugin_key)
+        super().start()
         # Note that both scheduler and worker get the exact same input.
         # Worker does not resolve intermediate inputs, just like the scheduler.
         # But careful: we are only able to capture inputs in client.map on
@@ -179,3 +180,6 @@ class DaskWorkerInterceptor(BaseInterceptor):
                 f"Error with dask worker: {self._worker.worker_address}"
             )
             self.logger.exception(e)
+
+    def stop(self) -> bool:
+        super().stop()

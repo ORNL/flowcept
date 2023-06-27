@@ -41,7 +41,7 @@ $ flake8 .
 All commits to the `main` branch will launch the [automated publish and release GitHub Action](.github/workflows/create-release-n-publish.yml).
 This will create a [tagged release](https://github.com/ORNL/flowcept/releases) and publish the package to [pypi](https://pypi.org/project/flowcept).
 
-# Checklist for Creating a new Flowcept Plugin
+# Checklist for Creating a new FlowCept adapter
 
 1. Create a new package directory under `flowcept/flowceptor/plugins`
 2. Create a new class that inherits from `BaseInterceptor`, and consider implementing the abstract methods:
@@ -51,13 +51,18 @@ This will create a [tagged release](https://github.com/ORNL/flowcept/releases) a
     - Prepare_task_msg
     
 See the existing plugins for a reference.
+
 3. [Optional] You may need extra classes, such as 
    local state manager (we provide a generic [`Interceptor State Manager`](flowcept/flowceptor/plugins/interceptor_state_manager.py)),
-   `@dataclasses`, Data Access Objects (`DAOs`), and event handlers. 
+   `@dataclasses`, Data Access Objects (`DAOs`), and event handlers.
+
 4. Create a new entry in the [settings.yaml](resources/settings.yaml) file and in the [Settings factory](flowcept/flowceptor/plugins/settings_factory.py)
+
 5. Create a new `requirements.txt` file under the directory [extra_requirements](extra_requirements) and
 adjust the [setup.py](setup.py).
+
 6. [Optional] Add a new constant to [vocabulary.py](flowcept/commons/vocabulary.py).
+
 7. [Optional] Ajust flowcept.__init__.py.
 
 

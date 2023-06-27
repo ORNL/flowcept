@@ -11,4 +11,6 @@ tensorboard_events/
 **/*.DS_Store*
 **/*.log*
 notebooks/.ipynb_checkpoints
+**/*ipynb_checkpoints*
 notebooks/tb_*
+notebooks/scheduler_file.json
