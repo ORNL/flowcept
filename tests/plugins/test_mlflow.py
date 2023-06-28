@@ -93,7 +93,7 @@ class TestMLFlow(unittest.TestCase):
         run_uuid = self.test_pure_run_mlflow()
         sleep(10)
         assert self.interceptor.state_manager.has_element_id(run_uuid) is True
-        assert len(doc_dao.find({"task_id": run_uuid})) > 0
+        assert len(doc_dao.query({"task_id": run_uuid})) > 0
 
     @classmethod
     def tearDownClass(cls):

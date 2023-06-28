@@ -137,7 +137,7 @@ class TestDask(unittest.TestCase):
         o2_task_id = self.atest_pure_workflow()
         print("Done workflow!")
         sleep(3)
-        assert len(doc_dao.find({"task_id": o2_task_id})) > 0
+        assert len(doc_dao.query({"task_id": o2_task_id})) > 0
 
     def test_observer_and_consumption_varying_args(self):
         doc_dao = DocumentDBDao()
@@ -145,7 +145,7 @@ class TestDask(unittest.TestCase):
             TestDask._init_consumption()
         o2_task_id = self.varying_args()
         sleep(10)
-        assert len(doc_dao.find({"task_id": o2_task_id})) > 0
+        assert len(doc_dao.query({"task_id": o2_task_id})) > 0
 
     def test_observer_and_consumption_error_task(self):
         doc_dao = DocumentDBDao()
@@ -153,7 +153,7 @@ class TestDask(unittest.TestCase):
             TestDask._init_consumption()
         o2_task_id = self.error_task_submission()
         sleep(10)
-        docs = doc_dao.find({"task_id": o2_task_id})
+        docs = doc_dao.query({"task_id": o2_task_id})
 
         assert len(docs) > 0
         assert docs[0]["stderr"]["exception"]
