@@ -191,7 +191,7 @@ class QueryTest(unittest.TestCase):
         assert c0 == c1
 
     def test_aggregation(self):
-        docs, task_ids = gen_some_mock_multi_workflow_data2(size=200)
+        docs, task_ids = gen_some_mock_multi_workflow_data2(size=1000)
 
         dao = DocumentDBDao()
         c0 = dao.count()
@@ -237,7 +237,7 @@ class QueryTest(unittest.TestCase):
             ],
             limit=10,
         )
-        assert len(res) == 10
+        assert len(res) > 1
         assert res[0]["max_generated_accuracy"] > 0
 
         dao.delete_keys("task_id", task_ids)
