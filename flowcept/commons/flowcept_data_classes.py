@@ -20,17 +20,18 @@ class Status(str, Enum):  # inheriting from str here for JSON serialization
 class TaskMessage:
     task_id: AnyStr = None  # Any way to identify a task
     utc_timestamp: float = None
-    plugin_id: AnyStr = None
+    adapter_id: AnyStr = None
     user: AnyStr = None
     msg_id: AnyStr = None  # TODO: This is deprecated. Remove from all plugins
     used: Dict[AnyStr, Any] = None  # Used parameter and files
     campaign_id: AnyStr = None
     generated: Dict[AnyStr, Any] = None  # Generated results and files
-    submission_time: float = None
-    start_time: float = None
-    end_time: float = None
+    submitted_at: float = None
+    started_at: float = None
+    ended_at: float = None
     start_telemetry: Dict[AnyStr, Any] = None
     end_telemetry: Dict[AnyStr, Any] = None
+    workflow_name: AnyStr = None
     workflow_id: AnyStr = None
     activity_id: AnyStr = None
     status: Status = None
@@ -62,3 +63,6 @@ class TaskMessage:
     @staticmethod
     def get_index_field():
         return "task_id"
+
+    def to_dict(self):
+        return self.__dict__

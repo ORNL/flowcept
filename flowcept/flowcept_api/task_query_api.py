@@ -1,6 +1,7 @@
 import json
 from typing import List, Dict, Tuple
 
+import pymongo
 import requests
 
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
@@ -11,6 +12,10 @@ from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
 
 class TaskQueryAPI(object):
+
+    ASC = pymongo.ASCENDING
+    DESC = pymongo.DESCENDING
+
     def __init__(
         self,
         with_webserver=False,
