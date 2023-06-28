@@ -12,7 +12,6 @@ from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
 
 class TaskQueryAPI(object):
-
     ASC = pymongo.ASCENDING
     DESC = pymongo.DESCENDING
 

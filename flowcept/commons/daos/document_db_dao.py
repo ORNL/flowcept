@@ -119,7 +119,6 @@ class DocumentDBDao(object):
         group_id_field = None
         # Aggregation stages
         if aggregation is not None:
-
             if projection is not None:
                 # Only one is supported now
                 group_id_field = f"${projection[0]}"
@@ -148,10 +147,12 @@ class DocumentDBDao(object):
 
         # Projection stage
         if projection is not None:
-            projected_fields.update({
-                "_id": 0,
-                projection[0].replace(".", "_"): "$_id",
-            })
+            projected_fields.update(
+                {
+                    "_id": 0,
+                    projection[0].replace(".", "_"): "$_id",
+                }
+            )
             pipeline.append({"$project": projected_fields})
 
         try:
