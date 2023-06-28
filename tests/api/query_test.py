@@ -106,15 +106,20 @@ class QueryTest(unittest.TestCase):
         assert c0 == c1
 
     def test_query_api_with_and_without_webserver(self):
-
         query_api_params = inspect.signature(TaskQueryAPI.query).parameters
-        doc_query_api_params = inspect.signature(DocumentDBDao.query).parameters
-        assert query_api_params == doc_query_api_params, "Function signatures do not match."
+        doc_query_api_params = inspect.signature(
+            DocumentDBDao.query
+        ).parameters
+        assert (
+            query_api_params == doc_query_api_params
+        ), "Function signatures do not match."
 
         query_api_docstring = inspect.getdoc(TaskQueryAPI.query)
         doc_query_api_docstring = inspect.getdoc(DocumentDBDao.query)
 
-        assert query_api_docstring == doc_query_api_docstring, "The docstrings are not equal."
+        assert (
+            query_api_docstring.strip() == doc_query_api_docstring.strip()
+        ), "The docstrings are not equal."
 
         docs, task_ids = gen_some_mock_data(size=1)
 
@@ -149,18 +154,18 @@ class QueryTest(unittest.TestCase):
         api = TaskQueryAPI()
         res = api.query(
             aggregation=[
-                ('max', 'used.number_epochs'),
-                ('max', 'generated.accuracy'),
-                ('avg', 'used.batch_size')
+                ("max", "used.number_epochs"),
+                ("max", "generated.accuracy"),
+                ("avg", "used.batch_size"),
             ]
         )
         assert len(res) > 0
 
         res = api.query(
             aggregation=[
-                ('max', 'used.number_epochs'),
-                ('max', 'generated.accuracy'),
-                ('avg', 'used.batch_size')
+                ("max", "used.number_epochs"),
+                ("max", "generated.accuracy"),
+                ("avg", "used.batch_size"),
             ]
         )
         assert len(res) > 0
@@ -168,6 +173,3 @@ class QueryTest(unittest.TestCase):
         dao.delete_keys("task_id", task_ids)
         c1 = dao.count()
         assert c0 == c1
-
-
-

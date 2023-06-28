@@ -62,8 +62,9 @@ class DocumentDBDao(object):
 
         if aggregation is not None:
             try:
-                rs = self._pipeline(filter, projection, limit, sort,
-                                    aggregation)
+                rs = self._pipeline(
+                    filter, projection, limit, sort, aggregation
+                )
             except Exception as e:
                 self.logger.exception(e)
                 return None
@@ -101,9 +102,11 @@ class DocumentDBDao(object):
         aggregation: List[Tuple] = None,
     ):
         if projection is not None:
-            raise Exception("Sorry, query with both projection and "
-                            "aggregation is not yet supported. "
-                            "Please let the developers know you need it.")
+            raise Exception(
+                "Sorry, query with both projection and "
+                "aggregation is not yet supported. "
+                "Please let the developers know you need it."
+            )
 
         pipeline = []
         # Match stage
@@ -130,17 +133,11 @@ class DocumentDBDao(object):
 
         # Aggregation stages
         if aggregation is not None:
-            stage = {
-                "$group": {
-                    "_id": None
-                }
-            }
+            stage = {"$group": {"_id": None}}
             for operator, field in aggregation:
                 fn = field.replace(".", "_")
                 fn = f"{operator}_{fn}"
-                field_agg = {
-                    fn: {f"${operator}": f"${field}"}
-                }
+                field_agg = {fn: {f"${operator}": f"${field}"}}
                 stage["$group"].update(field_agg)
             pipeline.append(stage)
         try:
