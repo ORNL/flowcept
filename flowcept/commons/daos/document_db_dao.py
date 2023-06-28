@@ -101,11 +101,13 @@ class DocumentDBDao(object):
         sort: List[Tuple] = None,
         aggregation: List[Tuple] = None,
     ):
-        if projection is not None:
+        if projection is not None and len(projection) > 1:
             raise Exception(
-                "Sorry, query with both projection and "
-                "aggregation is not yet supported. "
-                "Please let the developers know you need it."
+                "Sorry, this query API is still limited to at most one "
+                "grouping  at a time. Please use only one field in the "
+                "projection argument. If you really need more than one, "
+                "please contact the development team or query MongoDB "
+                "directly."
             )
 
         pipeline = []
@@ -113,16 +115,25 @@ class DocumentDBDao(object):
         if filter is not None:
             pipeline.append({"$match": filter})
 
-        # Projection stage
-        if projection is not None:
-            projection_stage = {}
-            for field in projection:
-                projection_stage[field] = 1
-            pipeline.append({"$project": projection_stage})
+        projected_fields = {}
+        group_id_field = None
+        # Aggregation stages
+        if aggregation is not None:
 
-        # Limit stage
-        if limit > 0:
-            pipeline.append({"$limit": limit})
+            if projection is not None:
+                # Only one is supported now
+                group_id_field = f"${projection[0]}"
+
+            stage = {"$group": {"_id": group_id_field}}
+            for operator, field in aggregation:
+                fn = field.replace(".", "_")
+                fn = f"{operator}_{fn}"
+                field_agg = {fn: {f"${operator}": f"${field}"}}
+                if projection is not None:
+                    projected_fields[fn] = 1
+                stage["$group"].update(field_agg)
+
+            pipeline.append(stage)
 
         # Sort stage
         if sort is not None:
@@ -131,15 +142,18 @@ class DocumentDBDao(object):
                 sort_stage[field] = order
             pipeline.append({"$sort": sort_stage})
 
-        # Aggregation stages
-        if aggregation is not None:
-            stage = {"$group": {"_id": None}}
-            for operator, field in aggregation:
-                fn = field.replace(".", "_")
-                fn = f"{operator}_{fn}"
-                field_agg = {fn: {f"${operator}": f"${field}"}}
-                stage["$group"].update(field_agg)
-            pipeline.append(stage)
+        # Limit stage
+        if limit > 0:
+            pipeline.append({"$limit": limit})
+
+        # Projection stage
+        if projection is not None:
+            projected_fields.update({
+                "_id": 0,
+                projection[0].replace(".", "_"): "$_id",
+            })
+            pipeline.append({"$project": projected_fields})
+
         try:
             _rs = self._collection.aggregate(pipeline)
             return _rs

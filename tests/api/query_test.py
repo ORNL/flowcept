@@ -2,16 +2,64 @@ import os.path
 import pathlib
 import unittest
 import json
+import random
 from threading import Thread
 import requests
 import inspect
 from time import sleep
 from uuid import uuid4
+
+from flowcept.commons.flowcept_data_classes import TaskMessage
 from flowcept.configs import WEBSERVER_PORT, WEBSERVER_HOST
 from flowcept.flowcept_api.task_query_api import TaskQueryAPI
 from flowcept.flowcept_webserver.app import app, BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
+
+
+def gen_some_mock_multi_workflow_data2(size=1):
+    new_docs = []
+    new_task_ids = []
+    for _ in range(0, size):
+
+        t1 = TaskMessage()
+        t1.task_id = str(uuid4())
+        t1.workflow_name = "generate_hyperparams"
+        t1.workflow_id = t1.workflow_name+str(uuid4())
+        t1.adapter_id = "adapter1"
+        t1.used = {"ifile": "/path/a.dat"}
+        t1.activity_id = "generate"
+        t1.generated = {
+            "epochs": random.randint(1, 100),
+            "batch_size": random.randint(16, 20)
+        }
+        t1.started_at = 100
+        t1.ended_at = 200
+        t1.campaign_id = "mock_campaign"
+        t1.user = "user_test"
+        new_docs.append(t1.to_dict())
+        new_task_ids.append(t1.task_id)
+
+        t2 = TaskMessage()
+        t2.task_id = str(uuid4())
+        t1.adapter_id = "adapter2"
+        t2.workflow_name = "train"
+        t2.activity_id = "fit"
+        t2.workflow_id = t2.workflow_name + str(uuid4())
+        t2.used = t1.generated
+        t2.generated = {
+            "loss": random.uniform(0.5, 50),
+            "accuracy": random.uniform(0.5, 0.95)
+        }
+        t2.started_at = 300
+        t2.ended_at = 400
+        t2.campaign_id = t1.campaign_id
+        t2.user = t1.campaign_id
+        new_docs.append(t2.to_dict())
+        new_task_ids.append(t2.task_id)
+
+    return new_docs, new_task_ids
+
 
 
 def gen_some_mock_data(size=1):
@@ -145,7 +193,7 @@ class QueryTest(unittest.TestCase):
         assert c0 == c1
 
     def test_aggregation(self):
-        docs, task_ids = gen_some_mock_data(size=100)
+        docs, task_ids = gen_some_mock_multi_workflow_data2(size=200)
 
         dao = DocumentDBDao()
         c0 = dao.count()
@@ -154,21 +202,49 @@ class QueryTest(unittest.TestCase):
         api = TaskQueryAPI()
         res = api.query(
             aggregation=[
-                ("max", "used.number_epochs"),
+                ("max", "used.epochs"),
                 ("max", "generated.accuracy"),
                 ("avg", "used.batch_size"),
             ]
         )
         assert len(res) > 0
+        assert res[0]['max_generated_accuracy'] > 0
+
+        campaign_id = docs[0]["campaign_id"]
+        res = api.query(
+            filter={
+                "campaign_id": campaign_id
+            },
+            aggregation=[
+                ("max", "used.epochs"),
+                ("max", "generated.accuracy"),
+                ("avg", "used.batch_size"),
+            ],
+            sort=[
+                ("max_used_epochs", TaskQueryAPI.ASC),
+                ("ended_at", TaskQueryAPI.DESC),
+            ],
+            limit=10
+        )
+        assert len(res) > 0
+        assert res[0]['max_generated_accuracy'] > 0
 
         res = api.query(
+            projection=['used.batch_size', 'a'],
+            filter={
+                "campaign_id": campaign_id
+            },
             aggregation=[
-                ("max", "used.number_epochs"),
+                ("min", "generated.loss"),
                 ("max", "generated.accuracy"),
-                ("avg", "used.batch_size"),
-            ]
+            ],
+            sort=[
+                ("ended_at", TaskQueryAPI.DESC),
+            ],
+            limit=10
         )
-        assert len(res) > 0
+        assert len(res) == 10
+        assert res[0]['max_generated_accuracy'] > 0
 
         dao.delete_keys("task_id", task_ids)
         c1 = dao.count()
