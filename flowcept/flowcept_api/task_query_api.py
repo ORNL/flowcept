@@ -71,7 +71,6 @@ class TaskQueryAPI(object):
             )
         """
 
-
         if self.with_webserver:
             request_data = {"filter": json.dumps(filter)}
             if projection:
