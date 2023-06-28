@@ -21,17 +21,16 @@ def gen_some_mock_multi_workflow_data2(size=1):
     new_docs = []
     new_task_ids = []
     for _ in range(0, size):
-
         t1 = TaskMessage()
         t1.task_id = str(uuid4())
         t1.workflow_name = "generate_hyperparams"
-        t1.workflow_id = t1.workflow_name+str(uuid4())
+        t1.workflow_id = t1.workflow_name + str(uuid4())
         t1.adapter_id = "adapter1"
         t1.used = {"ifile": "/path/a.dat"}
         t1.activity_id = "generate"
         t1.generated = {
             "epochs": random.randint(1, 100),
-            "batch_size": random.randint(16, 20)
+            "batch_size": random.randint(16, 20),
         }
         t1.started_at = 100
         t1.ended_at = 200
@@ -49,7 +48,7 @@ def gen_some_mock_multi_workflow_data2(size=1):
         t2.used = t1.generated
         t2.generated = {
             "loss": random.uniform(0.5, 50),
-            "accuracy": random.uniform(0.5, 0.95)
+            "accuracy": random.uniform(0.5, 0.95),
         }
         t2.started_at = 300
         t2.ended_at = 400
@@ -59,7 +58,6 @@ def gen_some_mock_multi_workflow_data2(size=1):
         new_task_ids.append(t2.task_id)
 
     return new_docs, new_task_ids
-
 
 
 def gen_some_mock_data(size=1):
@@ -208,13 +206,11 @@ class QueryTest(unittest.TestCase):
             ]
         )
         assert len(res) > 0
-        assert res[0]['max_generated_accuracy'] > 0
+        assert res[0]["max_generated_accuracy"] > 0
 
         campaign_id = docs[0]["campaign_id"]
         res = api.query(
-            filter={
-                "campaign_id": campaign_id
-            },
+            filter={"campaign_id": campaign_id},
             aggregation=[
                 ("max", "used.epochs"),
                 ("max", "generated.accuracy"),
@@ -224,16 +220,14 @@ class QueryTest(unittest.TestCase):
                 ("max_used_epochs", TaskQueryAPI.ASC),
                 ("ended_at", TaskQueryAPI.DESC),
             ],
-            limit=10
+            limit=10,
         )
         assert len(res) > 0
-        assert res[0]['max_generated_accuracy'] > 0
+        assert res[0]["max_generated_accuracy"] > 0
 
         res = api.query(
-            projection=['used.batch_size', 'a'],
-            filter={
-                "campaign_id": campaign_id
-            },
+            projection=["used.batch_size"],
+            filter={"campaign_id": campaign_id},
             aggregation=[
                 ("min", "generated.loss"),
                 ("max", "generated.accuracy"),
@@ -241,10 +235,10 @@ class QueryTest(unittest.TestCase):
             sort=[
                 ("ended_at", TaskQueryAPI.DESC),
             ],
-            limit=10
+            limit=10,
         )
         assert len(res) == 10
-        assert res[0]['max_generated_accuracy'] > 0
+        assert res[0]["max_generated_accuracy"] > 0
 
         dao.delete_keys("task_id", task_ids)
         c1 = dao.count()
