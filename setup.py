@@ -75,7 +75,7 @@ keywords = [
     "responsible-ai",
 ]
 description = """
-FlowCept is a system for runtime data integration of data processed by multiple
+FlowCept is a system for runtime integration of data processed by multiple
  workflows, allowing users to understand complex, heterogeneous, 
  large-scale data coming from various sources.
  """.strip()

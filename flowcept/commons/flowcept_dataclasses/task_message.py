@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import Dict, AnyStr, Any, Union, List
 
+from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
+
 
 class Status(str, Enum):  # inheriting from str here for JSON serialization
     SUBMITTED = "SUBMITTED"
@@ -22,15 +24,14 @@ class TaskMessage:
     utc_timestamp: float = None
     adapter_id: AnyStr = None
     user: AnyStr = None
-    msg_id: AnyStr = None  # TODO: This is deprecated. Remove from all plugins
     used: Dict[AnyStr, Any] = None  # Used parameter and files
     campaign_id: AnyStr = None
     generated: Dict[AnyStr, Any] = None  # Generated results and files
     submitted_at: float = None
     started_at: float = None
     ended_at: float = None
-    start_telemetry: Dict[AnyStr, Any] = None
-    end_telemetry: Dict[AnyStr, Any] = None
+    telemetry_at_start: Telemetry = None
+    telemetry_at_end: Telemetry = None
     workflow_name: AnyStr = None
     workflow_id: AnyStr = None
     activity_id: AnyStr = None
@@ -66,4 +67,9 @@ class TaskMessage:
         return "task_id"
 
     def to_dict(self):
-        return self.__dict__
+        ret = self.__dict__
+        if self.telemetry_at_start is not None:
+            ret["telemetry_at_start"] = self.telemetry_at_start.to_dict()
+        if self.telemetry_at_end is not None:
+            ret["telemetry_at_end"] = self.telemetry_at_end.to_dict()
+        return ret
