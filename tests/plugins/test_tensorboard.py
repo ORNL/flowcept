@@ -32,7 +32,7 @@ class TestTensorboard(unittest.TestCase):
         self.logger.debug("Exists?" + str(os.path.exists(logdir)))
         watch_interval_sec = self.interceptor.settings.watch_interval_sec
         # Making sure we'll wait until next watch cycle
-        sleep(watch_interval_sec * 2)
+        sleep(watch_interval_sec * 3)
 
     def test_run_tensorboard_hparam_tuning(self):
         """
@@ -145,7 +145,7 @@ class TestTensorboard(unittest.TestCase):
 
         watch_interval_sec = self.interceptor.settings.watch_interval_sec
         # Making sure we'll wait until next watch cycle
-        sleep(watch_interval_sec * 2)
+        sleep(watch_interval_sec * 3)
         assert self.interceptor.state_manager.count() == 16
         doc_dao = DocumentDBDao()
         docs = doc_dao.query({"workflow_id": wf_id})

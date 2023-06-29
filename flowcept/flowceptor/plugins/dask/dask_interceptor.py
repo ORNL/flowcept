@@ -70,8 +70,8 @@ def get_task_deps(task_state, task_msg: TaskMessage):
 def get_times_from_task_state(task_msg, ts):
     for times in ts.startstops:
         if times["action"] == "compute":
-            task_msg.start_time = times["start"]
-            task_msg.end_time = times["stop"]
+            task_msg.started_at = times["start"]
+            task_msg.ended_at = times["stop"]
 
 
 class DaskSchedulerInterceptor(BaseInterceptor):
@@ -95,7 +95,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                 }
                 task_msg.status = Status.SUBMITTED
                 if self.settings.scheduler_create_timestamps:
-                    task_msg.submission_time = get_utc_now()
+                    task_msg.submitted_at = get_utc_now()
 
                 get_task_deps(ts, task_msg)
 
@@ -145,17 +145,17 @@ class DaskWorkerInterceptor(BaseInterceptor):
                 task_msg.status = Status.RUNNING
                 task_msg.address = self._worker.worker_address
                 if self.settings.worker_create_timestamps:
-                    task_msg.start_time = get_utc_now()
+                    task_msg.started_at = get_utc_now()
             elif ts.state == "memory":
                 task_msg.status = Status.FINISHED
                 if self.settings.worker_create_timestamps:
-                    task_msg.end_time = get_utc_now()
+                    task_msg.ended_at = get_utc_now()
                 else:
                     get_times_from_task_state(task_msg, ts)
             elif ts.state == "error":
                 task_msg.status = Status.ERROR
                 if self.settings.worker_create_timestamps:
-                    task_msg.end_time = get_utc_now()
+                    task_msg.ended_at = get_utc_now()
                 else:
                     get_times_from_task_state(task_msg, ts)
                 task_msg.stderr = {
