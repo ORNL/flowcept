@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from flowcept.commons.flowcept_data_classes import TaskMessage
+from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
 
 
 def curate_task_msg(task_msg_dict: dict):

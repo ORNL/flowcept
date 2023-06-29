@@ -49,6 +49,7 @@ class TaskMessage:
     address: AnyStr = None
     dependencies: List = None
     dependents: List = None
+    flowcept_version: str = None
 
     @staticmethod
     def get_dict_field_names():

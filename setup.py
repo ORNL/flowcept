@@ -49,14 +49,45 @@ for req in extras_requirement_keys:
     extras_require[req] = _requirements
     full_requirements.extend(_requirements)
 
+
 extras_require["full"] = full_requirements
+
+keywords = [
+    "ai",
+    "ml",
+    "machine-learning",
+    "provenance",
+    "lineage",
+    "responsible-ai",
+    "databases",
+    "big-data",
+    "provenance",
+    "tensorboard",
+    "data-integration",
+    "scientific-workflows",
+    "dask",
+    "reproducibility",
+    "workflows",
+    "parallel-processing",
+    "lineage",
+    "model-management",
+    "mlflow",
+    "responsible-ai",
+]
+description = """
+FlowCept is a system for runtime data integration of data processed by multiple
+ workflows, allowing users to understand complex, heterogeneous, 
+ large-scale data coming from various sources.
+ """.strip()
+
+
 setup(
     name="flowcept",
     version=version,
     license="MIT",
     author="Oak Ridge National Laboratory",
     # author_email="support@flowcept.org",
-    description="A system to integrate data from multiple workflows.",
+    description=description,
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ORNL/flowcept",
@@ -64,6 +95,7 @@ setup(
     install_requires=requirements,
     extras_require=extras_require,
     packages=find_packages(),
+    keywords=keywords,
     classifiers=[
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
@@ -73,6 +105,12 @@ setup(
         "Natural Language :: English",
         # "Topic :: Documentation :: Sphinx",
         "Topic :: System :: Distributed Computing",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Scientific/Engineering :: Information Analysis",
+        "Topic :: System :: Logging",
+        "Topic :: System :: Monitoring",
+        "Topic :: Database"
     ],
     python_requires=">=3.8",
     # scripts=["bin/flowcept"],
