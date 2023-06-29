@@ -6,7 +6,7 @@ from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 
-def capture() -> Telemetry:
+def capture_telemetry() -> Telemetry:
     conf = TELEMETRY_CAPTURE
     if conf is None:
         return None
@@ -75,29 +75,29 @@ def _capture_process_info(conf):
     if not capt:
         return None
     try:
-        psutil_p = psutil.Process()
         p = Telemetry._Process()
-        p.pid = psutil_p.pid
-        try:
-            p.cpu_number = psutil_p.cpu_num()
-        except:
-            pass
-        p.memory = psutil_p.memory_full_info()
-        p.memory_percent = psutil_p.memory_percent()
-        p.cpu_times = psutil_p.cpu_times()._asdict()
-        p.cpu_percent = psutil_p.cpu_percent()
-
-        p.executable = psutil_p.exe()
-        p.cmd_line = psutil_p.cmdline()
-        p.num_open_file_descriptors = psutil_p.num_fds()
-        p.num_connections = len(psutil_p.connections())
-        try:
-            p.io_counters = psutil_p.io_counters()._asdict()
-        except:
-            pass
-        p.num_open_files = len(psutil_p.open_files())
-        p.num_threads = psutil_p.num_threads()
-        p.num_ctx_switches = psutil_p.num_ctx_switches()._asdict()
+        psutil_p = psutil.Process()
+        with psutil_p.oneshot():
+            p.pid = psutil_p.pid
+            try:
+                p.cpu_number = psutil_p.cpu_num()
+            except:
+                pass
+            p.memory = psutil_p.memory_full_info()
+            p.memory_percent = psutil_p.memory_percent()
+            p.cpu_times = psutil_p.cpu_times()._asdict()
+            p.cpu_percent = psutil_p.cpu_percent()
+            p.executable = psutil_p.exe()
+            p.cmd_line = psutil_p.cmdline()
+            p.num_open_file_descriptors = psutil_p.num_fds()
+            p.num_connections = len(psutil_p.connections())
+            try:
+                p.io_counters = psutil_p.io_counters()._asdict()
+            except:
+                pass
+            p.num_open_files = len(psutil_p.open_files())
+            p.num_threads = psutil_p.num_threads()
+            p.num_ctx_switches = psutil_p.num_ctx_switches()._asdict()
         return p
     except Exception as e:
         FlowceptLogger.get_logger().exception(e)

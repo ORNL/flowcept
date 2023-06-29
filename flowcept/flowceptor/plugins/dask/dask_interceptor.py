@@ -8,6 +8,8 @@ from flowcept.flowceptor.plugins.base_interceptor import (
     BaseInterceptor,
 )
 from flowcept.commons.utils import get_utc_now
+from flowcept.configs import TELEMETRY_CAPTURE
+from flowcept.flowceptor.telemetry_capture import capture_telemetry
 
 
 def get_run_spec_data(task_msg: TaskMessage, run_spec):
@@ -145,6 +147,8 @@ class DaskWorkerInterceptor(BaseInterceptor):
             task_msg.task_id = task_id
 
             if ts.state == "executing":
+                if TELEMETRY_CAPTURE is not None:
+                    task_msg.telemetry_at_start = capture_telemetry()
                 task_msg.status = Status.RUNNING
                 task_msg.address = self._worker.worker_address
                 if self.settings.worker_create_timestamps:
@@ -155,6 +159,8 @@ class DaskWorkerInterceptor(BaseInterceptor):
                     task_msg.ended_at = get_utc_now()
                 else:
                     get_times_from_task_state(task_msg, ts)
+                if TELEMETRY_CAPTURE is not None:
+                    task_msg.telemetry_at_end = capture_telemetry()
             elif ts.state == "error":
                 task_msg.status = Status.ERROR
                 if self.settings.worker_create_timestamps:
@@ -165,6 +171,8 @@ class DaskWorkerInterceptor(BaseInterceptor):
                     "exception": ts.exception_text,
                     "traceback": ts.traceback_text,
                 }
+                if TELEMETRY_CAPTURE is not None:
+                    task_msg.telemetry_at_end = capture_telemetry()
             else:
                 return
 
