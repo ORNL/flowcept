@@ -1,6 +1,9 @@
 import pickle
 
-from flowcept.commons.flowcept_data_classes import TaskMessage, Status
+from flowcept.commons.flowcept_dataclasses.task_message import (
+    TaskMessage,
+    Status,
+)
 from flowcept.flowceptor.plugins.base_interceptor import (
     BaseInterceptor,
 )
