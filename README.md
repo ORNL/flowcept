@@ -67,17 +67,6 @@ plugin:
 
 And other variables depending on the Plugin. For instance, in Dask, timestamp creation by workers add interception overhead.
 
-
-# Plugins-specific info
-
-You can run `pip install flowcept[plugin_name]` to install requirements for a specific plugin, instead of installing the
-whole package.
-
-### RabbitMQ for Zambeze plugin
-```bash
-$ docker run -it --rm --name rabbitmq -d -p 5672:5672 -p 15672:15672 rabbitmq:3.11-management
-```
-
 ## See also
 
 - [Zambeze Repository](https://github.com/ORNL/zambeze)

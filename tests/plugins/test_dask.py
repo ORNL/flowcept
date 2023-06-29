@@ -1,4 +1,3 @@
-import sys
 import unittest
 from time import sleep
 from uuid import uuid4
