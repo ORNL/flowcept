@@ -22,8 +22,8 @@ def _enrich_task_message(settings_key, task_msg: TaskMessage):
     if task_msg.utc_timestamp is None:
         task_msg.utc_timestamp = get_utc_now()
 
-    if task_msg.plugin_id is None:
-        task_msg.plugin_id = settings_key
+    if task_msg.adapter_id is None:
+        task_msg.adapter_id = settings_key
 
     if task_msg.user is None:
         task_msg.user = FLOWCEPT_USER
@@ -99,9 +99,9 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         if self.settings.enrich_messages:
             _enrich_task_message(self.settings.key, task_msg)
 
-        # dumped_task_msg = json.dumps(task_msg.__dict__)
+        _msg = task_msg.to_dict()
         self.logger.debug(
             f"Going to send to Redis an intercepted message:"
-            f"\n\t[BEGIN_MSG]{task_msg.__dict__}\n[END_MSG]\t"
+            f"\n\t[BEGIN_MSG]{_msg}\n[END_MSG]\t"
         )
-        self._mq_dao.publish(task_msg.__dict__)
+        self._mq_dao.publish(_msg)
