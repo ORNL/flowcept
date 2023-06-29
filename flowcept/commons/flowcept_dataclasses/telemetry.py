@@ -2,7 +2,6 @@ from typing import List, Dict
 
 
 class Telemetry:
-
     class _CPU:
         times: Dict[str, float] = None  # this is an average of all cpus
         percent: float = None

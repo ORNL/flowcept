@@ -27,7 +27,7 @@ def _capture_disk(conf):
         return None
     try:
         disk = Telemetry._Disk()
-        disk.disk_usage = psutil.disk_usage('/')._asdict()
+        disk.disk_usage = psutil.disk_usage("/")._asdict()
         disk.io = psutil.disk_io_counters(perdisk=False)._asdict()
         io_perdisk = psutil.disk_io_counters(perdisk=True)
         if len(io_perdisk) > 1:
@@ -104,7 +104,6 @@ def _capture_process_info(conf):
 
 
 def _capture_cpu(conf: Dict):
-
     capt_cpu = conf.get("cpu", False)
     capt_per_cpu = conf.get("per_cpu", False)
     if not (capt_cpu or capt_per_cpu):

@@ -110,7 +110,7 @@ setup(
         "Topic :: Scientific/Engineering :: Information Analysis",
         "Topic :: System :: Logging",
         "Topic :: System :: Monitoring",
-        "Topic :: Database"
+        "Topic :: Database",
     ],
     python_requires=">=3.8",
     # scripts=["bin/flowcept"],

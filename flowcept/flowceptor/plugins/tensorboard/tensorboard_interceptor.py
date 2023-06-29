@@ -4,7 +4,10 @@ import time
 from watchdog.observers import Observer
 from tbparse import SummaryReader
 
-from flowcept.commons.flowcept_data_classes import TaskMessage, Status
+from flowcept.commons.flowcept_dataclasses.task_message import (
+    TaskMessage,
+    Status,
+)
 from flowcept.commons.utils import get_utc_now
 from flowcept.flowceptor.plugins.interceptor_state_manager import (
     InterceptorStateManager,
