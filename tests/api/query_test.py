@@ -191,12 +191,12 @@ class QueryTest(unittest.TestCase):
         assert c0 == c1
 
     def test_aggregation(self):
-        docs, task_ids = gen_some_mock_multi_workflow_data2(size=1000)
+        docs, task_ids = gen_some_mock_multi_workflow_data2(size=10000)
 
         dao = DocumentDBDao()
         c0 = dao.count()
         dao.insert_many(docs)
-
+        sleep(3)
         api = TaskQueryAPI()
         res = api.query(
             aggregation=[
