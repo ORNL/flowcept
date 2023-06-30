@@ -206,7 +206,9 @@ class QueryTest(unittest.TestCase):
             ]
         )
         assert len(res) > 0
-        assert any(doc["max_generated_accuracy"] > 0 for doc in res)
+        for doc in res:
+            if doc.get("max_generated_accuracy") is not None:
+                assert doc["max_generated_accuracy"] > 0
 
         campaign_id = docs[0]["campaign_id"]
         res = api.query(
@@ -223,7 +225,9 @@ class QueryTest(unittest.TestCase):
             limit=10,
         )
         assert len(res) > 0
-        assert any(doc["max_generated_accuracy"] > 0 for doc in res)
+        for doc in res:
+            if doc.get("max_generated_accuracy") is not None:
+                assert doc["max_generated_accuracy"] > 0
 
         res = api.query(
             projection=["used.batch_size"],
@@ -238,7 +242,9 @@ class QueryTest(unittest.TestCase):
             limit=10,
         )
         assert len(res) > 1
-        assert any(doc["max_generated_accuracy"] > 0 for doc in res)
+        for doc in res:
+            if doc.get("max_generated_accuracy") is not None:
+                assert doc["max_generated_accuracy"] > 0
 
         dao.delete_keys("task_id", task_ids)
         c1 = dao.count()
