@@ -18,7 +18,7 @@ def get_descriptions():
     with open("README") as f:
         readme_content = f.read()
 
-    pattern = r'# {}\s*?\n\n(.+?)\n\n'.format(re.escape(PROJECT_NAME))
+    pattern = r"# {}\s*?\n\n(.+?)\n\n".format(re.escape(PROJECT_NAME))
     match = re.search(pattern, readme_content, re.DOTALL | re.IGNORECASE)
 
     if match:
