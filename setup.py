@@ -1,6 +1,10 @@
 from sys import platform
 import os
+import re
 from setuptools import setup, find_packages
+
+
+PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
 
 with open("flowcept/version.py") as f:
     exec(f.read())
@@ -8,6 +12,21 @@ with open("flowcept/version.py") as f:
 
 with open("README.md") as fh:
     long_description = fh.read()
+
+
+def get_descriptions():
+    with open("README") as f:
+        readme_content = f.read()
+
+    pattern = r'# {}\s*?\n\n(.+?)\n\n'.format(re.escape(PROJECT_NAME))
+    match = re.search(pattern, readme_content, re.DOTALL | re.IGNORECASE)
+
+    if match:
+        _short_description = match.group(1)
+        _short_description = _short_description.strip().replace("\n", "")
+        return _short_description, readme_content
+    else:
+        raise Exception("Could not find a match for the description!")
 
 
 def get_requirements(file_path):
@@ -74,11 +93,8 @@ keywords = [
     "mlflow",
     "responsible-ai",
 ]
-description = """
-FlowCept is a system for runtime integration of data processed by multiple
- workflows, allowing users to understand complex, heterogeneous, 
- large-scale data coming from various sources.
- """.strip()
+
+short_description, long_description = get_descriptions()
 
 
 setup(
@@ -87,7 +103,7 @@ setup(
     license="MIT",
     author="Oak Ridge National Laboratory",
     # author_email="support@flowcept.org",
-    description=description,
+    description=short_description,
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ORNL/flowcept",
