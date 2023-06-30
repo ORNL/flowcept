@@ -5,7 +5,7 @@ from typing import Dict
 from datetime import datetime
 
 from flowcept.commons.utils import GenericJSONDecoder
-from flowcept.commons.flowcept_data_classes import TaskMessage
+from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
 from flowcept.configs import (
     MONGO_INSERTION_BUFFER_TIME,
     MONGO_MAX_BUFFER_SIZE,

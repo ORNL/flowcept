@@ -95,6 +95,7 @@ MQ_TYPE = settings["project"].get("mq_type", "redis")
 DEBUG_MODE = settings["project"].get("debug", False)
 PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
+TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
 
 ######################
 # SYS METADATA #

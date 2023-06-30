@@ -14,8 +14,10 @@ from flowcept.configs import (
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao import MQDao
-from flowcept.commons.flowcept_data_classes import TaskMessage
+from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
 from flowcept.flowceptor.plugins.settings_factory import get_settings
+
+from flowcept.version import __version__
 
 
 def _enrich_task_message(settings_key, task_msg: TaskMessage):
@@ -51,6 +53,9 @@ def _enrich_task_message(settings_key, task_msg: TaskMessage):
 
     if task_msg.extra_metadata is None and EXTRA_METADATA is not None:
         task_msg.extra_metadata = EXTRA_METADATA
+
+    if task_msg.flowcept_version is None:
+        task_msg.flowcept_version = __version__
 
 
 class BaseInterceptor(object, metaclass=ABCMeta):

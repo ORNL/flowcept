@@ -7,16 +7,15 @@
 
 # FlowCept
 
-FlowCept is a runtime data integration system that aims at empowering any data generation system to capture 
-workflow provenance data using data observability, with minimal (often no) changes in the target system code. 
-Thus, it is able to integrate data from multiple workflows, enabling users to understand complex, heterogeneous, large-scale data coming from various sources in federated environments.
+FlowCept is a runtime data integration system that empowers any data processing system to capture and query workflow 
+provenance data using data observability, requiring minimal or no changes in the target system code. It seamlessly integrates data from multiple workflows, enabling users to comprehend complex, heterogeneous, and large-scale data from various sources in federated environments.
 
 FlowCept is intended to address scenarios where multiple workflows in a science campaign or in an enterprise run and generate 
-important data to be analyzed in an integrated manner. Since these workflows may use different data generation tools or can be executed within
-different parallel computing systems (e.g., Dask, Spark, workflow management systems), its key differentiator is the 
-capability to seamless integrate multi-workflow data from various sources using data observability.
-It builds an integrated data view at runtime of these multi-workflow data following 
-[W3C PROV](https://www.w3.org/TR/prov-overview/) recommendations for its data schema.
+important data to be analyzed in an integrated manner. Since these workflows may use different data manipulation tools (e.g., provenance or lineage capture tools, database systems, performance profiling tools) or can be executed within
+different parallel computing systems (e.g., Dask, Spark, Workflow Management Systems), its key differentiator is the 
+capability to seamless and automatically integrate data from various workflows using data observability.
+It builds an integrated data view at runtime enabling end-to-end exploratory data analysis and monitoring.
+It follows [W3C PROV](https://www.w3.org/TR/prov-overview/) recommendations for its data schema.
 It does not require changes in user codes or systems (i.e., instrumentation). 
 All users need to do is to create adapters for their systems or tools, if one is not available yet. 
 
