@@ -134,7 +134,7 @@ class TestDask(unittest.TestCase):
     def test_observer_and_consumption(self):
         doc_dao = DocumentDBDao()
         o2_task_id = self.atest_pure_workflow()
-        print("Task_id="+o2_task_id)
+        print("Task_id=" + o2_task_id)
         print("Done workflow!")
         sleep(3)
         assert len(doc_dao.query({"task_id": o2_task_id})) > 0
