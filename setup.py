@@ -10,12 +10,9 @@ with open("flowcept/version.py") as f:
     exec(f.read())
     version = locals()["__version__"]
 
-with open("README.md") as fh:
-    long_description = fh.read()
-
 
 def get_descriptions():
-    with open("README") as f:
+    with open("README.md") as f:
         readme_content = f.read()
 
     pattern = r"# {}\s*?\n\n(.+?)\n\n".format(re.escape(PROJECT_NAME))
