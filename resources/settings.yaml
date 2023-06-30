@@ -2,6 +2,14 @@ project:
   debug: true
   json_serializer: default # or complex. If "complex", FlowCept will deal with complex python dicts that may contain JSON unserializable values
   performance_logging: false
+  telemetry_capture:
+    gpu: false
+    cpu: true
+    per_cpu: true
+    process_info: true
+    mem: true
+    disk: true
+    network: true
   
 log:
   log_path: flowcept.log

@@ -3,7 +3,7 @@ from bson import ObjectId
 from pymongo import MongoClient, UpdateOne
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.flowcept_data_classes import TaskMessage
+from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
 from flowcept.commons.utils import perf_log
 from flowcept.configs import (
     MONGO_HOST,

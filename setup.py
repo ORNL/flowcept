@@ -1,13 +1,29 @@
 from sys import platform
 import os
+import re
 from setuptools import setup, find_packages
+
+
+PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
 
 with open("flowcept/version.py") as f:
     exec(f.read())
     version = locals()["__version__"]
 
-with open("README.md") as fh:
-    long_description = fh.read()
+
+def get_descriptions():
+    with open("README.md") as f:
+        readme_content = f.read()
+
+    pattern = r"# {}\s*?\n\n(.+?)\n\n".format(re.escape(PROJECT_NAME))
+    match = re.search(pattern, readme_content, re.DOTALL | re.IGNORECASE)
+
+    if match:
+        _short_description = match.group(1)
+        _short_description = _short_description.strip().replace("\n", "")
+        return _short_description, readme_content
+    else:
+        raise Exception("Could not find a match for the description!")
 
 
 def get_requirements(file_path):
@@ -49,14 +65,42 @@ for req in extras_requirement_keys:
     extras_require[req] = _requirements
     full_requirements.extend(_requirements)
 
+
 extras_require["full"] = full_requirements
+
+keywords = [
+    "ai",
+    "ml",
+    "machine-learning",
+    "provenance",
+    "lineage",
+    "responsible-ai",
+    "databases",
+    "big-data",
+    "provenance",
+    "tensorboard",
+    "data-integration",
+    "scientific-workflows",
+    "dask",
+    "reproducibility",
+    "workflows",
+    "parallel-processing",
+    "lineage",
+    "model-management",
+    "mlflow",
+    "responsible-ai",
+]
+
+short_description, long_description = get_descriptions()
+
+
 setup(
     name="flowcept",
     version=version,
     license="MIT",
     author="Oak Ridge National Laboratory",
     # author_email="support@flowcept.org",
-    description="A system to integrate data from multiple workflows.",
+    description=short_description,
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ORNL/flowcept",
@@ -64,6 +108,7 @@ setup(
     install_requires=requirements,
     extras_require=extras_require,
     packages=find_packages(),
+    keywords=keywords,
     classifiers=[
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
@@ -73,6 +118,12 @@ setup(
         "Natural Language :: English",
         # "Topic :: Documentation :: Sphinx",
         "Topic :: System :: Distributed Computing",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Scientific/Engineering :: Information Analysis",
+        "Topic :: System :: Logging",
+        "Topic :: System :: Monitoring",
+        "Topic :: Database",
     ],
     python_requires=">=3.8",
     # scripts=["bin/flowcept"],

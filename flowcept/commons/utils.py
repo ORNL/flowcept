@@ -3,7 +3,7 @@ import json
 from time import time
 from flowcept.configs import PERF_LOG
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.flowcept_data_classes import Status
+from flowcept.commons.flowcept_dataclasses.task_message import Status
 
 
 def get_utc_now() -> float:

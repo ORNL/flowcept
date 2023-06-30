@@ -5,7 +5,7 @@ import json
 from typing import Dict
 
 from flowcept.commons.utils import get_utc_now, get_status_from_str
-from flowcept.commons.flowcept_data_classes import TaskMessage
+from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
 from flowcept.flowceptor.plugins.base_interceptor import (
     BaseInterceptor,
 )
