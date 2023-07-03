@@ -151,7 +151,7 @@ class TelemetryCapture:
                 "power_usage": pynvml.nvmlDeviceGetPowerUsage(handle),
             }
             gpu = Telemetry.GPU()
-            if len(deviceCount) == 0:
+            if deviceCount == 1:
                 gpu.gpu_sums = gpu.GPUMetrics(**_this_gpu)
             else:
                 gpu.per_gpu = {0: gpu.GPUMetrics(**_this_gpu)}
