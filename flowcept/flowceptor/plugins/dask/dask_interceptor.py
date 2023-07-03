@@ -148,7 +148,9 @@ class DaskWorkerInterceptor(BaseInterceptor):
 
             if ts.state == "executing":
                 if TELEMETRY_CAPTURE is not None:
-                    task_msg.telemetry_at_start = capture_telemetry()
+                    task_msg.telemetry_at_start = capture_telemetry(
+                        self.logger
+                    )
                 task_msg.status = Status.RUNNING
                 task_msg.address = self._worker.worker_address
                 if self.settings.worker_create_timestamps:
@@ -160,7 +162,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
                 else:
                     get_times_from_task_state(task_msg, ts)
                 if TELEMETRY_CAPTURE is not None:
-                    task_msg.telemetry_at_end = capture_telemetry()
+                    task_msg.telemetry_at_end = capture_telemetry(self.logger)
             elif ts.state == "error":
                 task_msg.status = Status.ERROR
                 if self.settings.worker_create_timestamps:

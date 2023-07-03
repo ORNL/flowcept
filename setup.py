@@ -95,7 +95,7 @@ short_description, long_description = get_descriptions()
 
 
 setup(
-    name="flowcept",
+    name=PROJECT_NAME,
     version=version,
     license="MIT",
     author="Oak Ridge National Laboratory",
