@@ -1,5 +1,5 @@
 from typing import List, Dict
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict
 
 
 def remove_none_values(_dict):
@@ -7,78 +7,36 @@ def remove_none_values(_dict):
 
 
 class Telemetry:
-    @dataclass(init=False)
-    class CPU:
-        @dataclass
-        class CPUMetrics:
-            user: float
-            nice: float
-            system: float
-            idle: float
+    """
+     Class representing telemetry information captured in the platform where t
+     he experiment runs.
 
-        times_avg: CPUMetrics
+    We are using psutils and the data it can capture depends on the platform.
+    So, we won't use dataclasses because we can't list all possible info
+    to be captured in any platform.
+
+    """
+
+    class CPU:
+        times_avg: Dict[str, float] = None
         percent_all: float = None
 
-        times_per_cpu: List[CPUMetrics] = None
+        times_per_cpu: List[Dict[str, float]] = None
         percent_per_cpu: List[float] = None
 
-    @dataclass(init=False)
     class Memory:
-        @dataclass
-        class MemoryMetrics:
-            total: int = field(default=None)
-            used: int = field(default=None)
-            free: int = field(default=None)
-            percent: int = field(default=None)
-            sin: int = field(default=None)
-            sout: int = field(default=None)
-            available: int = field(default=None)
-            active: int = field(default=None)
-            inactive: int = field(default=None)
-            wired: int = field(default=None)
+        virtual: Dict[str, float]
+        swap: Dict[str, float]
 
-        virtual: MemoryMetrics = field(default=None)
-        swap: MemoryMetrics = field(default=None)
-
-    @dataclass(init=False)
     class Network:
-        @dataclass
-        class NetworkMetrics:
-            bytes_sent: int
-            bytes_recv: int
-            packets_sent: int
-            packets_recv: int
-            errin: int
-            errout: int
-            dropin: int
-            dropout: int
+        netio: Dict[str, int]
+        netio_per_interface: Dict[str, Dict[str, int]]
 
-        netio_sum: NetworkMetrics = None
-        netio_per_interface: Dict[str, NetworkMetrics] = None
-
-    @dataclass(init=False)
     class Disk:
-        @dataclass
-        class DiskUsage:
-            total: int
-            used: int
-            free: int
-            percent: float
+        disk_usage: Dict[str, float]
+        io: Dict[str, float]
+        io_per_disk: Dict[str, Dict[str, float]]
 
-        @dataclass
-        class DiskMetrics:
-            read_count: int
-            write_count: int
-            read_bytes: int
-            write_bytes: int
-            read_time: int
-            write_time: int
-
-        disk_usage: DiskUsage
-        io_sum: DiskMetrics
-        io_per_disk: Dict[str, DiskMetrics] = field(default=None)
-
-    # TODO: make it dataclass, like the others
     class Process:
         pid: int
         cpu_number: int
@@ -116,24 +74,16 @@ class Telemetry:
     def to_dict(self):
         ret = {}
         if self.cpu is not None:
-            ret["cpu"] = asdict(self.cpu, dict_factory=remove_none_values)
-
-        if self.memory is not None:
-            ret["memory"] = asdict(
-                self.memory, dict_factory=remove_none_values
-            )
-        if self.disk is not None:
-            ret["disk"] = asdict(self.disk, dict_factory=remove_none_values)
-
-        if self.network is not None:
-            ret["network"] = asdict(
-                self.network, dict_factory=remove_none_values
-            )
-
-        if self.gpu is not None:
-            ret["gpu"] = asdict(self.gpu, dict_factory=remove_none_values)
-
+            ret["cpu"] = self.cpu.__dict__
         if self.process is not None:
             ret["process"] = self.process.__dict__
+        if self.memory is not None:
+            ret["memory"] = self.memory.__dict__
+        if self.disk is not None:
+            ret["disk"] = self.disk.__dict__
+        if self.network is not None:
+            ret["network"] = self.network.__dict__
+        if self.gpu is not None:
+            ret["gpu"] = asdict(self.gpu, dict_factory=remove_none_values)
 
         return ret
