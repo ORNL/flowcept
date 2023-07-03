@@ -174,7 +174,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
                     "traceback": ts.traceback_text,
                 }
                 if TELEMETRY_CAPTURE is not None:
-                    task_msg.telemetry_at_end = capture_telemetry()
+                    task_msg.telemetry_at_end = capture_telemetry(self.logger)
             else:
                 return
 

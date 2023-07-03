@@ -33,17 +33,13 @@ def _capture_disk(conf, logger):
         return None
     try:
         disk = Telemetry.Disk()
-        disk.disk_usage = disk.DiskUsage(**psutil.disk_usage("/")._asdict())
-        disk.io_sum = disk.DiskMetrics(
-            **psutil.disk_io_counters(perdisk=False)._asdict()
-        )
+        disk.disk_usage = psutil.disk_usage("/")._asdict()
+        disk.io_sum = psutil.disk_io_counters(perdisk=False)._asdict()
         io_perdisk = psutil.disk_io_counters(perdisk=True)
         if len(io_perdisk) > 1:
             disk.io_per_disk = {}
             for d in io_perdisk:
-                disk.io_per_disk[d] = disk.DiskMetrics(
-                    **io_perdisk[d]._asdict()
-                )
+                disk.io_per_disk[d] = io_perdisk[d]._asdict()
 
         return disk
     except Exception as e:
@@ -56,16 +52,12 @@ def _capture_network(conf, logger):
         return None
     try:
         net = Telemetry.Network()
-        net.netio_sum = net.NetworkMetrics(
-            **psutil.net_io_counters(pernic=False)._asdict()
-        )
+        net.netio_sum = psutil.net_io_counters(pernic=False)._asdict()
         pernic = psutil.net_io_counters(pernic=True)
         net.netio_per_interface = {}
         for ic in pernic:
             if pernic[ic].bytes_sent and pernic[ic].bytes_recv:
-                net.netio_per_interface[ic] = net.NetworkMetrics(
-                    **pernic[ic]._asdict()
-                )
+                net.netio_per_interface[ic] = pernic[ic]._asdict()
         return net
     except Exception as e:
         logger.exception(e)
@@ -77,8 +69,8 @@ def _capture_memory(conf, logger):
         return None
     try:
         mem = Telemetry.Memory()
-        mem.virtual = mem.MemoryMetrics(**psutil.virtual_memory()._asdict())
-        mem.swap = mem.MemoryMetrics(**psutil.swap_memory()._asdict())
+        mem.virtual = psutil.virtual_memory()._asdict()
+        mem.swap = psutil.swap_memory()._asdict()
         return mem
     except Exception as e:
         logger.exception(e)
@@ -99,7 +91,6 @@ def _capture_process_info(conf, logger):
                 pass
             p.memory = psutil_p.memory_full_info()
             p.memory_percent = psutil_p.memory_percent()
-            # TODO dataclass:
             p.cpu_times = psutil_p.cpu_times()._asdict()
             p.cpu_percent = psutil_p.cpu_percent()
             p.executable = psutil_p.exe()
@@ -107,13 +98,11 @@ def _capture_process_info(conf, logger):
             p.num_open_file_descriptors = psutil_p.num_fds()
             p.num_connections = len(psutil_p.connections())
             try:
-                #  TODO dataclass:
                 p.io_counters = psutil_p.io_counters()._asdict()
             except:
                 pass
             p.num_open_files = len(psutil_p.open_files())
             p.num_threads = psutil_p.num_threads()
-            #  TODO dataclass:
             p.num_ctx_switches = psutil_p.num_ctx_switches()._asdict()
         return p
     except Exception as e:
@@ -128,14 +117,11 @@ def _capture_cpu(conf: Dict, logger):
     try:
         cpu = Telemetry.CPU()
         if conf.get("cpu", False):
-            cpu.times_avg = cpu.CPUMetrics(
-                **psutil.cpu_times(percpu=False)._asdict()
-            )
+            cpu.times_avg = psutil.cpu_times(percpu=False)._asdict()
             cpu.percent_all = psutil.cpu_percent()
         if conf.get("per_cpu", False):
             cpu.times_per_cpu = [
-                cpu.CPUMetrics(**c._asdict())
-                for c in psutil.cpu_times(percpu=True)
+                c._asdict() for c in psutil.cpu_times(percpu=True)
             ]
             cpu.percent_per_cpu = psutil.cpu_percent(percpu=True)
         return cpu
