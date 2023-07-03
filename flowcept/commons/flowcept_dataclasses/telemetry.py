@@ -60,6 +60,7 @@ class Telemetry:
             total: int
             free: int
             used: int
+            percent: float
 
         gpu_total: GPUMetrics
         per_gpu: Dict[int, GPUMetrics] = None

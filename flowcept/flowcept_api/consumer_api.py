@@ -1,12 +1,7 @@
 from typing import List, Union
 from time import sleep
-import random
 
 from flowcept.commons.daos.mq_dao import MQDao
-from flowcept.configs import (
-    REDIS_INSERTION_BUFFER_TIME,
-    MONGO_INSERTION_BUFFER_TIME,
-)
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.plugins.base_interceptor import BaseInterceptor
