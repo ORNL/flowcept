@@ -5,6 +5,8 @@ from pynvml import (
     nvmlDeviceGetCount,
     nvmlDeviceGetHandleByIndex,
     nvmlDeviceGetMemoryInfo,
+    nvmlInit,
+    nvmlShutdown,
 )
 
 from flowcept.configs import TELEMETRY_CAPTURE
@@ -143,6 +145,7 @@ def _capture_gpu(conf: Dict, logger):
             "total": info.total,
             "free": info.free,
             "used": info.used,
+            "percent": info.used / info.total * 100,
         }
         gpu = Telemetry.GPU()
         if len(deviceCount) == 0:
@@ -158,12 +161,42 @@ def _capture_gpu(conf: Dict, logger):
                 sums["used"] += info.used
 
                 gpu.per_gpu[i] = gpu.GPUMetrics(
-                    total=info.total, free=info.free, used=info.used
+                    total=info.total,
+                    free=info.free,
+                    used=info.used,
+                    percent=info.used / info.total * 100,
                 )
 
+            sums["percent"] = sums["used"] / sums["total"] * 100
             gpu.gpu_total = gpu.GPUMetrics(**sums)
 
         return gpu
     except Exception as e:
         logger.exception(e)
         return None
+
+
+def init_gpu_telemetry(logger: Logger):
+    conf = TELEMETRY_CAPTURE
+    if conf is None:
+        return None
+
+    if TELEMETRY_CAPTURE.get("gpu", False):
+        try:
+            nvmlInit()
+        except Exception as e:
+            logger.error("NVIDIA GPU NOT FOUND!")
+            logger.exception(e)
+
+
+def shutdown_gpu_telemetry(logger: Logger):
+    conf = TELEMETRY_CAPTURE
+    if conf is None:
+        return None
+
+    if TELEMETRY_CAPTURE.get("gpu", False):
+        try:
+            nvmlShutdown()
+        except Exception as e:
+            logger.error("NVIDIA GPU NOT FOUND!")
+            logger.exception(e)

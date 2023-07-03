@@ -11,12 +11,16 @@ from flowcept.configs import (
     CAMPAIGN_ID,
     HOSTNAME,
     EXTRA_METADATA,
-    TELEMETRY_CAPTURE,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao import MQDao
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
 from flowcept.flowceptor.plugins.settings_factory import get_settings
+
+from flowcept.flowceptor.telemetry_capture import (
+    init_gpu_telemetry,
+    shutdown_gpu_telemetry,
+)
 
 from flowcept.version import __version__
 
@@ -74,17 +78,7 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         :return:
         """
         self._mq_dao.start_time_based_flushing()
-
-        if TELEMETRY_CAPTURE is not None:
-            if TELEMETRY_CAPTURE["gpu"]:
-                try:
-                    from pynvml import nvmlInit
-
-                    nvmlInit()
-                except Exception as e:
-                    self.logger.error("NVIDIA GPU NOT FOUND!")
-                    self.logger.exception(e)
-
+        init_gpu_telemetry()
         return self
 
     def stop(self) -> bool:
@@ -93,16 +87,7 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         :return:
         """
         self._mq_dao.stop()
-
-        if TELEMETRY_CAPTURE is not None:
-            if TELEMETRY_CAPTURE["gpu"]:
-                try:
-                    from pynvml import nvmlShutdown
-
-                    nvmlShutdown()
-                except Exception as e:
-                    self.logger.error("NVIDIA GPU NOT FOUND!")
-                    self.logger.exception(e)
+        shutdown_gpu_telemetry()
 
     def observe(self, *args, **kwargs):
         """
