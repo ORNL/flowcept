@@ -7,6 +7,8 @@ from pynvml import (
     nvmlInit,
     nvmlShutdown,
     nvmlDeviceGetTemperature,
+    nvmlDeviceGetPowerUsage,
+    NVML_TEMPERATURE_GPU
 )
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -146,9 +148,9 @@ class TelemetryCapture:
                 "used": info.used,
                 "usage_percent": info.used / info.total * 100,
                 "temperature": nvmlDeviceGetTemperature(
-                    handle, pynvml.NVML_TEMPERATURE_GPU
+                    handle, NVML_TEMPERATURE_GPU
                 ),
-                "power_usage": pynvml.nvmlDeviceGetPowerUsage(handle),
+                "power_usage": nvmlDeviceGetPowerUsage(handle),
             }
             gpu = Telemetry.GPU()
             if deviceCount == 1:
@@ -162,7 +164,7 @@ class TelemetryCapture:
                     _temp = nvmlDeviceGetTemperature(
                         handle, pynvml.NVML_TEMPERATURE_GPU
                     )
-                    _pow = pynvml.nvmlDeviceGetPowerUsage(handle)
+                    _pow = nvmlDeviceGetPowerUsage(handle)
 
                     sums["total"] += info.total
                     sums["free"] += info.free
