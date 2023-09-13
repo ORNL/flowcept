@@ -8,8 +8,8 @@ def remove_none_values(_dict):
 
 class Telemetry:
     """
-     Class representing telemetry information captured in the platform where t
-     he experiment runs.
+     Class representing telemetry information captured in the platform where
+     the experiment runs.
 
     We are using psutils and the data it can capture depends on the platform.
     So, we won't use dataclasses because we can't list all possible info
