@@ -48,7 +48,7 @@ extras_requirement_keys = [
     "webserver",
 ]
 
-#MAC_REQUIRES = ["tensorboard"]
+# MAC_REQUIRES = ["tensorboard"]
 extras_require = dict()
 for req in extras_requirement_keys:
     # if req in MAC_REQUIRES and platform == "darwin":

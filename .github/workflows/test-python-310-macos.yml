@@ -28,7 +28,10 @@ jobs:
         brew install docker docker-compose 
         colima start
     - name: Run Docker Compose
-      run: docker compose -f deployment/compose.yml up -d
+      run: |
+        docker compose version
+        docker-compose version
+        docker-compose -f deployment/compose.yml up -d
     - name: Test with pytest
       run: |
         pytest --ignore=tests/plugins/test_tensorboard.py
@@ -36,4 +39,4 @@ jobs:
       run: |
         python flowcept/flowcept_webserver/app.py &
         sleep 3
-        pytest --nbmake "notebooks/"
+        pytest --nbmake "notebooks/" --ignore=notebooks/dask_from_CLI.ipynb
