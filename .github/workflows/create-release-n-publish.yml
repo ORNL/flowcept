@@ -91,3 +91,16 @@ jobs:
         run: pip install flowcept[mlflow,tensorboard]
       - name: Test pip install full
         run: pip install flowcept[full]
+      - name: Install dev dependencies
+        run: |
+          pip install -r extra_requirements/dev-requirements.txt
+      - name: Run Docker Compose
+        run: docker compose -f deployment/compose.yml up -d
+      - name: Test with pytest
+        run: |
+          pytest # --ignore=tests/plugins/test_tensorboard.py
+      - name: Test notebooks
+        run: |
+          python flowcept/flowcept_webserver/app.py &
+          sleep 3
+          pytest --nbmake "notebooks/" --ignore=notebooks/dask_from_CLI.ipynb
