@@ -23,6 +23,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .[full]
         pip install -r extra_requirements/dev-requirements.txt
+    - name: Install docker
+      run: brew install docker
     - name: Run Docker Compose
       run: docker compose -f deployment/compose.yml up -d
     - name: Test with pytest
