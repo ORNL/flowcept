@@ -8,7 +8,7 @@ from pynvml import (
     nvmlShutdown,
     nvmlDeviceGetTemperature,
     nvmlDeviceGetPowerUsage,
-    NVML_TEMPERATURE_GPU
+    NVML_TEMPERATURE_GPU,
 )
 
 from flowcept.commons.flowcept_logger import FlowceptLogger

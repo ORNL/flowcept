@@ -2,7 +2,8 @@ name: Test Python 3.10
 on:
   pull_request:
     #branches: [ "main" ]
-    branches: [ "dev" ]
+    #branches: [ "dev" ]
+    branches: [ "dev", "main" ]
 
 jobs:
 
