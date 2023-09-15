@@ -24,7 +24,9 @@ jobs:
         pip install -e .[full]
         pip install -r extra_requirements/dev-requirements.txt
     - name: Install docker
-      run: brew install docker
+      run: |
+        brew install docker
+        colima start
     - name: Run Docker Compose
       run: docker compose -f deployment/compose.yml up -d
     - name: Test with pytest
