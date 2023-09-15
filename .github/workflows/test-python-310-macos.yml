@@ -1,8 +1,6 @@
 name: Test Python 3.10 - MacOS
 on:
   pull_request:
-    #branches: [ "main" ]
-    #branches: [ "dev" ]
     branches: [ "dev", "main" ]
 
 jobs:
@@ -32,7 +30,6 @@ jobs:
     - name: Run Docker Compose
       run: |
         docker compose version
-        docker-compose version
         docker compose -f deployment/compose.yml up -d
     - name: Test with pytest
       run: |
