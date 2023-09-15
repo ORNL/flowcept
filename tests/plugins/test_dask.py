@@ -154,7 +154,7 @@ class TestDask(unittest.TestCase):
         if TestDask.consumer is None or not TestDask.consumer.is_started:
             TestDask._init_consumption()
         o2_task_id = self.error_task_submission()
-        sleep(10)
+        sleep(15)
         docs = doc_dao.query({"task_id": o2_task_id})
 
         assert len(docs) > 0

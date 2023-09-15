@@ -16,14 +16,8 @@ to do so.
 ## Automated versioning
 
 Flowcept ~~[attempts to]~~ follows semantic versioning.
-There is a [GitHub Action](.github/workflows/bump-version.yml) that automatically bumps the 
-patch number of the version at each push to the repository, except to the main branch. 
-Because of that, be aware that when you do a `git push`, you may need `git pull` soon too, as the
-CI Bot will bump the [version.py](flowcept/version.py) file in your branch.
-
-PRs may require merge conflicts resolution in this `version.py` file. Make sure you see the `version.py` file of the
-source and target branches in a PR to decide on a good patch number for the version. A good rule of thumb 
-is to use a patch number that is greater than the source branch's patch number version.
+There is a [GitHub Action](.github/workflows/create-release-n-publish.yml) that automatically bumps the 
+patch number of the version at PRs to the main branch and uploads to the package to pypi.
 
 ## Automated Tests and Code format check
 
