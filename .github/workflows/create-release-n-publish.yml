@@ -1,7 +1,8 @@
 name: Release and Publish
 on:
   push:  # It has to be push, otherwise error happens in code below.
-    branches: [ "main" ]
+    #branches: [ "main" ]
+    branches: [ "disabled" ]
 jobs:
   build:
     name: Create Release and Publish

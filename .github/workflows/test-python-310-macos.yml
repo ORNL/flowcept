@@ -27,11 +27,13 @@ jobs:
       run: |
         brew install docker docker-compose 
         colima start
+        mkdir -p ~/.docker/cli-plugins
+        ln -sfn /usr/local/opt/docker-compose/bin/docker-compose ~/.docker/cli-plugins/docker-compose
     - name: Run Docker Compose
       run: |
         docker compose version
         docker-compose version
-        docker-compose -f deployment/compose.yml up -d
+        docker compose -f deployment/compose.yml up -d
     - name: Test with pytest
       run: |
         pytest --ignore=tests/plugins/test_tensorboard.py
