@@ -48,19 +48,19 @@ extras_requirement_keys = [
     "webserver",
 ]
 
-MAC_REQUIRES = ["tensorboard"]
+#MAC_REQUIRES = ["tensorboard"]
 extras_require = dict()
 for req in extras_requirement_keys:
-    if req in MAC_REQUIRES and platform == "darwin":
-        req_path = f"extra_requirements/{req}-requirements-mac.txt"
-        # These env vars are needed to install tensorflow on mac
-        # (at least on m1 chip)
-        # (because of the grpcio package). See:
-        # https://stackoverflow.com/questions/66640705/how-can-i-install-grpcio-on-an-apple-m1-silicon-laptop
-        os.environ["GRPC_PYTHON_BUILD_SYSTEM_OPENSSL"] = "1"
-        os.environ["GRPC_PYTHON_BUILD_SYSTEM_ZLIB"] = "1"
-    else:
-        req_path = f"extra_requirements/{req}-requirements.txt"
+    # if req in MAC_REQUIRES and platform == "darwin":
+    #     req_path = f"extra_requirements/{req}-requirements-mac.txt"
+    #     # These env vars are needed to install tensorflow on mac
+    #     # (at least on m1 chip)
+    #     # (because of the grpcio package). See:
+    #     # https://stackoverflow.com/questions/66640705/how-can-i-install-grpcio-on-an-apple-m1-silicon-laptop
+    #     os.environ["GRPC_PYTHON_BUILD_SYSTEM_OPENSSL"] = "1"
+    #     os.environ["GRPC_PYTHON_BUILD_SYSTEM_ZLIB"] = "1"
+    # else:
+    req_path = f"extra_requirements/{req}-requirements.txt"
     _requirements = get_requirements(req_path)
     extras_require[req] = _requirements
     full_requirements.extend(_requirements)

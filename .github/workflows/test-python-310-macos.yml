@@ -1,4 +1,4 @@
-name: Test Python 3.11 - MacOS
+name: Test Python 3.10 - MacOS
 on:
   pull_request:
     #branches: [ "main" ]
@@ -12,10 +12,10 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.11
+    - name: Set up Python 3.10
       uses: actions/setup-python@v3
       with:
-        python-version: "3.11"
+        python-version: "3.10"
     - name: Check python version
       run: python --version
     - name: Install our dependencies
@@ -25,7 +25,7 @@ jobs:
         pip install -r extra_requirements/dev-requirements.txt
     - name: Install docker
       run: |
-        brew install docker
+        brew install docker docker-compose 
         colima start
     - name: Run Docker Compose
       run: docker compose -f deployment/compose.yml up -d
