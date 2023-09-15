@@ -1,4 +1,4 @@
-name: Test Python 3.10
+name: Test Python 3.11
 on:
   pull_request:
     #branches: [ "main" ]
