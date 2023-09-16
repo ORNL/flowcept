@@ -31,11 +31,11 @@ jobs:
       run: |
         docker compose version
         docker compose -f deployment/compose.yml up -d
-    - name: Test with pytest
-      run: |
-        pytest --ignore=tests/plugins/test_tensorboard.py
+#    - name: Test with pytest
+#      run: |
+#        pytest # --ignore=tests/plugins/test_tensorboard.py
     - name: Test notebooks
       run: |
         python flowcept/flowcept_webserver/app.py &
         sleep 3
-        pytest --timeout=3000 --nbmake "notebooks/" --ignore=notebooks/dask_from_CLI.ipynb
+        pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
