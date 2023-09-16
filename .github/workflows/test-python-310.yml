@@ -1,8 +1,8 @@
 name: Test Python 3.10
 on:
   pull_request:
-    # branches: [ "dev", "main" ]
-    branches: [ "disabled" ]
+    branches: [ "dev", "main" ]
+    # branches: [ "disabled" ]
 
 jobs:
 
