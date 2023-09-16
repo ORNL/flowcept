@@ -1,8 +1,10 @@
-name: Test Python 3.9
+name: Test Python 3.11
 on:
   pull_request:
-    branches: [ "dev", "main" ]
-    # branches: [ "disabled" ]
+    # branches: [ "dev", "main" ]
+    # Apparently there is a lib incompatibility with the Dask adapter for py3.11. See:
+    # https://github.com/ORNL/flowcept/actions/runs/6203429881/job/16844012184
+    branches: [ "disabled" ]
 
 jobs:
 
@@ -11,10 +13,10 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.9
+    - name: Set up Python 3.11
       uses: actions/setup-python@v3
       with:
-        python-version: "3.9"
+        python-version: "3.11"
     - name: Check python version
       run: python --version
     - name: Install our dependencies
@@ -26,7 +28,7 @@ jobs:
       run: docker compose -f deployment/compose.yml up -d
     - name: Test with pytest
       run: |
-        pytest # --ignore=tests/plugins/test_tensorboard.py
+        pytest --ignore=tests/plugins/test_tensorboard.py
     - name: Test notebooks
       run: |
         python flowcept/flowcept_webserver/app.py &
