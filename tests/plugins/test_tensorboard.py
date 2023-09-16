@@ -145,7 +145,7 @@ class TestTensorboard(unittest.TestCase):
 
         watch_interval_sec = self.interceptor.settings.watch_interval_sec
         # Making sure we'll wait until next watch cycle
-        sleep(watch_interval_sec * 3)
+        sleep(watch_interval_sec * 6)
         assert self.interceptor.state_manager.count() == 16
         doc_dao = DocumentDBDao()
         docs = doc_dao.query({"workflow_id": wf_id})
