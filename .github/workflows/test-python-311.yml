@@ -2,6 +2,8 @@ name: Test Python 3.11
 on:
   pull_request:
     # branches: [ "dev", "main" ]
+    # Apparently there is a lib incompatibility with the Dask adapter for py3.11. See:
+    # https://github.com/ORNL/flowcept/actions/runs/6203429881/job/16844012184
     branches: [ "disabled" ]
 
 jobs:

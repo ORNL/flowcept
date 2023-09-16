@@ -31,4 +31,4 @@ jobs:
       run: |
         python flowcept/flowcept_webserver/app.py &
         sleep 3
-        pytest  --timeout=3000 --nbmake "notebooks/" --ignore=notebooks/dask_from_CLI.ipynb
+        pytest --nbmake "notebooks/" --ignore=notebooks/dask_from_CLI.ipynb
