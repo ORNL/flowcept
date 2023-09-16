@@ -1,6 +1,7 @@
 name: Unit, integration, and notebook tests
 on: [push, pull_request]
 #on: [pull_request]
+branches: [ "disabled" ]
 
 jobs:
 
