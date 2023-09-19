@@ -142,15 +142,14 @@ class TestTensorboard(unittest.TestCase):
         self._init_consumption()
         wf_id = self.test_run_tensorboard_hparam_tuning()
         self.logger.debug("Done training. Sleeping some time...")
-
+        TestTensorboard.consumer.stop()
         watch_interval_sec = self.interceptor.settings.watch_interval_sec
         # Making sure we'll wait until next watch cycle
-        sleep(watch_interval_sec * 6)
+        sleep(watch_interval_sec * 7)
         assert self.interceptor.state_manager.count() == 16
         doc_dao = DocumentDBDao()
         docs = doc_dao.query({"workflow_id": wf_id})
         assert len(docs) == 16
-        TestTensorboard.consumer.stop()
 
     def test_read_tensorboard_hparam_tuning(self):
         self.reset_log_dir()
