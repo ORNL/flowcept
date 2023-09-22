@@ -154,14 +154,14 @@ class QueryTest(unittest.TestCase):
     def test_query_api_with_and_without_webserver(self):
         query_api_params = inspect.signature(TaskQueryAPI.query).parameters
         doc_query_api_params = inspect.signature(
-            DocumentDBDao.query
+            DocumentDBDao.task_query
         ).parameters
         assert (
             query_api_params == doc_query_api_params
         ), "Function signatures do not match."
 
         query_api_docstring = inspect.getdoc(TaskQueryAPI.query)
-        doc_query_api_docstring = inspect.getdoc(DocumentDBDao.query)
+        doc_query_api_docstring = inspect.getdoc(DocumentDBDao.task_query)
 
         assert (
             query_api_docstring.strip() == doc_query_api_docstring.strip()
