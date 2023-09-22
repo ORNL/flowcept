@@ -36,6 +36,11 @@ class DBAPI(object):
         return self._dao.workflow_insert_or_update(workflow_id, wf_data)
 
     def get_workflow(self, workflow_id):
-        return self._dao.workflow_query(
+        results = self._dao.workflow_query(
             filter={TaskMessage.get_workflow_id_field(): workflow_id}
         )
+        if results is None:
+            self.logger.error("Could not retrieve workflow")
+            return None
+        if len(results):
+            return results[0]

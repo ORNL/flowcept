@@ -246,10 +246,18 @@ class DocumentDBDao(object):
         self, workflow_id: str, _dict: Dict
     ) -> bool:
         _filter = {TaskMessage.get_workflow_id_field(): workflow_id}
-        update = {"$set": _dict}
+        custom_metadata = _dict.get("custom_metadata")
+        if custom_metadata is not None:
+            _dict.pop("custom_metadata")
+            data_to_update = _dict.copy()
+            for k, v in custom_metadata.items():
+                data_to_update[f"custom_metadata.{k}"] = v
+        else:
+            data_to_update = _dict.copy()
+        update_query = {"$set": data_to_update}
         try:
             result = self._wfs_collection.update_one(
-                _filter, update, upsert=True
+                _filter, update_query, upsert=True
             )
             return (result.upserted_id is not None) or result.raw_result[
                 "updatedExisting"
