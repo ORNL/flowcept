@@ -16,10 +16,12 @@ class WorkflowDBTest(unittest.TestCase):
         )
 
         assert dbapi.insert_or_update_workflow(
-            workflow_id="wftest2", flowcept_version="123"
+            workflow_id="wftest2"
         )
 
-        assert dbapi.get_workflow(workflow_id="wftest2")
+        wfdata = dbapi.get_workflow(workflow_id="wftest2")
+        assert wfdata is not None
+        print(wfdata)
 
         wf3 = str(uuid4())
 
