@@ -66,6 +66,10 @@ class TaskMessage:
     def get_index_field():
         return "task_id"
 
+    @staticmethod
+    def get_workflow_id_field():
+        return "workflow_id"
+
     def to_dict(self):
         ret = self.__dict__
         if self.telemetry_at_start is not None:

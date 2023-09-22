@@ -64,8 +64,11 @@ REDIS_INSERTION_BUFFER_TIME = random.randint(
 MONGO_HOST = settings["mongodb"].get("host", "localhost")
 MONGO_PORT = int(settings["mongodb"].get("port", "27017"))
 MONGO_DB = settings["mongodb"].get("db", "flowcept")
-MONGO_COLLECTION = settings["mongodb"].get("collection", "tasks")
-MONGO_CREATE_INDEX = settings["mongodb"].get("create_collection_index", True)
+
+MONGO_TASK_COLLECTION = "tasks"
+MONGO_WORKFLOWS_COLLECTION = "workflows"
+
+
 # In seconds:
 MONGO_INSERTION_BUFFER_TIME = int(
     settings["mongodb"].get("insertion_buffer_time_secs", 5)

@@ -24,7 +24,7 @@ class TaskQuery(Resource):
                 return f"Could not parse {arg} argument: {e}", 400
 
         dao = DocumentDBDao()
-        docs = dao.query(**doc_args)
+        docs = dao.task_query(**doc_args)
 
         if docs is not None and len(docs):
             return docs, 201

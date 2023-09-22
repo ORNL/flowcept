@@ -9,7 +9,8 @@ from flowcept.configs import (
     MONGO_HOST,
     MONGO_PORT,
     MONGO_DB,
-    MONGO_COLLECTION,
+    MONGO_TASK_COLLECTION,
+    MONGO_WORKFLOWS_COLLECTION,
     PERF_LOG,
 )
 from flowcept.flowceptor.consumers.consumer_utils import (
@@ -22,11 +23,15 @@ class DocumentDBDao(object):
     def __init__(self):
         self.logger = FlowceptLogger().get_logger()
         client = MongoClient(MONGO_HOST, MONGO_PORT)
-        db = client[MONGO_DB]
-        self._collection = db[MONGO_COLLECTION]
-        self._collection.create_index(TaskMessage.get_index_field())
+        self._db = client[MONGO_DB]
 
-    def query(
+        self._tasks_collection = self._db[MONGO_TASK_COLLECTION]
+        self._tasks_collection.create_index(TaskMessage.get_index_field())
+
+        self._wfs_collection = self._db[MONGO_WORKFLOWS_COLLECTION]
+        self._wfs_collection.create_index(TaskMessage.get_workflow_id_field())
+
+    def task_query(
         self,
         filter: Dict = None,
         projection: List[str] = None,
@@ -77,7 +82,7 @@ class DocumentDBDao(object):
             if remove_json_unserializables:
                 _projection.update({"_id": 0, "timestamp": 0})
             try:
-                rs = self._collection.find(
+                rs = self._tasks_collection.find(
                     filter=filter,
                     projection=_projection,
                     limit=limit,
@@ -156,7 +161,7 @@ class DocumentDBDao(object):
             pipeline.append({"$project": projected_fields})
 
         try:
-            _rs = self._collection.aggregate(pipeline)
+            _rs = self._tasks_collection.aggregate(pipeline)
             return _rs
         except Exception as e:
             self.logger.exception(e)
@@ -164,7 +169,7 @@ class DocumentDBDao(object):
 
     def insert_one(self, doc: Dict) -> ObjectId:
         try:
-            r = self._collection.insert_one(doc)
+            r = self._tasks_collection.insert_one(doc)
             return r.inserted_id
         except Exception as e:
             self.logger.exception(e)
@@ -172,7 +177,7 @@ class DocumentDBDao(object):
 
     def insert_many(self, doc_list: List[Dict]) -> List[ObjectId]:
         try:
-            r = self._collection.insert_many(doc_list)
+            r = self._tasks_collection.insert_many(doc_list)
             return r.inserted_ids
         except Exception as e:
             self.logger.exception(e)
@@ -203,7 +208,7 @@ class DocumentDBDao(object):
                     )
                 )
             t2 = perf_log("indexing_buffer", t1)
-            self._collection.bulk_write(requests)
+            self._tasks_collection.bulk_write(requests)
             perf_log("bulk_write", t2)
             return True
         except Exception as e:
@@ -214,7 +219,7 @@ class DocumentDBDao(object):
         if type(ids_list) != list:
             ids_list = [ids_list]
         try:
-            self._collection.delete_many({"_id": {"$in": ids_list}})
+            self._tasks_collection.delete_many({"_id": {"$in": ids_list}})
             return True
         except Exception as e:
             self.logger.exception(e)
@@ -224,7 +229,7 @@ class DocumentDBDao(object):
         if type(keys_list) != list:
             keys_list = [keys_list]
         try:
-            self._collection.delete_many({key_name: {"$in": keys_list}})
+            self._tasks_collection.delete_many({key_name: {"$in": keys_list}})
             return True
         except Exception as e:
             self.logger.exception(e)
@@ -232,7 +237,52 @@ class DocumentDBDao(object):
 
     def count(self) -> int:
         try:
-            return self._collection.count_documents({})
+            return self._tasks_collection.count_documents({})
         except Exception as e:
             self.logger.exception(e)
             return -1
+
+    def workflow_insert_or_update(
+        self, workflow_id: str, _dict: Dict
+    ) -> bool:
+        _filter = {TaskMessage.get_workflow_id_field(): workflow_id}
+        update = {"$set": _dict}
+        try:
+            result = self._wfs_collection.update_one(
+                _filter, update, upsert=True
+            )
+            return (result.upserted_id is not None) or result.raw_result[
+                "updatedExisting"
+            ]
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
+    def workflow_query(
+        self,
+        filter: Dict = None,
+        projection: List[str] = None,
+        limit: int = 0,
+        sort: List[Tuple] = None,
+        remove_json_unserializables=True,
+    ) -> List[Dict]:
+        # TODO refactor: reuse code for task_query instead of copy & paste
+        _projection = {}
+        if projection is not None:
+            for proj_field in projection:
+                _projection[proj_field] = 1
+
+        if remove_json_unserializables:
+            _projection.update({"_id": 0, "timestamp": 0})
+        try:
+            rs = self._wfs_collection.find(
+                filter=filter,
+                projection=_projection,
+                limit=limit,
+                sort=sort,
+            )
+            lst = list(rs)
+            return lst
+        except Exception as e:
+            self.logger.exception(e)
+            return None
