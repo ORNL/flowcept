@@ -4,7 +4,6 @@ from flowcept.flowcept_api.db_api import DBAPI
 
 
 class WorkflowDBTest(unittest.TestCase):
-
     def test_wf_dao(self):
         dbapi = DBAPI()
         assert dbapi.insert_or_update_workflow(workflow_id="wftest")
@@ -15,9 +14,7 @@ class WorkflowDBTest(unittest.TestCase):
             comment="comment test",
         )
 
-        assert dbapi.insert_or_update_workflow(
-            workflow_id="wftest2"
-        )
+        assert dbapi.insert_or_update_workflow(workflow_id="wftest2")
 
         wfdata = dbapi.get_workflow(workflow_id="wftest2")
         assert wfdata is not None

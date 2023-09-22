@@ -2,6 +2,8 @@ import unittest
 from time import sleep
 from uuid import uuid4
 
+from flowcept.configs import MONGO_INSERTION_BUFFER_TIME
+
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import TensorboardInterceptor, FlowceptConsumerAPI
@@ -142,11 +144,11 @@ class TestTensorboard(unittest.TestCase):
         self._init_consumption()
         wf_id = self.test_run_tensorboard_hparam_tuning()
         self.logger.debug("Done training. Sleeping some time...")
-        watch_interval_sec = self.interceptor.settings.watch_interval_sec
+        watch_interval_sec = MONGO_INSERTION_BUFFER_TIME
         # Making sure we'll wait until next watch cycle
         sleep(watch_interval_sec * 5)
         TestTensorboard.consumer.stop()
-        sleep(watch_interval_sec * 5)
+        sleep(watch_interval_sec * 10)
         assert self.interceptor.state_manager.count() == 16
         doc_dao = DocumentDBDao()
         docs = doc_dao.task_query({"workflow_id": wf_id})
