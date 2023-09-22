@@ -4,7 +4,7 @@ from flowcept.flowcept_api.db_api import DBAPI
 
 
 class WorkflowDBTest(unittest.TestCase):
-    å
+
     def test_wf_dao(self):
         dbapi = DBAPI()
         assert dbapi.insert_or_update_workflow(workflow_id="wftest")
