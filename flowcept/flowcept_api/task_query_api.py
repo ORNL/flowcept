@@ -98,7 +98,7 @@ class TaskQueryAPI(object):
 
         else:
             dao = DocumentDBDao()
-            docs = dao.query(
+            docs = dao.task_query(
                 filter,
                 projection,
                 limit,

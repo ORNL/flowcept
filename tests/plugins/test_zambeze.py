@@ -67,7 +67,7 @@ class TestZambeze(unittest.TestCase):
         self._connection.close()
         sleep(10)
         doc_dao = DocumentDBDao()
-        assert len(doc_dao.query({"task_id": act_id})) > 0
+        assert len(doc_dao.task_query({"task_id": act_id})) > 0
         self.consumer.stop()
         sleep(2)
 

@@ -15,7 +15,7 @@ class TaskMessages(Resource):
             filter = {"task_id": task_id}
 
         dao = DocumentDBDao()
-        docs = dao.query(filter)
+        docs = dao.task_query(filter)
         if len(docs):
             return jsonify(docs), 201
         else:
