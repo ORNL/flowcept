@@ -9,13 +9,16 @@ def curate_task_msg(task_msg_dict: dict):
         if field not in task_msg_dict:
             continue
         field_val = task_msg_dict[field]
-        if not field_val:
+        if type(field_val) == dict and not field_val:
             task_msg_dict.pop(field)  # removing empty fields
             continue
         if type(field_val) == dict:
             original_field_val = field_val.copy()
             for k in original_field_val:
-                if not original_field_val[k]:
+                if (
+                    type(original_field_val[k]) == dict
+                    and not original_field_val[k]
+                ):
                     field_val.pop(k)  # removing inner empty fields
             task_msg_dict[field] = field_val
         else:
@@ -35,7 +38,7 @@ def remove_empty_fields_from_dict(obj: dict):
     for key, value in list(obj.items()):
         if isinstance(value, dict):
             remove_empty_fields_from_dict(value)
-            if not value:
+            if value is None:
                 del obj[key]
         elif value in (None, ""):
             del obj[key]
