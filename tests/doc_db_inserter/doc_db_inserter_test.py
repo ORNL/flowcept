@@ -49,7 +49,8 @@ class TestDocDBInserter(unittest.TestCase):
                 "myid": uid,
                 "debug": True,
                 "name": "Renan2",
-                "used": {"bla": 2},
+                "empty_string": "",
+                "used": {"bla": 2, "lala": False},
             },
         ]
         self.doc_dao.insert_and_update_many("myid", docs)
