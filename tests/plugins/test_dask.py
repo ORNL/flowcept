@@ -112,6 +112,8 @@ class TestDask(unittest.TestCase):
         i1 = [
             {"x": np.random.random(), "y": np.random.random()},
             {"x": np.random.random()},
+            {"x": 4, "batch_norm": False},
+            {"x": 6, "batch_norm": True, "empty_string": ""},
         ]
         wf_id = f"wf_{uuid4()}"
         o1 = TestDask.client.map(dummy_func4, i1, workflow_id=wf_id)
