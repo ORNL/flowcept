@@ -10,6 +10,7 @@ from flowcept.configs import (
     REDIS_HOST,
     REDIS_PORT,
     REDIS_CHANNEL,
+    REDIS_PASSWORD,
     REDIS_STARTED_MQ_THREADS_KEY,
     JSON_SERIALIZER,
     REDIS_BUFFER_SIZE,
@@ -27,7 +28,9 @@ class MQDao:
 
     def __init__(self):
         self.logger = FlowceptLogger().get_logger()
-        self._redis = Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+        self._redis = Redis(
+            host=REDIS_HOST, port=REDIS_PORT, db=0, password=REDIS_PASSWORD
+        )
         self._buffer = None
         self._time_thread: Thread = None
         self._previous_time = -1
