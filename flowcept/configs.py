@@ -48,6 +48,7 @@ CAMPAIGN_ID = settings["experiment"].get("campaign_id", "super_campaign")
 REDIS_HOST = settings["main_redis"].get("host", "localhost")
 REDIS_PORT = int(settings["main_redis"].get("port", "6379"))
 REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
+REDIS_PASSWORD = settings["main_redis"].get("password", None)
 REDIS_STARTED_MQ_THREADS_KEY = "started_mq_threads"
 REDIS_BUFFER_SIZE = int(settings["main_redis"].get("buffer_size", 50))
 REDIS_INSERTION_BUFFER_TIME = int(

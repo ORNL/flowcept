@@ -70,6 +70,23 @@ And other variables depending on the Plugin. For instance, in Dask, timestamp cr
 
 - [Zambeze Repository](https://github.com/ORNL/zambeze)
 
+## Cite us
+
+If you used FlowCept for your research, consider citing our paper.
+
+```latex
+@inproceedings{souza2023towards,  
+  author = {Souza, Renan and Skluzacek, Tyler J and Wilkinson, Sean R and Ziatdinov, Maxim and da Silva, Rafael Ferreira},
+  booktitle = {IEEE International Conference on e-Science},
+  doi = {10.1109/e-Science58273.2023.10254822},
+  link = {https://doi.org/10.1109/e-Science58273.2023.10254822},
+  pdf = {https://arxiv.org/pdf/2308.09004.pdf},
+  title = {Towards Lightweight Data Integration using Multi-workflow Provenance and Data Observability},
+  year = {2023}
+}
+
+```
+
 ## Acknowledgement
 
 This research uses resources of the Oak Ridge Leadership Computing Facility 
