@@ -74,6 +74,14 @@ And other variables depending on the Plugin. For instance, in Dask, timestamp cr
 
 If you used FlowCept for your research, consider citing our paper.
 
+```
+Towards Lightweight Data Integration using Multi-workflow Provenance and Data Observability
+R. Souza, T. Skluzacek, S. Wilkinson, M. Ziatdinov, and R. da Silva
+19th IEEE International Conference on e-Science, 2023.
+```
+
+**Bibtex:**
+
 ```latex
 @inproceedings{souza2023towards,  
   author = {Souza, Renan and Skluzacek, Tyler J and Wilkinson, Sean R and Ziatdinov, Maxim and da Silva, Rafael Ferreira},
