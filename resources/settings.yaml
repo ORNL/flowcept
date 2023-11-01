@@ -21,13 +21,16 @@ experiment:
   experiment_id: flowcept_experiment
 
 main_redis:
+  uri: null # Optional Redis URI, if available
   host: localhost
   port: 6379
+  password: null # Optional Redis password
   channel: interception
   buffer_size: 50
   insertion_buffer_time_secs: 5
 
 mongodb:
+  uri: null #your MongoDB URI if available
   host: localhost
   port: 27017
   db: flowcept
