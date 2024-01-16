@@ -78,9 +78,16 @@ class MQDao:
             if len(self._buffer):
                 pipe = self._redis.pipeline()
                 for message in self._buffer:
-                    pipe.publish(
-                        REDIS_CHANNEL, json.dumps(message, cls=MQDao.ENCODER)
-                    )
+                    try:
+                        pipe.publish(
+                            REDIS_CHANNEL,
+                            json.dumps(message, cls=MQDao.ENCODER),
+                        )
+                    except Exception as e:
+                        self.logger.error(
+                            "Critical error as some messages couldn't be flushed! Check the messages' contents!"
+                        )
+                        self.logger.exception(e)
                 t0 = 0
                 if PERF_LOG:
                     t0 = time()

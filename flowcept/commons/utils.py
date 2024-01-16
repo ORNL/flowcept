@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
 import json
 from time import time
+
+import numpy as np
+
 from flowcept.configs import PERF_LOG
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_message import Status
@@ -56,6 +59,18 @@ class GenericJSONEncoder(json.JSONEncoder):
                 return str(obj)
             except:
                 return None
+        elif (
+            isinstance(obj, np.int)
+            or isinstance(obj, np.int32)
+            or isinstance(obj, np.int64)
+        ):
+            return int(obj)
+        elif (
+            isinstance(obj, np.float)
+            or isinstance(obj, np.float32)
+            or isinstance(obj, np.float64)
+        ):
+            return float(obj)
         return super().default(obj)
 
 

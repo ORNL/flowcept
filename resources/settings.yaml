@@ -10,6 +10,7 @@ project:
     mem: true
     disk: true
     network: true
+
   
 log:
   log_path: flowcept.log
@@ -62,15 +63,9 @@ plugins:
     host: localhost
     port: 5672
     queue_name: hello
-    key_values_to_filter:
-      - key: activity_status
-        value: CREATED
-    keys_to_intercept:
-      - arguments
-      - kwargs
-      - files
-      - name
-      - activity_id
+#    key_values_to_filter:
+#      - key: activity_status
+#        value: CREATED
     enrich_messages: true
 
   mlflow:
