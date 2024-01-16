@@ -61,7 +61,7 @@ class TestZambeze(unittest.TestCase):
             routing_key=self._queue_name,
             body=json.dumps(msg.__dict__),
         )
-
+        print("Zambeze Activity_id", act_id)
         self.logger.debug(" [x] Sent msg")
         sleep(5)
         self._connection.close()

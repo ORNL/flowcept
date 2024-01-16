@@ -60,7 +60,8 @@ def get_settings(plugin_key: str) -> BaseSettings:
 
     # Add any specific setting builder below
     if kind == Vocabulary.Settings.ZAMBEZE_KIND:
-        settings_obj.key_values_to_filter = [
-            KeyValue(**item) for item in settings_obj.key_values_to_filter
-        ]
+        if settings_obj.key_values_to_filter is not None:
+            settings_obj.key_values_to_filter = [
+                KeyValue(**item) for item in settings_obj.key_values_to_filter
+            ]
     return settings_obj
