@@ -1,4 +1,3 @@
-from sys import platform
 import os
 import re
 from setuptools import setup, find_packages
@@ -43,9 +42,7 @@ extras_requirement_keys = [
     "zambeze",
     "mlflow",
     "tensorboard",
-    "mongo",
     "dask",
-    "webserver",
 ]
 
 extras_require = dict()

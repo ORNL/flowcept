@@ -1,4 +1,9 @@
 PyYAML==6.0.1
 redis==4.4.2
 psutil==5.9.5
+pymongo==4.3.3
 nvidia-ml-py==11.525.131
+Werkzeug==2.2.2
+flask==2.2.2
+requests==2.28.2
+flask_restful==0.3.9
