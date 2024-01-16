@@ -11,16 +11,21 @@ import random
 PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
 SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
 if SETTINGS_PATH is None:
-    project_dir_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..")
+    raise Exception(
+        "Please define an environment variable with the ABSOLUTE path to "
+        "the settings.yaml file. There is a sample file "
+        "in the resources directory under the project's root path."
     )
-    SETTINGS_PATH = os.path.join(
-        project_dir_path, "resources", "settings.yaml"
-    )
+    # project_dir_path = os.path.abspath(
+    #     os.path.join(os.path.dirname(__file__), "..")
+    # )
+    # SETTINGS_PATH = os.path.join(
+    #     project_dir_path, "resources", "settings.yaml"
+    # )
 
-if not os.path.isabs(SETTINGS_PATH):
-    # TODO: check if we really need abs path
-    raise Exception("Please use an absolute path for the settings.yaml")
+# if not os.path.isabs(SETTINGS_PATH):
+#     # TODO: check if we really need abs path
+#     raise Exception("Please use an absolute path for the settings.yaml")
 
 
 with open(SETTINGS_PATH) as f:
@@ -99,7 +104,9 @@ MQ_TYPE = settings["project"].get("mq_type", "redis")
 DEBUG_MODE = settings["project"].get("debug", False)
 PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
+
 TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
+RAI_CAPTURE = settings["project"].get("responsible_ai_capture", None)
 
 ######################
 # SYS METADATA #
