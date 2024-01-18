@@ -26,8 +26,7 @@ class ZambezeSettings(BaseSettings):
     host: str
     port: int
     queue_name: str
-    key_values_to_filter: List[KeyValue]
-    keys_to_intercept: List[str]
+    key_values_to_filter: List[KeyValue] = None
     kind = "zambeze"
 
     def __post_init__(self):
