@@ -94,7 +94,7 @@ class TelemetryCapture:
                     p.cpu_number = psutil_p.cpu_num()
                 except:
                     pass
-                p.memory = psutil_p.memory_info()
+                p.memory = psutil_p.memory_info()._asdict()
                 p.memory_percent = psutil_p.memory_percent()
                 p.cpu_times = psutil_p.cpu_times()._asdict()
                 p.cpu_percent = psutil_p.cpu_percent()
