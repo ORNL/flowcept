@@ -11,22 +11,14 @@ import random
 PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
 SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
 if SETTINGS_PATH is None:
-    raise Exception(
-        "Please define an environment variable with the ABSOLUTE path to "
-        "the settings.yaml file. There is a sample file "
-        "in the resources directory under the project's root path."
-    )
-    # project_dir_path = os.path.abspath(
-    #     os.path.join(os.path.dirname(__file__), "..")
-    # )
-    # SETTINGS_PATH = os.path.join(
-    #     project_dir_path, "resources", "settings.yaml"
-    # )
+    _settings_dir = os.path.expanduser(f"~/.{PROJECT_NAME}")
+    SETTINGS_PATH = os.path.join(_settings_dir, "settings.yaml")
 
-# if not os.path.isabs(SETTINGS_PATH):
-#     # TODO: check if we really need abs path
-#     raise Exception("Please use an absolute path for the settings.yaml")
-
+    if not os.path.exists(SETTINGS_PATH):
+        raise Exception(
+            "Settings file (settings.yaml) was not found. You should either define the environment variable FLOWCEPT_SETTINGS_PATH with its path or install Flowcept's package to create the directory ~/.flowcept with the file in it.\n"
+            "A sample settings file is found resources directory under the project's root path."
+        )
 
 with open(SETTINGS_PATH) as f:
     settings = yaml.safe_load(f)
