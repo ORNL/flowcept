@@ -8,8 +8,12 @@ import requests
 import inspect
 from time import sleep
 from uuid import uuid4
+from datetime import datetime, timedelta
 
-from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
+from flowcept.commons.flowcept_dataclasses.task_message import (
+    TaskMessage,
+    Status,
+)
 from flowcept.configs import WEBSERVER_PORT, WEBSERVER_HOST
 from flowcept.flowcept_api.task_query_api import TaskQueryAPI
 from flowcept.flowcept_webserver.app import app, BASE_ROUTE
@@ -17,10 +21,18 @@ from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 
 
-def gen_some_mock_multi_workflow_data2(size=1):
+def gen_some_mock_multi_workflow_data(size=1):
+    """
+    Generates a multi-workflow composed of two workflows.
+    :param size: Maximum number of tasks to generate. The actual maximum will be 2*size because this mock data has two workflows.
+    :return:
+    """
     new_docs = []
     new_task_ids = []
-    for _ in range(0, size):
+
+    _end = datetime.now()
+
+    for i in range(0, size):
         t1 = TaskMessage()
         t1.task_id = str(uuid4())
         t1.workflow_name = "generate_hyperparams"
@@ -32,9 +44,14 @@ def gen_some_mock_multi_workflow_data2(size=1):
             "epochs": random.randint(1, 100),
             "batch_size": random.randint(16, 20),
         }
-        t1.started_at = 100
-        t1.ended_at = 200
+
+        _start = _end + timedelta(minutes=i)
+        _end = _start + timedelta(minutes=i + 1)
+
+        t1.started_at = int(_start.timestamp())
+        t1.ended_at = int(_end.timestamp())
         t1.campaign_id = "mock_campaign"
+        t1.status = Status.FINISHED.name
         t1.user = "user_test"
         new_docs.append(t1.to_dict())
         new_task_ids.append(t1.task_id)
@@ -50,8 +67,13 @@ def gen_some_mock_multi_workflow_data2(size=1):
             "loss": random.uniform(0.5, 50),
             "accuracy": random.uniform(0.5, 0.95),
         }
-        t2.started_at = 300
-        t2.ended_at = 400
+
+        _start = _end + timedelta(minutes=i)
+        _end = _start + timedelta(minutes=i + 1)
+
+        t2.started_at = int(_start.timestamp())
+        t2.ended_at = int(_end.timestamp())
+        t2.status = Status.FINISHED.name
         t2.campaign_id = t1.campaign_id
         t2.user = t1.campaign_id
         new_docs.append(t2.to_dict())
@@ -60,10 +82,13 @@ def gen_some_mock_multi_workflow_data2(size=1):
     return new_docs, new_task_ids
 
 
-def gen_some_mock_data(size=1):
-    fpath = os.path.join(
-        pathlib.Path(__file__).parent.resolve(), "sample_data.json"
-    )
+def gen_some_mock_data(size=1, with_telemetry=False):
+    if with_telemetry:
+        fname = "sample_data_with_telemetry.json"
+    else:
+        fname = "sample_data.json"
+
+    fpath = os.path.join(pathlib.Path(__file__).parent.resolve(), fname)
     with open(fpath) as f:
         docs = json.load(f)
 
@@ -191,7 +216,7 @@ class QueryTest(unittest.TestCase):
         assert c0 == c1
 
     def test_aggregation(self):
-        docs, task_ids = gen_some_mock_multi_workflow_data2(size=100)
+        docs, task_ids = gen_some_mock_multi_workflow_data(size=100)
 
         dao = DocumentDBDao()
         c0 = dao.count()
@@ -246,6 +271,25 @@ class QueryTest(unittest.TestCase):
             if doc.get("max_generated_accuracy") is not None:
                 assert doc["max_generated_accuracy"] > 0
 
+        dao.delete_keys("task_id", task_ids)
+        c1 = dao.count()
+        assert c0 == c1
+
+    def test_query_df(self):
+        max_docs = 5
+        docs, task_ids = gen_some_mock_multi_workflow_data(size=max_docs)
+
+        dao = DocumentDBDao()
+        c0 = dao.count()
+        dao.insert_many(docs)
+        sleep(1)
+        api = TaskQueryAPI()
+
+        _filter = {"task_id": {"$in": task_ids}}
+        res = api.query_returning_df(
+            _filter, remove_json_unserializables=False
+        )
+        assert len(res) == max_docs * 2
         dao.delete_keys("task_id", task_ids)
         c1 = dao.count()
         assert c0 == c1
