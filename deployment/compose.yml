@@ -22,9 +22,9 @@ services:
 #    ports:
 #      - 60379:6379
 
-#  zambeze_rabbitmq:
-#    container_name: zambeze_rabbitmq
-#    image: rabbitmq:3.11-management
-#    ports:
-#      - 5672:5672
-#      - 15672:15672
+  zambeze_rabbitmq:
+    container_name: zambeze_rabbitmq
+    image: rabbitmq:3.11-management
+    ports:
+      - 5672:5672
+      - 15672:15672
