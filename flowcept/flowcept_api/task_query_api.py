@@ -1,5 +1,5 @@
 from typing import List, Dict, Tuple
-from datetime import datetime, timedelta
+from datetime import timedelta
 import json
 
 import pandas as pd
@@ -17,6 +17,7 @@ from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
 
 class TaskQueryAPI(object):
+
     ASC = pymongo.ASCENDING
     DESC = pymongo.DESCENDING
 
@@ -27,9 +28,9 @@ class TaskQueryAPI(object):
         port: int = WEBSERVER_PORT,
         auth=None,
     ):
-        self.logger = FlowceptLogger().get_logger()
-        self.with_webserver = with_webserver
-        if self.with_webserver:
+        self._logger = FlowceptLogger().get_logger()
+        self._with_webserver = with_webserver
+        if self._with_webserver:
             self._host = host
             self._port = port
             _base_url = f"http://{self._host}:{self._port}"
@@ -38,7 +39,7 @@ class TaskQueryAPI(object):
                 r = requests.get(_base_url)
                 if r.status_code > 300:
                     raise Exception(r.text)
-                self.logger.debug(
+                self._logger.debug(
                     "Ok, webserver is ready to receive requests."
                 )
             except Exception as e:
@@ -101,7 +102,7 @@ class TaskQueryAPI(object):
             )
         """
 
-        if self.with_webserver:
+        if self._with_webserver:
             request_data = {"filter": json.dumps(filter)}
             if projection:
                 request_data["projection"] = json.dumps(projection)
@@ -135,7 +136,7 @@ class TaskQueryAPI(object):
             if docs:
                 return docs
             else:
-                self.logger.error("Error when executing query.")
+                self._logger.error("Error when executing query.")
 
     def _get_dataframe_from_task_docs(
         self, docs: [List[Dict]], shift_hours=0
@@ -161,18 +162,18 @@ class TaskQueryAPI(object):
                         _df[column_name], unit="s"
                     ) + timedelta(hours=_shift_hours)
                 except Exception as _e:
-                    self.logger.exception(_e)
+                    self._logger.exception(_e)
 
         try:
             df = pd.json_normalize(docs)
         except Exception as e:
-            self.logger.exception(e)
+            self._logger.exception(e)
             return None
 
         try:
             df["status"] = df.apply(__get_doc_status, axis=1)
         except Exception as e:
-            self.logger.exception(e)
+            self._logger.exception(e)
 
         try:
             df = df.drop(
@@ -180,7 +181,7 @@ class TaskQueryAPI(object):
                 errors="ignore",
             )
         except Exception as e:
-            self.logger.exception(e)
+            self._logger.exception(e)
 
         for col in [
             "started_at",
@@ -197,7 +198,7 @@ class TaskQueryAPI(object):
                     + timedelta(hours=shift_hours)
                 )
             except Exception as e:
-                self.logger.exception(e)
+                self._logger.exception(e)
 
         try:
             df["elapsed_time"] = df["ended_at"] - df["started_at"]
@@ -207,6 +208,6 @@ class TaskQueryAPI(object):
                 else -1
             )
         except Exception as e:
-            self.logger.exception(e)
+            self._logger.exception(e)
 
         return df
