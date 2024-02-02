@@ -1,10 +1,15 @@
-import json
 from typing import List, Dict, Tuple
+from datetime import datetime, timedelta
+import json
 
+import pandas as pd
 import pymongo
 import requests
 
+from bson.objectid import ObjectId
+
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept.commons.flowcept_dataclasses.task_message import Status
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import WEBSERVER_HOST, WEBSERVER_PORT
 from flowcept.flowcept_webserver.app import BASE_ROUTE
@@ -40,6 +45,27 @@ class TaskQueryAPI(object):
                 raise Exception(
                     f"Error when accessing the webserver at {_base_url}"
                 )
+
+    def query_returning_df(
+        self,
+        filter: Dict = None,
+        projection: List[str] = None,
+        limit: int = 0,
+        sort: List[Tuple] = None,
+        aggregation: List[Tuple] = None,
+        remove_json_unserializables=True,
+        shift_hours: int = 0,
+    ) -> pd.DataFrame:
+        docs = self.query(
+            filter,
+            projection,
+            limit,
+            sort,
+            aggregation,
+            remove_json_unserializables,
+        )
+        df = self._get_dataframe_from_task_docs(docs, shift_hours)
+        return df
 
     def query(
         self,
@@ -109,4 +135,78 @@ class TaskQueryAPI(object):
             if docs:
                 return docs
             else:
-                self.logger.error("Exception when executing query.")
+                self.logger.error("Error when executing query.")
+
+    def _get_dataframe_from_task_docs(
+        self, docs: [List[Dict]], shift_hours=0
+    ) -> pd.DataFrame:
+        def __get_doc_status(row):
+            if row.get("status"):
+                return row.get("status")
+            elif row.get("finished"):
+                return Status.FINISHED.name
+            elif row.get("error"):
+                return Status.ERROR.name
+            elif row.get("running"):
+                return Status.RUNNING.name
+            elif row.get("submitted"):
+                return Status.SUBMITTED.name
+            else:
+                return Status.UNKNOWN.name
+
+        def __to_datetime(_df, column_name, _shift_hours=0):
+            if column_name in _df.columns:
+                try:
+                    _df[column_name] = pd.to_datetime(
+                        _df[column_name], unit="s"
+                    ) + timedelta(hours=_shift_hours)
+                except Exception as _e:
+                    self.logger.exception(_e)
+
+        try:
+            df = pd.json_normalize(docs)
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+        try:
+            df["status"] = df.apply(__get_doc_status, axis=1)
+        except Exception as e:
+            self.logger.exception(e)
+
+        try:
+            df = df.drop(
+                columns=["finished", "error", "running", "submitted"],
+                errors="ignore",
+            )
+        except Exception as e:
+            self.logger.exception(e)
+
+        for col in [
+            "started_at",
+            "ended_at",
+            "submitted_at",
+            "utc_timestamp",
+        ]:
+            __to_datetime(df, col)
+
+        if "_id" in df.columns:
+            try:
+                df["doc_generated_time"] = df["_id"].apply(
+                    lambda _id: ObjectId(_id).generation_time
+                    + timedelta(hours=shift_hours)
+                )
+            except Exception as e:
+                self.logger.exception(e)
+
+        try:
+            df["elapsed_time"] = df["ended_at"] - df["started_at"]
+            df["elapsed_time"] = df["elapsed_time"].apply(
+                lambda x: x.total_seconds()
+                if isinstance(x, timedelta)
+                else -1
+            )
+        except Exception as e:
+            self.logger.exception(e)
+
+        return df
