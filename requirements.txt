@@ -7,3 +7,4 @@ Werkzeug==2.2.2
 flask==2.2.2
 requests==2.28.2
 flask_restful==0.3.9
+pandas==2.0.3
