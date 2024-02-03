@@ -41,6 +41,7 @@ def create_settings_file():
     source_file = "resources/sample_settings.yaml"
     destination_file = os.path.join(directory_path, "settings.yaml")
     shutil.copyfile(source_file, destination_file)
+    print(f"Copied settings file to {destination_file}")
 
 
 requirements = get_requirements("requirements.txt")
