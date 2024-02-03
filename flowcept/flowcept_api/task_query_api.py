@@ -11,13 +11,17 @@ from bson.objectid import ObjectId
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_dataclasses.task_message import Status
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.commons.query_utils import (
+    get_doc_status,
+    to_datetime,
+    calculate_telemetry_diff_for_docs,
+)
 from flowcept.configs import WEBSERVER_HOST, WEBSERVER_PORT
 from flowcept.flowcept_webserver.app import BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
 
 class TaskQueryAPI(object):
-
     ASC = pymongo.ASCENDING
     DESC = pymongo.DESCENDING
 
@@ -55,6 +59,7 @@ class TaskQueryAPI(object):
         sort: List[Tuple] = None,
         aggregation: List[Tuple] = None,
         remove_json_unserializables=True,
+        calculate_telemetry_diff=False,
         shift_hours: int = 0,
     ) -> pd.DataFrame:
         docs = self.query(
@@ -65,7 +70,9 @@ class TaskQueryAPI(object):
             aggregation,
             remove_json_unserializables,
         )
-        df = self._get_dataframe_from_task_docs(docs, shift_hours)
+        df = self._get_dataframe_from_task_docs(
+            docs, calculate_telemetry_diff, shift_hours
+        )
         return df
 
     def query(
@@ -139,30 +146,16 @@ class TaskQueryAPI(object):
                 self._logger.error("Error when executing query.")
 
     def _get_dataframe_from_task_docs(
-        self, docs: [List[Dict]], shift_hours=0
+        self,
+        docs: [List[Dict]],
+        calculate_telemetry_diff=False,
+        shift_hours=0,
     ) -> pd.DataFrame:
-        def __get_doc_status(row):
-            if row.get("status"):
-                return row.get("status")
-            elif row.get("finished"):
-                return Status.FINISHED.name
-            elif row.get("error"):
-                return Status.ERROR.name
-            elif row.get("running"):
-                return Status.RUNNING.name
-            elif row.get("submitted"):
-                return Status.SUBMITTED.name
-            else:
-                return Status.UNKNOWN.name
-
-        def __to_datetime(_df, column_name, _shift_hours=0):
-            if column_name in _df.columns:
-                try:
-                    _df[column_name] = pd.to_datetime(
-                        _df[column_name], unit="s"
-                    ) + timedelta(hours=_shift_hours)
-                except Exception as _e:
-                    self._logger.exception(_e)
+        if calculate_telemetry_diff:
+            try:
+                docs = calculate_telemetry_diff_for_docs(docs)
+            except Exception as e:
+                self._logger.exception(e)
 
         try:
             df = pd.json_normalize(docs)
@@ -171,7 +164,7 @@ class TaskQueryAPI(object):
             return None
 
         try:
-            df["status"] = df.apply(__get_doc_status, axis=1)
+            df["status"] = df.apply(get_doc_status, axis=1)
         except Exception as e:
             self._logger.exception(e)
 
@@ -189,7 +182,7 @@ class TaskQueryAPI(object):
             "submitted_at",
             "utc_timestamp",
         ]:
-            __to_datetime(df, col)
+            to_datetime(self._logger, df, col, shift_hours)
 
         if "_id" in df.columns:
             try:
