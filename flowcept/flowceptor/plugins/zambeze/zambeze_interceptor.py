@@ -50,7 +50,7 @@ class ZambezeInterceptor(BaseInterceptor):
         try:
             self._channel.basic_cancel(self._consumer_tag)
         except Exception as e:
-            self.logger.warn(
+            self.logger.warning(
                 f"This exception is expected to occur after "
                 f"channel.basic_cancel: {e}"
             )

@@ -19,6 +19,7 @@ from flowcept.flowcept_api.task_query_api import TaskQueryAPI
 from flowcept.flowcept_webserver.app import app, BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept.analytics.analytics_utils import clean_telemetry_dataframe
 
 
 def gen_some_mock_multi_workflow_data(size=1):
@@ -293,3 +294,29 @@ class QueryTest(unittest.TestCase):
         dao.delete_keys("task_id", task_ids)
         c1 = dao.count()
         assert c0 == c1
+
+    def test_query_df_telemetry(self):
+        max_docs = 3
+        docs, task_ids = gen_some_mock_data(
+            size=max_docs, with_telemetry=True
+        )
+
+        dao = DocumentDBDao()
+        c0 = dao.count()
+        dao.insert_many(docs)
+        sleep(1)
+        api = TaskQueryAPI()
+
+        _filter = {"task_id": {"$in": task_ids}}
+        df = api.query_returning_df(
+            _filter,
+            remove_json_unserializables=False,
+            calculate_telemetry_diff=True,
+        )
+        dao.delete_keys("task_id", task_ids)
+        c1 = dao.count()
+        assert c0 == c1
+
+        assert len(df) == max_docs
+        cleaned_df = clean_telemetry_dataframe(df)
+        assert len(df.columns) > len(cleaned_df)
