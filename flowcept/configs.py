@@ -14,11 +14,11 @@ if SETTINGS_PATH is None:
     _settings_dir = os.path.expanduser(f"~/.{PROJECT_NAME}")
     SETTINGS_PATH = os.path.join(_settings_dir, "settings.yaml")
 
-    if not os.path.exists(SETTINGS_PATH):
-        raise Exception(
-            "Settings file (settings.yaml) was not found. You should either define the environment variable FLOWCEPT_SETTINGS_PATH with its path or install Flowcept's package to create the directory ~/.flowcept with the file in it.\n"
-            "A sample settings file is found resources directory under the project's root path."
-        )
+if not os.path.exists(SETTINGS_PATH):
+    raise Exception(
+        f"Settings file {SETTINGS_PATH} was not found. You should either define the environment variable FLOWCEPT_SETTINGS_PATH with its path or install Flowcept's package to create the directory ~/.flowcept with the file in it.\n"
+        "A sample settings file is found resources directory under the project's root path."
+    )
 
 with open(SETTINGS_PATH) as f:
     settings = yaml.safe_load(f)
