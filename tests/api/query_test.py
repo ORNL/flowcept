@@ -96,6 +96,7 @@ def gen_some_mock_data(size=1, with_telemetry=False):
     i = 0
     new_docs = []
     new_task_ids = []
+    _end = datetime.now()
     for doc in docs:
         if i >= size:
             break
@@ -103,6 +104,12 @@ def gen_some_mock_data(size=1, with_telemetry=False):
         new_doc = doc.copy()
         new_id = str(uuid4())
         new_doc["task_id"] = new_id
+
+        _start = _end + timedelta(minutes=i)
+        _end = _start + timedelta(minutes=i + 1)
+
+        new_doc["started_at"] = int(_start.timestamp())
+        new_doc["ended_at"] = int(_end.timestamp())
         new_doc.pop("_id")
         new_docs.append(new_doc)
         new_task_ids.append(new_id)

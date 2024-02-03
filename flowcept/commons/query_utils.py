@@ -62,6 +62,9 @@ def calculate_telemetry_diff_for_docs(docs: List[Dict]):
         new_doc = doc.copy()
         telemetry_start = new_doc.get("telemetry_at_start")
         telemetry_end = new_doc.get("telemetry_at_end")
+        if telemetry_start is None or telemetry_end is None:
+            new_docs.append(new_doc)
+            continue
         new_telemetry = dict()
         for key in telemetry_start:
             new_telemetry[key] = _calc_telemetry_diff_for_row(

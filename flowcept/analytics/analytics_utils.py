@@ -6,11 +6,13 @@ def clean_telemetry_dataframe(
     df, logger: logging.Logger = None, drop_percent_cols=True, aggregate=True
 ):
     has_telemetry_diff_column = any(
-        col.startswith('telemetry_diff') for col in df.columns)
+        col.startswith("telemetry_diff") for col in df.columns
+    )
 
     if not has_telemetry_diff_column:
         raise Exception(
-            "We assume that the dataframe has telemetry differences.")
+            "We assume that the dataframe has telemetry differences."
+        )
 
     logmsg = f"Number of columns originally: {len(df.columns)}"
     if logger:

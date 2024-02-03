@@ -4,13 +4,11 @@ from flowcept.version import __version__
 from flowcept.flowcept_api.consumer_api import FlowceptConsumerAPI
 from flowcept.flowcept_api.task_query_api import TaskQueryAPI
 
-# TODO: Redo these try/excepts in a better way
 try:
     from flowcept.flowceptor.plugins.zambeze.zambeze_interceptor import (
         ZambezeInterceptor,
     )
 except:
-    print("Could not import Zambeze Interceptor")
     pass
 
 try:
@@ -18,14 +16,14 @@ try:
         TensorboardInterceptor,
     )
 except:
-    print("Could not import TensorBoard interceptor.")
+    pass
 
 try:
     from flowcept.flowceptor.plugins.mlflow.mlflow_interceptor import (
         MLFlowInterceptor,
     )
 except:
-    print("Could not import MLFlow Interceptor")
+    pass
 
 try:
     from flowcept.flowceptor.plugins.dask.dask_plugins import (
@@ -33,4 +31,11 @@ try:
         FlowceptDaskWorkerPlugin,
     )
 except:
-    print("Could not import Dask interceptor")
+    pass
+
+# from flowcept.flowceptor.decorators.responsible_ai import (
+#     model_explainer,
+#     model_profiler,
+# )
+
+from flowcept.flowcept_api import db_api

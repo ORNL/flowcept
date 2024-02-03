@@ -16,8 +16,13 @@ if SETTINGS_PATH is None:
 
 if not os.path.exists(SETTINGS_PATH):
     raise Exception(
-        f"Settings file {SETTINGS_PATH} was not found. You should either define the environment variable FLOWCEPT_SETTINGS_PATH with its path or install Flowcept's package to create the directory ~/.flowcept with the file in it.\n"
-        "A sample settings file is found resources directory under the project's root path."
+        f"Settings file {SETTINGS_PATH} was not found. "
+        f"You should either define the "
+        f"environment variable FLOWCEPT_SETTINGS_PATH with its path or "
+        f"install Flowcept's package to create the directory "
+        f"~/.flowcept with the file in it.\n"
+        "A sample settings file is found in the 'resources' directory "
+        "under the project's root path."
     )
 
 with open(SETTINGS_PATH) as f:
