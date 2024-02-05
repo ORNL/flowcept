@@ -1,4 +1,3 @@
-import os
 import yaml
 
 from flowcept.commons.vocabulary import Vocabulary
@@ -6,7 +5,7 @@ from flowcept.configs import (
     SETTINGS_PATH,
 )
 
-from flowcept.flowceptor.plugins.base_settings_dataclasses import (
+from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
     BaseSettings,
     KeyValue,
 )

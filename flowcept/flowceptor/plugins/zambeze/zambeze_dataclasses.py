@@ -1,7 +1,7 @@
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from dataclasses import dataclass
+from typing import List, Dict
 
-from flowcept.flowceptor.plugins.base_settings_dataclasses import (
+from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
     BaseSettings,
     KeyValue,
 )

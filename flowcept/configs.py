@@ -144,3 +144,10 @@ EXTRA_METADATA = settings.get("extra_metadata", None)
 
 WEBSERVER_HOST = settings["web_server"].get("host", "0.0.0.0")
 WEBSERVER_PORT = int(settings["web_server"].get("port", "5000"))
+
+################# Enabled ADAPTERS
+
+ADAPTERS = set()
+
+for adapter in settings.get("plugins", set()):
+    ADAPTERS.add(settings["plugins"][adapter].get("kind"))
