@@ -3,8 +3,17 @@ import numpy as np
 
 
 def clean_telemetry_dataframe(
-    df, logger: logging.Logger = None, drop_percent_cols=True, aggregate=True
+    df, logger: logging.Logger = None, drop_percent_cols=True, aggregate=False
 ):
+    """
+
+    :param df:
+    :param logger:
+    :param drop_percent_cols:
+    :param aggregate: We use some very simplistic forms of aggregations just
+     to reduce the complexity of the dataframe. Use this feature very carefully as the aggregation may be misleading.
+    :return:
+    """
     has_telemetry_diff_column = any(
         col.startswith("telemetry_diff") for col in df.columns
     )
@@ -28,10 +37,6 @@ def clean_telemetry_dataframe(
 
     # Select non-zero columns only
     dfa = dfa.loc[:, (dfa != 0).any()]
-    print(
-        "Number of columns after selecting only non-zero columns:",
-        len(dfa.columns),
-    )
 
     # Remove duplicate columns
     dfa_T = dfa.T
@@ -48,16 +53,15 @@ def clean_telemetry_dataframe(
     # cpu_times = dfa[['telemetry_diff.process.cpu_times.user',
     #                  'telemetry_diff.process.cpu_times.system']]
 
-    # cols_to_drop = [col for col in dfa.columns if "telemetry_at_start" in col]
-    # cols_to_drop.extend(
-    #     [col for col in dfa.columns if "telemetry_at_end" in col])
-    # dfa.drop(columns=cols_to_drop, inplace=True)
+    cols_to_drop = []
 
     if drop_percent_cols:
-        cols_to_drop = [col for col in dfa.columns if "percent" in col]
+        cols_to_drop.extend([col for col in dfa.columns if "percent" in col])
         dfa.drop(columns=cols_to_drop, inplace=True)
 
     if aggregate:
+        cols_to_drop = []
+
         network_cols = [
             col
             for col in dfa.columns
@@ -70,12 +74,31 @@ def clean_telemetry_dataframe(
         io_sum_cols = [col for col in dfa.columns if "disk.io_sum" in col]
         dfa["telemetry_diff.disk.activity"] = dfa[io_sum_cols].mean(axis=1)
 
-        cols_to_drop = [
-            col for col in dfa.columns if "disk.io_per_disk" in col
+        processes_nums_cols = [
+            col for col in dfa.columns if "telemetry_diff.process.num_" in col
         ]
+        dfa["telemetry_diff.process.activity"] = dfa[processes_nums_cols].sum(
+            axis=1
+        )
+
+        cols_to_drop.extend(processes_nums_cols)
         cols_to_drop.extend(network_cols)
         cols_to_drop.extend(io_sum_cols)
+
+        cols_to_drop.extend(
+            [col for col in dfa.columns if "disk.io_per_disk" in col]
+        )
+
         dfa.drop(columns=cols_to_drop, inplace=True)
+
+    # Removing any leftover cols
+    cols_to_drop = [
+        col
+        for col in dfa.columns
+        if "telemetry_at_start" in col or "telemetry_at_end" in col
+    ]
+    dfa.drop(columns=cols_to_drop, inplace=True)
+
     # cols_to_drop.extend(
     #     [col for col in dfa.columns if "telemetry_diff.memory." in col])
     # cols_to_drop.extend(
