@@ -53,6 +53,8 @@ extras_requirement_keys = [
     "mlflow",
     "tensorboard",
     "dask",
+    "nvidia",
+    "analytics",
 ]
 
 extras_require = dict()
@@ -86,6 +88,7 @@ keywords = [
     "model-management",
     "mlflow",
     "responsible-ai",
+    "data-analytics",
 ]
 
 short_description, long_description = get_descriptions()

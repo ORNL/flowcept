@@ -44,3 +44,7 @@ class DBAPI(object):
             return None
         if len(results):
             return results[0]
+
+    def dump_to_file(self, filter, output_file, export_format, should_zip):
+        # TODO: implement
+        raise NotImplementedError()
