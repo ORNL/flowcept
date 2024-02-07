@@ -1,6 +1,9 @@
 import logging
 import numpy as np
 import pandas as pd
+import re
+
+_CORRELATION_DF_HEADER = ["col_1", "col_2", "correlation"]
 
 
 def clean_dataframe(
@@ -11,7 +14,7 @@ def clean_dataframe(
     keep_task_id=False,
     keep_telemetry_percent_columns=False,
     aggregate_telemetry=False,
-):
+) -> pd.DataFrame:
     """
 
     :param keep_task_id:
@@ -107,24 +110,21 @@ def clean_dataframe(
     return dfa
 
 
-def check_correlation_between(
-    df: pd.DataFrame,
-    col_pattern1,
-    col_pattern2,
-    method="kendall",
-    threshold=0.1,
-):
-    correlation_matrix = df.filter(
-        regex=f"{col_pattern1}|{col_pattern2}"
-    ).corr(method=method)
+def _check_correlations(df, method="kendall", threshold=0, col_pattern1=None):
     # Create a mask to select the upper triangle of the correlation matrix
+    correlation_matrix = df.corr(method=method, numeric_only=True)
     mask = correlation_matrix.where(
         np.triu(np.ones(correlation_matrix.shape), k=1).astype(bool)
     )
     corrs = []
+    if col_pattern1 is not None:
+        col_pattern1_re = re.compile(col_pattern1)
+
     # Iterate through the selected upper triangle of the correlation matrix
     for i in range(len(mask.columns)):
-        if col_pattern1 not in mask.columns[i]:
+        if col_pattern1 is not None and not col_pattern1_re.match(
+            mask.columns[i]
+        ):
             continue
         for j in range(i + 1, len(mask.columns)):
             pair = (mask.columns[i], mask.columns[j])
@@ -136,58 +136,57 @@ def check_correlation_between(
     return corrs
 
 
-def _analyze_corrleations_this_vs_other(
-    df: pd.DataFrame, this: str, other: str, threshold=0.1
+def analyze_correlations(df: pd.DataFrame, method="kendall", threshold=0):
+    # Create a mask to select the upper triangle of the correlation matrix
+    return pd.DataFrame(
+        _check_correlations(df, method, threshold),
+        columns=_CORRELATION_DF_HEADER,
+    )
+
+
+def analyze_correlation_between(
+    df: pd.DataFrame,
+    col_pattern1,
+    col_pattern2,
+    method="kendall",
+    threshold=0,
 ):
-    this_cols = [col for col in df.columns if col.startswith(this)]
-    corrs = []
-    for col in this_cols:
-        corrs.append(
-            check_correlation_between(df, col, other, threshold=threshold)
-        )
-    return corrs
+    df = df.filter(regex=f"{col_pattern1}|{col_pattern2}")
+    return pd.DataFrame(
+        _check_correlations(df, method, threshold, col_pattern1),
+        columns=_CORRELATION_DF_HEADER,
+    )
 
 
-def analyze_correlations_used_vs_generated(df: pd.DataFrame, threshold=0.1):
-    return _analyze_corrleations_this_vs_other(
-        df, this="used", other="generated", threshold=threshold
+def analyze_correlations_used_vs_generated(df: pd.DataFrame, threshold=0):
+    return analyze_correlation_between(
+        df,
+        col_pattern1="^used[.]*",
+        col_pattern2="^generated[.]*",
+        threshold=threshold,
     )
 
 
 def analyze_correlations_used_vs_telemetry_diff(
-    df: pd.DataFrame, threshold=0.1
+    df: pd.DataFrame, threshold=0
 ):
-    return _analyze_corrleations_this_vs_other(
-        df, this="used", other="telemetry_diff", threshold=threshold
+    return analyze_correlation_between(
+        df,
+        col_pattern1="^used[.]*",
+        col_pattern2="^telemetry_diff[.]*",
+        threshold=threshold,
     )
 
 
 def analyze_correlations_generated_vs_telemetry_diff(
-    df: pd.DataFrame, threshold=0.1
+    df: pd.DataFrame, threshold=0
 ):
-    return _analyze_corrleations_this_vs_other(
-        df, this="generated", other="telemetry_diff", threshold=threshold
+    return analyze_correlation_between(
+        df,
+        col_pattern1="^generated[.]*",
+        col_pattern2="^telemetry_diff[.]*",
+        threshold=threshold,
     )
-
-
-def get_high_correlations(df: pd.DataFrame, method="kendall", threshold=0.5):
-    # Create a mask to select the upper triangle of the correlation matrix
-    correlation_matrix = df.corr(method=method)
-    mask = correlation_matrix.where(
-        np.triu(np.ones(correlation_matrix.shape), k=1).astype(bool)
-    )
-
-    high_corrs = []
-    # Iterate through the selected upper triangle of the correlation matrix
-    for i in range(len(mask.columns)):
-        for j in range(i + 1, len(mask.columns)):
-            corr = mask.iloc[i, j]  # Get correlation value
-            pair = (mask.columns[i], mask.columns[j])  # Get column pair
-
-            # Check if correlation is above threshold & avoid auto-correlation
-            if abs(corr) > threshold and pair[0] != pair[1]:
-                high_corrs.append((pair[0], pair[1], corr))
-    return high_corrs
 
 
 def format_number(num):

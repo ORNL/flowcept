@@ -20,7 +20,13 @@ from flowcept.flowcept_api.task_query_api import TaskQueryAPI
 from flowcept.flowcept_webserver.app import app, BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
-from flowcept.analytics.analytics_utils import clean_dataframe
+from flowcept.analytics.analytics_utils import (
+    clean_dataframe,
+    analyze_correlations_used_vs_generated,
+    analyze_correlations,
+    analyze_correlations_used_vs_telemetry_diff,
+    analyze_correlations_generated_vs_telemetry_diff,
+)
 
 
 def gen_mock_multi_workflow_data(size=1):
@@ -366,3 +372,28 @@ class QueryTest(unittest.TestCase):
         )
         self.delete_task_ids_and_assert(task_ids, init_db_count)
         assert 0 < len(df) < max_docs
+
+    def test_correlations(self):
+        max_docs = 10
+        task_ids_filter, task_ids, init_db_count = self.gen_n_get_task_ids(
+            gen_mock_data,
+            size=max_docs,
+            generation_args={"with_telemetry": True},
+        )
+        df = self.api.df_query(task_ids_filter, calculate_telemetry_diff=True)
+        self.delete_task_ids_and_assert(task_ids, init_db_count)
+        assert len(df) == max_docs
+
+        df = clean_dataframe(df, aggregate_telemetry=True)
+
+        corrs_df = analyze_correlations(df)
+        assert len(corrs_df)
+
+        corrs_df = analyze_correlations_used_vs_generated(df)
+        assert len(corrs_df)
+
+        corrs_df = analyze_correlations_used_vs_telemetry_diff(df)
+        assert len(corrs_df)
+
+        corrs_df = analyze_correlations_generated_vs_telemetry_diff(df)
+        assert len(corrs_df)
