@@ -1,27 +1,32 @@
 import logging
 import numpy as np
+import pandas as pd
 
 
-def clean_telemetry_dataframe(
-    df, logger: logging.Logger = None, drop_percent_cols=True, aggregate=False
+def clean_dataframe(
+    df: pd.DataFrame,
+    logger: logging.Logger = None,
+    keep_non_numeric_columns=False,
+    keep_only_nans_columns=False,
+    keep_task_id=False,
+    keep_telemetry_percent_columns=False,
+    aggregate_telemetry=False,
 ):
     """
 
+    :param keep_task_id:
+    :param keep_only_nans_columns:
+    :param keep_non_numeric_columns:
     :param df:
     :param logger:
-    :param drop_percent_cols:
-    :param aggregate: We use some very simplistic forms of aggregations just
+    :param keep_telemetry_percent_columns:
+    :param aggregate_telemetry: We use some very simplistic forms of aggregations just
      to reduce the complexity of the dataframe. Use this feature very carefully as the aggregation may be misleading.
     :return:
     """
-    has_telemetry_diff_column = any(
+    has_telemetry_diff_columns = any(
         col.startswith("telemetry_diff") for col in df.columns
     )
-
-    if not has_telemetry_diff_column:
-        raise Exception(
-            "We assume that the dataframe has telemetry differences."
-        )
 
     logmsg = f"Number of columns originally: {len(df.columns)}"
     if logger:
@@ -29,37 +34,31 @@ def clean_telemetry_dataframe(
     else:
         print(logmsg)
 
+    regex_str = "used|generated"
+    if keep_task_id:
+        regex_str += "|task_id"
+    if has_telemetry_diff_columns:
+        regex_str += "|telemetry_diff"
+
     # Get only the columns of interest for analysis
-    dfa = df.filter(regex="used|generated|telemetry_diff")
+    dfa = df.filter(regex=regex_str)
 
     # Select numeric only columns
-    dfa = dfa.select_dtypes(include=np.number)
+    if not keep_non_numeric_columns:
+        dfa = dfa.select_dtypes(include=np.number)
 
-    # Select non-zero columns only
-    dfa = dfa.loc[:, (dfa != 0).any()]
+    if not keep_only_nans_columns:
+        dfa = dfa.loc[:, (dfa != 0).any()]
 
     # Remove duplicate columns
     dfa_T = dfa.T
     dfa = dfa_T.drop_duplicates(keep="first").T
 
-    # used_memory = dfa["telemetry_diff.memory.swap.used"] + dfa["telemetry_diff.memory.virtual.used"]
-    # used_memory = -1 * dfa["telemetry_diff.memory.virtual.available"].apply(
-    #     int)
-    # used_memory = dfa["telemetry_diff.memory.swap.free"]
-    # used_memory = dfa["telemetry_diff.memory.virtual.used"]
-    # used_memory = df["telemetry_at_end.memory.virtual.active"]
-    # used_memory = df["telemetry_at_end.memory.swap.used"]
-
-    # cpu_times = dfa[['telemetry_diff.process.cpu_times.user',
-    #                  'telemetry_diff.process.cpu_times.system']]
-
-    cols_to_drop = []
-
-    if drop_percent_cols:
-        cols_to_drop.extend([col for col in dfa.columns if "percent" in col])
+    if not keep_telemetry_percent_columns and has_telemetry_diff_columns:
+        cols_to_drop = [col for col in dfa.columns if "percent" in col]
         dfa.drop(columns=cols_to_drop, inplace=True)
 
-    if aggregate:
+    if aggregate_telemetry and has_telemetry_diff_columns:
         cols_to_drop = []
 
         network_cols = [
@@ -97,22 +96,8 @@ def clean_telemetry_dataframe(
         for col in dfa.columns
         if "telemetry_at_start" in col or "telemetry_at_end" in col
     ]
-    dfa.drop(columns=cols_to_drop, inplace=True)
-
-    # cols_to_drop.extend(
-    #     [col for col in dfa.columns if "telemetry_diff.memory." in col])
-    # cols_to_drop.extend(
-    #     [col for col in dfa.columns if "telemetry_diff.process." in col])
-    # cols_to_drop.extend([
-    #     "telemetry_diff.cpu.times_avg.idle",
-    #     "telemetry_diff.disk.disk_usage.free"
-    # ])
-
-    # cols_to_keep = {"telemetry_diff.cpu.times_avg.user", "telemetry_diff.cpu.times_avg.system", "telemetry_diff.cpu.times_per_cpu.sum_user", "telemetry_diff.cpu.times_per_cpu.sum_system"}
-    # cols_to_drop.extend([col for col in dfa.columns if col not in cols_to_keep])
-
-    # dfa['telemetry_diff.memory.used'] = used_memory
-    # # dfa['telemetry_diff.process.memory'] = process_mem_sum
+    if len(cols_to_drop):
+        dfa.drop(columns=cols_to_drop, inplace=True)
 
     logmsg = f"Number of columns later: {len(dfa.columns)}"
     if logger:
@@ -120,3 +105,133 @@ def clean_telemetry_dataframe(
     else:
         print(logmsg)
     return dfa
+
+
+def check_correlation_between(
+    df: pd.DataFrame,
+    col_pattern1,
+    col_pattern2,
+    method="kendall",
+    threshold=0.1,
+):
+    correlation_matrix = df.filter(
+        regex=f"{col_pattern1}|{col_pattern2}"
+    ).corr(method=method)
+    # Create a mask to select the upper triangle of the correlation matrix
+    mask = correlation_matrix.where(
+        np.triu(np.ones(correlation_matrix.shape), k=1).astype(bool)
+    )
+    corrs = []
+    # Iterate through the selected upper triangle of the correlation matrix
+    for i in range(len(mask.columns)):
+        if col_pattern1 not in mask.columns[i]:
+            continue
+        for j in range(i + 1, len(mask.columns)):
+            pair = (mask.columns[i], mask.columns[j])
+            corr = mask.iloc[i, j]  # Get correlation value
+            if abs(corr) > threshold and pair[0] != pair[1]:
+                corrs.append(
+                    (mask.columns[i], mask.columns[j], round(corr, 2))
+                )
+    return corrs
+
+
+def _analyze_corrleations_this_vs_other(
+    df: pd.DataFrame, this: str, other: str, threshold=0.1
+):
+    this_cols = [col for col in df.columns if col.startswith(this)]
+    corrs = []
+    for col in this_cols:
+        corrs.append(
+            check_correlation_between(df, col, other, threshold=threshold)
+        )
+    return corrs
+
+
+def analyze_correlations_used_vs_generated(df: pd.DataFrame, threshold=0.1):
+    return _analyze_corrleations_this_vs_other(
+        df, this="used", other="generated", threshold=threshold
+    )
+
+
+def analyze_correlations_used_vs_telemetry_diff(
+    df: pd.DataFrame, threshold=0.1
+):
+    return _analyze_corrleations_this_vs_other(
+        df, this="used", other="telemetry_diff", threshold=threshold
+    )
+
+
+def analyze_correlations_generated_vs_telemetry_diff(
+    df: pd.DataFrame, threshold=0.1
+):
+    return _analyze_corrleations_this_vs_other(
+        df, this="generated", other="telemetry_diff", threshold=threshold
+    )
+
+
+def get_high_correlations(df: pd.DataFrame, method="kendall", threshold=0.5):
+    # Create a mask to select the upper triangle of the correlation matrix
+    correlation_matrix = df.corr(method=method)
+    mask = correlation_matrix.where(
+        np.triu(np.ones(correlation_matrix.shape), k=1).astype(bool)
+    )
+
+    high_corrs = []
+    # Iterate through the selected upper triangle of the correlation matrix
+    for i in range(len(mask.columns)):
+        for j in range(i + 1, len(mask.columns)):
+            corr = mask.iloc[i, j]  # Get correlation value
+            pair = (mask.columns[i], mask.columns[j])  # Get column pair
+
+            # Check if correlation is above threshold & avoid auto-correlation
+            if abs(corr) > threshold and pair[0] != pair[1]:
+                high_corrs.append((pair[0], pair[1], corr))
+    return high_corrs
+
+
+def format_number(num):
+    suffixes = ["", "K", "M", "B", "T"]
+    idx = 0
+    while abs(num) >= 1000 and idx < len(suffixes) - 1:
+        idx += 1
+        num /= 1000.0
+    formatted = f"{num:.1f}" if num % 1 != 0 else f"{int(num)}"
+    formatted = (
+        formatted.rstrip("0").rstrip(".")
+        if "." in formatted
+        else formatted.rstrip(".")
+    )
+    return f"{formatted}{suffixes[idx]}"
+
+
+def describe_col(df, col, label=None):
+    label = col if label is None else label
+    return {
+        "label": label,
+        "mean": format_number(df[col].mean()),
+        "std": format_number(df[col].std()),
+        "min": format_number(df[col].min()),
+        "25%": format_number(df[col].quantile(0.25)),
+        "50%": format_number(df[col].median()),
+        "75%": format_number(df[col].quantile(0.75)),
+        "max": format_number(df[col].max()),
+    }
+
+
+def describe_cols(df, cols, col_labels):
+    return pd.DataFrame(
+        [
+            describe_col(df, col, col_label)
+            for col, col_label in zip(cols, col_labels)
+        ]
+    )
+
+
+def identify_pareto(df):
+    datav = df.values
+    pareto = []
+    for i, point in enumerate(datav):
+        if all(np.any(point <= other_point) for other_point in datav[:i]):
+            pareto.append(point)
+    return pd.DataFrame(pareto, columns=df.columns)

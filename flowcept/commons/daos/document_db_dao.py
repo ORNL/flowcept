@@ -60,7 +60,7 @@ class DocumentDBDao(object):
                 filter={"campaign_id": "mycampaign1"},
                 projection=["workflow_id", "started_at", "ended_at"],
                 limit=10,
-                sort=[("workflow_id", 1), ("end_time", -1)],
+                sort=[("workflow_id", ASC), ("end_time", DESC)],
                 aggregation=[("avg", "ended_at"), ("min", "started_at")]
             )
         """
