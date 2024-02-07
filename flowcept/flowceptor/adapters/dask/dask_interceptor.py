@@ -165,9 +165,6 @@ class DaskWorkerInterceptor(BaseInterceptor):
                     task_msg.telemetry_at_end = (
                         self.telemetry_capture.capture()
                     )
-                if RAI_CAPTURE is not None:
-                    rai_caputre = ResponsibleAICapture()
-                    print(rai_caputre.capture())
 
             elif ts.state == "error":
                 task_msg.status = Status.ERROR

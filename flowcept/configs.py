@@ -103,7 +103,6 @@ PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 
 TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
-RAI_CAPTURE = settings["project"].get("responsible_ai_capture", None)
 
 ######################
 # SYS METADATA #
