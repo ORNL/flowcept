@@ -149,5 +149,5 @@ WEBSERVER_PORT = int(settings["web_server"].get("port", "5000"))
 
 ADAPTERS = set()
 
-for adapter in settings.get("plugins", set()):
-    ADAPTERS.add(settings["plugins"][adapter].get("kind"))
+for adapter in settings.get("adapters", set()):
+    ADAPTERS.add(settings["adapters"][adapter].get("kind"))

@@ -4,11 +4,12 @@ from flowcept.commons.flowcept_dataclasses.task_message import (
     TaskMessage,
     Status,
 )
-from flowcept.flowceptor.plugins.base_interceptor import (
+from flowcept.flowceptor.adapters.base_interceptor import (
     BaseInterceptor,
 )
 from flowcept.commons.utils import get_utc_now
-from flowcept.configs import TELEMETRY_CAPTURE
+from flowcept.configs import TELEMETRY_CAPTURE, RAI_CAPTURE
+from flowcept.flowceptor.rai_capture import ResponsibleAICapture
 
 
 def get_run_spec_data(task_msg: TaskMessage, run_spec):
@@ -164,6 +165,10 @@ class DaskWorkerInterceptor(BaseInterceptor):
                     task_msg.telemetry_at_end = (
                         self.telemetry_capture.capture()
                     )
+                if RAI_CAPTURE is not None:
+                    rai_caputre = ResponsibleAICapture()
+                    print(rai_caputre.capture())
+
             elif ts.state == "error":
                 task_msg.status = Status.ERROR
                 if self.settings.worker_create_timestamps:

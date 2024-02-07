@@ -11,7 +11,7 @@ class InterceptorStateManager(object):
 
         if not hasattr(settings, "redis_host"):
             raise Exception(
-                f"This plugin setting {settings.key} manages state in Redis, so"
+                f"This adapter setting {settings.key} manages state in Redis, so"
                 f"Redis Host is required in the settings yaml file."
             )
 

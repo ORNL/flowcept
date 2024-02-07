@@ -56,7 +56,7 @@ sys_metadata:
 extra_metadata:
   place_holder: ""
 
-plugins:
+adapters:
   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2. Use an empty dict, {}, if you won't use any adapter.
   zambeze:
     kind: zambeze

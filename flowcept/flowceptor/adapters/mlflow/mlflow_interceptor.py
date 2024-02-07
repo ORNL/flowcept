@@ -5,18 +5,18 @@ from watchdog.observers import Observer
 
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
 from flowcept.commons.utils import get_utc_now, get_status_from_str
-from flowcept.flowceptor.plugins.base_interceptor import (
+from flowcept.flowceptor.adapters.base_interceptor import (
     BaseInterceptor,
 )
-from flowcept.flowceptor.plugins.interceptor_state_manager import (
+from flowcept.flowceptor.adapters.interceptor_state_manager import (
     InterceptorStateManager,
 )
 
-from flowcept.flowceptor.plugins.mlflow.mlflow_dao import MLFlowDAO
-from flowcept.flowceptor.plugins.mlflow.interception_event_handler import (
+from flowcept.flowceptor.adapters.mlflow.mlflow_dao import MLFlowDAO
+from flowcept.flowceptor.adapters.mlflow.interception_event_handler import (
     InterceptionEventHandler,
 )
-from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import RunData
+from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import RunData
 
 
 class MLFlowInterceptor(BaseInterceptor):
