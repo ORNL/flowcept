@@ -7,10 +7,13 @@ from flowcept.flowcept_api.task_query_api import TaskQueryAPI
 
 from flowcept.flowcept_api import db_api
 
-# from flowcept.flowceptor.decorators.responsible_ai import (
-#     model_explainer,
-#     model_profiler,
-# )
+try:
+    from flowcept.flowceptor.decorators.responsible_ai import (
+        model_explainer,
+        model_profiler,
+    )
+except:
+    pass
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
@@ -29,7 +32,7 @@ def get_adapter_exception_msg(adapter_kind):
 
 if Vocabulary.Settings.ZAMBEZE_KIND in ADAPTERS:
     try:
-        from flowcept.flowceptor.plugins.zambeze.zambeze_interceptor import (
+        from flowcept.flowceptor.adapters.zambeze.zambeze_interceptor import (
             ZambezeInterceptor,
         )
     except Exception as e:
@@ -40,7 +43,7 @@ if Vocabulary.Settings.ZAMBEZE_KIND in ADAPTERS:
 
 if Vocabulary.Settings.TENSORBOARD_KIND in ADAPTERS:
     try:
-        from flowcept.flowceptor.plugins.tensorboard.tensorboard_interceptor import (
+        from flowcept.flowceptor.adapters.tensorboard.tensorboard_interceptor import (
             TensorboardInterceptor,
         )
     except Exception as e:
@@ -51,7 +54,7 @@ if Vocabulary.Settings.TENSORBOARD_KIND in ADAPTERS:
 
 if Vocabulary.Settings.MLFLOW_KIND in ADAPTERS:
     try:
-        from flowcept.flowceptor.plugins.mlflow.mlflow_interceptor import (
+        from flowcept.flowceptor.adapters.mlflow.mlflow_interceptor import (
             MLFlowInterceptor,
         )
     except Exception as e:
@@ -62,9 +65,9 @@ if Vocabulary.Settings.MLFLOW_KIND in ADAPTERS:
 
 if Vocabulary.Settings.DASK_KIND in ADAPTERS:
     try:
-        from flowcept.flowceptor.plugins.dask.dask_plugins import (
-            FlowceptDaskSchedulerPlugin,
-            FlowceptDaskWorkerPlugin,
+        from flowcept.flowceptor.adapters.dask.dask_plugins import (
+            FlowceptDaskSchedulerAdapter,
+            FlowceptDaskWorkerAdapter,
         )
     except Exception as e:
         logger.error(get_adapter_exception_msg(Vocabulary.Settings.DASK_KIND))

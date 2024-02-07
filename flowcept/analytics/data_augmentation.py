@@ -3,7 +3,6 @@ import h2o
 import numpy as np
 import pandas as pd
 
-# from h2o.estimators.glm import H2OGeneralizedLinearEstimator
 from h2o.automl import H2OAutoML
 
 h2o.init()
