@@ -40,7 +40,8 @@ class DecoratorDaskTests(unittest.TestCase):
         outputs = []
         db = db_api.DBAPI()
         db.insert_or_update_workflow(
-            workflow_id=wf_id, custom_metadata=hp_conf.update({"n_confs": len(confs)})
+            workflow_id=wf_id,
+            custom_metadata=hp_conf.update({"n_confs": len(confs)}),
         )
         for conf in confs[:1]:
             outputs.append(
