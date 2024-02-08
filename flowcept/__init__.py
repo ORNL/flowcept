@@ -1,21 +1,13 @@
 from flowcept.configs import PROJECT_NAME, ADAPTERS, SETTINGS_PATH
 from flowcept.version import __version__
+
 from flowcept.commons.vocabulary import Vocabulary
+from flowcept.commons.flowcept_logger import FlowceptLogger
 
 from flowcept.flowcept_api.consumer_api import FlowceptConsumerAPI
 from flowcept.flowcept_api.task_query_api import TaskQueryAPI
-
 from flowcept.flowcept_api import db_api
 
-try:
-    from flowcept.flowceptor.decorators.responsible_ai import (
-        model_explainer,
-        model_profiler,
-    )
-except:
-    pass
-
-from flowcept.commons.flowcept_logger import FlowceptLogger
 
 logger = FlowceptLogger().get_logger()
 
@@ -28,6 +20,15 @@ def get_adapter_exception_msg(adapter_kind):
         f" from the settings."
         f" Exception:"
     )
+
+
+try:
+    from flowcept.flowceptor.decorators.responsible_ai import (
+        model_explainer,
+        model_profiler,
+    )
+except Exception as e:
+    logger.exception(e)
 
 
 if Vocabulary.Settings.ZAMBEZE_KIND in ADAPTERS:
