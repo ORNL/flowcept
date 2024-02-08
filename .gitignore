@@ -15,3 +15,5 @@ notebooks/.ipynb_checkpoints
 notebooks/tb_*
 notebooks/scheduler_file.json
 test.py
+**/*dump*
+tests/decorator_tests/responsible_ai_and_telemetry_sample.json

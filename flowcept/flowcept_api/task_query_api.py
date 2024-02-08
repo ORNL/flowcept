@@ -1,3 +1,6 @@
+"""
+    General overview of this module.
+"""
 from typing import List, Dict, Tuple
 from datetime import timedelta
 import json
@@ -23,6 +26,10 @@ from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
 
 class TaskQueryAPI(object):
+    """
+    General overview of this class.
+    """
+
     ASC = pymongo.ASCENDING
     DESC = pymongo.DESCENDING
 

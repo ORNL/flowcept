@@ -4,7 +4,7 @@ from pymongo import MongoClient, UpdateOne
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
-from flowcept.commons.utils import perf_log
+from flowcept.commons.utils import perf_log, get_utc_now, get_utc_now_str
 from flowcept.configs import (
     MONGO_HOST,
     MONGO_PORT,
@@ -235,6 +235,14 @@ class DocumentDBDao(object):
             self.logger.exception(e)
             return False
 
+    def delete_with_filter(self, filter) -> bool:
+        try:
+            self._tasks_collection.delete_many(filter)
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
     def count(self) -> int:
         try:
             return self._tasks_collection.count_documents({})
@@ -294,3 +302,61 @@ class DocumentDBDao(object):
         except Exception as e:
             self.logger.exception(e)
             return None
+
+    def dump_to_file(
+        self,
+        collection_name=MONGO_TASK_COLLECTION,
+        filter=None,
+        output_file=None,
+        export_format="json",
+        should_zip=False,
+    ):
+        if collection_name == MONGO_TASK_COLLECTION:
+            _collection = self._tasks_collection
+        elif collection_name == MONGO_WORKFLOWS_COLLECTION:
+            _collection = self._wfs_collection
+        else:
+            raise Exception(
+                f"Sorry, only {MONGO_TASK_COLLECTION} and {MONGO_WORKFLOWS_COLLECTION} collections are currently available for dump."
+            )
+
+        if export_format != "json":
+            raise Exception("Sorry, only JSON is currently supported.")
+
+        if output_file is None:
+            output_file = f"docs_dump_{collection_name}_{get_utc_now_str()}"
+            output_file += ".zip" if should_zip else ".json"
+
+        try:
+            cursor = _collection.find(filter=filter)
+        except Exception as e:
+            self.logger.exception(e)
+            return
+
+        import json
+        import zipfile
+        import io
+        from bson.json_util import dumps
+
+        try:
+            json_data = dumps(cursor)
+        except Exception as e:
+            self.logger.exception(e)
+            return
+
+        try:
+            if should_zip:
+                in_memory_stream = io.BytesIO()
+                with zipfile.ZipFile(
+                    in_memory_stream, "w", zipfile.ZIP_DEFLATED
+                ) as zip_file:
+                    zip_file.writestr("_", json_data)
+                compressed_data = in_memory_stream.getvalue()
+                with open(output_file, "wb") as f:
+                    f.write(compressed_data)
+            else:
+                with open(output_file, "w") as f:
+                    json.dump(json.loads(json_data), f)
+        except Exception as e:
+            self.logger.exception(e)
+            return
