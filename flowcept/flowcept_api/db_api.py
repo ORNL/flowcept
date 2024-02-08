@@ -1,5 +1,6 @@
 from typing import Dict
 
+from flowcept.configs import MONGO_TASK_COLLECTION
 from flowcept.version import __version__
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
@@ -19,6 +20,9 @@ class DBAPI(object):
             )
 
         self._dao = DocumentDBDao()
+
+    def insert_or_update_task(self, task: TaskMessage):
+        self._dao.insert_one(task.to_dict())
 
     def insert_or_update_workflow(
         self,
@@ -45,6 +49,28 @@ class DBAPI(object):
         if len(results):
             return results[0]
 
-    def dump_to_file(self, filter, output_file, export_format, should_zip):
-        # TODO: implement
-        raise NotImplementedError()
+    def dump_to_file(
+        self,
+        collection_name=MONGO_TASK_COLLECTION,
+        filter=None,
+        output_file=None,
+        export_format="json",
+        should_zip=False,
+    ):
+        if filter is None and not should_zip:
+            self.logger.error(
+                "I am sorry, we will not allow you to dump the entire database without filter and without even zipping it. You are likely doing something wrong or perhaps not using the best tool for a database dump."
+            )
+            return False
+        try:
+            self._dao.dump_to_file(
+                collection_name,
+                filter,
+                output_file,
+                export_format,
+                should_zip,
+            )
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
