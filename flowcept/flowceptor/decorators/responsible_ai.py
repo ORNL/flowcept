@@ -31,7 +31,9 @@ def model_explainer(background_size=100, test_data_size=3):
             # result["shap_values"] = shap_values
             if "responsible_ai_metrics" not in result:
                 result["responsible_ai_metrics"] = {}
-            result["responsible_ai_metrics"]["shap_sum"] = float(np.sum(np.concatenate(shap_values)))
+            result["responsible_ai_metrics"]["shap_sum"] = float(
+                np.sum(np.concatenate(shap_values))
+            )
             return result
 
         return wrapper
