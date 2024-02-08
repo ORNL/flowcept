@@ -1,25 +1,12 @@
-from flowcept.configs import PROJECT_NAME, ADAPTERS, SETTINGS_PATH
+import flowcept
+from flowcept.configs import SETTINGS_PATH
 from flowcept.version import __version__
 
 from flowcept.commons.vocabulary import Vocabulary
-from flowcept.commons.flowcept_logger import FlowceptLogger
 
 from flowcept.flowcept_api.consumer_api import FlowceptConsumerAPI
 from flowcept.flowcept_api.task_query_api import TaskQueryAPI
 from flowcept.flowcept_api import db_api
-
-
-logger = FlowceptLogger().get_logger()
-
-
-def get_adapter_exception_msg(adapter_kind):
-    return (
-        f"You have an adapter for {adapter_kind} in"
-        f" {SETTINGS_PATH} but we couldn't import its interceptor. "
-        f" Consider fixing the following exception or remove that adapter "
-        f" from the settings."
-        f" Exception:"
-    )
 
 
 try:
@@ -27,49 +14,57 @@ try:
         model_explainer,
         model_profiler,
     )
-except Exception as e:
-    logger.exception(e)
+except Exception as _exp:
+    flowcept.commons.logger.exception(_exp)
 
 
-if Vocabulary.Settings.ZAMBEZE_KIND in ADAPTERS:
+if Vocabulary.Settings.ZAMBEZE_KIND in flowcept.configs.ADAPTERS:
     try:
         from flowcept.flowceptor.adapters.zambeze.zambeze_interceptor import (
             ZambezeInterceptor,
         )
-    except Exception as e:
-        logger.error(
-            get_adapter_exception_msg(Vocabulary.Settings.ZAMBEZE_KIND)
+    except Exception as _exp:
+        flowcept.commons.logger.error(
+            flowcept.commons._get_adapter_exception_msg(
+                Vocabulary.Settings.ZAMBEZE_KIND
+            )
         )
-        logger.exception(e)
+        flowcept.commons.logger.exception(_exp)
 
-if Vocabulary.Settings.TENSORBOARD_KIND in ADAPTERS:
+if Vocabulary.Settings.TENSORBOARD_KIND in flowcept.configs.ADAPTERS:
     try:
         from flowcept.flowceptor.adapters.tensorboard.tensorboard_interceptor import (
             TensorboardInterceptor,
         )
-    except Exception as e:
-        logger.error(
-            get_adapter_exception_msg(Vocabulary.Settings.TENSORBOARD_KIND)
+    except Exception as _exp:
+        flowcept.commons.logger.error(
+            flowcept.commons._get_adapter_exception_msg(
+                Vocabulary.Settings.TENSORBOARD_KIND
+            )
         )
-        logger.exception(e)
+        flowcept.commons.logger.exception(_exp)
 
-if Vocabulary.Settings.MLFLOW_KIND in ADAPTERS:
+if Vocabulary.Settings.MLFLOW_KIND in flowcept.configs.ADAPTERS:
     try:
         from flowcept.flowceptor.adapters.mlflow.mlflow_interceptor import (
             MLFlowInterceptor,
         )
-    except Exception as e:
-        logger.error(
-            get_adapter_exception_msg(Vocabulary.Settings.MLFLOW_KIND)
+    except Exception as _exp:
+        flowcept.commons.loggerr.error(
+            flowcept.commons._get_adapter_exception_msg(
+                Vocabulary.Settings.MLFLOW_KIND
+            )
         )
-        logger.exception(e)
+        flowcept.commons.logger.exception(_exp)
 
-if Vocabulary.Settings.DASK_KIND in ADAPTERS:
+if Vocabulary.Settings.DASK_KIND in flowcept.configs.ADAPTERS:
     try:
         from flowcept.flowceptor.adapters.dask.dask_plugins import (
             FlowceptDaskSchedulerAdapter,
             FlowceptDaskWorkerAdapter,
         )
-    except Exception as e:
-        logger.error(get_adapter_exception_msg(Vocabulary.Settings.DASK_KIND))
-        logger.exception(e)
+    except Exception as _exp:
+        flowcept.commons._get_adapter_exception_msg(
+            Vocabulary.Settings.DASK_KIND
+        )
+        flowcept.commons.logger.exception(_exp)
