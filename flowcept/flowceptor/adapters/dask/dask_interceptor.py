@@ -8,8 +8,7 @@ from flowcept.flowceptor.adapters.base_interceptor import (
     BaseInterceptor,
 )
 from flowcept.commons.utils import get_utc_now
-from flowcept.configs import TELEMETRY_CAPTURE, RAI_CAPTURE
-from flowcept.flowceptor.rai_capture import ResponsibleAICapture
+from flowcept.configs import TELEMETRY_CAPTURE
 
 
 def get_run_spec_data(task_msg: TaskMessage, run_spec):

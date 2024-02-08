@@ -5,8 +5,8 @@
 **/*pycache*
 **/*dist*
 mlflow.db
-tests/plugins/mnist_train
-tests/plugins/tensorboard_events/
+tests/decorator_tests/mnist*
+tests/decorator_tests/tensorboard_events/
 tensorboard_events/
 **/*.DS_Store*
 **/*.log*
@@ -15,4 +15,3 @@ notebooks/.ipynb_checkpoints
 notebooks/tb_*
 notebooks/scheduler_file.json
 test.py
-tests/decorator_tests/mnist_data*
