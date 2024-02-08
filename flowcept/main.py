@@ -21,7 +21,6 @@ INTERCEPTORS = {
 
 
 def main():
-    # TODO: this is unfinished
     with open(SETTINGS_PATH) as f:
         yaml_data = yaml.load(f, Loader=yaml.FullLoader)
 
