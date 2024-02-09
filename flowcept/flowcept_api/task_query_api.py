@@ -236,6 +236,12 @@ class TaskQueryAPI(object):
         filter: Dict = None,
         clean_telemetry_dataframe: bool = False,
         calculate_telemetry_diff: bool = False,
+        keep_non_numeric_columns=False,
+        keep_only_nans_columns=False,
+        keep_task_id=False,
+        keep_telemetry_percent_columns=False,
+        sum_lists=False,
+        aggregate_telemetry=False,
     ):
         """
         Retrieve the top K tasks from the (optionally telemetry-aware) DataFrame based on specified sorting criteria.
@@ -266,7 +272,15 @@ class TaskQueryAPI(object):
 
         # Clean the telemetry DataFrame if specified
         if clean_telemetry_dataframe:
-            df = clean_df(df)
+            df = clean_df(
+                df,
+                keep_non_numeric_columns=keep_non_numeric_columns,
+                keep_only_nans_columns=keep_only_nans_columns,
+                keep_task_id=keep_task_id,
+                keep_telemetry_percent_columns=keep_telemetry_percent_columns,
+                sum_lists=sum_lists,
+                aggregate_telemetry=aggregate_telemetry,
+            )
 
         # Sorting criteria validation and extraction
         sort_col_names, sort_col_orders = [], []
@@ -299,6 +313,12 @@ class TaskQueryAPI(object):
         sort: List[Tuple] = None,
         limit: int = -1,
         clean_dataframe=False,
+        keep_non_numeric_columns=False,
+        keep_only_nans_columns=False,
+        keep_task_id=False,
+        keep_telemetry_percent_columns=False,
+        sum_lists=False,
+        aggregate_telemetry=False,
         calculate_telemetry_diff=False,
     ) -> pd.DataFrame:
         """
@@ -317,7 +337,15 @@ class TaskQueryAPI(object):
         )
         df.fillna(value=np.nan, inplace=True)
         if clean_dataframe:
-            df = clean_df(df)
+            df = clean_df(
+                df,
+                keep_non_numeric_columns=keep_non_numeric_columns,
+                keep_only_nans_columns=keep_only_nans_columns,
+                keep_task_id=keep_task_id,
+                keep_telemetry_percent_columns=keep_telemetry_percent_columns,
+                sum_lists=sum_lists,
+                aggregate_telemetry=aggregate_telemetry,
+            )
 
         query_parts = []
         for col_name, condition, quantile in clauses:

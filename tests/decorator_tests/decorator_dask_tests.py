@@ -52,10 +52,10 @@ class DecoratorDaskTests(unittest.TestCase):
             print(r)
             assert "responsible_ai_metrics" in r
 
-        db.dump_to_file(
-            filter={"workflow_id": wf_id},
-            output_file="responsible_ai_and_telemetry_sample.json",
-        )
+        # db.dump_to_file(
+        #     filter={"workflow_id": wf_id},
+        #     output_file="tmp_sample_data_with_telemetry_and_rai.json",
+        # )
 
     @staticmethod
     def test_model_trainer():

@@ -1,10 +1,15 @@
 from typing import List, Dict, Tuple, Any
+import io
+import json
+import zipfile
+
 from bson import ObjectId
+from bson.json_util import dumps
 from pymongo import MongoClient, UpdateOne
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
-from flowcept.commons.utils import perf_log, get_utc_now, get_utc_now_str
+from flowcept.commons.utils import perf_log, get_utc_now_str
 from flowcept.configs import (
     MONGO_HOST,
     MONGO_PORT,
@@ -333,11 +338,6 @@ class DocumentDBDao(object):
             self.logger.exception(e)
             return
 
-        import json
-        import zipfile
-        import io
-        from bson.json_util import dumps
-
         try:
             json_data = dumps(cursor)
         except Exception as e:
@@ -350,13 +350,15 @@ class DocumentDBDao(object):
                 with zipfile.ZipFile(
                     in_memory_stream, "w", zipfile.ZIP_DEFLATED
                 ) as zip_file:
-                    zip_file.writestr("_", json_data)
+                    zip_file.writestr("dump_file.json", json_data)
                 compressed_data = in_memory_stream.getvalue()
                 with open(output_file, "wb") as f:
                     f.write(compressed_data)
             else:
                 with open(output_file, "w") as f:
                     json.dump(json.loads(json_data), f)
+
+            self.logger.info(f"DB dump file {output_file} saved.")
         except Exception as e:
             self.logger.exception(e)
             return
