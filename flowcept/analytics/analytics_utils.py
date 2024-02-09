@@ -1,9 +1,31 @@
 import logging
+import numbers
+
 import numpy as np
 import pandas as pd
 import re
 
 _CORRELATION_DF_HEADER = ["col_1", "col_2", "correlation"]
+
+
+def is_list(val):
+    if type(val) in {list, np.array, pd.Series}:
+        return True
+    return False
+
+
+def flatten_list_with_sum(val):
+    _sum = 0
+    if is_list(val):
+        for el in val:
+            if is_list(el):
+                _sum += flatten_list_with_sum(el)
+            else:
+                if isinstance(el, numbers.Number) and not np.isnan(el):
+                    _sum += el
+    else:
+        _sum += val
+    return _sum
 
 
 def clean_dataframe(
@@ -13,6 +35,7 @@ def clean_dataframe(
     keep_only_nans_columns=False,
     keep_task_id=False,
     keep_telemetry_percent_columns=False,
+    sum_lists=False,
     aggregate_telemetry=False,
 ) -> pd.DataFrame:
     """
@@ -45,6 +68,29 @@ def clean_dataframe(
 
     # Get only the columns of interest for analysis
     dfa = df.filter(regex=regex_str)
+
+    if sum_lists:
+        # Identify the original columns that were lists or lists of lists
+        list_cols = [
+            col
+            for col in dfa.columns
+            if any(isinstance(val, (list, list)) for val in dfa[col])
+        ]
+
+        cols_to_drop = []
+        # Apply the function to all columns and create new scalar columns
+        for col in list_cols:
+            try:
+                if "telemetry_diff" in col:
+                    continue
+                dfa[f"{col}_sum"] = dfa[col].apply(flatten_list_with_sum)
+                cols_to_drop.append(col)
+            except Exception as e:
+                logger.exception(e)
+        # Apply the function to all columns and create new scalar columns
+
+        # Drop the original columns that were lists or lists of lists
+        dfa = dfa.drop(columns=cols_to_drop)
 
     # Select numeric only columns
     if not keep_non_numeric_columns:
@@ -110,59 +156,62 @@ def clean_dataframe(
     return dfa
 
 
-def _check_correlations(df, method="kendall", threshold=0, col_pattern1=None):
+def analyze_correlations(df, method="kendall", threshold=0):
     # Create a mask to select the upper triangle of the correlation matrix
     correlation_matrix = df.corr(method=method, numeric_only=True)
     mask = correlation_matrix.where(
         np.triu(np.ones(correlation_matrix.shape), k=1).astype(bool)
     )
     corrs = []
-    if col_pattern1 is not None:
-        col_pattern1_re = re.compile(col_pattern1)
+    # if col_pattern1 is not None:
+    #     col_pattern1_re = re.compile(col_pattern1)
 
     # Iterate through the selected upper triangle of the correlation matrix
     for i in range(len(mask.columns)):
-        if col_pattern1 is not None and not col_pattern1_re.match(
-            mask.columns[i]
-        ):
-            continue
+        # if col_pattern1 is not None and not col_pattern1_re.match(
+        #     mask.columns[i]
+        # ):
+        #     continue
         for j in range(i + 1, len(mask.columns)):
             pair = (mask.columns[i], mask.columns[j])
             corr = mask.iloc[i, j]  # Get correlation value
-            if abs(corr) > threshold and pair[0] != pair[1]:
+            if abs(corr) >= threshold and pair[0] != pair[1]:
                 corrs.append(
                     (mask.columns[i], mask.columns[j], round(corr, 2))
                 )
-    return corrs
 
-
-def analyze_correlations(df: pd.DataFrame, method="kendall", threshold=0):
-    # Create a mask to select the upper triangle of the correlation matrix
     return pd.DataFrame(
-        _check_correlations(df, method, threshold),
+        corrs,
         columns=_CORRELATION_DF_HEADER,
     )
 
 
-def analyze_correlation_between(
+def analyze_correlations_between(
     df: pd.DataFrame,
     col_pattern1,
     col_pattern2,
     method="kendall",
     threshold=0,
 ):
-    df = df.filter(regex=f"{col_pattern1}|{col_pattern2}")
-    return pd.DataFrame(
-        _check_correlations(df, method, threshold, col_pattern1),
-        columns=_CORRELATION_DF_HEADER,
-    )
+    corr_df = analyze_correlations(df, method, threshold)
+    filtered_df = corr_df[
+        (
+            corr_df[_CORRELATION_DF_HEADER[0]].str.contains(col_pattern1)
+            & corr_df[_CORRELATION_DF_HEADER[1]].str.contains(col_pattern2)
+        )
+        | (
+            corr_df[_CORRELATION_DF_HEADER[0]].str.contains(col_pattern2)
+            & corr_df[_CORRELATION_DF_HEADER[1]].str.contains(col_pattern1)
+        )
+    ]
+    return filtered_df
 
 
 def analyze_correlations_used_vs_generated(df: pd.DataFrame, threshold=0):
-    return analyze_correlation_between(
+    return analyze_correlations_between(
         df,
-        col_pattern1="^used[.]*",
-        col_pattern2="^generated[.]*",
+        col_pattern1="used.",
+        col_pattern2="generated.",
         threshold=threshold,
     )
 
@@ -170,7 +219,7 @@ def analyze_correlations_used_vs_generated(df: pd.DataFrame, threshold=0):
 def analyze_correlations_used_vs_telemetry_diff(
     df: pd.DataFrame, threshold=0
 ):
-    return analyze_correlation_between(
+    return analyze_correlations_between(
         df,
         col_pattern1="^used[.]*",
         col_pattern2="^telemetry_diff[.]*",
@@ -181,7 +230,7 @@ def analyze_correlations_used_vs_telemetry_diff(
 def analyze_correlations_generated_vs_telemetry_diff(
     df: pd.DataFrame, threshold=0
 ):
-    return analyze_correlation_between(
+    return analyze_correlations_between(
         df,
         col_pattern1="^generated[.]*",
         col_pattern2="^telemetry_diff[.]*",

@@ -26,6 +26,7 @@ from flowcept.analytics.analytics_utils import (
     analyze_correlations,
     analyze_correlations_used_vs_telemetry_diff,
     analyze_correlations_generated_vs_telemetry_diff,
+    analyze_correlations_between,
 )
 
 
@@ -92,7 +93,7 @@ def gen_mock_multi_workflow_data(size=1):
 
 def gen_mock_data(size=1, with_telemetry=False):
     if with_telemetry:
-        fname = "sample_data_with_telemetry.json"
+        fname = "sample_data_with_telemetry_and_rai.json"
     else:
         fname = "sample_data.json"
 
@@ -360,8 +361,8 @@ class QueryTest(unittest.TestCase):
         ]
         sort = [
             ("telemetry_diff.process.cpu_times.user", TaskQueryAPI.ASC),
-            ("generated.z", TaskQueryAPI.DESC),
-            ("used.x", TaskQueryAPI.ASC),
+            ("generated.loss", TaskQueryAPI.ASC),
+            ("generated.responsible_ai_metrics.flops", TaskQueryAPI.ASC),
         ]
         df = self.api.df_get_tasks_quantiles(
             clauses=clauses,
@@ -374,7 +375,7 @@ class QueryTest(unittest.TestCase):
         assert 0 < len(df) < max_docs
 
     def test_correlations(self):
-        max_docs = 10
+        max_docs = 9
         task_ids_filter, task_ids, init_db_count = self.gen_n_get_task_ids(
             gen_mock_data,
             size=max_docs,
@@ -384,16 +385,23 @@ class QueryTest(unittest.TestCase):
         self.delete_task_ids_and_assert(task_ids, init_db_count)
         assert len(df) == max_docs
 
-        df = clean_dataframe(df, aggregate_telemetry=True)
+        df = clean_dataframe(df, aggregate_telemetry=True, sum_lists=True)
 
-        corrs_df = analyze_correlations(df)
-        assert len(corrs_df)
+        correlations_df = analyze_correlations(df)
+        assert len(correlations_df)
 
-        corrs_df = analyze_correlations_used_vs_generated(df)
-        assert len(corrs_df)
+        correlations_df = analyze_correlations_between(
+            df, col_pattern1="generated.", col_pattern2="used."
+        )
+        assert len(correlations_df)
 
-        corrs_df = analyze_correlations_used_vs_telemetry_diff(df)
-        assert len(corrs_df)
+        correlations_df_ = analyze_correlations_used_vs_generated(df)
+        assert len(correlations_df_)
+        assert all(correlations_df == correlations_df_)
 
-        corrs_df = analyze_correlations_generated_vs_telemetry_diff(df)
-        assert len(corrs_df)
+        correlations_df = analyze_correlations_used_vs_telemetry_diff(df)
+        assert len(correlations_df)
+
+        correlations_df = analyze_correlations_generated_vs_telemetry_diff(df)
+
+        assert len(correlations_df)
