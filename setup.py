@@ -55,6 +55,7 @@ extras_requirement_keys = [
     "dask",
     "nvidia",
     "analytics",
+    "responsible_ai",
 ]
 
 extras_require = dict()
