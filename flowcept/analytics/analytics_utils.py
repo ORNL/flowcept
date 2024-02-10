@@ -163,15 +163,9 @@ def analyze_correlations(df, method="kendall", threshold=0):
         np.triu(np.ones(correlation_matrix.shape), k=1).astype(bool)
     )
     corrs = []
-    # if col_pattern1 is not None:
-    #     col_pattern1_re = re.compile(col_pattern1)
 
     # Iterate through the selected upper triangle of the correlation matrix
     for i in range(len(mask.columns)):
-        # if col_pattern1 is not None and not col_pattern1_re.match(
-        #     mask.columns[i]
-        # ):
-        #     continue
         for j in range(i + 1, len(mask.columns)):
             pair = (mask.columns[i], mask.columns[j])
             corr = mask.iloc[i, j]  # Get correlation value
