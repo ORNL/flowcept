@@ -139,7 +139,16 @@ class TaskQueryAPI(object):
         remove_json_unserializables=True,
         calculate_telemetry_diff=False,
         shift_hours: int = 0,
+        clean_dataframe: bool = False,
+        keep_non_numeric_columns=False,
+        keep_only_nans_columns=False,
+        keep_task_id=False,
+        keep_telemetry_percent_columns=False,
+        sum_lists=False,
+        aggregate_telemetry=False,
     ) -> pd.DataFrame:
+        # TODO: assert that if clean_dataframe is False, other clean_dataframe
+        # related args should be default.
         docs = self.query(
             filter,
             projection,
@@ -151,6 +160,17 @@ class TaskQueryAPI(object):
         df = self._get_dataframe_from_task_docs(
             docs, calculate_telemetry_diff, shift_hours
         )
+        # Clean the telemetry DataFrame if specified
+        if clean_dataframe:
+            df = clean_df(
+                df,
+                keep_non_numeric_columns=keep_non_numeric_columns,
+                keep_only_nans_columns=keep_only_nans_columns,
+                keep_task_id=keep_task_id,
+                keep_telemetry_percent_columns=keep_telemetry_percent_columns,
+                sum_lists=sum_lists,
+                aggregate_telemetry=aggregate_telemetry,
+            )
         return df
 
     def _get_dataframe_from_task_docs(
@@ -234,7 +254,7 @@ class TaskQueryAPI(object):
         sort: List[Tuple] = None,
         k: int = 5,
         filter: Dict = None,
-        clean_telemetry_dataframe: bool = False,
+        clean_dataframe: bool = False,
         calculate_telemetry_diff: bool = False,
         keep_non_numeric_columns=False,
         keep_only_nans_columns=False,
@@ -264,14 +284,21 @@ class TaskQueryAPI(object):
         """
         # Retrieve telemetry DataFrame based on filter and calculation options
         df = self.df_query(
-            filter=filter, calculate_telemetry_diff=calculate_telemetry_diff
+            filter=filter, calculate_telemetry_diff=calculate_telemetry_diff,
+            clean_dataframe=clean_dataframe,
+            keep_non_numeric_columns=keep_non_numeric_columns,
+            keep_only_nans_columns=keep_only_nans_columns,
+            keep_task_id=keep_task_id,
+            keep_telemetry_percent_columns=keep_telemetry_percent_columns,
+            sum_lists=sum_lists,
+            aggregate_telemetry=aggregate_telemetry,
         )
 
         # Fill NaN values in the DataFrame with np.nan
         df.fillna(value=np.nan, inplace=True)
 
         # Clean the telemetry DataFrame if specified
-        if clean_telemetry_dataframe:
+        if clean_dataframe:
             df = clean_df(
                 df,
                 keep_non_numeric_columns=keep_non_numeric_columns,
@@ -333,19 +360,16 @@ class TaskQueryAPI(object):
         """
         # TODO: idea: think of finding the clauses, quantile threshold, and sort order automatically
         df = self.df_query(
-            filter=filter, calculate_telemetry_diff=calculate_telemetry_diff
+            filter=filter, calculate_telemetry_diff=calculate_telemetry_diff,
+            clean_dataframe=clean_dataframe,
+            keep_non_numeric_columns=keep_non_numeric_columns,
+            keep_only_nans_columns=keep_only_nans_columns,
+            keep_task_id=keep_task_id,
+            keep_telemetry_percent_columns=keep_telemetry_percent_columns,
+            sum_lists=sum_lists,
+            aggregate_telemetry=aggregate_telemetry,
         )
         df.fillna(value=np.nan, inplace=True)
-        if clean_dataframe:
-            df = clean_df(
-                df,
-                keep_non_numeric_columns=keep_non_numeric_columns,
-                keep_only_nans_columns=keep_only_nans_columns,
-                keep_task_id=keep_task_id,
-                keep_telemetry_percent_columns=keep_telemetry_percent_columns,
-                sum_lists=sum_lists,
-                aggregate_telemetry=aggregate_telemetry,
-            )
 
         query_parts = []
         for col_name, condition, quantile in clauses:
