@@ -3,6 +3,7 @@ import numbers
 
 import numpy as np
 import pandas as pd
+
 pd.options.mode.chained_assignment = None
 
 _CORRELATION_DF_HEADER = ["col_1", "col_2", "correlation"]
@@ -202,7 +203,9 @@ def analyze_correlations_between(
     return filtered_df
 
 
-def analyze_correlations_used_vs_generated(df: pd.DataFrame, method="kendall", threshold=0):
+def analyze_correlations_used_vs_generated(
+    df: pd.DataFrame, method="kendall", threshold=0
+):
     return analyze_correlations_between(
         df,
         col_pattern1="used.",
