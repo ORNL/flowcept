@@ -284,7 +284,8 @@ class TaskQueryAPI(object):
         """
         # Retrieve telemetry DataFrame based on filter and calculation options
         df = self.df_query(
-            filter=filter, calculate_telemetry_diff=calculate_telemetry_diff,
+            filter=filter,
+            calculate_telemetry_diff=calculate_telemetry_diff,
             clean_dataframe=clean_dataframe,
             keep_non_numeric_columns=keep_non_numeric_columns,
             keep_only_nans_columns=keep_only_nans_columns,
@@ -360,7 +361,8 @@ class TaskQueryAPI(object):
         """
         # TODO: idea: think of finding the clauses, quantile threshold, and sort order automatically
         df = self.df_query(
-            filter=filter, calculate_telemetry_diff=calculate_telemetry_diff,
+            filter=filter,
+            calculate_telemetry_diff=calculate_telemetry_diff,
             clean_dataframe=clean_dataframe,
             keep_non_numeric_columns=keep_non_numeric_columns,
             keep_only_nans_columns=keep_only_nans_columns,

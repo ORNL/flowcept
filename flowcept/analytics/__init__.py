@@ -6,10 +6,7 @@ from flowcept.analytics.analytics_utils import (
     analyze_correlations_generated_vs_telemetry_diff,
     analyze_correlations_between,
     describe_col,
-    describe_cols
+    describe_cols,
 )
 
-from flowcept.analytics.plot import (
-    heatmap,
-    scatter2d_with_colors
-)
+from flowcept.analytics.plot import heatmap, scatter2d_with_colors

@@ -10,9 +10,9 @@ import random
 
 PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
 SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
+SETTINGS_DIR = os.path.expanduser(f"~/.{PROJECT_NAME}")
 if SETTINGS_PATH is None:
-    _settings_dir = os.path.expanduser(f"~/.{PROJECT_NAME}")
-    SETTINGS_PATH = os.path.join(_settings_dir, "settings.yaml")
+    SETTINGS_PATH = os.path.join(SETTINGS_DIR, "settings.yaml")
 
 if not os.path.exists(SETTINGS_PATH):
     raise Exception(
@@ -31,7 +31,10 @@ with open(SETTINGS_PATH) as f:
 ########################
 #   Log Settings       #
 ########################
-LOG_FILE_PATH = settings["log"].get("log_path", f"{PROJECT_NAME}.log")
+LOG_FILE_PATH = settings["log"].get("log_path", "default")
+
+if LOG_FILE_PATH == "default":
+    LOG_FILE_PATH = os.path.join(SETTINGS_DIR, f"{PROJECT_NAME}.log")
 
 # Possible values below are the typical python logging levels.
 LOG_FILE_LEVEL = settings["log"].get("log_file_level", "debug").upper()

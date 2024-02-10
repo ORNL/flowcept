@@ -29,6 +29,7 @@ def heatmap(
         **heatmap_args,
     )
 
+
 # TODO: idea: consider finding xcol, ycol, color_col automatically based on high
 #  correlations for eg
 def scatter2d_with_colors(
