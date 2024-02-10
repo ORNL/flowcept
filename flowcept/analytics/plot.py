@@ -29,7 +29,8 @@ def heatmap(
         **heatmap_args,
     )
 
-
+# TODO: idea: consider finding xcol, ycol, color_col automatically based on high
+#  correlations for eg
 def scatter2d_with_colors(
     df,
     x_col,
@@ -79,7 +80,7 @@ def scatter2d_with_colors(
 
     if plot_horizon_line:
         k = df[y_col].quantile(horizon_quantile)
-        y_line = np.linspace(df[x_col].min(), df[x_col].max(), len(df) * 10)
+        y_line = np.linspace(df[x_col].min(), df[x_col].max(), len(df) * 100)
         fig.add_trace(
             go.Scatter(
                 x=y_line,

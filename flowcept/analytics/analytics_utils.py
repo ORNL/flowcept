@@ -3,7 +3,7 @@ import numbers
 
 import numpy as np
 import pandas as pd
-import re
+pd.options.mode.chained_assignment = None
 
 _CORRELATION_DF_HEADER = ["col_1", "col_2", "correlation"]
 
@@ -40,6 +40,7 @@ def clean_dataframe(
 ) -> pd.DataFrame:
     """
 
+    :param sum_lists:
     :param keep_task_id:
     :param keep_only_nans_columns:
     :param keep_non_numeric_columns:
@@ -201,33 +202,36 @@ def analyze_correlations_between(
     return filtered_df
 
 
-def analyze_correlations_used_vs_generated(df: pd.DataFrame, threshold=0):
+def analyze_correlations_used_vs_generated(df: pd.DataFrame, method="kendall", threshold=0):
     return analyze_correlations_between(
         df,
         col_pattern1="used.",
         col_pattern2="generated.",
+        method=method,
         threshold=threshold,
     )
 
 
 def analyze_correlations_used_vs_telemetry_diff(
-    df: pd.DataFrame, threshold=0
+    df: pd.DataFrame, method="kendall", threshold=0
 ):
     return analyze_correlations_between(
         df,
         col_pattern1="^used[.]*",
         col_pattern2="^telemetry_diff[.]*",
+        method=method,
         threshold=threshold,
     )
 
 
 def analyze_correlations_generated_vs_telemetry_diff(
-    df: pd.DataFrame, threshold=0
+    df: pd.DataFrame, method="kendall", threshold=0
 ):
     return analyze_correlations_between(
         df,
         col_pattern1="^generated[.]*",
         col_pattern2="^telemetry_diff[.]*",
+        method=method,
         threshold=threshold,
     )
 
@@ -238,7 +242,7 @@ def format_number(num):
     while abs(num) >= 1000 and idx < len(suffixes) - 1:
         idx += 1
         num /= 1000.0
-    formatted = f"{num:.1f}" if num % 1 != 0 else f"{int(num)}"
+    formatted = f"{num:.2f}" if num % 1 != 0 else f"{int(num)}"
     formatted = (
         formatted.rstrip("0").rstrip(".")
         if "." in formatted
