@@ -6,7 +6,7 @@ from flowcept.commons.vocabulary import Vocabulary
 
 from flowcept.flowcept_api.consumer_api import FlowceptConsumerAPI
 from flowcept.flowcept_api.task_query_api import TaskQueryAPI
-from flowcept.flowcept_api import db_api
+from flowcept.flowcept_api.db_api import DBAPI
 
 
 try:
