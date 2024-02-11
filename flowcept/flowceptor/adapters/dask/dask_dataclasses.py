@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
-from flowcept.flowceptor.plugins.base_settings_dataclasses import BaseSettings
+from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
+    BaseSettings,
+)
 
 
 @dataclass

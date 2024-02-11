@@ -11,6 +11,9 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 
 
 def dummy_func1(x, workflow_id=None):
+    cool_var = "cool value"  # test if we can intercept this var
+    print(cool_var)
+    y = cool_var
     return x * 2
 
 
@@ -43,26 +46,26 @@ class TestDask(unittest.TestCase):
         TestDask.client = TestDask._setup_local_dask_cluster()
 
     @staticmethod
-    def _setup_local_dask_cluster():
+    def _setup_local_dask_cluster(n_workers=2):
         from dask.distributed import Client, LocalCluster
         from flowcept import (
-            FlowceptDaskSchedulerPlugin,
-            FlowceptDaskWorkerPlugin,
+            FlowceptDaskSchedulerAdapter,
+            FlowceptDaskWorkerAdapter,
         )
 
         if TestDask.consumer is None or not TestDask.consumer.is_started:
             TestDask.consumer = FlowceptConsumerAPI().start()
 
-        cluster = LocalCluster(n_workers=2)
+        cluster = LocalCluster(n_workers=n_workers)
         scheduler = cluster.scheduler
         client = Client(scheduler.address)
 
         # Instantiate and Register FlowceptPlugins, which are the ONLY
         # additional steps users would need to do in their code:
-        scheduler_plugin = FlowceptDaskSchedulerPlugin(scheduler)
+        scheduler_plugin = FlowceptDaskSchedulerAdapter(scheduler)
         scheduler.add_plugin(scheduler_plugin)
 
-        worker_plugin = FlowceptDaskWorkerPlugin()
+        worker_plugin = FlowceptDaskWorkerAdapter()
         client.register_worker_plugin(worker_plugin)
 
         return client
@@ -76,6 +79,14 @@ class TestDask(unittest.TestCase):
         self.logger.debug(o2.key)
         sleep(10)
         return o2.key
+
+    def test_dummyfunc(self):
+        i1 = np.random.random()
+        wf_id = f"wf_{uuid4()}"
+        o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
+        self.logger.debug(o1.result())
+        sleep(10)
+        return o1.key
 
     def test_long_workflow(self):
         i1 = np.random.random()

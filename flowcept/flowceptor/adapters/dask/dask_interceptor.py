@@ -4,7 +4,7 @@ from flowcept.commons.flowcept_dataclasses.task_message import (
     TaskMessage,
     Status,
 )
-from flowcept.flowceptor.plugins.base_interceptor import (
+from flowcept.flowceptor.adapters.base_interceptor import (
     BaseInterceptor,
 )
 from flowcept.commons.utils import get_utc_now
@@ -164,6 +164,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
                     task_msg.telemetry_at_end = (
                         self.telemetry_capture.capture()
                     )
+
             elif ts.state == "error":
                 task_msg.status = Status.ERROR
                 if self.settings.worker_create_timestamps:
