@@ -70,6 +70,8 @@ def clean_dataframe(
 
     # Get only the columns of interest for analysis
     dfa = df.filter(regex=regex_str)
+    if keep_task_id:
+        task_ids = dfa["task_id"]
 
     if sum_lists:
         # Identify the original columns that were lists or lists of lists
@@ -149,6 +151,9 @@ def clean_dataframe(
     ]
     if len(cols_to_drop):
         dfa.drop(columns=cols_to_drop, inplace=True)
+
+    if keep_task_id:
+        dfa["task_id"] = task_ids
 
     logmsg = f"Number of columns later: {len(dfa.columns)}"
     if logger:
@@ -284,3 +289,17 @@ def identify_pareto(df):
         if all(np.any(point <= other_point) for other_point in datav[:i]):
             pareto.append(point)
     return pd.DataFrame(pareto, columns=df.columns)
+
+
+def find_outliers_zscore(row, threshold=3):
+    numeric_columns = [
+        col
+        for col, val in row.items()
+        if pd.api.types.is_numeric_dtype(type(val))
+    ]
+    z_scores = np.abs(
+        (row[numeric_columns] - row[numeric_columns].mean())
+        / row[numeric_columns].std()
+    )
+    outliers_columns = list(z_scores[z_scores > threshold].index)
+    return outliers_columns
