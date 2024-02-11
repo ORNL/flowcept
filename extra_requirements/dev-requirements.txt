@@ -7,4 +7,3 @@ jupyterlab==3.6.1
 nbmake==1.4
 torch==2.0.1
 torchvision==0.15.2
-

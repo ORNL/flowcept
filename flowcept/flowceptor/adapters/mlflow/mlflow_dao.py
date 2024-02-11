@@ -3,7 +3,7 @@ from sqlalchemy.engine import Row, create_engine
 from textwrap import dedent
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import (
+from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import (
     RunData,
     MLFlowSettings,
 )

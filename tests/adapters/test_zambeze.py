@@ -7,7 +7,7 @@ from uuid import uuid4
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept import ZambezeInterceptor, FlowceptConsumerAPI
-from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
+from flowcept.flowceptor.adapters.zambeze.zambeze_dataclasses import (
     ZambezeMessage,
 )
 

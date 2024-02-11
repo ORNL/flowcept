@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 from setuptools import setup, find_packages
 
 
@@ -34,6 +35,15 @@ def get_requirements(file_path):
     return __requirements
 
 
+def create_settings_file():
+    directory_path = os.path.expanduser(f"~/.{PROJECT_NAME}")
+    os.makedirs(directory_path, exist_ok=True)
+    source_file = "resources/sample_settings.yaml"
+    destination_file = os.path.join(directory_path, "settings.yaml")
+    shutil.copyfile(source_file, destination_file)
+    print(f"Copied settings file to {destination_file}")
+
+
 requirements = get_requirements("requirements.txt")
 full_requirements = requirements.copy()
 
@@ -43,6 +53,9 @@ extras_requirement_keys = [
     "mlflow",
     "tensorboard",
     "dask",
+    "nvidia",
+    "analytics",
+    "responsible_ai",
 ]
 
 extras_require = dict()
@@ -76,10 +89,12 @@ keywords = [
     "model-management",
     "mlflow",
     "responsible-ai",
+    "data-analytics",
 ]
 
 short_description, long_description = get_descriptions()
 
+create_settings_file()
 
 setup(
     name=PROJECT_NAME,
@@ -94,7 +109,7 @@ setup(
     include_package_data=True,
     install_requires=requirements,
     extras_require=extras_require,
-    packages=find_packages(),
+    packages=find_packages(exclude=("tests", "notebooks", "deployment")),
     keywords=keywords,
     classifiers=[
         "License :: OSI Approved :: MIT License",
