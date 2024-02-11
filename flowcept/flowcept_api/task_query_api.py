@@ -32,6 +32,8 @@ class TaskQueryAPI(object):
 
     ASC = pymongo.ASCENDING
     DESC = pymongo.DESCENDING
+    MINIMUM_FIRST = ASC
+    MAXIMUM_FIRST = DESC
 
     def __init__(
         self,
@@ -124,7 +126,7 @@ class TaskQueryAPI(object):
                 aggregation,
                 remove_json_unserializables,
             )
-            if docs:
+            if docs is not None:
                 return docs
             else:
                 self._logger.error("Error when executing query.")
@@ -157,6 +159,9 @@ class TaskQueryAPI(object):
             aggregation,
             remove_json_unserializables,
         )
+        if len(docs) == 0:
+            return pd.DataFrame()
+
         df = self._get_dataframe_from_task_docs(
             docs, calculate_telemetry_diff, shift_hours
         )
@@ -179,11 +184,16 @@ class TaskQueryAPI(object):
         calculate_telemetry_diff=False,
         shift_hours=0,
     ) -> pd.DataFrame:
+        if docs is None:
+            raise Exception("Docs is none in _get_dataframe_from_task_docs")
+
         if calculate_telemetry_diff:
             try:
                 docs = calculate_telemetry_diff_for_docs(docs)
             except Exception as e:
                 self._logger.exception(e)
+
+
 
         try:
             df = pd.json_normalize(docs)
