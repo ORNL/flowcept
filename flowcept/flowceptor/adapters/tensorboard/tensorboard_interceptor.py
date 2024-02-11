@@ -9,13 +9,13 @@ from flowcept.commons.flowcept_dataclasses.task_message import (
     Status,
 )
 from flowcept.commons.utils import get_utc_now
-from flowcept.flowceptor.plugins.interceptor_state_manager import (
+from flowcept.flowceptor.adapters.interceptor_state_manager import (
     InterceptorStateManager,
 )
-from flowcept.flowceptor.plugins.base_interceptor import (
+from flowcept.flowceptor.adapters.base_interceptor import (
     BaseInterceptor,
 )
-from flowcept.flowceptor.plugins.mlflow.interception_event_handler import (
+from flowcept.flowceptor.adapters.mlflow.interception_event_handler import (
     InterceptionEventHandler,
 )
 

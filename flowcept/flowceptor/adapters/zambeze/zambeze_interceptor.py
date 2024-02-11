@@ -6,7 +6,7 @@ from typing import Dict
 
 from flowcept.commons.utils import get_utc_now, get_status_from_str
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
-from flowcept.flowceptor.plugins.base_interceptor import (
+from flowcept.flowceptor.adapters.base_interceptor import (
     BaseInterceptor,
 )
 
@@ -50,7 +50,7 @@ class ZambezeInterceptor(BaseInterceptor):
         try:
             self._channel.basic_cancel(self._consumer_tag)
         except Exception as e:
-            self.logger.warn(
+            self.logger.warning(
                 f"This exception is expected to occur after "
                 f"channel.basic_cancel: {e}"
             )

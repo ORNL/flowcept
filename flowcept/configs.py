@@ -10,23 +10,20 @@ import random
 
 PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
 SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
+SETTINGS_DIR = os.path.expanduser(f"~/.{PROJECT_NAME}")
 if SETTINGS_PATH is None:
+    SETTINGS_PATH = os.path.join(SETTINGS_DIR, "settings.yaml")
+
+if not os.path.exists(SETTINGS_PATH):
     raise Exception(
-        "Please define an environment variable with the ABSOLUTE path to "
-        "the settings.yaml file. There is a sample file "
-        "in the resources directory under the project's root path."
+        f"Settings file {SETTINGS_PATH} was not found. "
+        f"You should either define the "
+        f"environment variable FLOWCEPT_SETTINGS_PATH with its path or "
+        f"install Flowcept's package to create the directory "
+        f"~/.flowcept with the file in it.\n"
+        "A sample settings file is found in the 'resources' directory "
+        "under the project's root path."
     )
-    # project_dir_path = os.path.abspath(
-    #     os.path.join(os.path.dirname(__file__), "..")
-    # )
-    # SETTINGS_PATH = os.path.join(
-    #     project_dir_path, "resources", "settings.yaml"
-    # )
-
-# if not os.path.isabs(SETTINGS_PATH):
-#     # TODO: check if we really need abs path
-#     raise Exception("Please use an absolute path for the settings.yaml")
-
 
 with open(SETTINGS_PATH) as f:
     settings = yaml.safe_load(f)
@@ -34,7 +31,10 @@ with open(SETTINGS_PATH) as f:
 ########################
 #   Log Settings       #
 ########################
-LOG_FILE_PATH = settings["log"].get("log_path", f"{PROJECT_NAME}.log")
+LOG_FILE_PATH = settings["log"].get("log_path", "default")
+
+if LOG_FILE_PATH == "default":
+    LOG_FILE_PATH = os.path.join(SETTINGS_DIR, f"{PROJECT_NAME}.log")
 
 # Possible values below are the typical python logging levels.
 LOG_FILE_LEVEL = settings["log"].get("log_file_level", "debug").upper()
@@ -106,7 +106,6 @@ PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 
 TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
-RAI_CAPTURE = settings["project"].get("responsible_ai_capture", None)
 
 ######################
 # SYS METADATA #
@@ -147,3 +146,16 @@ EXTRA_METADATA = settings.get("extra_metadata", None)
 
 WEBSERVER_HOST = settings["web_server"].get("host", "0.0.0.0")
 WEBSERVER_PORT = int(settings["web_server"].get("port", "5000"))
+
+######################
+#    ANALYTICS      #
+######################
+
+ANALYTICS = settings.get("analytics", None)
+
+################# Enabled ADAPTERS
+
+ADAPTERS = set()
+
+for adapter in settings.get("adapters", set()):
+    ADAPTERS.add(settings["adapters"][adapter].get("kind"))
