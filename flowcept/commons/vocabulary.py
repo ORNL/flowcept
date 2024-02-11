@@ -1,6 +1,6 @@
 class Vocabulary:
     class Settings:
-        PLUGINS = "plugins"
+        ADAPTERS = "adapters"
         KIND = "kind"
 
         ZAMBEZE_KIND = "zambeze"

@@ -1,4 +1,3 @@
-import os
 import yaml
 
 from flowcept.commons.vocabulary import Vocabulary
@@ -6,20 +5,20 @@ from flowcept.configs import (
     SETTINGS_PATH,
 )
 
-from flowcept.flowceptor.plugins.base_settings_dataclasses import (
+from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
     BaseSettings,
     KeyValue,
 )
-from flowcept.flowceptor.plugins.zambeze.zambeze_dataclasses import (
+from flowcept.flowceptor.adapters.zambeze.zambeze_dataclasses import (
     ZambezeSettings,
 )
-from flowcept.flowceptor.plugins.mlflow.mlflow_dataclasses import (
+from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import (
     MLFlowSettings,
 )
-from flowcept.flowceptor.plugins.tensorboard.tensorboard_dataclasses import (
+from flowcept.flowceptor.adapters.tensorboard.tensorboard_dataclasses import (
     TensorboardSettings,
 )
-from flowcept.flowceptor.plugins.dask.dask_dataclasses import (
+from flowcept.flowceptor.adapters.dask.dask_dataclasses import (
     DaskSettings,
 )
 
@@ -45,16 +44,16 @@ def _build_base_settings(kind: str, settings_dict: dict) -> BaseSettings:
     return settings_obj
 
 
-def get_settings(plugin_key: str) -> BaseSettings:
+def get_settings(adapter_key: str) -> BaseSettings:
     with open(SETTINGS_PATH) as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
-    settings_dict = data[Vocabulary.Settings.PLUGINS][plugin_key]
+    settings_dict = data[Vocabulary.Settings.ADAPTERS][adapter_key]
     if not settings_dict:
         raise Exception(
-            f"You must specify the plugin <<{plugin_key}>> in"
+            f"You must specify the adapter <<{adapter_key}>> in"
             f" the settings YAML file."
         )
-    settings_dict["key"] = plugin_key
+    settings_dict["key"] = adapter_key
     kind = settings_dict[Vocabulary.Settings.KIND]
     settings_obj = _build_base_settings(kind, settings_dict)
 

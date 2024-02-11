@@ -15,7 +15,7 @@ from flowcept.configs import (
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao import MQDao
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
-from flowcept.flowceptor.plugins.settings_factory import get_settings
+from flowcept.commons.settings_factory import get_settings
 
 from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 

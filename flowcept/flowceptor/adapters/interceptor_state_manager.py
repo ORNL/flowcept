@@ -1,6 +1,8 @@
 from redis import Redis
 
-from flowcept.flowceptor.plugins.base_settings_dataclasses import BaseSettings
+from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
+    BaseSettings,
+)
 
 
 class InterceptorStateManager(object):
@@ -9,7 +11,7 @@ class InterceptorStateManager(object):
 
         if not hasattr(settings, "redis_host"):
             raise Exception(
-                f"This plugin setting {settings.key} manages state in Redis, so"
+                f"This adapter setting {settings.key} manages state in Redis, so"
                 f"Redis Host is required in the settings yaml file."
             )
 

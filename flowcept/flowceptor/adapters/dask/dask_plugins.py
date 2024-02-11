@@ -1,13 +1,13 @@
 from dask.distributed import WorkerPlugin, SchedulerPlugin
 
 
-from flowcept.flowceptor.plugins.dask.dask_interceptor import (
+from flowcept.flowceptor.adapters.dask.dask_interceptor import (
     DaskSchedulerInterceptor,
     DaskWorkerInterceptor,
 )
 
 
-class FlowceptDaskSchedulerPlugin(SchedulerPlugin):
+class FlowceptDaskSchedulerAdapter(SchedulerPlugin):
     def __init__(self, scheduler):
         self.address = scheduler.address
         self.interceptor = DaskSchedulerInterceptor(scheduler)
@@ -20,7 +20,7 @@ class FlowceptDaskSchedulerPlugin(SchedulerPlugin):
         self.interceptor.stop()
 
 
-class FlowceptDaskWorkerPlugin(WorkerPlugin):
+class FlowceptDaskWorkerAdapter(WorkerPlugin):
     def __init__(self):
         self.interceptor = DaskWorkerInterceptor()
 
