@@ -16,6 +16,7 @@ from bson.objectid import ObjectId
 from flowcept.analytics.analytics_utils import (
     clean_dataframe as clean_df,
     analyze_correlations_between,
+    find_outliers_zscore,
 )
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -601,3 +602,32 @@ class TaskQueryAPI(object):
             sorted_return[s[0]] = ret[s[0]]
 
         return sorted_return
+
+    def df_find_outliers(
+        self,
+        filter,
+        outlier_threshold=3,
+        calculate_telemetry_diff=True,
+        clean_dataframe: bool = False,
+        keep_non_numeric_columns=False,
+        keep_only_nans_columns=False,
+        keep_task_id=False,
+        keep_telemetry_percent_columns=False,
+        sum_lists=False,
+        aggregate_telemetry=False,
+    ):
+        df = self.df_query(
+            filter=filter,
+            calculate_telemetry_diff=calculate_telemetry_diff,
+            clean_dataframe=clean_dataframe,
+            keep_non_numeric_columns=keep_non_numeric_columns,
+            keep_only_nans_columns=keep_only_nans_columns,
+            keep_task_id=keep_task_id,
+            keep_telemetry_percent_columns=keep_telemetry_percent_columns,
+            sum_lists=sum_lists,
+            aggregate_telemetry=aggregate_telemetry,
+        )
+        df["outlier_columns"] = df.apply(
+            find_outliers_zscore, axis=1, threshold=outlier_threshold
+        )
+        return df[df["outlier_columns"].apply(len) > 0]

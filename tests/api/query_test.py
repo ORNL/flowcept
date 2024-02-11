@@ -3,7 +3,6 @@ import pathlib
 import unittest
 import json
 import random
-from collections import OrderedDict
 from threading import Thread
 
 import pandas as pd
@@ -12,8 +11,6 @@ import inspect
 from time import sleep
 from uuid import uuid4
 from datetime import datetime, timedelta
-
-from sortedcontainers import SortedDict
 
 from flowcept.commons.flowcept_dataclasses.task_message import (
     TaskMessage,
@@ -422,4 +419,21 @@ class QueryTest(unittest.TestCase):
             filter=task_ids_filter
         )
         assert len(best_tasks)
+        self.delete_task_ids_and_assert(task_ids, init_db_count)
+
+    def test_find_outliers(self):
+        max_docs = 9
+        task_ids_filter, task_ids, init_db_count = self.gen_n_get_task_ids(
+            gen_mock_data,
+            size=max_docs,
+            generation_args={"with_telemetry": True},
+        )
+        outliers = self.api.df_find_outliers(
+            outlier_threshold=5,
+            calculate_telemetry_diff=True,
+            filter=task_ids_filter,
+            clean_dataframe=True,
+            keep_task_id=True,
+        )
+        assert len(outliers)
         self.delete_task_ids_and_assert(task_ids, init_db_count)
