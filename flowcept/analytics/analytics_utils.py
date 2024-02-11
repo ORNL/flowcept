@@ -192,12 +192,12 @@ def analyze_correlations_between(
     corr_df = analyze_correlations(df, method, threshold)
     filtered_df = corr_df[
         (
-            corr_df[_CORRELATION_DF_HEADER[0]].str.contains(col_pattern1)
-            & corr_df[_CORRELATION_DF_HEADER[1]].str.contains(col_pattern2)
+            corr_df[_CORRELATION_DF_HEADER[0]].str.match(col_pattern1)
+            & corr_df[_CORRELATION_DF_HEADER[1]].str.match(col_pattern2)
         )
         | (
-            corr_df[_CORRELATION_DF_HEADER[0]].str.contains(col_pattern2)
-            & corr_df[_CORRELATION_DF_HEADER[1]].str.contains(col_pattern1)
+            corr_df[_CORRELATION_DF_HEADER[0]].str.match(col_pattern2)
+            & corr_df[_CORRELATION_DF_HEADER[1]].str.match(col_pattern1)
         )
     ]
     return filtered_df
@@ -208,8 +208,8 @@ def analyze_correlations_used_vs_generated(
 ):
     return analyze_correlations_between(
         df,
-        col_pattern1="used.",
-        col_pattern2="generated.",
+        col_pattern1="used[.]",
+        col_pattern2="generated[.]",
         method=method,
         threshold=threshold,
     )
