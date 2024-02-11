@@ -147,6 +147,12 @@ EXTRA_METADATA = settings.get("extra_metadata", None)
 WEBSERVER_HOST = settings["web_server"].get("host", "0.0.0.0")
 WEBSERVER_PORT = int(settings["web_server"].get("port", "5000"))
 
+######################
+#    ANALYTICS      #
+######################
+
+ANALYTICS = settings.get("analytics", None)
+
 ################# Enabled ADAPTERS
 
 ADAPTERS = set()

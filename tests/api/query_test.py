@@ -3,6 +3,7 @@ import pathlib
 import unittest
 import json
 import random
+from collections import OrderedDict
 from threading import Thread
 
 import pandas as pd
@@ -11,6 +12,8 @@ import inspect
 from time import sleep
 from uuid import uuid4
 from datetime import datetime, timedelta
+
+from sortedcontainers import SortedDict
 
 from flowcept.commons.flowcept_dataclasses.task_message import (
     TaskMessage,
@@ -408,104 +411,15 @@ class QueryTest(unittest.TestCase):
 
         assert len(correlations_df)
 
-    def test_correlations_and_quantiles(self):
+    def test_find_best_tasks(self):
         max_docs = 9
         task_ids_filter, task_ids, init_db_count = self.gen_n_get_task_ids(
             gen_mock_data,
             size=max_docs,
             generation_args={"with_telemetry": True},
         )
-        df = self.api.df_query(task_ids_filter, calculate_telemetry_diff=True)
-        #self.delete_task_ids_and_assert(task_ids, init_db_count)
-        assert len(df) == max_docs
-
-        # given max generated.accuracy
-        # min resources
-        # min
-
-        pattern_x = '^generated\.(?!responsible_ai_metrics\.).*' #loss, acc
-        pattern_y = '^telemetry_diff\..*'                        #telemetry
-        pattern_z = '^generated\.responsible_ai_metrics\..*$' #params
-
-        corr_df1 = analyze_correlations_between(df, pattern_x, pattern_y)
-        corr_df2 = analyze_correlations_between(df, pattern_x, pattern_z)
-
-        CORR_THR = 0.5
-        TOP_K = 50
-
-        result_df1 = corr_df1[abs(corr_df1['correlation']) >= CORR_THR]
-        result_df1 = result_df1.iloc[result_df1['correlation'].abs().argsort()][
-                    ::-1].head(TOP_K)
-
-        result_df2 = corr_df2[abs(corr_df2['correlation']) >= CORR_THR]
-        result_df2 = result_df2.iloc[
-                         result_df2['correlation'].abs().argsort()][
-                     ::-1].head(TOP_K)
-        # (x,y)
-        # (x,color)
-        cols = []
-
-        for index, row in result_df1.iterrows():
-            # Accessing individual elements in the row
-            x_col = row['col_1']
-            y_col = row['col_2']
-            x_y_corr = row['correlation']
-
-            for index2, row2 in result_df2.iterrows():
-                # Accessing individual elements in the row
-                x_col_df2 = row2['col_1']
-                z_col = row2['col_2']
-                x_z_corr = row2['correlation']
-
-                if x_col == x_col_df2:
-                    cols.append(
-                        {"x_col": x_col,
-                         "y_col": y_col,
-                         "z_col": z_col,
-                         "x_y_corr": x_y_corr,
-                         "x_z_corr": x_z_corr
-                        }
-                    )
-
-        dfa = pd.DataFrame(cols)
-        new_rows = []
-        task_id_counts = {}
-        for index, row in dfa.iterrows():
-            clauses = [
-                (row["y_col"], "<=", 0.5),
-            ]
-            xcol_sort = TaskQueryAPI.MINIMUM_FIRST if "loss" in row["x_col"] else TaskQueryAPI.MAXIMUM_FIRST # This should come from a "KB"
-            sort = [
-                (row["y_col"], TaskQueryAPI.MINIMUM_FIRST), # resources
-                (row["x_col"], xcol_sort), # accuracy
-                (row["z_col"], TaskQueryAPI.MINIMUM_FIRST), # resp_ai
-            ]
-            try:
-                df = self.api.df_get_tasks_quantiles(
-                    limit=1,
-                    clauses=clauses,
-                    filter=task_ids_filter,
-                    sort=sort,
-                    calculate_telemetry_diff=True,
-                    clean_dataframe=False,
-                )
-                cols_to_proj = ["task_id", row['x_col'], row['y_col'], row['z_col']]
-                _dict = df[cols_to_proj].to_dict(orient='records')[0]
-                _dict["x_y_corr"] = row["x_y_corr"]
-                _dict["x_z_corr"] = row["x_z_corr"]
-                new_rows.append(_dict)
-
-            except Exception as e:
-                print(e)
-
-        result_df = pd.DataFrame(new_rows)
-
-        task_id_counts = result_df['task_id'].value_counts()
-
-        # Sort the DataFrame by the frequency of 'task_id' values
-        sorted_dfa = result_df.sort_values(by='task_id',
-                                     key=lambda x: x.map(task_id_counts), ascending=False)
-
-        print(sorted_dfa)
-        pass
-
+        best_tasks = self.api.find_interesting_tasks_based_on_correlations_generated_and_telemetry_data(
+            filter=task_ids_filter
+        )
+        assert len(best_tasks)
+        self.delete_task_ids_and_assert(task_ids, init_db_count)

@@ -1,6 +1,7 @@
 """
     General overview of this module.
 """
+from collections import OrderedDict
 from typing import List, Dict, Tuple
 from datetime import timedelta
 import json
@@ -12,7 +13,10 @@ import requests
 
 from bson.objectid import ObjectId
 
-from flowcept.analytics.analytics_utils import clean_dataframe as clean_df
+from flowcept.analytics.analytics_utils import (
+    clean_dataframe as clean_df,
+    analyze_correlations_between,
+)
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.query_utils import (
@@ -20,7 +24,7 @@ from flowcept.commons.query_utils import (
     to_datetime,
     calculate_telemetry_diff_for_docs,
 )
-from flowcept.configs import WEBSERVER_HOST, WEBSERVER_PORT
+from flowcept.configs import WEBSERVER_HOST, WEBSERVER_PORT, ANALYTICS
 from flowcept.flowcept_webserver.app import BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
@@ -192,8 +196,6 @@ class TaskQueryAPI(object):
                 docs = calculate_telemetry_diff_for_docs(docs)
             except Exception as e:
                 self._logger.exception(e)
-
-
 
         try:
             df = pd.json_normalize(docs)
@@ -424,3 +426,178 @@ class TaskQueryAPI(object):
             result_df = result_df.head(limit)
 
         return result_df
+
+    def find_interesting_tasks_based_on_correlations_generated_and_telemetry_data(
+        self, filter=None, correlation_threshold=0.5, top_k=50
+    ):
+        return self.find_interesting_tasks_based_on_xyz(
+            filter=filter,
+            correlation_threshold=correlation_threshold,
+            top_k=top_k,
+        )
+
+    def find_interesting_tasks_based_on_xyz(
+        self,
+        pattern_x="^generated\.(?!responsible_ai_metrics\.).*",  # loss, acc
+        pattern_y="^telemetry_diff\..*",  # telemetry
+        pattern_z="^generated\.responsible_ai_metrics\..*$",  # params
+        filter=None,
+        correlation_threshold=0.5,
+        top_k=50,
+    ):
+        """
+        Returns the most interesting tasks for which (xy) and (xz) are highly correlated, meaning that
+        y is very senstive to x as well as z is very sensitive to x.
+        It returns a sorted dict, based on a score calculated depending on how many
+        high (xy) and (xz) correlations are found.
+        :param pattern_x:
+        :param pattern_y:
+        :param pattern_z:
+        :param filter:
+        :param correlation_threshold:
+        :param top_k:
+        :return:
+        """
+        self._logger.warning(
+            "This is an experimental feature. Use it with carefully!"
+        )
+        # TODO: improve and optmize this function.
+        df = self.df_query(filter=filter, calculate_telemetry_diff=True)
+        corr_df1 = analyze_correlations_between(df, pattern_x, pattern_y)
+        corr_df2 = analyze_correlations_between(df, pattern_x, pattern_z)
+
+        result_df1 = corr_df1[
+            abs(corr_df1["correlation"]) >= correlation_threshold
+        ]
+        result_df1 = result_df1.iloc[
+            result_df1["correlation"].abs().argsort()
+        ][::-1].head(top_k)
+
+        result_df2 = corr_df2[
+            abs(corr_df2["correlation"]) >= correlation_threshold
+        ]
+        result_df2 = result_df2.iloc[
+            result_df2["correlation"].abs().argsort()
+        ][::-1].head(top_k)
+        cols = []
+        for index, row in result_df1.iterrows():
+            x_col = row["col_1"]
+            y_col = row["col_2"]
+            x_y_corr = row["correlation"]
+
+            for index2, row2 in result_df2.iterrows():
+                # Accessing individual elements in the row
+                x_col_df2 = row2["col_1"]
+                z_col = row2["col_2"]
+                x_z_corr = row2["correlation"]
+
+                if x_col == x_col_df2:
+                    cols.append(
+                        {
+                            "x_col": x_col,
+                            "y_col": y_col,
+                            "z_col": z_col,
+                            "x_y_corr": x_y_corr,
+                            "x_z_corr": x_z_corr,
+                        }
+                    )
+
+        dfa = pd.DataFrame(cols)
+        new_rows = []
+
+        ret = {}
+
+        SORT_ORDERS = ANALYTICS["sort_orders"]
+
+        for index, row in dfa.iterrows():
+            clauses = [
+                (row["y_col"], "<=", 0.5),
+            ]
+            xcol_sort = TaskQueryAPI.MINIMUM_FIRST
+            if (
+                SORT_ORDERS is not None
+                and SORT_ORDERS[row["x_col"]] == "maximum_first"
+            ):
+                xcol_sort = TaskQueryAPI.MAXIMUM_FIRST
+
+            sort = [
+                (row["y_col"], TaskQueryAPI.MINIMUM_FIRST),  # resources
+                (row["x_col"], xcol_sort),  # accuracy
+                (row["z_col"], TaskQueryAPI.MINIMUM_FIRST),  # resp_ai
+            ]
+            try:
+                # TODO: we don't need to query the db again! this is slow!!
+                df = self.df_get_tasks_quantiles(
+                    limit=1,
+                    clauses=clauses,
+                    filter=filter,
+                    sort=sort,
+                    calculate_telemetry_diff=True,
+                    clean_dataframe=False,
+                )
+                cols_to_proj = [
+                    "task_id",
+                    row["x_col"],
+                    row["y_col"],
+                    row["z_col"],
+                ]
+                _dict = df[cols_to_proj].to_dict(orient="records")[0]
+                _dict["x_y_corr"] = row["x_y_corr"]
+                _dict["x_z_corr"] = row["x_z_corr"]
+                new_rows.append(_dict)
+
+                tid, x_col, y_col, z_col, x, y, z, xy_corr, xz_corr = (
+                    _dict["task_id"],
+                    row["x_col"],
+                    row["y_col"],
+                    row["z_col"],
+                    _dict[row["x_col"]],
+                    _dict[row["y_col"]],
+                    _dict[row["z_col"]],
+                    row["x_y_corr"],
+                    row["x_z_corr"],
+                )
+                if tid not in ret:
+                    ret[tid] = {
+                        "x_cols": [],
+                        "y_cols": [],
+                        "z_cols": [],
+                        "score": 0,
+                        "n_x_cols": 0,
+                        "n_y_cols": 0,
+                        "n_z_cols": 0,
+                        "data": {},
+                    }
+
+                if x_col not in ret[tid]["x_cols"]:
+                    ret[tid]["x_cols"].append(x_col)
+                    ret[tid]["n_x_cols"] += 1
+                    ret[tid]["score"] += 20
+                if y_col not in ret[tid]["y_cols"]:
+                    ret[tid]["y_cols"].append(y_col)
+                    ret[tid]["n_y_cols"] += 1
+                    ret[tid]["score"] += 1
+                if z_col not in ret[tid]["z_cols"]:
+                    ret[tid]["z_cols"].append(z_col)
+                    ret[tid]["n_z_cols"] += 1
+                    ret[tid]["score"] += 10
+
+                _data = ret[tid]["data"]
+                if x_col not in _data:
+                    _data[x_col] = {"value": x, "y": [], "z": []}
+                # TODO: We are repeating values here unnecessarily!
+                _data[x_col]["y"].append({y_col: y, "xy_corr": xy_corr})
+                _data[x_col]["z"].append({z_col: z, "xz_corr": xz_corr})
+            except Exception as e:
+                print(e)
+
+        scores = []
+        for tid in ret:
+            scores.append((tid, ret[tid]["score"]))
+        sorted_score = sorted(scores, key=lambda _x: _x[1], reverse=True)
+
+        sorted_return = OrderedDict()
+        for s in sorted_score:
+            sorted_return[s[0]] = ret[s[0]]
+
+        return sorted_return
