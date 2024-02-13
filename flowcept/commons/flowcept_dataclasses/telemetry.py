@@ -72,7 +72,7 @@ class Telemetry:
     memory: Memory = None
     disk: Disk = None
     network: Network = None
-    gpu: Dict  # TODO: use dataclasses
+    gpu: Dict = None  # TODO: use dataclasses
 
     def to_dict(self):
         ret = {}
