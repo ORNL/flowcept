@@ -57,6 +57,7 @@ extras_requirement_keys = [
     "amd",
     "analytics",
     "responsible_ai",
+    "data_augmentation"
 ]
 
 skip_full = {"amd", "nvidia"}

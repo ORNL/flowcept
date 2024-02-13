@@ -188,11 +188,6 @@ class TelemetryCapture:
             self.logger.exception(e)
 
         try:
-            flowcept_gpu_info["max_clocks"] = amd_info.query_max_clocks()
-        except Exception as e:
-            self.logger.exception(e)
-
-        try:
             max_clocks = amd_info.query_max_clocks()
             flowcept_gpu_info["max_shader_clock"] = max_clocks["sclk_max"]
             flowcept_gpu_info["max_memory_clock"] = max_clocks["mclk_max"]
@@ -242,7 +237,7 @@ class TelemetryCapture:
             if len(N_GPUS) == 0:
                 self.logger.exception(
                     "You are trying to capture telemetry GPU info, but we"
-                    " couldn't detect any GPU, either NVIDIA or AMD."
+                    " couldn't detect any GPU, neither NVIDIA nor AMD."
                     " Please set GPU telemetry capture to false."
                 )
 

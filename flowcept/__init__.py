@@ -14,9 +14,8 @@ try:
         model_explainer,
         model_profiler,
     )
-except Exception as _exp:
-    flowcept.commons.logger.exception(_exp)
-
+except:
+    pass
 
 if Vocabulary.Settings.ZAMBEZE_KIND in flowcept.configs.ADAPTERS:
     try:
@@ -50,7 +49,7 @@ if Vocabulary.Settings.MLFLOW_KIND in flowcept.configs.ADAPTERS:
             MLFlowInterceptor,
         )
     except Exception as _exp:
-        flowcept.commons.loggerr.error(
+        flowcept.commons.logger.error(
             flowcept.commons._get_adapter_exception_msg(
                 Vocabulary.Settings.MLFLOW_KIND
             )
