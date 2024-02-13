@@ -53,26 +53,26 @@ class Telemetry:
         executable: str
         cmd_line: List[str]
 
-    @dataclass(init=False)
-    class GPU:
-        @dataclass
-        class GPUMetrics:
-            total: int
-            free: int
-            used: int
-            usage_percent: float
-            temperature: float
-            power_usage: float
-
-        gpu_sums: GPUMetrics
-        per_gpu: Dict[int, GPUMetrics] = None
+    # @dataclass(init=False)
+    # class GPU:
+    #     @dataclass
+    #     class GPUMetrics:
+    #         total: int
+    #         free: int
+    #         used: int
+    #         usage_percent: float
+    #         temperature: float
+    #         power_usage: float
+    #
+    #     gpu_sums: GPUMetrics
+    #     per_gpu: Dict[int, GPUMetrics] = None
 
     cpu: CPU = None
     process: Process = None
     memory: Memory = None
     disk: Disk = None
     network: Network = None
-    gpu: GPU = None
+    gpu: Dict  # TODO: use dataclasses
 
     def to_dict(self):
         ret = {}

@@ -107,6 +107,26 @@ JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 
 TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
 
+
+##################################
+# GPU TELEMETRY CAPTURE SETTINGS #
+#################################
+
+N_GPUS = dict()
+if TELEMETRY_CAPTURE.get("gpu", False):
+    try:
+        from pynvml import nvmlDeviceGetCount
+
+        N_GPUS["nvidia"] = nvmlDeviceGetCount()
+    except:
+        pass
+    try:
+        import pyamdgpuinfo
+
+        N_GPUS["amd"] = pyamdgpuinfo.detect_gpus()
+    except:
+        pass
+
 ######################
 # SYS METADATA #
 ######################
