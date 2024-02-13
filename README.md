@@ -95,6 +95,14 @@ R. Souza, T. Skluzacek, S. Wilkinson, M. Ziatdinov, and R. da Silva
 
 ```
 
+## Disclaimer & Get in Touch
+
+Please note that this a research software. We encourage you to give it a try and use it with your own stack. We
+are continuously working on improving documentation and adding more examples and notebooks, but we are still far from
+a good documentation covering the whole system. If you are interested in working with FlowCept in your own scientific
+project, we can give you a jump start if you reach out to us. Feel free to [create an issue](https://github.com/ORNL/flowcept/issues/new), 
+[create a new discussion thread](https://github.com/ORNL/flowcept/discussions/new/choose) or drop us an email (we trust you'll find a way to reach out to us :wink: ).
+
 ## Acknowledgement
 
 This research uses resources of the Oak Ridge Leadership Computing Facility 
