@@ -26,7 +26,7 @@ class FlowceptConsumerAPI(object):
             self.logger.warning("Consumer is already started!")
             return self
 
-        self._mq_dao.reset_started_mq_threads()
+        #self._mq_dao.reset_started_mq_threads()
         if self._interceptors and len(self._interceptors):
             for interceptor in self._interceptors:
                 self.logger.debug(
@@ -66,3 +66,10 @@ class FlowceptConsumerAPI(object):
         self._document_inserter.stop()
         self.is_started = False
         self.logger.debug("All stopped!")
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()

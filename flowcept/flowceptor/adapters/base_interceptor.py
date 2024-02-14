@@ -65,26 +65,27 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         self.logger = FlowceptLogger().get_logger()
         self.settings = get_settings(plugin_key)
         self._mq_dao = MQDao()
+        self._interceptor_instance_id = id(self)
         self.telemetry_capture = TelemetryCapture()
 
     def prepare_task_msg(self, *args, **kwargs) -> TaskMessage:
         raise NotImplementedError()
 
-    def start(self) -> "BaseInterceptor":
+    def start(self, bundle_exec_id=None) -> "BaseInterceptor":
         """
         Starts an interceptor
         :return:
         """
-        self._mq_dao.start_time_based_flushing()
+        self._mq_dao.start_time_based_flushing(self._interceptor_instance_id, bundle_exec_id)
         self.telemetry_capture.init_gpu_telemetry()
         return self
 
-    def stop(self) -> bool:
+    def stop(self, bundle_exec_id=None) -> bool:
         """
         Gracefully stops an interceptor
         :return:
         """
-        self._mq_dao.stop()
+        self._mq_dao.stop_time_based_flushing(self._interceptor_instance_id, bundle_exec_id)
         self.telemetry_capture.shutdown_gpu_telemetry()
 
     def observe(self, *args, **kwargs):

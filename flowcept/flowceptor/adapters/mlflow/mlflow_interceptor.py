@@ -66,7 +66,7 @@ class MLFlowInterceptor(BaseInterceptor):
     def stop(self) -> bool:
         super().stop()
         self.logger.debug("Interceptor stopping...")
-        self._observer.stop()
+        self._observer.stop_time_based_flushing()
         self.logger.debug("Interceptor stopped.")
         return True
 
