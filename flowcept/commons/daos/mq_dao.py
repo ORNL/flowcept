@@ -29,9 +29,9 @@ class MQDao:
 
     @staticmethod
     def get_set_name(exec_bunlde_id=None):
-        set_id = f'started_mq_thread_execution'
+        set_id = f"started_mq_thread_execution"
         if exec_bunlde_id is not None:
-            set_id += "_"+str(exec_bunlde_id)
+            set_id += "_" + str(exec_bunlde_id)
         return set_id
 
     def __init__(self):
@@ -39,7 +39,7 @@ class MQDao:
         self._redis = Redis(
             host=REDIS_HOST, port=REDIS_PORT, db=0, password=REDIS_PASSWORD
         )
-        self.keyvalue_dao = KeyValueDAO(connection=self._redis)
+        self._keyvalue_dao = KeyValueDAO(connection=self._redis)
         self._buffer = None
         self._time_thread: Thread = None
         self._previous_time = -1
@@ -47,13 +47,38 @@ class MQDao:
         self._time_based_flushing_started = False
         self._lock = None
 
-    def register_time_based_thread_init(self, interceptor_instance_id: int, exec_bundle_id: int=None):
-        # TODO add logs, can we do int instead of str?
-        set_key = MQDao.get_set_name(exec_bundle_id)
-        self.keyvalue_dao.add_key_into_set(set_key,
-                                           str(interceptor_instance_id))
+    def register_time_based_thread_init(
+        self, interceptor_instance_id: int, exec_bundle_id=None
+    ):
+        set_name = MQDao.get_set_name(exec_bundle_id)
+        self.logger.debug(
+            f"Registering the beginning of the time_based MQ flush thread {set_name}.{interceptor_instance_id}"
+        )
+        self._keyvalue_dao.add_key_into_set(set_name, interceptor_instance_id)
 
-    def start_time_based_flushing(self, interceptor_instance_id: int, exec_bundle_id: int=None):
+    def register_time_based_thread_end(
+        self, interceptor_instance_id: int, exec_bundle_id=None
+    ):
+        set_name = MQDao.get_set_name(exec_bundle_id)
+        self.logger.debug(
+            f"Registering the end of the time_based MQ flush thread {set_name}.{interceptor_instance_id}"
+        )
+        self._keyvalue_dao.remove_key_from_set(
+            set_name, interceptor_instance_id
+        )
+
+    def all_time_based_threads_ended(self, exec_bundle_id=None):
+        set_name = MQDao.get_set_name(exec_bundle_id)
+        return self._keyvalue_dao.set_is_empty(set_name)
+
+    def delete_all_time_based_threads_sets(self):
+        return self._keyvalue_dao.delete_all_matching_sets(
+            MQDao.get_set_name() + "*"
+        )
+
+    def start_time_based_flushing(
+        self, interceptor_instance_id: int, exec_bundle_id=None
+    ):
         self._buffer = list()
         self._time_thread: Thread = None
         self._previous_time = time()
@@ -61,8 +86,10 @@ class MQDao:
         self._time_based_flushing_started = False
         self._lock = Lock()
         self._time_thread = Thread(target=self.time_based_flushing)
-        self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
-        #self._redis.incr(REDIS_STARTED_MQ_THREADS_KEY)
+        self.register_time_based_thread_init(
+            interceptor_instance_id, exec_bundle_id
+        )
+        # self._redis.incr(REDIS_STARTED_MQ_THREADS_KEY)
         # self.logger.debug(
         #     f"Incrementing REDIS_STARTED_MQ_THREADS_KEY. Now: {self.get_started_mq_threads()}"
         # )
@@ -76,7 +103,9 @@ class MQDao:
     #     self.logger.debug("RESETTING REDIS_STARTED_MQ_THREADS_KEY TO 0")
     #     self._redis.set(REDIS_STARTED_MQ_THREADS_KEY, 0)
 
-    def stop_time_based_flushing(self, interceptor_instance_id: int, exec_bundle_id: int=None):
+    def stop_time_based_flushing(
+        self, interceptor_instance_id: int, exec_bundle_id: int = None
+    ):
         self.logger.info("MQ time-based received stop signal!")
         if self._time_based_flushing_started:
             self._stop_flag = True
@@ -138,9 +167,16 @@ class MQDao:
             )
             sleep(REDIS_INSERTION_BUFFER_TIME)
 
-    def _send_stop_message(self, interceptor_instance_id, exec_bundle_id=None):
+    def _send_stop_message(
+        self, interceptor_instance_id, exec_bundle_id=None
+    ):
         # TODO: these should be constants
-        msg = {"type": "flowcept_control", "info": "mq_dao_thread_stopped", "interceptor_instance_id": interceptor_instance_id, "exec_bundle_id": exec_bundle_id}
+        msg = {
+            "type": "flowcept_control",
+            "info": "mq_dao_thread_stopped",
+            "interceptor_instance_id": interceptor_instance_id,
+            "exec_bundle_id": exec_bundle_id,
+        }
         self._redis.publish(REDIS_CHANNEL, json.dumps(msg))
 
     def stop_document_inserter(self):
