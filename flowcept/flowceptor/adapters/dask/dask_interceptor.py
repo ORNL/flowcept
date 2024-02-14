@@ -82,8 +82,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
     def __init__(self, scheduler, plugin_key="dask"):
         self._scheduler = scheduler
         super().__init__(plugin_key)
-        self.exec_bundle_id = self._scheduler.address
-        super().start(bundle_exec_id=self.exec_bundle_id)
+        super().start(bundle_exec_id=self._scheduler.address)
 
     def callback(self, task_id, start, finish, *args, **kwargs):
         try:
@@ -121,7 +120,6 @@ class DaskWorkerInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="dask"):
         self._plugin_key = plugin_key
         self._worker = None
-        self.exec_bundle_id = None
         # super().__init__ goes to setup_worker.
 
     def setup_worker(self, worker):
@@ -131,8 +129,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
         """
         self._worker = worker
         super().__init__(self._plugin_key)
-        self.exec_bundle_id = self._worker.scheduler.address
-        super().start(bundle_exec_id=self.exec_bundle_id)
+        super().start(bundle_exec_id=self._worker.scheduler.address)
         # Note that both scheduler and worker get the exact same input.
         # Worker does not resolve intermediate inputs, just like the scheduler.
         # But careful: we are only able to capture inputs in client.map on
@@ -200,6 +197,3 @@ class DaskWorkerInterceptor(BaseInterceptor):
                 f"Error with dask worker: {self._worker.worker_address}"
             )
             self.logger.exception(e)
-
-    def stop(self, exec_bundle_id=None) -> bool:
-        super().stop(exec_bundle_id)
