@@ -9,26 +9,28 @@ from flowcept.configs import (
 
 
 class KeyValueDAO:
-
     def __init__(self, connection=None):
         self.logger = FlowceptLogger().get_logger()
         if connection is None:
             self._redis = Redis(
-                host=REDIS_HOST, port=REDIS_PORT, db=0, password=REDIS_PASSWORD
+                host=REDIS_HOST,
+                port=REDIS_PORT,
+                db=0,
+                password=REDIS_PASSWORD,
             )
         else:
             self._redis = connection
 
-    def reset_set(self, set_name: str):
+    def delete_set(self, set_name: str):
         self._redis.delete(set_name)
 
-    def add_key_into_set(self, set_name:str, key:str):
+    def add_key_into_set(self, set_name: str, key):
         self._redis.sadd(set_name, key)
 
-    def remove_key_from_set(self, set_name:str, key:str):
+    def remove_key_from_set(self, set_name: str, key):
         self._redis.srem(set_name, key)
 
-    def set_has_key(self, set_name: str, key: str) -> bool:
+    def set_has_key(self, set_name: str, key) -> bool:
         return self._redis.sismember(set_name, key)
 
     def set_count(self, set_name: str):
@@ -36,3 +38,8 @@ class KeyValueDAO:
 
     def set_is_empty(self, set_name: str) -> bool:
         return self.set_count(set_name) == 0
+
+    def delete_all_matching_sets(self, key_pattern):
+        matching_sets = self._redis.keys(key_pattern)
+        for set_name in matching_sets:
+            self.delete_set(set_name)
