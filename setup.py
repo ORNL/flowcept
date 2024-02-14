@@ -54,16 +54,21 @@ extras_requirement_keys = [
     "tensorboard",
     "dask",
     "nvidia",
+    "amd",
     "analytics",
     "responsible_ai",
+    "data_augmentation",
 ]
+
+skip_full = {"amd", "nvidia"}
 
 extras_require = dict()
 for req in extras_requirement_keys:
     req_path = f"extra_requirements/{req}-requirements.txt"
     _requirements = get_requirements(req_path)
     extras_require[req] = _requirements
-    full_requirements.extend(_requirements)
+    if req not in skip_full:
+        full_requirements.extend(_requirements)
 
 
 extras_require["full"] = full_requirements
