@@ -24,6 +24,7 @@ experiment:
 main_redis:
   host: localhost
   port: 6379
+  reset_db_at_start: true
   channel: interception
   buffer_size: 50
   insertion_buffer_time_secs: 5

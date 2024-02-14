@@ -95,7 +95,7 @@ class TensorboardInterceptor(BaseInterceptor):
     def stop(self) -> bool:
         self.logger.debug("Interceptor stopping...")
         super().stop()
-        self._observer.stop()
+        self._observer.stop_time_based_flushing()
         self.logger.debug("Interceptor stopped.")
         return True
 

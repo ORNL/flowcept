@@ -4,6 +4,7 @@ from redis.client import PubSub
 from threading import Thread, Lock
 from time import time, sleep
 
+from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
 from flowcept.commons.utils import perf_log
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
@@ -26,11 +27,19 @@ class MQDao:
     ENCODER = GenericJSONEncoder if JSON_SERIALIZER == "complex" else None
     # TODO we don't have a unit test to cover complex dict!
 
+    @staticmethod
+    def get_set_name(exec_bunlde_id=None):
+        set_id = f'started_mq_thread_execution'
+        if exec_bunlde_id is not None:
+            set_id += "_"+str(exec_bunlde_id)
+        return set_id
+
     def __init__(self):
         self.logger = FlowceptLogger().get_logger()
         self._redis = Redis(
             host=REDIS_HOST, port=REDIS_PORT, db=0, password=REDIS_PASSWORD
         )
+        self.keyvalue_dao = KeyValueDAO(connection=self._redis)
         self._buffer = None
         self._time_thread: Thread = None
         self._previous_time = -1
@@ -38,36 +47,42 @@ class MQDao:
         self._time_based_flushing_started = False
         self._lock = None
 
-    def start_time_based_flushing(self):
+    def register_time_based_thread_init(self, interceptor_instance_id: int, exec_bundle_id: int=None):
+        # TODO add logs, can we do int instead of str?
+        set_key = MQDao.get_set_name(exec_bundle_id)
+        self.keyvalue_dao.add_key_into_set(set_key,
+                                           str(interceptor_instance_id))
+
+    def start_time_based_flushing(self, interceptor_instance_id: int, exec_bundle_id: int=None):
         self._buffer = list()
         self._time_thread: Thread = None
         self._previous_time = time()
         self._stop_flag = False
         self._time_based_flushing_started = False
         self._lock = Lock()
-
         self._time_thread = Thread(target=self.time_based_flushing)
-        self._redis.incr(REDIS_STARTED_MQ_THREADS_KEY)
-        self.logger.debug(
-            f"Incrementing REDIS_STARTED_MQ_THREADS_KEY. Now: {self.get_started_mq_threads()}"
-        )
+        self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
+        #self._redis.incr(REDIS_STARTED_MQ_THREADS_KEY)
+        # self.logger.debug(
+        #     f"Incrementing REDIS_STARTED_MQ_THREADS_KEY. Now: {self.get_started_mq_threads()}"
+        # )
         self._time_based_flushing_started = True
         self._time_thread.start()
 
-    def get_started_mq_threads(self):
-        return int(self._redis.get(REDIS_STARTED_MQ_THREADS_KEY))
+    # def get_started_mq_threads(self):
+    #     return int(self._redis.get(REDIS_STARTED_MQ_THREADS_KEY))
+    #
+    # def reset_started_mq_threads(self):
+    #     self.logger.debug("RESETTING REDIS_STARTED_MQ_THREADS_KEY TO 0")
+    #     self._redis.set(REDIS_STARTED_MQ_THREADS_KEY, 0)
 
-    def reset_started_mq_threads(self):
-        self.logger.debug("RESETTING REDIS_STARTED_MQ_THREADS_KEY TO 0")
-        self._redis.set(REDIS_STARTED_MQ_THREADS_KEY, 0)
-
-    def stop(self):
+    def stop_time_based_flushing(self, interceptor_instance_id: int, exec_bundle_id: int=None):
         self.logger.info("MQ time-based received stop signal!")
         if self._time_based_flushing_started:
             self._stop_flag = True
             self._time_thread.join()
             self._flush()
-            self._send_stop_message()
+            self._send_stop_message(interceptor_instance_id, exec_bundle_id)
             self._time_based_flushing_started = False
             self.logger.info("MQ time-based flushing stopped.")
         else:
@@ -123,9 +138,9 @@ class MQDao:
             )
             sleep(REDIS_INSERTION_BUFFER_TIME)
 
-    def _send_stop_message(self):
+    def _send_stop_message(self, interceptor_instance_id, exec_bundle_id=None):
         # TODO: these should be constants
-        msg = {"type": "flowcept_control", "info": "mq_dao_thread_stopped"}
+        msg = {"type": "flowcept_control", "info": "mq_dao_thread_stopped", "interceptor_instance_id": interceptor_instance_id, "exec_bundle_id": exec_bundle_id}
         self._redis.publish(REDIS_CHANNEL, json.dumps(msg))
 
     def stop_document_inserter(self):
