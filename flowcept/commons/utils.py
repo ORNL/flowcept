@@ -83,8 +83,9 @@ class GenericJSONEncoder(json.JSONEncoder):
 def _get_adapter_exception_msg(adapter_kind):
     return (
         f"You have an adapter for {adapter_kind} in"
-        f" {SETTINGS_PATH} but we couldn't import its interceptor. "
-        f" Consider fixing the following exception or remove that adapter "
+        f" {SETTINGS_PATH} but we couldn't import its interceptor."
+        f" Consider fixing the following exception (e.g., try installing the"
+        f" adapter requirements -- see the README file remove that adapter"
         f" from the settings."
         f" Exception:"
     )
