@@ -87,7 +87,7 @@ class Telemetry:
         if self.network is not None:
             ret["network"] = self.network.__dict__
         if self.gpu is not None:
-            #ret["gpu"] = asdict(self.gpu, dict_factory=remove_none_values)
+            # ret["gpu"] = asdict(self.gpu, dict_factory=remove_none_values)
             ret["gpu"] = self.gpu
 
         return ret
