@@ -50,6 +50,7 @@ CAMPAIGN_ID = settings["experiment"].get("campaign_id", "super_campaign")
 ######################
 #   Redis Settings   #
 ######################
+REDIS_URI = settings["main_redis"].get("uri", None)
 REDIS_HOST = settings["main_redis"].get("host", "localhost")
 REDIS_PORT = int(settings["main_redis"].get("port", "6379"))
 REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
@@ -70,9 +71,10 @@ REDIS_INSERTION_BUFFER_TIME = random.randint(
 ######################
 #  MongoDB Settings  #
 ######################
+MONGO_URI = settings["mongodb"].get("uri", None)
 MONGO_HOST = settings["mongodb"].get("host", "localhost")
 MONGO_PORT = int(settings["mongodb"].get("port", "27017"))
-MONGO_DB = settings["mongodb"].get("db", "flowcept")
+MONGO_DB = settings["mongodb"].get("db", PROJECT_NAME)
 
 MONGO_TASK_COLLECTION = "tasks"
 MONGO_WORKFLOWS_COLLECTION = "workflows"

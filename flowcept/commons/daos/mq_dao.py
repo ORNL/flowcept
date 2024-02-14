@@ -17,6 +17,7 @@ from flowcept.configs import (
     REDIS_BUFFER_SIZE,
     REDIS_INSERTION_BUFFER_TIME,
     PERF_LOG,
+    REDIS_URI,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -40,9 +41,19 @@ class MQDao:
 
     def __init__(self):
         self.logger = FlowceptLogger().get_logger()
-        self._redis = Redis(
-            host=REDIS_HOST, port=REDIS_PORT, db=0, password=REDIS_PASSWORD
-        )
+
+        if REDIS_URI is not None:
+            # If a URI is provided, use it for connection
+            self._redis = Redis.from_url(REDIS_URI)
+        else:
+            # Otherwise, use the host, port, and password settings
+            self._redis = Redis(
+                host=REDIS_HOST,
+                port=REDIS_PORT,
+                db=0,
+                password=REDIS_PASSWORD if REDIS_PASSWORD else None,
+            )
+
         self._keyvalue_dao = KeyValueDAO(connection=self._redis)
         self._buffer = None
         self._time_thread: Thread = None
