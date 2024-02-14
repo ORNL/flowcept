@@ -47,10 +47,10 @@ This will create a [tagged release](https://github.com/ORNL/flowcept/releases) a
 See the existing plugins for a reference.
 
 3. [Optional] You may need extra classes, such as 
-   local state manager (we provide a generic [`Interceptor State Manager`](flowcept/flowceptor/plugins/interceptor_state_manager.py)),
+   local state manager (we provide a generic [`Interceptor State Manager`](flowcept/flowceptor/adapters/interceptor_state_manager.py)),
    `@dataclasses`, Data Access Objects (`DAOs`), and event handlers.
 
-4. Create a new entry in the [settings.yaml](resources/settings.yaml) file and in the [Settings factory](flowcept/flowceptor/plugins/settings_factory.py)
+4. Create a new entry in the [settings.yaml](resources/settings.yaml) file and in the [Settings factory](flowcept/commons/settings_factory.py)
 
 5. Create a new `requirements.txt` file under the directory [extra_requirements](extra_requirements) and
 adjust the [setup.py](setup.py).

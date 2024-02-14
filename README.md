@@ -70,6 +70,39 @@ And other variables depending on the Plugin. For instance, in Dask, timestamp cr
 
 - [Zambeze Repository](https://github.com/ORNL/zambeze)
 
+## Cite us
+
+If you used FlowCept for your research, consider citing our paper.
+
+```
+Towards Lightweight Data Integration using Multi-workflow Provenance and Data Observability
+R. Souza, T. Skluzacek, S. Wilkinson, M. Ziatdinov, and R. da Silva
+19th IEEE International Conference on e-Science, 2023.
+```
+
+**Bibtex:**
+
+```latex
+@inproceedings{souza2023towards,  
+  author = {Souza, Renan and Skluzacek, Tyler J and Wilkinson, Sean R and Ziatdinov, Maxim and da Silva, Rafael Ferreira},
+  booktitle = {IEEE International Conference on e-Science},
+  doi = {10.1109/e-Science58273.2023.10254822},
+  link = {https://doi.org/10.1109/e-Science58273.2023.10254822},
+  pdf = {https://arxiv.org/pdf/2308.09004.pdf},
+  title = {Towards Lightweight Data Integration using Multi-workflow Provenance and Data Observability},
+  year = {2023}
+}
+
+```
+
+## Disclaimer & Get in Touch
+
+Please note that this a research software. We encourage you to give it a try and use it with your own stack. We
+are continuously working on improving documentation and adding more examples and notebooks, but we are still far from
+a good documentation covering the whole system. If you are interested in working with FlowCept in your own scientific
+project, we can give you a jump start if you reach out to us. Feel free to [create an issue](https://github.com/ORNL/flowcept/issues/new), 
+[create a new discussion thread](https://github.com/ORNL/flowcept/discussions/new/choose) or drop us an email (we trust you'll find a way to reach out to us :wink: ).
+
 ## Acknowledgement
 
 This research uses resources of the Oak Ridge Leadership Computing Facility 

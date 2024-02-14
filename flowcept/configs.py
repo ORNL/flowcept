@@ -10,18 +10,20 @@ import random
 
 PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
 SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
+SETTINGS_DIR = os.path.expanduser(f"~/.{PROJECT_NAME}")
 if SETTINGS_PATH is None:
-    project_dir_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..")
-    )
-    SETTINGS_PATH = os.path.join(
-        project_dir_path, "resources", "settings.yaml"
-    )
+    SETTINGS_PATH = os.path.join(SETTINGS_DIR, "settings.yaml")
 
-if not os.path.isabs(SETTINGS_PATH):
-    # TODO: check if we really need abs path
-    raise Exception("Please use an absolute path for the settings.yaml")
-
+if not os.path.exists(SETTINGS_PATH):
+    raise Exception(
+        f"Settings file {SETTINGS_PATH} was not found. "
+        f"You should either define the "
+        f"environment variable FLOWCEPT_SETTINGS_PATH with its path or "
+        f"install Flowcept's package to create the directory "
+        f"~/.flowcept with the file in it.\n"
+        "A sample settings file is found in the 'resources' directory "
+        "under the project's root path."
+    )
 
 with open(SETTINGS_PATH) as f:
     settings = yaml.safe_load(f)
@@ -29,7 +31,10 @@ with open(SETTINGS_PATH) as f:
 ########################
 #   Log Settings       #
 ########################
-LOG_FILE_PATH = settings["log"].get("log_path", f"{PROJECT_NAME}.log")
+LOG_FILE_PATH = settings["log"].get("log_path", "default")
+
+if LOG_FILE_PATH == "default":
+    LOG_FILE_PATH = os.path.join(SETTINGS_DIR, f"{PROJECT_NAME}.log")
 
 # Possible values below are the typical python logging levels.
 LOG_FILE_LEVEL = settings["log"].get("log_file_level", "debug").upper()
@@ -101,7 +106,28 @@ MQ_TYPE = settings["project"].get("mq_type", "redis")
 DEBUG_MODE = settings["project"].get("debug", False)
 PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
+
 TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
+
+
+##################################
+# GPU TELEMETRY CAPTURE SETTINGS #
+#################################
+
+N_GPUS = dict()
+if TELEMETRY_CAPTURE.get("gpu", False):
+    try:
+        from pynvml import nvmlDeviceGetCount
+
+        N_GPUS["nvidia"] = nvmlDeviceGetCount()
+    except:
+        pass
+    try:
+        import pyamdgpuinfo
+
+        N_GPUS["amd"] = pyamdgpuinfo.detect_gpus()
+    except:
+        pass
 
 ######################
 # SYS METADATA #
@@ -142,3 +168,16 @@ EXTRA_METADATA = settings.get("extra_metadata", None)
 
 WEBSERVER_HOST = settings["web_server"].get("host", "0.0.0.0")
 WEBSERVER_PORT = int(settings["web_server"].get("port", "5000"))
+
+######################
+#    ANALYTICS      #
+######################
+
+ANALYTICS = settings.get("analytics", None)
+
+################# Enabled ADAPTERS
+
+ADAPTERS = set()
+
+for adapter in settings.get("adapters", set()):
+    ADAPTERS.add(settings["adapters"][adapter].get("kind"))
