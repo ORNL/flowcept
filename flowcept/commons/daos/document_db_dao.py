@@ -24,11 +24,10 @@ class DocumentDBDao(object):
     def __init__(self):
         self.logger = FlowceptLogger().get_logger()
 
-        if MONGO_URI:
+        if MONGO_URI is not None:
             client = MongoClient(MONGO_URI)
         else:
             client = MongoClient(MONGO_HOST, MONGO_PORT)
-        client = MongoClient(MONGO_HOST, MONGO_PORT)
         self._db = client[MONGO_DB]
 
         self._tasks_collection = self._db[MONGO_TASK_COLLECTION]
