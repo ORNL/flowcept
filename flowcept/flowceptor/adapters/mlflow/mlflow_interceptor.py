@@ -59,8 +59,8 @@ class MLFlowInterceptor(BaseInterceptor):
                 task_msg = self.prepare_task_msg(run_data)
                 self.intercept(task_msg)
 
-    def start(self) -> "MLFlowInterceptor":
-        super().start()
+    def start(self, bundle_exec_id) -> "MLFlowInterceptor":
+        super().start(bundle_exec_id)
         self.observe()
         return self
 

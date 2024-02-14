@@ -31,7 +31,7 @@ class FlowceptConsumerAPI(object):
                 self.logger.debug(
                     f"Flowceptor {interceptor.settings.key} starting..."
                 )
-                interceptor.start()
+                interceptor.start(bundle_exec_id=id(self))
                 self.logger.debug("... ok!")
 
         self.logger.debug("Flowcept Consumer starting...")

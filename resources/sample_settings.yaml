@@ -69,7 +69,9 @@ adapters:
     kind: zambeze
     host: localhost
     port: 5672
-    queue_name: hello
+    queue_names:
+      - hello
+      - hello2
 #    key_values_to_filter:
 #      - key: activity_status
 #        value: CREATED

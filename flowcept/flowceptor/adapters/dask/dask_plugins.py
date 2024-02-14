@@ -17,7 +17,7 @@ class FlowceptDaskSchedulerAdapter(SchedulerPlugin):
 
     def close(self):
         self.interceptor.logger.debug("Going to close scheduler!")
-        self.interceptor.stop(self.interceptor.exec_bundle_id)
+        self.interceptor.stop()
 
 
 class FlowceptDaskWorkerAdapter(WorkerPlugin):
@@ -32,4 +32,4 @@ class FlowceptDaskWorkerAdapter(WorkerPlugin):
 
     def teardown(self, worker):
         self.interceptor.logger.debug("Going to close worker!")
-        self.interceptor.stop(self.interceptor.exec_bundle_id)
+        self.interceptor.stop()

@@ -38,8 +38,8 @@ class ZambezeInterceptor(BaseInterceptor):
         }
         return task_msg
 
-    def start(self) -> "ZambezeInterceptor":
-        super().start()
+    def start(self, bundle_exec_id) -> "ZambezeInterceptor":
+        super().start(bundle_exec_id)
         self._observer_thread = Thread(target=self.observe)
         self._observer_thread.start()
         return self
@@ -48,7 +48,7 @@ class ZambezeInterceptor(BaseInterceptor):
         self.logger.debug("Interceptor stopping...")
         super().stop()
         try:
-            self._channel.basic_cancel(self._consumer_tag)
+            self._channel.stop_consuming()
         except Exception as e:
             self.logger.warning(
                 f"This exception is expected to occur after "
@@ -66,13 +66,20 @@ class ZambezeInterceptor(BaseInterceptor):
             )
         )
         self._channel = connection.channel()
-        self._channel.queue_declare(queue=self.settings.queue_name)
-        self._consumer_tag = self._channel.basic_consume(
-            queue=self.settings.queue_name,
-            on_message_callback=self.callback,
-            auto_ack=True,
-        )
-        self.logger.debug("Waiting for Zambeze messages.")
+        for queue in self.settings.queue_names:
+            self._channel.queue_declare(queue=queue)
+
+        # self._consumer_tag =\
+        for queue in self.settings.queue_names:
+            self._channel.basic_consume(
+                queue=queue,
+                on_message_callback=self.callback,
+                auto_ack=True,
+            )
+            self.logger.debug(
+                f"Waiting for Zambeze messages on queue {queue}"
+            )
+
         try:
             self._channel.start_consuming()
         except Exception as e:
