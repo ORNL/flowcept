@@ -4,8 +4,8 @@
   },
   "task_id": "a9a08ba1f7f1412ba9a1dd9ecab7478b",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -38,8 +38,8 @@
   },
   "task_id": "81260f61b9f34006b1eacf630d389391",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -72,8 +72,8 @@
   },
   "task_id": "a52c39e223df4f8080b33dee418f1c0e",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -1228,8 +1228,8 @@
   },
   "task_id": "540c11c163724acab17c75a080effaa3",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -1262,8 +1262,8 @@
   },
   "task_id": "3d199fd3f81644d1ba128d927736fe35",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -1296,8 +1296,8 @@
   },
   "task_id": "10a2196d1e0243b98a3acdba166c8176",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -2400,8 +2400,8 @@
   "utc_timestamp": 1675567424.617196,
   "status": "FINISHED",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -2427,8 +2427,8 @@
   "utc_timestamp": 1675567483.143584,
   "status": "FINISHED",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -2454,8 +2454,8 @@
   "utc_timestamp": 1675567483.169748,
   "status": "FINISHED",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -4371,8 +4371,8 @@
   "utc_timestamp": 1675626002.916159,
   "status": "FINISHED",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -4398,8 +4398,8 @@
   "utc_timestamp": 1675626002.938445,
   "status": "FINISHED",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -4425,8 +4425,8 @@
   "utc_timestamp": 1675626013.02857,
   "status": "FINISHED",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -5204,8 +5204,8 @@
   "utc_timestamp": 1675711806.97092,
   "status": "FINISHED",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -5231,8 +5231,8 @@
   "utc_timestamp": 1675711807.049049,
   "status": "FINISHED",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04
@@ -5258,8 +5258,8 @@
   "utc_timestamp": 1675711817.129983,
   "status": "FINISHED",
   "used": {
-    "batch_size": "64",
-    "number_epochs": "10"
+    "batch_size": 64,
+    "number_epochs": 10
   },
   "generated": {
     "loss": 0.04

@@ -1,18 +1,26 @@
 import psutil
-import pynvml
-from pynvml import (
-    nvmlDeviceGetCount,
-    nvmlDeviceGetHandleByIndex,
-    nvmlDeviceGetMemoryInfo,
-    nvmlInit,
-    nvmlShutdown,
-    nvmlDeviceGetTemperature,
-    nvmlDeviceGetPowerUsage,
-    NVML_TEMPERATURE_GPU,
-)
 
+try:
+    import pynvml
+    from pynvml import (
+        nvmlDeviceGetCount,
+        nvmlDeviceGetHandleByIndex,
+        nvmlDeviceGetMemoryInfo,
+        nvmlDeviceGetName,
+        nvmlInit,
+        nvmlShutdown,
+        nvmlDeviceGetTemperature,
+        nvmlDeviceGetPowerUsage,
+        NVML_TEMPERATURE_GPU,
+    )
+except:
+    pass
+try:
+    import pyamdgpuinfo
+except:
+    pass
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.configs import TELEMETRY_CAPTURE
+from flowcept.configs import TELEMETRY_CAPTURE, N_GPUS
 from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
 
 
@@ -26,19 +34,29 @@ class TelemetryCapture:
             return None
 
         tel = Telemetry()
-        tel.process = self._capture_process_info()
-        tel.cpu = self._capture_cpu()
-        tel.memory = self._capture_memory()
-        tel.network = self._capture_network()
-        tel.disk = self._capture_disk()
-        tel.gpu = self._capture_gpu()
+        if self.conf.get("process_info", False):
+            tel.process = self._capture_process_info()
+
+        capt_cpu = self.conf.get("cpu", False)
+        capt_per_cpu = self.conf.get("per_cpu", False)
+        if capt_cpu or capt_per_cpu:
+            tel.cpu = self._capture_cpu(capt_cpu, capt_per_cpu)
+
+        if self.conf.get("mem", False):
+            tel.memory = self._capture_memory()
+
+        if self.conf.get("network", False):
+            tel.network = self._capture_network()
+
+        if self.conf.get("disk", False):
+            tel.disk = self._capture_disk()
+
+        if self.conf.get("gpu", False):
+            tel.gpu = self._capture_gpu()
 
         return tel
 
     def _capture_disk(self):
-        capt = self.conf.get("disk", False)
-        if not capt:
-            return None
         try:
             disk = Telemetry.Disk()
             disk.disk_usage = psutil.disk_usage("/")._asdict()
@@ -54,9 +72,6 @@ class TelemetryCapture:
             self.logger.exception(e)
 
     def _capture_network(self):
-        capt = self.conf.get("network", False)
-        if not capt:
-            return None
         try:
             net = Telemetry.Network()
             net.netio_sum = psutil.net_io_counters(pernic=False)._asdict()
@@ -70,9 +85,6 @@ class TelemetryCapture:
             self.logger.exception(e)
 
     def _capture_memory(self):
-        capt = self.conf.get("mem", False)
-        if not capt:
-            return None
         try:
             mem = Telemetry.Memory()
             mem.virtual = psutil.virtual_memory()._asdict()
@@ -82,9 +94,6 @@ class TelemetryCapture:
             self.logger.exception(e)
 
     def _capture_process_info(self):
-        capt = self.conf.get("process_info", False)
-        if not capt:
-            return None
         try:
             p = Telemetry.Process()
             psutil_p = psutil.Process()
@@ -94,7 +103,7 @@ class TelemetryCapture:
                     p.cpu_number = psutil_p.cpu_num()
                 except:
                     pass
-                p.memory = psutil_p.memory_info()
+                p.memory = psutil_p.memory_info()._asdict()
                 p.memory_percent = psutil_p.memory_percent()
                 p.cpu_times = psutil_p.cpu_times()._asdict()
                 p.cpu_percent = psutil_p.cpu_percent()
@@ -113,11 +122,7 @@ class TelemetryCapture:
         except Exception as e:
             self.logger.exception(e)
 
-    def _capture_cpu(self):
-        capt_cpu = self.conf.get("cpu", False)
-        capt_per_cpu = self.conf.get("per_cpu", False)
-        if not (capt_cpu or capt_per_cpu):
-            return None
+    def _capture_cpu(self, capt_cpu, capt_per_cpu):
         try:
             cpu = Telemetry.CPU()
             if capt_cpu:
@@ -133,58 +138,127 @@ class TelemetryCapture:
             self.logger.exception(e)
             return None
 
-    def _capture_gpu(self):
-        capt = self.conf.get("gpu", False)
-        if not capt:
-            return None
+    def __get_gpu_info_nvidia(self, gpu_ix: int = 0):
+        try:
+            handle = nvmlDeviceGetHandleByIndex(gpu_ix)
+            nvidia_info = nvmlDeviceGetMemoryInfo(handle)
+        except Exception as e:
+            self.logger.exception(e)
+            return {}
+
+        flowcept_gpu_info = {
+            "total": nvidia_info.total,
+            "used": nvidia_info.used,
+            "temperature": nvmlDeviceGetTemperature(
+                handle, NVML_TEMPERATURE_GPU
+            ),
+            "power_usage": nvmlDeviceGetPowerUsage(handle),
+            "name": nvmlDeviceGetName(handle),
+        }
+
+        return flowcept_gpu_info
+
+    def __get_gpu_info_amd(self, gpu_ix: int = 0):
+        flowcept_gpu_info = {}
+        try:
+            amd_info = pyamdgpuinfo.get_gpu(gpu_ix)
+        except Exception as e:
+            self.logger.exception(e)
+            return flowcept_gpu_info
+
+        memory_info = amd_info.memory_info.copy()
+        try:
+            flowcept_gpu_info["total"] = memory_info.pop("vram_size")
+        except Exception as e:
+            self.logger.exception(e)
 
         try:
-            deviceCount = nvmlDeviceGetCount()
-            handle = nvmlDeviceGetHandleByIndex(0)
-            info = nvmlDeviceGetMemoryInfo(handle)
-            _this_gpu = {
-                "total": info.total,
-                "free": info.free,
-                "used": info.used,
-                "usage_percent": info.used / info.total * 100,
-                "temperature": nvmlDeviceGetTemperature(
-                    handle, NVML_TEMPERATURE_GPU
-                ),
-                "power_usage": nvmlDeviceGetPowerUsage(handle),
-            }
-            gpu = Telemetry.GPU()
-            if deviceCount == 1:
-                gpu.gpu_sums = gpu.GPUMetrics(**_this_gpu)
+            flowcept_gpu_info["temperature"] = amd_info.query_temperature()
+        except Exception as e:
+            self.logger.exception(e)
+
+        try:
+            flowcept_gpu_info["power_usage"] = amd_info.query_power()
+        except Exception as e:
+            self.logger.exception(e)
+
+        try:
+            flowcept_gpu_info["used"] = amd_info.query_vram_usage()
+        except Exception as e:
+            self.logger.exception(e)
+
+        try:
+            max_clocks = amd_info.query_max_clocks()
+            flowcept_gpu_info["max_shader_clock"] = max_clocks["sclk_max"]
+            flowcept_gpu_info["max_memory_clock"] = max_clocks["mclk_max"]
+        except Exception as e:
+            self.logger.exception(e)
+
+        try:
+            flowcept_gpu_info["shader_clock"] = amd_info.query_sclk()
+        except Exception as e:
+            self.logger.exception(e)
+
+        try:
+            flowcept_gpu_info["memory_clock"] = amd_info.query_mclk()
+        except Exception as e:
+            self.logger.exception(e)
+
+        try:
+            flowcept_gpu_info["gtt_usage"] = amd_info.query_gtt_usage()
+        except Exception as e:
+            self.logger.exception(e)
+
+        try:
+            flowcept_gpu_info["load"] = amd_info.query_load()
+        except Exception as e:
+            self.logger.exception(e)
+
+        try:
+            flowcept_gpu_info[
+                "graphics_voltage"
+            ] = amd_info.query_graphics_voltage()
+        except Exception as e:
+            self.logger.exception(e)
+
+        flowcept_gpu_info.update(memory_info)
+
+        try:
+            name = amd_info.name
+            if name is not None:
+                flowcept_gpu_info["name"] = name
+        except Exception as e:
+            self.logger.exception(e)
+
+        return flowcept_gpu_info
+
+    def _capture_gpu(self):
+        try:
+            if len(N_GPUS) == 0:
+                self.logger.exception(
+                    "You are trying to capture telemetry GPU info, but we"
+                    " couldn't detect any GPU, neither NVIDIA nor AMD."
+                    " Please set GPU telemetry capture to false."
+                )
+
+            n_nvidia_gpus = N_GPUS.get("nvidia", 0)
+            n_amd_gpus = N_GPUS.get("amd", 0)
+
+            if n_nvidia_gpus > 0:
+                n_gpus = n_nvidia_gpus
+                gpu_capture_func = self.__get_gpu_info_nvidia
+            elif n_amd_gpus > 0:
+                n_gpus = n_amd_gpus
+                gpu_capture_func = self.__get_gpu_info_amd
             else:
-                gpu.per_gpu = {0: gpu.GPUMetrics(**_this_gpu)}
-                sums = _this_gpu.copy()
-                for i in range(1, deviceCount):
-                    handle = nvmlDeviceGetHandleByIndex(i)
-                    info = nvmlDeviceGetMemoryInfo(handle)
-                    _temp = nvmlDeviceGetTemperature(
-                        handle, pynvml.NVML_TEMPERATURE_GPU
-                    )
-                    _pow = nvmlDeviceGetPowerUsage(handle)
+                self.logger.exception("This should never happen.")
+                return None
 
-                    sums["total"] += info.total
-                    sums["free"] += info.free
-                    sums["used"] += info.used
-                    sums["temperature"] += _temp
-                    sums["power_usage"] += _pow
+            gpu_telemetry = {}
+            for i in range(0, n_gpus):
+                gpu_telemetry[i] = gpu_capture_func(i)
 
-                    gpu.per_gpu[i] = gpu.GPUMetrics(
-                        total=info.total,
-                        free=info.free,
-                        used=info.used,
-                        usage_percent=info.used / info.total * 100,
-                        temperature=_temp,
-                        power_usage=_pow,
-                    )
-
-                sums["usage_percent"] = sums["used"] / sums["total"] * 100
-                gpu.gpu_sums = gpu.GPUMetrics(**sums)
-
-            return gpu
+            return gpu_telemetry
         except Exception as e:
             self.logger.exception(e)
             return None
@@ -192,8 +266,8 @@ class TelemetryCapture:
     def init_gpu_telemetry(self):
         if self.conf is None:
             return None
-
-        if self.conf.get("gpu", False):
+        # These methods are only needed for NVIDIA GPUs
+        if N_GPUS.get("nvidia", 0) > 0:
             try:
                 nvmlInit()
             except Exception as e:
@@ -203,8 +277,8 @@ class TelemetryCapture:
     def shutdown_gpu_telemetry(self):
         if self.conf is None:
             return None
-
-        if self.conf.get("gpu", False):
+        # These methods are only needed for NVIDIA GPUs
+        if N_GPUS.get("nvidia", 0) > 0:
             try:
                 nvmlShutdown()
             except Exception as e:

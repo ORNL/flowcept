@@ -41,7 +41,7 @@ class FlowceptLogger(object):
 
         return logger
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, **kwargs) -> "FlowceptLogger":
         if not cls._instance:
             cls._instance = super(FlowceptLogger, cls).__new__(
                 cls, *args, **kwargs

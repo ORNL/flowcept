@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta
 import json
 from time import time
-from flowcept.configs import PERF_LOG
+
+import numpy as np
+
+from flowcept.configs import PERF_LOG, SETTINGS_PATH
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_message import Status
 
@@ -9,6 +12,12 @@ from flowcept.commons.flowcept_dataclasses.task_message import Status
 def get_utc_now() -> float:
     now = datetime.utcnow()
     return now.timestamp()
+
+
+def get_utc_now_str() -> str:
+    format_string = "%Y-%m-%dT%H:%M:%S.%f"
+    now = datetime.utcnow()
+    return now.strftime(format_string)
 
 
 def get_utc_minutes_ago(minutes_ago=1):
@@ -56,7 +65,30 @@ class GenericJSONEncoder(json.JSONEncoder):
                 return str(obj)
             except:
                 return None
+        elif (
+            isinstance(obj, np.int)
+            or isinstance(obj, np.int32)
+            or isinstance(obj, np.int64)
+        ):
+            return int(obj)
+        elif (
+            isinstance(obj, np.float)
+            or isinstance(obj, np.float32)
+            or isinstance(obj, np.float64)
+        ):
+            return float(obj)
         return super().default(obj)
+
+
+def _get_adapter_exception_msg(adapter_kind):
+    return (
+        f"You have an adapter for {adapter_kind} in"
+        f" {SETTINGS_PATH} but we couldn't import its interceptor."
+        f" Consider fixing the following exception (e.g., try installing the"
+        f" adapter requirements -- see the README file remove that adapter"
+        f" from the settings."
+        f" Exception:"
+    )
 
 
 class GenericJSONDecoder(json.JSONDecoder):
