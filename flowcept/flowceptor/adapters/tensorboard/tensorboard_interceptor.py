@@ -3,6 +3,7 @@ import time
 
 from watchdog.observers import Observer
 from tbparse import SummaryReader
+from watchdog.observers.polling import PollingObserver
 
 from flowcept.commons.flowcept_dataclasses.task_message import (
     TaskMessage,
@@ -23,7 +24,7 @@ from flowcept.flowceptor.adapters.mlflow.interception_event_handler import (
 class TensorboardInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="tensorboard"):
         super().__init__(plugin_key)
-        self._observer = None
+        self._observer: PollingObserver = None
         self.state_manager = InterceptorStateManager(self.settings)
         self.state_manager.reset()
         self.log_metrics = set(self.settings.log_metrics)
@@ -95,7 +96,7 @@ class TensorboardInterceptor(BaseInterceptor):
     def stop(self) -> bool:
         self.logger.debug("Interceptor stopping...")
         super().stop()
-        self._observer.stop_time_based_flushing()
+        self._observer.stop()
         self.logger.debug("Interceptor stopped.")
         return True
 

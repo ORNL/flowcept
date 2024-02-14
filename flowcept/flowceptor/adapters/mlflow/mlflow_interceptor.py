@@ -2,6 +2,7 @@ import os
 import time
 
 from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver
 
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
 from flowcept.commons.utils import get_utc_now, get_status_from_str
@@ -22,7 +23,7 @@ from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import RunData
 class MLFlowInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="mlflow"):
         super().__init__(plugin_key)
-        self._observer = None
+        self._observer: PollingObserver = None
         self.state_manager = InterceptorStateManager(self.settings)
         self.dao = MLFlowDAO(self.settings)
 
@@ -66,7 +67,7 @@ class MLFlowInterceptor(BaseInterceptor):
     def stop(self) -> bool:
         super().stop()
         self.logger.debug("Interceptor stopping...")
-        self._observer.stop_time_based_flushing()
+        self._observer.stop()
         self.logger.debug("Interceptor stopped.")
         return True
 
