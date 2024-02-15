@@ -4,6 +4,7 @@ from time import sleep
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import MLFlowInterceptor, FlowceptConsumerAPI
+from tests.test_utils import assert_by_querying_task_collections_until
 
 
 def _init_consumption():
@@ -88,12 +89,14 @@ class TestMLFlow(unittest.TestCase):
                 self.interceptor.state_manager.add_element_id(run_uuid)
 
     def test_observer_and_consumption(self):
-        doc_dao = DocumentDBDao()
         _init_consumption()
         run_uuid = self.test_pure_run_mlflow()
         sleep(10)
         assert self.interceptor.state_manager.has_element_id(run_uuid) is True
-        assert len(doc_dao.task_query({"task_id": run_uuid})) > 0
+        assert assert_by_querying_task_collections_until(
+            DocumentDBDao(),
+            {"task_id": run_uuid},
+        )
 
     @classmethod
     def tearDownClass(cls):
