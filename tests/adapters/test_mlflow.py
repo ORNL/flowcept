@@ -4,7 +4,7 @@ from time import sleep
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import MLFlowInterceptor, FlowceptConsumerAPI
-from tests.test_utils import assert_by_querying_task_collections_until
+from flowcept.commons.utils import assert_by_querying_task_collections_until
 
 
 def _init_consumption():

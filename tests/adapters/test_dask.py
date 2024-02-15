@@ -8,7 +8,7 @@ from dask.distributed import Client
 from flowcept import FlowceptConsumerAPI
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from tests.test_utils import assert_by_querying_task_collections_until
+from flowcept.commons.utils import assert_by_querying_task_collections_until
 
 
 def dummy_func1(x, workflow_id=None):
