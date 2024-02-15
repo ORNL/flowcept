@@ -39,7 +39,7 @@ class MQDao:
         return set_id
 
     def __init__(self):
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
 
         if REDIS_URI is not None:
             # If a URI is provided, use it for connection

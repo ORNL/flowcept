@@ -5,6 +5,7 @@ from typing import Callable
 
 import numpy as np
 
+import flowcept.commons
 from flowcept.configs import (
     PERF_LOG,
     SETTINGS_PATH,
@@ -41,7 +42,7 @@ def get_utc_minutes_ago(minutes_ago=1):
 def perf_log(func_name, t0: float):
     if PERF_LOG:
         t1 = time()
-        logger = FlowceptLogger().get_logger()
+        logger = FlowceptLogger()
         logger.debug(f"[PERFEVAL][{func_name}]={t1 - t0}")
         return t1
     return None
@@ -103,9 +104,27 @@ def assert_by_querying_task_collections_until(
                 pass
 
         trials += 1
+        flowcept.commons.logger.debug(f"Condition not yet met. Trials={trials}/{max_trials}.")
         sleep(1)
 
     return False
+
+
+# TODO: consider reusing this function in the function assert_by_querying_task_collections_until
+def evaluate_until(evaluation_condition: Callable, max_trials=10, max_time=60):
+    start_time = time()
+    trials = 0
+
+    while trials < max_trials and (time() - start_time) < max_time:
+        if evaluation_condition():
+            return True  # Condition met
+
+        trials += 1
+        flowcept.commons.logger.debug(
+            f"Condition not yet met. Trials={trials}/{max_trials}.")
+        sleep(1)  # Sleep for 2 seconds between trials
+
+    return False  # Condition not met within max_trials or max_time
 
 
 class GenericJSONEncoder(json.JSONEncoder):

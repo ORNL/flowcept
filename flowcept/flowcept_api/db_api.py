@@ -13,7 +13,7 @@ class DBAPI(object):
         self,
         with_webserver=False,
     ):
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
         self.with_webserver = with_webserver
         if self.with_webserver:
             raise NotImplementedError(

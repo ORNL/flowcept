@@ -30,7 +30,7 @@ from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
 class TelemetryCapture:
     def __init__(self, conf=TELEMETRY_CAPTURE):
         self.conf = conf
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
 
     def capture(self) -> Telemetry:
         if self.conf is None:

@@ -16,7 +16,7 @@ from flowcept.commons.utils import assert_by_querying_task_collections_until
 class TestZambeze(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestZambeze, self).__init__(*args, **kwargs)
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
         interceptor = ZambezeInterceptor()
         self.consumer = FlowceptConsumerAPI(interceptor)
         self._connection = pika.BlockingConnection(
