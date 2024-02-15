@@ -1,4 +1,7 @@
 import psutil
+import platform
+import cpuinfo
+import os
 
 try:
     import pynvml
@@ -20,7 +23,7 @@ try:
 except:
     pass
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.configs import TELEMETRY_CAPTURE, N_GPUS
+from flowcept.configs import TELEMETRY_CAPTURE, N_GPUS, HOSTNAME, LOGIN_NAME
 from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
 
 
@@ -55,6 +58,45 @@ class TelemetryCapture:
             tel.gpu = self._capture_gpu()
 
         return tel
+
+    def capture_machine_info(self):
+        # TODO: add ifs for each type of telem; improve this method overall
+        if self.conf is None or self.conf.get("machine_info", None) is None:
+            return None
+
+        try:
+            mem = Telemetry.Memory()
+            mem.virtual = psutil.virtual_memory()._asdict()
+            mem.swap = psutil.swap_memory()._asdict()
+
+            disk = Telemetry.Disk()
+            disk.disk_usage = psutil.disk_usage("/")._asdict()
+
+            platform_info = platform.uname()._asdict()
+            network_info = psutil.net_if_addrs()
+            processor_info = cpuinfo.get_cpu_info()
+
+            gpu_info = None
+            if self.conf.get("gpu", False):
+                gpu_info = self._capture_gpu()
+
+            info = {
+                "memory": {"swap": mem.swap, "virtual": mem.virtual},
+                "disk": disk.disk_usage,
+                "platform": platform_info,
+                "cpu": processor_info,
+                "network": network_info,
+                "environment": os.environ,
+                "hostname": HOSTNAME,
+                "login_name": LOGIN_NAME,
+                "process": self._capture_process_info().__dict__,
+            }
+            if gpu_info is not None:
+                info["gpu"] = gpu_info
+            return info
+        except Exception as e:
+            self.logger.exception(e)
+            return None
 
     def _capture_disk(self):
         try:
@@ -240,6 +282,7 @@ class TelemetryCapture:
                     " couldn't detect any GPU, neither NVIDIA nor AMD."
                     " Please set GPU telemetry capture to false."
                 )
+                return None
 
             n_nvidia_gpus = N_GPUS.get("nvidia", 0)
             n_amd_gpus = N_GPUS.get("amd", 0)

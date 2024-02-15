@@ -25,19 +25,9 @@ class DBAPI(object):
         self._dao.insert_one(task.to_dict())
 
     def insert_or_update_workflow(
-        self,
-        workflow_id: str,
-        custom_metadata: Dict = None,
-        comment: str = None,
+        self, workflow_id: str, workflow_info: Dict = {}
     ) -> bool:
-        wf_data = dict()
-        if custom_metadata is not None:
-            wf_data["custom_metadata"] = custom_metadata
-        wf_data["flowcept_version"] = __version__
-        if comment is not None:
-            wf_data["comment"] = comment
-
-        return self._dao.workflow_insert_or_update(workflow_id, wf_data)
+        return self._dao.workflow_insert_or_update(workflow_id, workflow_info)
 
     def get_workflow(self, workflow_id):
         results = self._dao.workflow_query(

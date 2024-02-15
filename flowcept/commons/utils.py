@@ -4,9 +4,16 @@ from time import time
 
 import numpy as np
 
-from flowcept.configs import PERF_LOG, SETTINGS_PATH
+from flowcept.configs import (
+    PERF_LOG,
+    SETTINGS_PATH,
+    CAMPAIGN_ID,
+    FLOWCEPT_USER,
+    settings,
+)
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_message import Status
+from flowcept.version import __version__
 
 
 def get_utc_now() -> float:
@@ -47,6 +54,18 @@ def get_status_from_str(status_str: str) -> Status:
         return Status.SUBMITTED
     else:
         return Status.UNKNOWN
+
+
+def get_basic_workflow_info(workflow_id):
+    workflow_info = {
+        "workflow_id": workflow_id,
+        "campaign_id": CAMPAIGN_ID,
+        "utc_timestamp": get_utc_now(),
+        "flowcept_user": FLOWCEPT_USER,
+        "flowcept_version": __version__,
+        "flowcept_settings": settings,
+    }
+    return workflow_info
 
 
 class GenericJSONEncoder(json.JSONEncoder):

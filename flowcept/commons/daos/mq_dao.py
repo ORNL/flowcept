@@ -63,7 +63,7 @@ class MQDao:
         self._lock = None
 
     def register_time_based_thread_init(
-        self, interceptor_instance_id: int, exec_bundle_id=None
+        self, interceptor_instance_id: str, exec_bundle_id=None
     ):
         set_name = MQDao._get_set_name(exec_bundle_id)
         self.logger.debug(
@@ -72,7 +72,7 @@ class MQDao:
         self._keyvalue_dao.add_key_into_set(set_name, interceptor_instance_id)
 
     def register_time_based_thread_end(
-        self, interceptor_instance_id: int, exec_bundle_id=None
+        self, interceptor_instance_id: str, exec_bundle_id=None
     ):
         set_name = MQDao._get_set_name(exec_bundle_id)
         self.logger.debug(
@@ -92,7 +92,7 @@ class MQDao:
         )
 
     def start_time_based_flushing(
-        self, interceptor_instance_id: int, exec_bundle_id=None
+        self, interceptor_instance_id: str, exec_bundle_id=None
     ):
         self._buffer = list()
         self._time_thread: Thread = None
@@ -119,7 +119,7 @@ class MQDao:
     #     self._redis.set(REDIS_STARTED_MQ_THREADS_KEY, 0)
 
     def stop_time_based_flushing(
-        self, interceptor_instance_id: int, exec_bundle_id: int = None
+        self, interceptor_instance_id: str, exec_bundle_id: int = None
     ):
         self.logger.info("MQ time-based received stop signal!")
         if self._time_based_flushing_started:
