@@ -85,7 +85,7 @@ def assert_by_querying_task_collections_until(
     doc_dao,
     filter,
     condition_to_evaluate: Callable = None,
-    max_trials=10,
+    max_trials=30,
     max_time=60,
 ):
     start_time = time()

@@ -1,5 +1,6 @@
 import os
 import socket
+import getpass
 
 import yaml
 import random
@@ -135,22 +136,32 @@ if TELEMETRY_CAPTURE.get("gpu", False):
 # SYS METADATA #
 ######################
 
+LOGIN_NAME = None
+PUBLIC_IP = None
+PRIVATE_IP = None
+SYS_NAME = None
+NODE_NAME = None
+
 sys_metadata = settings.get("sys_metadata", None)
 if sys_metadata is not None:
-    SYS_NAME = sys_metadata.get("sys_name", os.uname()[0])
-    NODE_NAME = sys_metadata.get("node_name", os.uname()[1])
-    try:
-        LOGIN_NAME = sys_metadata.get("login_name", os.getlogin())
-    except:
-        LOGIN_NAME = None
+    SYS_NAME = sys_metadata.get("sys_name", None)
+    NODE_NAME = sys_metadata.get("node_name", None)
+    LOGIN_NAME = sys_metadata.get("login_name", None)
     PUBLIC_IP = sys_metadata.get("public_ip", None)
     PRIVATE_IP = sys_metadata.get("private_ip", None)
-else:
-    SYS_NAME = os.uname()[0]
-    NODE_NAME = os.uname()[1]
-    LOGIN_NAME = None
-    PUBLIC_IP = None
-    PRIVATE_IP = None
+
+
+if LOGIN_NAME is None:
+    try:
+        LOGIN_NAME = sys_metadata.get("login_name", getpass.getuser())
+    except:
+        try:
+            LOGIN_NAME = os.getlogin()
+        except:
+            LOGIN_NAME = None
+
+SYS_NAME = SYS_NAME if SYS_NAME is not None else os.uname()[0]
+NODE_NAME = NODE_NAME if NODE_NAME is not None else os.uname()[1]
 
 try:
     HOSTNAME = socket.getfqdn()
