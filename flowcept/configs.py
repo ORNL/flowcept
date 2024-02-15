@@ -57,10 +57,7 @@ REDIS_HOST = settings["main_redis"].get("host", "localhost")
 REDIS_PORT = int(settings["main_redis"].get("port", "6379"))
 REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
 REDIS_PASSWORD = settings["main_redis"].get("password", None)
-REDIS_STARTED_MQ_THREADS_KEY = "started_mq_threads"
-REDIS_RESET_DB_AT_START = settings["main_redis"].get(
-    "reset_db_at_start", True
-)
+
 REDIS_BUFFER_SIZE = int(settings["main_redis"].get("buffer_size", 50))
 REDIS_INSERTION_BUFFER_TIME = int(
     settings["main_redis"].get("insertion_buffer_time_secs", 5)

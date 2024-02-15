@@ -10,6 +10,7 @@ from pymongo import MongoClient, UpdateOne
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
 from flowcept.commons.utils import perf_log, get_utc_now_str
+from flowcept.commons.decorators import singleton
 from flowcept.configs import (
     MONGO_HOST,
     MONGO_PORT,
@@ -25,6 +26,7 @@ from flowcept.flowceptor.consumers.consumer_utils import (
 from time import time
 
 
+@singleton
 class DocumentDBDao(object):
     def __init__(self):
         self.logger = FlowceptLogger().get_logger()
