@@ -40,7 +40,7 @@ class TestDask(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(TestDask, self).__init__(*args, **kwargs)
-        self.score = DocumentDBDao()
+        self.doc_dao = DocumentDBDao()
         self.logger = FlowceptLogger()
 
     @classmethod
