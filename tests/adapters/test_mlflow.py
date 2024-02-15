@@ -11,7 +11,6 @@ from flowcept.commons.utils import (
 
 
 class TestMLFlow(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super(TestMLFlow, self).__init__(*args, **kwargs)
         self.interceptor = MLFlowInterceptor()
