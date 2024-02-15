@@ -154,13 +154,15 @@ class TestTensorboard(unittest.TestCase):
         TestTensorboard.consumer.stop()
         sleep(watch_interval_sec * 20)
 
+        assert evaluate_until(
+            lambda: self.interceptor.state_manager.count() == 16,
+            msg="Checking if state count == 16",
+        )
         doc_dao = DocumentDBDao()
         assert assert_by_querying_task_collections_until(
             doc_dao, {"workflow_id": wf_id}
         )
-        assert evaluate_until(
-            lambda: self.interceptor.state_manager.count() == 16
-        )
+
         # TODO: Sometimes this fails. It's been hard to debug and tensorboard
         #  is not a priority. Need to investigate later
         # May be related: https://github.com/ORNL/flowcept/issues/49
