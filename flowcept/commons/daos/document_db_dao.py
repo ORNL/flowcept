@@ -17,6 +17,7 @@ from flowcept.configs import (
     MONGO_TASK_COLLECTION,
     MONGO_WORKFLOWS_COLLECTION,
     PERF_LOG,
+    MONGO_URI,
 )
 from flowcept.flowceptor.consumers.consumer_utils import (
     curate_dict_task_messages,
@@ -27,7 +28,11 @@ from time import time
 class DocumentDBDao(object):
     def __init__(self):
         self.logger = FlowceptLogger().get_logger()
-        client = MongoClient(MONGO_HOST, MONGO_PORT)
+
+        if MONGO_URI is not None:
+            client = MongoClient(MONGO_URI)
+        else:
+            client = MongoClient(MONGO_HOST, MONGO_PORT)
         self._db = client[MONGO_DB]
 
         self._tasks_collection = self._db[MONGO_TASK_COLLECTION]

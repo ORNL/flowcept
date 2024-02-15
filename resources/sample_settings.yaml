@@ -24,6 +24,7 @@ experiment:
 main_redis:
   host: localhost
   port: 6379
+  reset_db_at_start: true
   channel: interception
   buffer_size: 50
   insertion_buffer_time_secs: 5
@@ -68,7 +69,9 @@ adapters:
     kind: zambeze
     host: localhost
     port: 5672
-    queue_name: hello
+    queue_names:
+      - hello
+      - hello2
 #    key_values_to_filter:
 #      - key: activity_status
 #        value: CREATED
