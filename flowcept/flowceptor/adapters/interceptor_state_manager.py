@@ -1,12 +1,10 @@
 from redis import Redis
 
-from flowcept.commons.decorators import singleton
 from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
     BaseSettings,
 )
 
 
-@singleton
 class InterceptorStateManager(object):
     def __init__(self, settings: BaseSettings):
         self._set_name = settings.key
