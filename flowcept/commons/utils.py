@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import json
-from time import time
+from time import time, sleep
+from typing import Callable
 
 import numpy as np
 
@@ -68,6 +69,45 @@ def get_basic_workflow_info(workflow_id):
     return workflow_info
 
 
+def get_adapter_exception_msg(adapter_kind):
+    return (
+        f"You have an adapter for {adapter_kind} in"
+        f" {SETTINGS_PATH} but we couldn't import its interceptor."
+        f" Consider fixing the following exception (e.g., try installing the"
+        f" adapter requirements -- see the README file remove that adapter"
+        f" from the settings."
+        f" Exception:"
+    )
+
+
+def assert_by_querying_task_collections_until(
+    doc_dao,
+    filter,
+    condition_to_evaluate: Callable = None,
+    max_trials=10,
+    max_time=60,
+):
+    start_time = time()
+    trials = 0
+
+    while (time() - start_time) < max_time and trials < max_trials:
+        docs = doc_dao.task_query(filter)
+        if condition_to_evaluate is None:
+            if docs is not None and len(docs):
+                return True
+        else:
+            try:
+                if condition_to_evaluate(docs):
+                    return True
+            except:
+                pass
+
+        trials += 1
+        sleep(1)
+
+    return False
+
+
 class GenericJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, (list, tuple)):
@@ -97,17 +137,6 @@ class GenericJSONEncoder(json.JSONEncoder):
         ):
             return float(obj)
         return super().default(obj)
-
-
-def _get_adapter_exception_msg(adapter_kind):
-    return (
-        f"You have an adapter for {adapter_kind} in"
-        f" {SETTINGS_PATH} but we couldn't import its interceptor."
-        f" Consider fixing the following exception (e.g., try installing the"
-        f" adapter requirements -- see the README file remove that adapter"
-        f" from the settings."
-        f" Exception:"
-    )
 
 
 class GenericJSONDecoder(json.JSONDecoder):

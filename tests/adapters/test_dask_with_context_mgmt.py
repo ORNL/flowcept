@@ -6,7 +6,9 @@ import numpy as np
 from dask.distributed import Client
 
 from flowcept import FlowceptConsumerAPI, TaskQueryAPI, DBAPI
+from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.commons.utils import assert_by_querying_task_collections_until
 
 
 def dummy_func1(x, workflow_id=None):
@@ -59,9 +61,8 @@ class TestDaskContextMgmt(unittest.TestCase):
             sleep(5)
             TestDaskContextMgmt.client.shutdown()
 
-        query_api = TaskQueryAPI()
-        db_api = DBAPI()
-        docs = query_api.query({"workflow_id": wf_id})
-        assert len(docs)
-        wfdata = db_api.get_workflow(wf_id)
-        assert wfdata
+        assert assert_by_querying_task_collections_until(
+            DocumentDBDao(),
+            {"task_id": o1.key},
+            condition_to_evaluate=lambda docs: "ended_at" in docs[0],
+        )

@@ -24,7 +24,7 @@ if Vocabulary.Settings.ZAMBEZE_KIND in flowcept.configs.ADAPTERS:
         )
     except Exception as _exp:
         flowcept.commons.logger.error(
-            flowcept.commons._get_adapter_exception_msg(
+            flowcept.commons.get_adapter_exception_msg(
                 Vocabulary.Settings.ZAMBEZE_KIND
             )
         )
@@ -37,7 +37,7 @@ if Vocabulary.Settings.TENSORBOARD_KIND in flowcept.configs.ADAPTERS:
         )
     except Exception as _exp:
         flowcept.commons.logger.error(
-            flowcept.commons._get_adapter_exception_msg(
+            flowcept.commons.get_adapter_exception_msg(
                 Vocabulary.Settings.TENSORBOARD_KIND
             )
         )
@@ -50,7 +50,7 @@ if Vocabulary.Settings.MLFLOW_KIND in flowcept.configs.ADAPTERS:
         )
     except Exception as _exp:
         flowcept.commons.logger.error(
-            flowcept.commons._get_adapter_exception_msg(
+            flowcept.commons.get_adapter_exception_msg(
                 Vocabulary.Settings.MLFLOW_KIND
             )
         )
@@ -63,7 +63,7 @@ if Vocabulary.Settings.DASK_KIND in flowcept.configs.ADAPTERS:
             FlowceptDaskWorkerAdapter,
         )
     except Exception as _exp:
-        flowcept.commons._get_adapter_exception_msg(
+        flowcept.commons.get_adapter_exception_msg(
             Vocabulary.Settings.DASK_KIND
         )
         flowcept.commons.logger.exception(_exp)

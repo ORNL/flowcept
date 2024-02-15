@@ -7,7 +7,7 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 
 import unittest
 
-from flowcept import db_api
+from flowcept.flowcept_api.db_api import DBAPI
 from tests.decorator_tests.dl_trainer import ModelTrainer
 from tests.adapters.test_dask import TestDask
 
@@ -38,7 +38,7 @@ class DecoratorDaskTests(unittest.TestCase):
         confs = [{**d, "workflow_id": wf_id} for d in confs]
         print(wf_id)
         outputs = []
-        db = db_api.DBAPI()
+        db = DBAPI()
         db.insert_or_update_workflow(
             workflow_id=wf_id,
             custom_metadata=hp_conf.update({"n_confs": len(confs)}),

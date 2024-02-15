@@ -10,7 +10,7 @@ from flowcept import ZambezeInterceptor, FlowceptConsumerAPI
 from flowcept.flowceptor.adapters.zambeze.zambeze_dataclasses import (
     ZambezeMessage,
 )
-from tests.test_utils import assert_by_querying_task_collections_until
+from flowcept.commons.utils import assert_by_querying_task_collections_until
 
 
 class TestZambeze(unittest.TestCase):
