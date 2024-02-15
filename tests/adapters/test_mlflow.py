@@ -4,8 +4,10 @@ from time import sleep
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import MLFlowInterceptor, FlowceptConsumerAPI
-from flowcept.commons.utils import assert_by_querying_task_collections_until, \
-    evaluate_until
+from flowcept.commons.utils import (
+    assert_by_querying_task_collections_until,
+    evaluate_until,
+)
 
 
 def _init_consumption():
@@ -93,7 +95,9 @@ class TestMLFlow(unittest.TestCase):
         _init_consumption()
         run_uuid = self.test_pure_run_mlflow()
         sleep(10)
-        assert evaluate_until(lambda: self.interceptor.state_manager.has_element_id(run_uuid))
+        assert evaluate_until(
+            lambda: self.interceptor.state_manager.has_element_id(run_uuid)
+        )
         assert assert_by_querying_task_collections_until(
             DocumentDBDao(),
             {"task_id": run_uuid},
