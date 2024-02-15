@@ -18,7 +18,7 @@ class TestZambeze(unittest.TestCase):
         self.logger = FlowceptLogger().get_logger()
         interceptor = ZambezeInterceptor()
         self.consumer = FlowceptConsumerAPI(interceptor)
-
+        # self.consumer.reset_time_based_threads_tracker()
         self._connection = pika.BlockingConnection(
             pika.ConnectionParameters(
                 interceptor.settings.host,
@@ -26,9 +26,9 @@ class TestZambeze(unittest.TestCase):
             )
         )
         self._channel = self._connection.channel()
-        self._queue_name = interceptor.settings.queue_name
-        self._channel.queue_declare(queue=self._queue_name)
+        self._queue_names = interceptor.settings.queue_names
 
+        self._channel.queue_declare(queue=self._queue_names[0])
         self.consumer.start()
 
     def test_send_message(self):
@@ -58,7 +58,7 @@ class TestZambeze(unittest.TestCase):
 
         self._channel.basic_publish(
             exchange="",
-            routing_key=self._queue_name,
+            routing_key=self._queue_names[0],
             body=json.dumps(msg.__dict__),
         )
         print("Zambeze Activity_id", act_id)

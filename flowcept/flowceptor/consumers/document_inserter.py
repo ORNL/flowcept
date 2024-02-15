@@ -141,7 +141,6 @@ class DocumentInserter:
         )
         time_thread.start()
         pubsub = self._mq_dao.subscribe()
-        stoped_mq_threads = 0
         should_continue = True
         while should_continue:
             try:
@@ -160,15 +159,18 @@ class DocumentInserter:
                                 "Received mq_dao_thread_stopped message "
                                 "in DocInserter!"
                             )
-                            stoped_mq_threads += 1
-                            started_mq_threads = (
-                                self._mq_dao.get_started_mq_threads()
+                            exec_bundle_id = _dict_obj.get(
+                                "exec_bundle_id", None
                             )
-                            self.logger.debug(
-                                f"stoped_mq_threads={stoped_mq_threads}; "
-                                f"REDIS_STARTED_MQ_THREADS_KEY={started_mq_threads}"
+                            interceptor_instance_id = _dict_obj.get(
+                                "interceptor_instance_id"
                             )
-                            if stoped_mq_threads == started_mq_threads:
+                            self._mq_dao.register_time_based_thread_end(
+                                interceptor_instance_id, exec_bundle_id
+                            )
+                            if self._mq_dao.all_time_based_threads_ended(
+                                exec_bundle_id
+                            ):
                                 self._safe_to_stop = True
                                 self.logger.debug("It is safe to stop.")
 

@@ -25,7 +25,7 @@ class ZambezeMessage:
 class ZambezeSettings(BaseSettings):
     host: str
     port: int
-    queue_name: str
+    queue_names: List[str]
     key_values_to_filter: List[KeyValue] = None
     kind = "zambeze"
 
