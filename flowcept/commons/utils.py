@@ -114,7 +114,7 @@ def assert_by_querying_task_collections_until(
 
 # TODO: consider reusing this function in the function assert_by_querying_task_collections_until
 def evaluate_until(
-    evaluation_condition: Callable, max_trials=10, max_time=60, msg=""
+    evaluation_condition: Callable, max_trials=30, max_time=60, msg=""
 ):
     start_time = time()
     trials = 0
