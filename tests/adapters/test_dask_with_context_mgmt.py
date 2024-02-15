@@ -5,8 +5,7 @@ import numpy as np
 
 from dask.distributed import Client
 
-from flowcept import FlowceptConsumerAPI, TaskQueryAPI
-from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept import FlowceptConsumerAPI, TaskQueryAPI, DBAPI
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 
@@ -61,5 +60,8 @@ class TestDaskContextMgmt(unittest.TestCase):
             TestDaskContextMgmt.client.shutdown()
 
         query_api = TaskQueryAPI()
+        db_api = DBAPI()
         docs = query_api.query({"workflow_id": wf_id})
         assert len(docs)
+        wfdata = db_api.get_workflow(wf_id)
+        assert wfdata

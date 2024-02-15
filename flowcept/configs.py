@@ -47,6 +47,8 @@ LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "debug").upper()
 FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 CAMPAIGN_ID = settings["experiment"].get("campaign_id", "super_campaign")
 
+REGISTER_WORKFLOW = settings["experiment"].get("register_workflow", True)
+
 ######################
 #   Redis Settings   #
 ######################
@@ -140,7 +142,10 @@ sys_metadata = settings.get("sys_metadata", None)
 if sys_metadata is not None:
     SYS_NAME = sys_metadata.get("sys_name", os.uname()[0])
     NODE_NAME = sys_metadata.get("node_name", os.uname()[1])
-    LOGIN_NAME = sys_metadata.get("login_name", "login_name")
+    try:
+        LOGIN_NAME = sys_metadata.get("login_name", os.getlogin())
+    except:
+        LOGIN_NAME = None
     PUBLIC_IP = sys_metadata.get("public_ip", None)
     PRIVATE_IP = sys_metadata.get("private_ip", None)
 else:

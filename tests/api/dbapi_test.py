@@ -2,7 +2,9 @@ import unittest
 from uuid import uuid4
 
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
+from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
 from flowcept.flowcept_api.db_api import DBAPI
+from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 
 
 class WorkflowDBTest(unittest.TestCase):
@@ -10,14 +12,10 @@ class WorkflowDBTest(unittest.TestCase):
         dbapi = DBAPI()
         wf1 = str(uuid4())
 
-        assert dbapi.insert_or_update_workflow(
-            workflow_id=wf1,
-            custom_metadata={"bla": "blu"},
-            comment="comment test",
-        )
+        assert dbapi.insert_or_update_workflow(workflow_id=wf1)
 
         assert dbapi.insert_or_update_workflow(
-            workflow_id=wf1, custom_metadata={"bli": "blo"}
+            workflow_id=wf1, workflow_info={"test": "abc"}
         )
 
         wfdata = dbapi.get_workflow(workflow_id=wf1)
@@ -25,20 +23,31 @@ class WorkflowDBTest(unittest.TestCase):
         print(wfdata)
 
         wf2 = str(uuid4())
+        print(wf2)
 
+        tel = TelemetryCapture()
         assert dbapi.insert_or_update_workflow(workflow_id=wf2)
         assert dbapi.insert_or_update_workflow(
-            workflow_id=wf2, comment="test"
+            workflow_id=wf2, workflow_info={"interceptor_id": "123"}
         )
         assert dbapi.insert_or_update_workflow(
-            workflow_id=wf2, custom_metadata={"a": "b"}
+            workflow_id=wf2, workflow_info={"interceptor_id": "1234"}
         )
         assert dbapi.insert_or_update_workflow(
-            workflow_id=wf2, custom_metadata={"c": "d"}
+            workflow_id=wf2,
+            workflow_info={
+                "machine_info": {"123": tel.capture_machine_info()}
+            },
+        )
+        assert dbapi.insert_or_update_workflow(
+            workflow_id=wf2,
+            workflow_info={
+                "machine_info": {"1234": tel.capture_machine_info()}
+            },
         )
         wfdata = dbapi.get_workflow(workflow_id=wf2)
+        print(wfdata)
         assert wfdata is not None
-        assert len(wfdata["custom_metadata"]) == 2
 
     def test_dump(self):
         dbapi = DBAPI()
