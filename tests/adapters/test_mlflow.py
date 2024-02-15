@@ -10,17 +10,11 @@ from flowcept.commons.utils import (
 )
 
 
-def _init_consumption():
-    TestMLFlow.consumer.start()
-    sleep(3)
-
-
 class TestMLFlow(unittest.TestCase):
-    interceptor = MLFlowInterceptor()
-    consumer: FlowceptConsumerAPI = FlowceptConsumerAPI(interceptor)
 
     def __init__(self, *args, **kwargs):
         super(TestMLFlow, self).__init__(*args, **kwargs)
+        self.interceptor = MLFlowInterceptor()
         self.logger = FlowceptLogger()
 
     def test_pure_run_mlflow(self):
@@ -30,7 +24,7 @@ class TestMLFlow(unittest.TestCase):
         # from mlflow.tracking import MlflowClient
         # client = MlflowClient()
         mlflow.set_tracking_uri(
-            f"sqlite:///" f"{TestMLFlow.interceptor.settings.file_path}"
+            f"sqlite:///" f"{self.interceptor.settings.file_path}"
         )
         experiment_name = "LinearRegression"
         experiment_id = mlflow.create_experiment(
@@ -52,7 +46,7 @@ class TestMLFlow(unittest.TestCase):
         # from mlflow.tracking import MlflowClient
         # client = MlflowClient()
         mlflow.set_tracking_uri(
-            f"sqlite:///" f"{TestMLFlow.interceptor.settings.file_path}"
+            f"sqlite:///" f"{self.interceptor.settings.file_path}"
         )
         experiment_name = "LinearRegression"
         experiment_id = mlflow.create_experiment(
@@ -92,9 +86,10 @@ class TestMLFlow(unittest.TestCase):
                 self.interceptor.state_manager.add_element_id(run_uuid)
 
     def test_observer_and_consumption(self):
-        _init_consumption()
-        run_uuid = self.test_pure_run_mlflow()
-        sleep(10)
+        with FlowceptConsumerAPI(self.interceptor):
+            run_uuid = self.test_pure_run_mlflow()
+            sleep(5)
+
         assert evaluate_until(
             lambda: self.interceptor.state_manager.has_element_id(run_uuid)
         )
@@ -102,12 +97,6 @@ class TestMLFlow(unittest.TestCase):
             DocumentDBDao(),
             {"task_id": run_uuid},
         )
-
-    @classmethod
-    def tearDownClass(cls):
-        if TestMLFlow.consumer is not None:
-            TestMLFlow.consumer.stop()
-            sleep(5)
 
 
 if __name__ == "__main__":
