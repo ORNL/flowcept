@@ -18,7 +18,7 @@ class DecoratorDaskTests(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(DecoratorDaskTests, self).__init__(*args, **kwargs)
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
 
     @classmethod
     def setUpClass(cls):

@@ -41,15 +41,10 @@ class FlowceptLogger(object):
 
         return logger
 
-    def __new__(cls, *args, **kwargs) -> "FlowceptLogger":
+    def __new__(cls, *args, **kwargs) -> logging.Logger:
         if not cls._instance:
             cls._instance = super(FlowceptLogger, cls).__new__(
                 cls, *args, **kwargs
             )
             cls._instance._logger = FlowceptLogger._build_logger()
-        return cls._instance
-
-    def get_logger(self):
-        if FlowceptLogger._instance is None:
-            return FlowceptLogger()
-        return self._logger
+        return cls._instance._logger

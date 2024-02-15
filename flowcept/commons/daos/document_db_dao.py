@@ -29,7 +29,7 @@ from time import time
 @singleton
 class DocumentDBDao(object):
     def __init__(self):
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
 
         if MONGO_URI is not None:
             client = MongoClient(MONGO_URI)

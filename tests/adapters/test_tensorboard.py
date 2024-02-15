@@ -7,7 +7,8 @@ from flowcept.configs import MONGO_INSERTION_BUFFER_TIME
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import TensorboardInterceptor, FlowceptConsumerAPI
-from flowcept.commons.utils import assert_by_querying_task_collections_until
+from flowcept.commons.utils import assert_by_querying_task_collections_until, \
+    evaluate_until
 
 
 class TestTensorboard(unittest.TestCase):
@@ -16,7 +17,7 @@ class TestTensorboard(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(TestTensorboard, self).__init__(*args, **kwargs)
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
 
     def _init_consumption(self):
         TestTensorboard.consumer.start()
@@ -150,12 +151,12 @@ class TestTensorboard(unittest.TestCase):
         sleep(watch_interval_sec * 10)
         TestTensorboard.consumer.stop()
         sleep(watch_interval_sec * 20)
-        assert self.interceptor.state_manager.count() == 16
-        doc_dao = DocumentDBDao()
 
+        doc_dao = DocumentDBDao()
         assert assert_by_querying_task_collections_until(
             doc_dao, {"workflow_id": wf_id}
         )
+        assert evaluate_until(lambda: self.interceptor.state_manager.count() == 16)
         # TODO: Sometimes this fails. It's been hard to debug and tensorboard
         #  is not a priority. Need to investigate later
         # May be related: https://github.com/ORNL/flowcept/issues/49

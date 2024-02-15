@@ -26,7 +26,7 @@ from flowcept.version import __version__
 
 class BaseInterceptor(object, metaclass=ABCMeta):
     def __init__(self, plugin_key):
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
         self.settings = get_settings(plugin_key)
         self._mq_dao = MQDao()
         self._db_api = DBAPI()

@@ -12,7 +12,7 @@ from flowcept.configs import (
 @singleton
 class KeyValueDAO:
     def __init__(self, connection=None):
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
         if connection is None:
             self._redis = Redis(
                 host=REDIS_HOST,
