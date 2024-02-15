@@ -104,14 +104,18 @@ def assert_by_querying_task_collections_until(
                 pass
 
         trials += 1
-        flowcept.commons.logger.debug(f"Condition not yet met. Trials={trials}/{max_trials}.")
+        flowcept.commons.logger.debug(
+            f"Condition not yet met. Trials={trials}/{max_trials}."
+        )
         sleep(1)
 
     return False
 
 
 # TODO: consider reusing this function in the function assert_by_querying_task_collections_until
-def evaluate_until(evaluation_condition: Callable, max_trials=10, max_time=60):
+def evaluate_until(
+    evaluation_condition: Callable, max_trials=10, max_time=60
+):
     start_time = time()
     trials = 0
 
@@ -121,7 +125,8 @@ def evaluate_until(evaluation_condition: Callable, max_trials=10, max_time=60):
 
         trials += 1
         flowcept.commons.logger.debug(
-            f"Condition not yet met. Trials={trials}/{max_trials}.")
+            f"Condition not yet met. Trials={trials}/{max_trials}."
+        )
         sleep(1)  # Sleep for 2 seconds between trials
 
     return False  # Condition not met within max_trials or max_time

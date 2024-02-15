@@ -7,8 +7,10 @@ from flowcept.configs import MONGO_INSERTION_BUFFER_TIME
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import TensorboardInterceptor, FlowceptConsumerAPI
-from flowcept.commons.utils import assert_by_querying_task_collections_until, \
-    evaluate_until
+from flowcept.commons.utils import (
+    assert_by_querying_task_collections_until,
+    evaluate_until,
+)
 
 
 class TestTensorboard(unittest.TestCase):
@@ -156,7 +158,9 @@ class TestTensorboard(unittest.TestCase):
         assert assert_by_querying_task_collections_until(
             doc_dao, {"workflow_id": wf_id}
         )
-        assert evaluate_until(lambda: self.interceptor.state_manager.count() == 16)
+        assert evaluate_until(
+            lambda: self.interceptor.state_manager.count() == 16
+        )
         # TODO: Sometimes this fails. It's been hard to debug and tensorboard
         #  is not a priority. Need to investigate later
         # May be related: https://github.com/ORNL/flowcept/issues/49
