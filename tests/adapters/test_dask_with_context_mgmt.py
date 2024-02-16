@@ -5,9 +5,10 @@ import numpy as np
 
 from dask.distributed import Client
 
-from flowcept import FlowceptConsumerAPI, TaskQueryAPI
+from flowcept import FlowceptConsumerAPI, TaskQueryAPI, DBAPI
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.commons.utils import assert_by_querying_task_collections_until
 
 
 def dummy_func1(x, workflow_id=None):
@@ -22,7 +23,7 @@ class TestDaskContextMgmt(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(TestDaskContextMgmt, self).__init__(*args, **kwargs)
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
 
     @classmethod
     def setUpClass(cls):
@@ -60,6 +61,8 @@ class TestDaskContextMgmt(unittest.TestCase):
             sleep(5)
             TestDaskContextMgmt.client.shutdown()
 
-        query_api = TaskQueryAPI()
-        docs = query_api.query({"workflow_id": wf_id})
-        assert len(docs)
+        assert assert_by_querying_task_collections_until(
+            DocumentDBDao(),
+            {"task_id": o1.key},
+            condition_to_evaluate=lambda docs: "ended_at" in docs[0],
+        )

@@ -1,6 +1,8 @@
+import uuid
 from abc import ABCMeta, abstractmethod
 
-from flowcept.commons.utils import get_utc_now
+from flowcept.flowcept_api.db_api import DBAPI
+from flowcept.commons.utils import get_utc_now, get_basic_workflow_info
 from flowcept.configs import (
     FLOWCEPT_USER,
     SYS_NAME,
@@ -22,52 +24,58 @@ from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 from flowcept.version import __version__
 
 
-def _enrich_task_message(settings_key, task_msg: TaskMessage):
-    if task_msg.utc_timestamp is None:
-        task_msg.utc_timestamp = get_utc_now()
-
-    if task_msg.adapter_id is None:
-        task_msg.adapter_id = settings_key
-
-    if task_msg.user is None:
-        task_msg.user = FLOWCEPT_USER
-
-    if task_msg.campaign_id is None:
-        task_msg.campaign_id = CAMPAIGN_ID
-
-    if task_msg.sys_name is None:
-        task_msg.sys_name = SYS_NAME
-
-    if task_msg.node_name is None:
-        task_msg.node_name = NODE_NAME
-
-    if task_msg.login_name is None:
-        task_msg.login_name = LOGIN_NAME
-
-    if task_msg.public_ip is None and PUBLIC_IP is not None:
-        task_msg.public_ip = PUBLIC_IP
-
-    if task_msg.private_ip is None and PRIVATE_IP is not None:
-        task_msg.private_ip = PRIVATE_IP
-
-    if task_msg.hostname is None and HOSTNAME is not None:
-        task_msg.hostname = HOSTNAME
-
-    if task_msg.extra_metadata is None and EXTRA_METADATA is not None:
-        task_msg.extra_metadata = EXTRA_METADATA
-
-    if task_msg.flowcept_version is None:
-        task_msg.flowcept_version = __version__
-
-
 class BaseInterceptor(object, metaclass=ABCMeta):
     def __init__(self, plugin_key):
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
         self.settings = get_settings(plugin_key)
         self._mq_dao = MQDao()
+        self._db_api = DBAPI()
         self._bundle_exec_id = None
-        self._interceptor_instance_id = id(self)
+        self._interceptor_instance_id = str(id(self))
         self.telemetry_capture = TelemetryCapture()
+        self._generated_workflow_id = False
+        self._registered_workflow = False
+
+    def _enrich_task_message(self, settings_key, task_msg: TaskMessage):
+        if task_msg.utc_timestamp is None:
+            task_msg.utc_timestamp = get_utc_now()
+
+        if task_msg.adapter_id is None:
+            task_msg.adapter_id = settings_key
+
+        if task_msg.user is None:
+            task_msg.user = FLOWCEPT_USER
+
+        if task_msg.campaign_id is None:
+            task_msg.campaign_id = CAMPAIGN_ID
+
+        if task_msg.sys_name is None:
+            task_msg.sys_name = SYS_NAME
+
+        if task_msg.node_name is None:
+            task_msg.node_name = NODE_NAME
+
+        if task_msg.login_name is None:
+            task_msg.login_name = LOGIN_NAME
+
+        if task_msg.public_ip is None and PUBLIC_IP is not None:
+            task_msg.public_ip = PUBLIC_IP
+
+        if task_msg.private_ip is None and PRIVATE_IP is not None:
+            task_msg.private_ip = PRIVATE_IP
+
+        if task_msg.hostname is None and HOSTNAME is not None:
+            task_msg.hostname = HOSTNAME
+
+        if task_msg.extra_metadata is None and EXTRA_METADATA is not None:
+            task_msg.extra_metadata = EXTRA_METADATA
+
+        if task_msg.flowcept_version is None:
+            task_msg.flowcept_version = __version__
+
+        if task_msg.workflow_id is None and not self._generated_workflow_id:
+            task_msg.workflow_id = str(uuid.uuid4())
+            self._generated_workflow_id = True
 
     def prepare_task_msg(self, *args, **kwargs) -> TaskMessage:
         raise NotImplementedError()
@@ -112,9 +120,32 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         """
         raise NotImplementedError()
 
+    def register_workflow(self, task_msg: TaskMessage):
+        self._registered_workflow = True
+        if task_msg.workflow_id is None:
+            return
+        machine_info = self.telemetry_capture.capture_machine_info()
+        workflow_info = get_basic_workflow_info(task_msg.workflow_id)
+        workflow_info["interceptor_id"] = self._interceptor_instance_id
+        if machine_info is not None:
+            workflow_info.update(
+                {
+                    "machine_info": {
+                        self._interceptor_instance_id: machine_info
+                    }
+                }
+            )
+
+        self._db_api.insert_or_update_workflow(
+            task_msg.workflow_id, workflow_info
+        )
+
     def intercept(self, task_msg: TaskMessage):
         if self.settings.enrich_messages:
-            _enrich_task_message(self.settings.key, task_msg)
+            self._enrich_task_message(self.settings.key, task_msg)
+
+        if not self._registered_workflow:
+            self.register_workflow(task_msg)
 
         _msg = task_msg.to_dict()
         self.logger.debug(
