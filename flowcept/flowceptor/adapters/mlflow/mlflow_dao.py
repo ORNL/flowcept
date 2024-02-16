@@ -2,6 +2,7 @@ from typing import List
 from sqlalchemy.engine import Row, create_engine
 from textwrap import dedent
 
+from flowcept.commons.decorators import singleton
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import (
     RunData,
@@ -9,6 +10,7 @@ from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import (
 )
 
 
+@singleton
 class MLFlowDAO:
     _LIMIT = 10
     # TODO: This should not at all be hard coded.
@@ -17,7 +19,7 @@ class MLFlowDAO:
 
     def __init__(self, mlflow_settings: MLFlowSettings):
         self._engine = MLFlowDAO._get_db_engine(mlflow_settings.file_path)
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
 
     @staticmethod
     def _get_db_engine(sqlite_file):

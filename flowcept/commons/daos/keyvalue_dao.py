@@ -1,6 +1,7 @@
 from redis import Redis
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.commons.decorators import singleton
 from flowcept.configs import (
     REDIS_HOST,
     REDIS_PORT,
@@ -8,9 +9,10 @@ from flowcept.configs import (
 )
 
 
+@singleton
 class KeyValueDAO:
     def __init__(self, connection=None):
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
         if connection is None:
             self._redis = Redis(
                 host=REDIS_HOST,

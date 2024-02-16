@@ -8,6 +8,7 @@ from dask.distributed import Client
 from flowcept import FlowceptConsumerAPI
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.commons.utils import assert_by_querying_task_collections_until
 
 
 def dummy_func1(x, workflow_id=None):
@@ -39,7 +40,8 @@ class TestDask(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(TestDask, self).__init__(*args, **kwargs)
-        self.logger = FlowceptLogger().get_logger()
+        self.doc_dao = DocumentDBDao()
+        self.logger = FlowceptLogger()
 
     @classmethod
     def setUpClass(cls):
@@ -77,7 +79,7 @@ class TestDask(unittest.TestCase):
         o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
         self.logger.debug(o2.result())
         self.logger.debug(o2.key)
-        sleep(10)
+        sleep(3)
         return o2.key
 
     def test_dummyfunc(self):
@@ -85,7 +87,7 @@ class TestDask(unittest.TestCase):
         wf_id = f"wf_{uuid4()}"
         o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
         self.logger.debug(o1.result())
-        sleep(10)
+        sleep(3)
         return o1.key
 
     def test_long_workflow(self):
@@ -95,7 +97,7 @@ class TestDask(unittest.TestCase):
         o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
         o3 = TestDask.client.submit(dummy_func3, o1, o2, workflow_id=wf_id)
         self.logger.debug(o3.result())
-        sleep(10)
+        sleep(3)
         return o3.key
 
     def varying_args(self):
@@ -105,7 +107,7 @@ class TestDask(unittest.TestCase):
         assert result["r"] > 0
         self.logger.debug(result)
         self.logger.debug(o1.key)
-        sleep(10)
+        sleep(3)
         return o1.key
 
     def test_map_workflow(self):
@@ -116,7 +118,7 @@ class TestDask(unittest.TestCase):
             result = o.result()
             assert result > 0
             self.logger.debug(f"{o.key}, {result}")
-        sleep(10)
+        sleep(3)
         return o1
 
     def test_map_workflow_kwargs(self):
@@ -132,7 +134,7 @@ class TestDask(unittest.TestCase):
             result = o.result()
             assert result["z"] > 0
             self.logger.debug(o.key, result)
-        sleep(10)
+        sleep(3)
         return o1
 
     def error_task_submission(self):
@@ -145,33 +147,35 @@ class TestDask(unittest.TestCase):
         return o1.key
 
     def test_observer_and_consumption(self):
-        doc_dao = DocumentDBDao()
         o2_task_id = self.atest_pure_workflow()
         print("Task_id=" + o2_task_id)
         print("Done workflow!")
         sleep(3)
-        docs = doc_dao.task_query({"task_id": o2_task_id})
-        assert len(docs) > 0
-        assert len(docs[0]["telemetry_at_end"]) > 0
+        assert assert_by_querying_task_collections_until(
+            self.doc_dao,
+            {"task_id": o2_task_id},
+            condition_to_evaluate=lambda docs: "telemetry_at_end" in docs[0],
+        )
 
     def test_observer_and_consumption_varying_args(self):
-        doc_dao = DocumentDBDao()
         if TestDask.consumer is None or not TestDask.consumer.is_started:
             TestDask._init_consumption()
         o2_task_id = self.varying_args()
-        sleep(10)
-        assert len(doc_dao.task_query({"task_id": o2_task_id})) > 0
+        sleep(3)
+        assert assert_by_querying_task_collections_until(
+            self.doc_dao, {"task_id": o2_task_id}
+        )
 
     def test_observer_and_consumption_error_task(self):
-        doc_dao = DocumentDBDao()
         if TestDask.consumer is None or not TestDask.consumer.is_started:
             TestDask._init_consumption()
         o2_task_id = self.error_task_submission()
-        sleep(15)
-        docs = doc_dao.task_query({"task_id": o2_task_id})
-
-        assert len(docs) > 0
-        assert docs[0]["stderr"]["exception"]
+        assert assert_by_querying_task_collections_until(
+            self.doc_dao,
+            {"task_id": o2_task_id},
+            condition_to_evaluate=lambda docs: "exception"
+            in docs[0]["stderr"],
+        )
 
     @classmethod
     def tearDownClass(cls):
@@ -183,4 +187,4 @@ class TestDask(unittest.TestCase):
         print("Closing flowcept!")
         if TestDask.consumer:
             TestDask.consumer.stop()
-        sleep(5)
+        sleep(3)

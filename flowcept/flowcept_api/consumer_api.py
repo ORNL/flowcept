@@ -12,7 +12,7 @@ class FlowceptConsumerAPI(object):
         self,
         interceptors: Union[BaseInterceptor, List[BaseInterceptor]] = None,
     ):
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
         self._document_inserter: DocumentInserter = None
         self._mq_dao = MQDao()
 
