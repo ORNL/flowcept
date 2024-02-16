@@ -12,7 +12,6 @@ from flowcept.configs import (
     REDIS_PORT,
     REDIS_CHANNEL,
     REDIS_PASSWORD,
-    REDIS_STARTED_MQ_THREADS_KEY,
     JSON_SERIALIZER,
     REDIS_BUFFER_SIZE,
     REDIS_INSERTION_BUFFER_TIME,
@@ -40,7 +39,7 @@ class MQDao:
         return set_id
 
     def __init__(self):
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
 
         if REDIS_URI is not None:
             # If a URI is provided, use it for connection
@@ -63,7 +62,7 @@ class MQDao:
         self._lock = None
 
     def register_time_based_thread_init(
-        self, interceptor_instance_id: int, exec_bundle_id=None
+        self, interceptor_instance_id: str, exec_bundle_id=None
     ):
         set_name = MQDao._get_set_name(exec_bundle_id)
         self.logger.debug(
@@ -72,7 +71,7 @@ class MQDao:
         self._keyvalue_dao.add_key_into_set(set_name, interceptor_instance_id)
 
     def register_time_based_thread_end(
-        self, interceptor_instance_id: int, exec_bundle_id=None
+        self, interceptor_instance_id: str, exec_bundle_id=None
     ):
         set_name = MQDao._get_set_name(exec_bundle_id)
         self.logger.debug(
@@ -92,7 +91,7 @@ class MQDao:
         )
 
     def start_time_based_flushing(
-        self, interceptor_instance_id: int, exec_bundle_id=None
+        self, interceptor_instance_id: str, exec_bundle_id=None
     ):
         self._buffer = list()
         self._time_thread: Thread = None
@@ -104,22 +103,11 @@ class MQDao:
         self.register_time_based_thread_init(
             interceptor_instance_id, exec_bundle_id
         )
-        # self._redis.incr(REDIS_STARTED_MQ_THREADS_KEY)
-        # self.logger.debug(
-        #     f"Incrementing REDIS_STARTED_MQ_THREADS_KEY. Now: {self.get_started_mq_threads()}"
-        # )
         self._time_based_flushing_started = True
         self._time_thread.start()
 
-    # def get_started_mq_threads(self):
-    #     return int(self._redis.get(REDIS_STARTED_MQ_THREADS_KEY))
-    #
-    # def reset_started_mq_threads(self):
-    #     self.logger.debug("RESETTING REDIS_STARTED_MQ_THREADS_KEY TO 0")
-    #     self._redis.set(REDIS_STARTED_MQ_THREADS_KEY, 0)
-
     def stop_time_based_flushing(
-        self, interceptor_instance_id: int, exec_bundle_id: int = None
+        self, interceptor_instance_id: str, exec_bundle_id: int = None
     ):
         self.logger.info("MQ time-based received stop signal!")
         if self._time_based_flushing_started:

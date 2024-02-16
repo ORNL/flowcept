@@ -142,7 +142,7 @@ class QueryTest(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(QueryTest, self).__init__(*args, **kwargs)
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
         self.api = TaskQueryAPI()
         self.db_dao = DocumentDBDao()
 

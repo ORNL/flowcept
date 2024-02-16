@@ -1,5 +1,6 @@
 import os
 import socket
+import getpass
 
 import yaml
 import random
@@ -47,6 +48,8 @@ LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "debug").upper()
 FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 CAMPAIGN_ID = settings["experiment"].get("campaign_id", "super_campaign")
 
+REGISTER_WORKFLOW = settings["experiment"].get("register_workflow", True)
+
 ######################
 #   Redis Settings   #
 ######################
@@ -55,10 +58,7 @@ REDIS_HOST = settings["main_redis"].get("host", "localhost")
 REDIS_PORT = int(settings["main_redis"].get("port", "6379"))
 REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
 REDIS_PASSWORD = settings["main_redis"].get("password", None)
-REDIS_STARTED_MQ_THREADS_KEY = "started_mq_threads"
-REDIS_RESET_DB_AT_START = settings["main_redis"].get(
-    "reset_db_at_start", True
-)
+
 REDIS_BUFFER_SIZE = int(settings["main_redis"].get("buffer_size", 50))
 REDIS_INSERTION_BUFFER_TIME = int(
     settings["main_redis"].get("insertion_buffer_time_secs", 5)
@@ -136,19 +136,32 @@ if TELEMETRY_CAPTURE.get("gpu", False):
 # SYS METADATA #
 ######################
 
+LOGIN_NAME = None
+PUBLIC_IP = None
+PRIVATE_IP = None
+SYS_NAME = None
+NODE_NAME = None
+
 sys_metadata = settings.get("sys_metadata", None)
 if sys_metadata is not None:
-    SYS_NAME = sys_metadata.get("sys_name", os.uname()[0])
-    NODE_NAME = sys_metadata.get("node_name", os.uname()[1])
-    LOGIN_NAME = sys_metadata.get("login_name", "login_name")
+    SYS_NAME = sys_metadata.get("sys_name", None)
+    NODE_NAME = sys_metadata.get("node_name", None)
+    LOGIN_NAME = sys_metadata.get("login_name", None)
     PUBLIC_IP = sys_metadata.get("public_ip", None)
     PRIVATE_IP = sys_metadata.get("private_ip", None)
-else:
-    SYS_NAME = os.uname()[0]
-    NODE_NAME = os.uname()[1]
-    LOGIN_NAME = None
-    PUBLIC_IP = None
-    PRIVATE_IP = None
+
+
+if LOGIN_NAME is None:
+    try:
+        LOGIN_NAME = sys_metadata.get("login_name", getpass.getuser())
+    except:
+        try:
+            LOGIN_NAME = os.getlogin()
+        except:
+            LOGIN_NAME = None
+
+SYS_NAME = SYS_NAME if SYS_NAME is not None else os.uname()[0]
+NODE_NAME = NODE_NAME if NODE_NAME is not None else os.uname()[1]
 
 try:
     HOSTNAME = socket.getfqdn()

@@ -42,7 +42,7 @@ class DocumentInserter:
         self._mq_dao = MQDao()
         self._doc_dao = DocumentDBDao()
         self._previous_time = time()
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
         self._main_thread: Thread = None
         self._curr_max_buffer_size = MONGO_MAX_BUFFER_SIZE
         self._lock = Lock()

@@ -1,18 +1,19 @@
 from typing import Dict
 
+from flowcept.commons.decorators import singleton
 from flowcept.configs import MONGO_TASK_COLLECTION
-from flowcept.version import __version__
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 
+@singleton
 class DBAPI(object):
     def __init__(
         self,
         with_webserver=False,
     ):
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
         self.with_webserver = with_webserver
         if self.with_webserver:
             raise NotImplementedError(
@@ -25,19 +26,9 @@ class DBAPI(object):
         self._dao.insert_one(task.to_dict())
 
     def insert_or_update_workflow(
-        self,
-        workflow_id: str,
-        custom_metadata: Dict = None,
-        comment: str = None,
+        self, workflow_id: str, workflow_info: Dict = {}
     ) -> bool:
-        wf_data = dict()
-        if custom_metadata is not None:
-            wf_data["custom_metadata"] = custom_metadata
-        wf_data["flowcept_version"] = __version__
-        if comment is not None:
-            wf_data["comment"] = comment
-
-        return self._dao.workflow_insert_or_update(workflow_id, wf_data)
+        return self._dao.workflow_insert_or_update(workflow_id, workflow_info)
 
     def get_workflow(self, workflow_id):
         results = self._dao.workflow_query(
