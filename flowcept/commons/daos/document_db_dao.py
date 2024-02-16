@@ -10,6 +10,7 @@ from pymongo import MongoClient, UpdateOne
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
 from flowcept.commons.utils import perf_log, get_utc_now_str
+from flowcept.commons.decorators import singleton
 from flowcept.configs import (
     MONGO_HOST,
     MONGO_PORT,
@@ -25,9 +26,10 @@ from flowcept.flowceptor.consumers.consumer_utils import (
 from time import time
 
 
+@singleton
 class DocumentDBDao(object):
     def __init__(self):
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
 
         if MONGO_URI is not None:
             client = MongoClient(MONGO_URI)
@@ -261,18 +263,32 @@ class DocumentDBDao(object):
             return -1
 
     def workflow_insert_or_update(
-        self, workflow_id: str, _dict: Dict
+        self, workflow_id: str, _dict: Dict = {}
     ) -> bool:
         _filter = {TaskMessage.get_workflow_id_field(): workflow_id}
-        custom_metadata = _dict.get("custom_metadata")
-        if custom_metadata is not None:
-            _dict.pop("custom_metadata")
-            data_to_update = _dict.copy()
-            for k, v in custom_metadata.items():
-                data_to_update[f"custom_metadata.{k}"] = v
-        else:
-            data_to_update = _dict.copy()
-        update_query = {"$set": data_to_update}
+        update_query = {}
+        interceptor_id = _dict.pop("interceptor_id", None)
+        if interceptor_id is not None:
+            if not isinstance(interceptor_id, str):
+                self.logger.exception(
+                    "Interceptor_ID must be a string, as Mongo can only record string keys."
+                )
+                return False
+            update_query.update(
+                {"$push": {"interceptor_ids": interceptor_id}}
+            )
+
+        machine_info = _dict.pop("machine_info", None)
+        if machine_info is not None:
+            for k in machine_info:
+                _dict[f"machine_info.{k}"] = machine_info[k]
+
+        update_query.update(
+            {
+                "$set": _dict,
+            }
+        )
+
         try:
             result = self._wfs_collection.update_one(
                 _filter, update_query, upsert=True

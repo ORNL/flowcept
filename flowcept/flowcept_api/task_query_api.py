@@ -25,11 +25,13 @@ from flowcept.commons.query_utils import (
     to_datetime,
     calculate_telemetry_diff_for_docs,
 )
+from flowcept.commons.decorators import singleton
 from flowcept.configs import WEBSERVER_HOST, WEBSERVER_PORT, ANALYTICS
 from flowcept.flowcept_webserver.app import BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
 
+@singleton
 class TaskQueryAPI(object):
     """
     General overview of this class.
@@ -47,7 +49,7 @@ class TaskQueryAPI(object):
         port: int = WEBSERVER_PORT,
         auth=None,
     ):
-        self._logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
         self._with_webserver = with_webserver
         if self._with_webserver:
             self._host = host
@@ -58,7 +60,7 @@ class TaskQueryAPI(object):
                 r = requests.get(_base_url)
                 if r.status_code > 300:
                     raise Exception(r.text)
-                self._logger.debug(
+                self.logger.debug(
                     "Ok, webserver is ready to receive requests."
                 )
             except Exception as e:
@@ -134,7 +136,7 @@ class TaskQueryAPI(object):
             if docs is not None:
                 return docs
             else:
-                self._logger.error("Error when executing query.")
+                self.logger.error("Error when executing query.")
 
     def df_query(
         self,
@@ -196,18 +198,18 @@ class TaskQueryAPI(object):
             try:
                 docs = calculate_telemetry_diff_for_docs(docs)
             except Exception as e:
-                self._logger.exception(e)
+                self.logger.exception(e)
 
         try:
             df = pd.json_normalize(docs)
         except Exception as e:
-            self._logger.exception(e)
+            self.logger.exception(e)
             return None
 
         try:
             df["status"] = df.apply(get_doc_status, axis=1)
         except Exception as e:
-            self._logger.exception(e)
+            self.logger.exception(e)
 
         try:
             df = df.drop(
@@ -215,7 +217,7 @@ class TaskQueryAPI(object):
                 errors="ignore",
             )
         except Exception as e:
-            self._logger.exception(e)
+            self.logger.exception(e)
 
         for col in [
             "started_at",
@@ -223,7 +225,7 @@ class TaskQueryAPI(object):
             "submitted_at",
             "utc_timestamp",
         ]:
-            to_datetime(self._logger, df, col, shift_hours)
+            to_datetime(self.logger, df, col, shift_hours)
 
         if "_id" in df.columns:
             try:
@@ -232,7 +234,7 @@ class TaskQueryAPI(object):
                     + timedelta(hours=shift_hours)
                 )
             except Exception as e:
-                self._logger.exception(e)
+                self.logger.exception(e)
 
         try:
             df["elapsed_time"] = df["ended_at"] - df["started_at"]
@@ -242,7 +244,7 @@ class TaskQueryAPI(object):
                 else -1
             )
         except Exception as e:
-            self._logger.exception(e)
+            self.logger.exception(e)
 
         return df
 
@@ -399,7 +401,7 @@ class TaskQueryAPI(object):
             quantile_val = df[col_name].quantile(quantile)
             query_parts.append(f"`{col_name}` {condition} {quantile_val}")
         quantiles_query = " & ".join(query_parts)
-        self._logger.debug(quantiles_query)
+        self.logger.debug(quantiles_query)
         result_df = df.query(quantiles_query)
         if len(result_df) == 0:
             return result_df
@@ -459,7 +461,7 @@ class TaskQueryAPI(object):
         :param top_k:
         :return:
         """
-        self._logger.warning(
+        self.logger.warning(
             "This is an experimental feature. Use it with carefully!"
         )
         # TODO: improve and optmize this function.

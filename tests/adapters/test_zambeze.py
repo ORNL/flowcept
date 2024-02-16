@@ -10,15 +10,15 @@ from flowcept import ZambezeInterceptor, FlowceptConsumerAPI
 from flowcept.flowceptor.adapters.zambeze.zambeze_dataclasses import (
     ZambezeMessage,
 )
+from flowcept.commons.utils import assert_by_querying_task_collections_until
 
 
 class TestZambeze(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestZambeze, self).__init__(*args, **kwargs)
-        self.logger = FlowceptLogger().get_logger()
+        self.logger = FlowceptLogger()
         interceptor = ZambezeInterceptor()
         self.consumer = FlowceptConsumerAPI(interceptor)
-        # self.consumer.reset_time_based_threads_tracker()
         self._connection = pika.BlockingConnection(
             pika.ConnectionParameters(
                 interceptor.settings.host,
@@ -65,11 +65,11 @@ class TestZambeze(unittest.TestCase):
         self.logger.debug(" [x] Sent msg")
         sleep(5)
         self._connection.close()
-        sleep(10)
-        doc_dao = DocumentDBDao()
-        assert len(doc_dao.task_query({"task_id": act_id})) > 0
+        assert assert_by_querying_task_collections_until(
+            DocumentDBDao(),
+            {"task_id": act_id},
+        )
         self.consumer.stop()
-        sleep(2)
 
 
 if __name__ == "__main__":
