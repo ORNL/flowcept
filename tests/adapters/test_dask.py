@@ -158,8 +158,6 @@ class TestDask(unittest.TestCase):
         )
 
     def test_observer_and_consumption_varying_args(self):
-        if TestDask.consumer is None or not TestDask.consumer.is_started:
-            TestDask._init_consumption()
         o2_task_id = self.varying_args()
         sleep(3)
         assert assert_by_querying_task_collections_until(
@@ -167,8 +165,6 @@ class TestDask(unittest.TestCase):
         )
 
     def test_observer_and_consumption_error_task(self):
-        if TestDask.consumer is None or not TestDask.consumer.is_started:
-            TestDask._init_consumption()
         o2_task_id = self.error_task_submission()
         assert assert_by_querying_task_collections_until(
             self.doc_dao,
@@ -180,11 +176,14 @@ class TestDask(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         print("Closing scheduler and workers!")
+        sleep(10)
         try:
             TestDask.client.shutdown()
         except:
             pass
-        print("Closing flowcept!")
+
+        print("Waiting before closing flowcept!")
+        sleep(30)
         if TestDask.consumer:
             TestDask.consumer.stop()
-        sleep(3)
+        sleep(10)

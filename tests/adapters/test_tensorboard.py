@@ -14,16 +14,13 @@ from flowcept.commons.utils import (
 
 
 class TestTensorboard(unittest.TestCase):
-    interceptor = TensorboardInterceptor()
-    consumer = FlowceptConsumerAPI(interceptor)
-
     def __init__(self, *args, **kwargs):
         super(TestTensorboard, self).__init__(*args, **kwargs)
-        self.logger = FlowceptLogger()
-
-    def _init_consumption(self):
-        TestTensorboard.consumer.start()
+        # TODO: we are adding this sleep here to try to avoid errors in the CI
+        # tests that are only caused with this test.
         sleep(30)
+        self.logger = FlowceptLogger()
+        self.interceptor = TensorboardInterceptor()
 
     def reset_log_dir(self):
         logdir = self.interceptor.settings.file_path
@@ -31,7 +28,7 @@ class TestTensorboard(unittest.TestCase):
         import shutil
 
         if os.path.exists(logdir):
-            self.logger.debug("Path exists, gonna delete")
+            self.logger.debug("Path exists, going to delete")
             shutil.rmtree(logdir)
             sleep(1)
         os.mkdir(logdir)
@@ -145,14 +142,12 @@ class TestTensorboard(unittest.TestCase):
 
     def test_observer_and_consumption(self):
         self.reset_log_dir()
-        self._init_consumption()
-        wf_id = self.test_run_tensorboard_hparam_tuning()
-        self.logger.debug("Done training. Sleeping some time...")
-        watch_interval_sec = MONGO_INSERTION_BUFFER_TIME
-        # Making sure we'll wait until next watch cycle
-        sleep(watch_interval_sec * 10)
-        TestTensorboard.consumer.stop()
-        sleep(watch_interval_sec * 20)
+        with FlowceptConsumerAPI(self.interceptor):
+            wf_id = self.test_run_tensorboard_hparam_tuning()
+            self.logger.debug("Done training. Sleeping some time...")
+            watch_interval_sec = MONGO_INSERTION_BUFFER_TIME
+            # Making sure we'll wait until next watch cycle
+            sleep(watch_interval_sec * 20)
 
         assert evaluate_until(
             lambda: self.interceptor.state_manager.count() == 16,
@@ -207,9 +202,3 @@ class TestTensorboard(unittest.TestCase):
                 # Only append if we find a tracked metric in the event
                 output.append(msg)
         assert len(output) == 16
-
-    @classmethod
-    def tearDownClass(cls):
-        if TestTensorboard.consumer is not None:
-            TestTensorboard.consumer.stop()
-            sleep(2)
