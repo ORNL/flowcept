@@ -14,7 +14,6 @@ from flowcept.commons.utils import (
 
 
 class TestTensorboard(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super(TestTensorboard, self).__init__(*args, **kwargs)
         # TODO: we are adding this sleep here to try to avoid errors in the CI
