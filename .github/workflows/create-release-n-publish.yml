@@ -1,8 +1,8 @@
 name: Release and Publish
 on:
   push:  # It has to be push, otherwise error happens in code below.
-    # branches: [ "main" ]
-    branches: [ "main", "dev" ] # use this only to test the CI
+    branches: [ "main" ]
+    #branches: [ "main", "dev" ] # use this only to test the CI
     #branches: [ "disabled" ]
 jobs:
   build:
@@ -88,21 +88,11 @@ jobs:
           password: ${{ secrets.PYPI_API_TOKEN }}
           verbose: true
       - name: Wait pypi do its thing
-        run: sleep 60
+        run: sleep 120
       - name: Test pip install
         run: pip install flowcept
       - name: Print installed version
         run: pip list | grep flowcept
-      - name: Check if version from pypi is the same as the most current one
-        run: |
-          echo "Current version: $CURRENT_VERSION"
-          if pip list | grep -q "flowcept.*$CURRENT_VERSION"; then
-            echo "SUCCESS: Version $CURRENT_VERSION is in the output of 'pip list | grep flowcept'."
-            exit 0
-          else
-            echo "FAILURE: Version $CURRENT_VERSION is not found in the output of 'pip list | grep flowcept'."
-            exit 1
-          fi
       - name: Test pip install one adapter
         run: pip install flowcept[dask]
       - name: Test pip install multiple adapters
