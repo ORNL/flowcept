@@ -10,7 +10,7 @@ from pymongo import MongoClient, UpdateOne
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
 from flowcept.commons.utils import perf_log, get_utc_now_str
-from flowcept.commons.decorators import singleton
+from flowcept.commons import singleton
 from flowcept.configs import (
     MONGO_HOST,
     MONGO_PORT,

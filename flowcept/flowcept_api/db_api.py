@@ -1,6 +1,6 @@
 from typing import Dict
 
-from flowcept.commons.decorators import singleton
+from flowcept.commons import singleton
 from flowcept.configs import MONGO_TASK_COLLECTION
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage

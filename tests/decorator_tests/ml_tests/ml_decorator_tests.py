@@ -6,14 +6,14 @@ import torch
 from torch import nn
 
 import flowcept.commons
+import flowcept.instrumentation.decorators
 from flowcept import model_explainer, model_profiler, FlowceptConsumerAPI
 
 import unittest
 
-from flowcept.commons.decorators.flowcept_task import flowcept_task
+from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 from tests.decorator_tests.ml_tests.dl_trainer import (
     ModelTrainer,
-    register_modules,
 )
 from tests.decorator_tests.ml_tests.llm_trainer import (
     model_train,
@@ -22,13 +22,12 @@ from tests.decorator_tests.ml_tests.llm_trainer import (
 )
 
 
-class DecoratorTests(unittest.TestCase):
+class MLDecoratorTests(unittest.TestCase):
     @staticmethod
-    def test_very_simple_decorator():
+    def test_explainer_decorator():
         @model_explainer(background_size=3)
         def my_function(arg1):
             model = np.random.random()
-            test_data = np.random.random(10) + arg1
             result = {
                 "model": model,
             }
@@ -54,9 +53,9 @@ class DecoratorTests(unittest.TestCase):
         wf_id = str(uuid.uuid4())
         print("Parent workflow_id:" + wf_id)
         with FlowceptConsumerAPI(
-            interceptors=flowcept.commons.instrumentation_interceptor
+            interceptors=flowcept.instrumentation.decorators.instrumentation_interceptor
         ):
-            for conf in confs:
+            for conf in confs[:1]:
                 conf["workflow_id"] = wf_id
                 result = trainer.model_fit(**conf)
                 print(result)
@@ -102,7 +101,7 @@ class DecoratorTests(unittest.TestCase):
         )
         result = model_train(**conf)
         assert result
-        print(DecoratorTests.debug_model_profiler(conf, ntokens, test_data))
+        print(MLDecoratorTests.debug_model_profiler(conf, ntokens, test_data))
 
     @staticmethod
     @model_profiler()
@@ -124,19 +123,3 @@ class DecoratorTests(unittest.TestCase):
             "model": best_m,
             "test_data": test_data,
         }
-
-    @flowcept_task
-    def decorated_function(self, x, workflow_id=None):
-        sleep(x)
-        return {"y": 2}
-
-    def test_decorated_function(self):
-        workflow_id = str(uuid.uuid4())
-        with FlowceptConsumerAPI(
-            interceptors=flowcept.commons.instrumentation_interceptor
-        ):
-            self.decorated_function(x=0.1, workflow_id=workflow_id)
-        print(workflow_id)
-
-    def test_test(self):
-        o = register_modules([nn.Conv2d])

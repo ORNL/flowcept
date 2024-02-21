@@ -10,7 +10,7 @@ from flowcept.flowcept_api.db_api import DBAPI
 
 
 try:
-    from flowcept.commons.decorators.responsible_ai import (
+    from flowcept.instrumentation.decorators.responsible_ai import (
         model_explainer,
         model_profiler,
     )
