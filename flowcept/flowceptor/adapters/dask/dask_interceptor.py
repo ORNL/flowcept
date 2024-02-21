@@ -1,7 +1,7 @@
 import pickle
 
-from flowcept.commons.flowcept_dataclasses.task_message import (
-    TaskMessage,
+from flowcept.commons.flowcept_dataclasses.task_object import (
+    TaskObject,
     Status,
 )
 from flowcept.flowceptor.adapters.base_interceptor import (
@@ -11,7 +11,7 @@ from flowcept.commons.utils import get_utc_now, replace_non_serializable
 from flowcept.configs import TELEMETRY_CAPTURE, REPLACE_NON_JSON_SERIALIZABLE
 
 
-def get_run_spec_data(task_msg: TaskMessage, run_spec):
+def get_run_spec_data(task_msg: TaskObject, run_spec):
     def _get_arg(arg_name):
         if type(run_spec) == dict:
             return run_spec.get(arg_name, None)
@@ -67,7 +67,7 @@ def get_run_spec_data(task_msg: TaskMessage, run_spec):
         task_msg.used = replace_non_serializable(task_msg.used)
 
 
-def get_task_deps(task_state, task_msg: TaskMessage):
+def get_task_deps(task_state, task_msg: TaskObject):
     if len(task_state.dependencies):
         task_msg.dependencies = [t.key for t in task_state.dependencies]
     if len(task_state.dependents):
@@ -93,7 +93,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                 ts = self._scheduler.tasks[task_id]
 
             if ts.state == "waiting":
-                task_msg = TaskMessage()
+                task_msg = TaskObject()
                 task_msg.task_id = task_id
                 task_msg.custom_metadata = {
                     "scheduler": self._scheduler.address_safe,
@@ -145,7 +145,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
 
             ts = self._worker.state.tasks[task_id]
 
-            task_msg = TaskMessage()
+            task_msg = TaskObject()
             task_msg.task_id = task_id
 
             if ts.state == "executing":

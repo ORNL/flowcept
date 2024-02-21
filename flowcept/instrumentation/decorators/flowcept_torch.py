@@ -4,6 +4,10 @@ import torch
 from torch import nn
 
 import flowcept.commons
+from flowcept import DBAPI
+from flowcept.commons.flowcept_dataclasses.workflow_object import (
+    WorkflowObject,
+)
 from flowcept.commons.utils import replace_non_serializable
 from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE
 
@@ -90,3 +94,11 @@ def register_modules(
         flowcept_torch_modules[module] = new_module
 
     return flowcept_torch_modules
+
+
+def register_module_as_workflow(module: nn.Module, parent_workflow_id=None):
+    workflow_obj = WorkflowObject()
+    workflow_obj.parent_workflow_id = parent_workflow_id
+    workflow_obj.name = module.__class__.name__
+    DBAPI().insert_or_update_workflow(workflow_obj)
+    return workflow_obj.workflow_id

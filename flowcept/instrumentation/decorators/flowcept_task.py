@@ -2,8 +2,8 @@ import uuid
 from time import time
 
 import flowcept.commons
-from flowcept.commons.flowcept_dataclasses.task_message import (
-    TaskMessage,
+from flowcept.commons.flowcept_dataclasses.task_object import (
+    TaskObject,
     Status,
 )
 
@@ -13,7 +13,7 @@ from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE
 from functools import wraps
 
 
-# TODO: :code-reorg: consider taking it to utils and reusing it in dask interceptor
+# TODO: :code-reorg: consider moving it to utils and reusing it in dask interceptor
 def default_args_handler(task_message, *args, **kwargs):
     args_handled = {}
     if args is not None and len(args):
@@ -31,7 +31,7 @@ def flowcept_task(func=None, **decorator_kwargs):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            task_message = TaskMessage()
+            task_message = TaskObject()
             task_message.activity_id = func.__name__
             task_message.task_id = str(uuid.uuid4())
 

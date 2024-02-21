@@ -14,10 +14,14 @@ from flowcept import (
     DBAPI,
     FlowceptConsumerAPI,
 )
+from flowcept.commons.flowcept_dataclasses.workflow_object import (
+    WorkflowObject,
+)
 from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 from flowcept.instrumentation.decorators.flowcept_torch import (
     torch_args_handler,
     register_modules,
+    register_module_as_workflow,
 )
 
 
@@ -33,17 +37,9 @@ class TestNet(nn.Module):
     ):
         super(TestNet, self).__init__()
 
-        # register this workflow # TODO: :ml-refactor: :usability: improve these 3 lines below
-        self.workflow_id = str(uuid.uuid4())
-        self._db_api = DBAPI()
-        self._db_api.insert_or_update_workflow(
-            workflow_id=self.workflow_id,
-            workflow_info={
-                "parent_workflow_id": parent_workflow_id,
-                "name": self.__class__.__name__,
-            },
+        self.workflow_id = register_module_as_workflow(
+            self, parent_workflow_id
         )
-
         m = register_modules(
             [
                 nn.Conv2d,
