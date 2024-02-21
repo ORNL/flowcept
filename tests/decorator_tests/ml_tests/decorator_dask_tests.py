@@ -7,7 +7,8 @@ from dask.distributed import Client
 
 from cluster_experiment_utils.utils import generate_configs
 
-from flowcept import FlowceptConsumerAPI
+from flowcept import FlowceptConsumerAPI, WorkflowObject
+
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 from flowcept.flowcept_api.db_api import DBAPI
@@ -45,13 +46,13 @@ class DecoratorDaskTests(unittest.TestCase):
         confs = [{**d, "workflow_id": wf_id} for d in confs]
         print(wf_id)
         outputs = []
+        wf_obj = WorkflowObject()
+        wf_obj.workflow_id = wf_id
+        wf_obj.custom_metadata = {
+            "hyperparameter_conf": hp_conf.update({"n_confs": len(confs)})
+        }
         db = DBAPI()
-        db.insert_or_update_workflow(
-            workflow_id=wf_id,
-            workflow_info={
-                "hyperparameter_conf": hp_conf.update({"n_confs": len(confs)})
-            },
-        )
+        db.insert_or_update_workflow(wf_obj)
         for conf in confs[:1]:
             conf["workflow_id"] = wf_id
             outputs.append(
