@@ -5,7 +5,7 @@ from typing import Dict
 from datetime import datetime
 
 from flowcept.commons.utils import GenericJSONDecoder
-from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
+from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.configs import (
     MONGO_INSERTION_BUFFER_TIME,
     MONGO_MAX_BUFFER_SIZE,
@@ -82,7 +82,7 @@ class DocumentInserter:
                     f"Gonna flush {len(self._buffer)} msgs to DocDB!"
                 )
                 inserted = self._doc_dao.insert_and_update_many(
-                    TaskMessage.task_id_field(), self._buffer
+                    TaskObject.task_id_field(), self._buffer
                 )
                 if not inserted:
                     self.logger.warning(
