@@ -7,8 +7,8 @@ from flowcept.commons.flowcept_dataclasses.task_message import (
 from flowcept.flowceptor.adapters.base_interceptor import (
     BaseInterceptor,
 )
-from flowcept.commons.utils import get_utc_now
-from flowcept.configs import TELEMETRY_CAPTURE
+from flowcept.commons.utils import get_utc_now, replace_non_serializable
+from flowcept.configs import TELEMETRY_CAPTURE, REPLACE_NON_JSON_SERIALIZABLE
 
 
 def get_run_spec_data(task_msg: TaskMessage, run_spec):
@@ -62,6 +62,9 @@ def get_run_spec_data(task_msg: TaskMessage, run_spec):
         if "workflow_id" in task_obj:
             task_msg.workflow_id = task_obj.pop("workflow_id")
         task_msg.used = task_obj["value"]
+
+    if REPLACE_NON_JSON_SERIALIZABLE:
+        task_msg.used = replace_non_serializable(task_msg.used)
 
 
 def get_task_deps(task_state, task_msg: TaskMessage):
@@ -189,6 +192,10 @@ class DaskWorkerInterceptor(BaseInterceptor):
             if self.settings.worker_should_get_output:
                 if task_id in self._worker.data.memory:
                     task_msg.generated = self._worker.data.memory[task_id]
+                    if REPLACE_NON_JSON_SERIALIZABLE:
+                        task_msg.generated = replace_non_serializable(
+                            task_msg.generated
+                        )
 
             self.intercept(task_msg)
 

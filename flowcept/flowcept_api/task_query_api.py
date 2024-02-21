@@ -374,7 +374,7 @@ class TaskQueryAPI(object):
         :param limit:
         :return:
         """
-        # TODO: idea: think of finding the clauses, quantile threshold, and sort order automatically
+        # TODO: :idea: think of finding the clauses, quantile threshold, and sort order automatically
         df = self.df_query(
             filter=filter,
             calculate_telemetry_diff=calculate_telemetry_diff,

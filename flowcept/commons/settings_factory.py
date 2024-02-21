@@ -33,18 +33,12 @@ SETTINGS_CLASSES = {
 
 def _build_base_settings(kind: str, settings_dict: dict) -> BaseSettings:
     settings_obj = SETTINGS_CLASSES[kind](**settings_dict)
-    # if hasattr(settings_obj, "file_path") and not os.path.isabs(
-    #     settings_obj.file_path
-    # ):
-    #     settings_obj.file_path = SETTINGS_PATH
-
-    # # Add default values for abstract settings here:
-    # if settings_obj.enrich_messages is None:
-    #     settings_obj.enrich_messages = True
     return settings_obj
 
 
 def get_settings(adapter_key: str) -> BaseSettings:
+    if adapter_key is None:  # TODO: :ml-refactor:
+        return None
     with open(SETTINGS_PATH) as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
     settings_dict = data[Vocabulary.Settings.ADAPTERS][adapter_key]

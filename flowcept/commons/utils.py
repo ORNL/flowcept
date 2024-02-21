@@ -163,6 +163,24 @@ class GenericJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
+def replace_non_serializable(obj):
+    if isinstance(
+        obj, (int, float, bool, str, list, tuple, dict, type(None))
+    ):
+        if isinstance(obj, dict):
+            return {
+                key: replace_non_serializable(value)
+                for key, value in obj.items()
+            }
+        elif isinstance(obj, (list, tuple)):
+            return [replace_non_serializable(item) for item in obj]
+        else:
+            return obj
+    else:
+        # Replace non-serializable values with id()
+        return f"{obj.__class__.__name__}_instance_id_{id(obj)}"
+
+
 class GenericJSONDecoder(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
         json.JSONDecoder.__init__(

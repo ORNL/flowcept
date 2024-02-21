@@ -4,13 +4,12 @@
 **/*egg*
 **/*pycache*
 **/*dist*
-mlflow.db
-tests/decorator_tests/mnist*
-tests/decorator_tests/tensorboard_events/
-tensorboard_events/
+**/*mlflow.db*
+**/*mnist*
+**/*tensorboard_events*
 **/*.DS_Store*
 **/*.log*
-notebooks/.ipynb_checkpoints
+**/*.pth
 **/*ipynb_checkpoints*
 notebooks/tb_*
 notebooks/scheduler_file.json
