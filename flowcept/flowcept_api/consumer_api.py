@@ -7,6 +7,7 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 
+# TODO: :code-reorg: This may not be considered an API anymore as it's doing critical things for the good functioning of the system.
 class FlowceptConsumerAPI(object):
     def __init__(
         self,
@@ -28,7 +29,7 @@ class FlowceptConsumerAPI(object):
 
         if self._interceptors and len(self._interceptors):
             for interceptor in self._interceptors:
-                # TODO: :ml-refactor: revise
+                # TODO: :base-interceptor-refactor: revise
                 if interceptor.settings is None:
                     key = id(interceptor)
                 else:
@@ -59,7 +60,7 @@ class FlowceptConsumerAPI(object):
         sleep(sleep_time)
         if self._interceptors and len(self._interceptors):
             for interceptor in self._interceptors:
-                # TODO: :ml-refactor: revise
+                # TODO: :base-interceptor-refactor: revise
                 if interceptor.settings is None:
                     key = id(interceptor)
                 else:

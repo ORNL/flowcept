@@ -50,6 +50,7 @@ def model_profiler(name=None):
                 raise Exception(error_format_msg)
             model = result.pop("model", None)
 
+            # TODO: :ml-refactor:
             if hasattr(model, "model_type"):
                 model_type = str(model.model_type)
             elif hasattr(model, "type"):

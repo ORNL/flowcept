@@ -4,7 +4,7 @@ from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 logger = FlowceptLogger()
 
-# TODO :ml-refactor: :code-reorg: :usability:
+# TODO :base-interceptor-refactor: :ml-refactor: :code-reorg: :usability:
 #  Consider creating a new concept for instrumentation-based 'interception'.
 #  These adaptors were made for data observability.
 #  Perhaps we should have a BaseAdaptor that would work for both and

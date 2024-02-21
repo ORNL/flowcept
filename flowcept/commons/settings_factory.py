@@ -37,7 +37,7 @@ def _build_base_settings(kind: str, settings_dict: dict) -> BaseSettings:
 
 
 def get_settings(adapter_key: str) -> BaseSettings:
-    if adapter_key is None:  # TODO: :ml-refactor:
+    if adapter_key is None:  # TODO: :base-interceptor-refactor:
         return None
     with open(SETTINGS_PATH) as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
