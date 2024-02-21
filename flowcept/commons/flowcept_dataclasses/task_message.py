@@ -58,16 +58,16 @@ class TaskMessage:
             "used",
             "generated",
             "custom_metadata",
-            "start_telemetry",
-            "end_telemetry",
+            "telemetry_at_start",
+            "telemetry_at_end",
         ]
 
     @staticmethod
-    def get_index_field():
+    def task_id_field():
         return "task_id"
 
     @staticmethod
-    def get_workflow_id_field():
+    def workflow_id_field():
         return "workflow_id"
 
     def to_dict(self):

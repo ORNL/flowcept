@@ -13,6 +13,7 @@ from flowcept.configs import (
     CAMPAIGN_ID,
     HOSTNAME,
     EXTRA_METADATA,
+    ENRICH_MESSAGES,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao import MQDao
@@ -24,10 +25,22 @@ from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 from flowcept.version import __version__
 
 
-class BaseInterceptor(object, metaclass=ABCMeta):
+# TODO :ml-refactor: :code-reorg: :usability:
+#  Consider creating a new concept for instrumentation-based 'interception'.
+#  These adaptors were made for data observability.
+#  Perhaps we should have a BaseAdaptor that would work for both and
+#  observability and instrumentation adapters. This would be a major refactor
+#  in the code. https://github.com/ORNL/flowcept/issues/109
+# class BaseInterceptor(object, metaclass=ABCMeta):
+class BaseInterceptor(object):
     def __init__(self, plugin_key):
         self.logger = FlowceptLogger()
-        self.settings = get_settings(plugin_key)
+        if (
+            plugin_key is not None
+        ):  # TODO :ml-refactor: :code-reorg: :usability:
+            self.settings = get_settings(plugin_key)
+        else:
+            self.settings = None
         self._mq_dao = MQDao()
         self._db_api = DBAPI()
         self._bundle_exec_id = None
@@ -141,8 +154,21 @@ class BaseInterceptor(object, metaclass=ABCMeta):
         )
 
     def intercept(self, task_msg: TaskMessage):
-        if self.settings.enrich_messages:
-            self._enrich_task_message(self.settings.key, task_msg)
+        if (
+            self._mq_dao._buffer is None
+        ):  # TODO :ml-refactor: :code-reorg: :usability:
+            raise Exception(
+                f"This interceptor {id(self)} has never been started!"
+            )
+
+        if ENRICH_MESSAGES:
+            if (
+                self.settings is not None
+            ):  # TODO :ml-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
+                key = self.settings.key
+            else:
+                key = None
+            self._enrich_task_message(key, task_msg)
 
         if not self._registered_workflow:
             self.register_workflow(task_msg)

@@ -1,7 +1,5 @@
 import shap
-from thop import profile
 import numpy as np
-from time import time
 
 
 def model_explainer(background_size=100, test_data_size=3):
@@ -46,37 +44,61 @@ def model_profiler(name=None):
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
             error_format_msg = (
-                "You must return a dict in the form:"
-                " {'model': model,"
-                " 'test_data': test_data}"
+                "You must return a dict in the form:" " {'model': model,"
             )
             if type(result) != dict:
                 raise Exception(error_format_msg)
             model = result.pop("model", None)
-            test_data = result.pop("test_data", None)
 
-            flops, params = profile(model, inputs=(test_data,))
-            fully_connected_layers = model.fc_layers
-            convolutional_layers = model.conv_layers
-            n_fc_layers = len(fully_connected_layers)
-            n_cv_layers = len(convolutional_layers)
-            depth = n_fc_layers + n_cv_layers
+            if hasattr(model, "model_type"):
+                model_type = str(model.model_type)
+            elif hasattr(model, "type"):
+                model_type = str(model.type)
+            else:
+                model_type = "unknown"
+
+            nparams = 0
             max_width = -1
             for p in model.parameters():
                 m = np.max(p.shape)
+                nparams += p.numel()
                 if m > max_width:
                     max_width = m
 
-            # TODO: create a class
+            n_layers = 0
+            n_modules = 0
+            modules = []
+            for m in model.modules():
+                n_modules += 1
+                module_children = list(m.children())
+                n_modules += len(module_children)
+                n_layers += (
+                    1 if len(module_children) == 0 else len(module_children)
+                )  # TODO :ml-refactor: improve code
+                module = {
+                    "id": id(m),
+                    "class": str(m.__class__.__name__),
+                    "n_layers": 1
+                    if len(module_children) == 0
+                    else len(module_children),
+                }
+                modules.append(module)
+
+            # fully_connected_layers = model.fc_layers
+            # convolutional_layers = model.conv_layers
+            # n_fc_layers = len(fully_connected_layers)
+            # n_cv_layers = len(convolutional_layers)
+            # depth = n_fc_layers + n_cv_layers
+
+            # TODO: :ml-refactor: create a class; check for model.named_children
             this_result = {
-                "flops": int(flops),
-                "params": int(params),
+                "params": nparams,
                 "max_width": int(max_width),
-                "depth": int(depth),
-                "n_fc_layers": int(n_fc_layers),
-                "n_cv_layers": int(n_cv_layers),
-                "convolutional_layers": str(convolutional_layers),
-                "fully_connected_layers": str(fully_connected_layers),
+                "n_modules": n_modules,
+                "model_type": model_type,
+                "modules": modules,
+                "n_layers": n_layers,
+                "model_repr": repr(model),
             }
             if name is not None:
                 this_result["name"] = name

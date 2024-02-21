@@ -38,10 +38,11 @@ class DocumentDBDao(object):
         self._db = client[MONGO_DB]
 
         self._tasks_collection = self._db[MONGO_TASK_COLLECTION]
-        self._tasks_collection.create_index(TaskMessage.get_index_field())
+        self._tasks_collection.create_index(TaskMessage.task_id_field())
+        self._tasks_collection.create_index(TaskMessage.workflow_id_field())
 
         self._wfs_collection = self._db[MONGO_WORKFLOWS_COLLECTION]
-        self._wfs_collection.create_index(TaskMessage.get_workflow_id_field())
+        self._wfs_collection.create_index(TaskMessage.workflow_id_field())
 
     def task_query(
         self,
@@ -265,7 +266,7 @@ class DocumentDBDao(object):
     def workflow_insert_or_update(
         self, workflow_id: str, _dict: Dict = {}
     ) -> bool:
-        _filter = {TaskMessage.get_workflow_id_field(): workflow_id}
+        _filter = {TaskMessage.workflow_id_field(): workflow_id}
         update_query = {}
         interceptor_id = _dict.pop("interceptor_id", None)
         if interceptor_id is not None:

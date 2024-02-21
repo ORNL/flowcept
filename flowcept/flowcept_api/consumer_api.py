@@ -28,17 +28,20 @@ class FlowceptConsumerAPI(object):
 
         if self._interceptors and len(self._interceptors):
             for interceptor in self._interceptors:
-                self.logger.debug(
-                    f"Flowceptor {interceptor.settings.key} starting..."
-                )
+                # TODO: :ml-refactor: revise
+                if interceptor.settings is None:
+                    key = id(interceptor)
+                else:
+                    key = interceptor.settings.key
+                self.logger.debug(f"Flowceptor {key} starting...")
                 interceptor.start(bundle_exec_id=id(self))
-                self.logger.debug("... ok!")
+                self.logger.debug(f"...Flowceptor {key} started ok!")
 
         self.logger.debug("Flowcept Consumer starting...")
         self._document_inserter = DocumentInserter(
             check_safe_stops=True
         ).start()
-        sleep(2)
+        sleep(1)
         self.logger.debug("Ok, we're consuming messages!")
         self.is_started = True
         return self
@@ -56,9 +59,12 @@ class FlowceptConsumerAPI(object):
         sleep(sleep_time)
         if self._interceptors and len(self._interceptors):
             for interceptor in self._interceptors:
-                self.logger.debug(
-                    f"Flowceptor {interceptor.settings.key} stopping..."
-                )
+                # TODO: :ml-refactor: revise
+                if interceptor.settings is None:
+                    key = id(interceptor)
+                else:
+                    key = interceptor.settings.key
+                self.logger.debug(f"Flowceptor {key} stopping...")
                 interceptor.stop()
                 self.logger.debug("... ok!")
         self.logger.debug("Stopping Consumer...")

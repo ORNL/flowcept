@@ -82,7 +82,7 @@ class DocumentInserter:
                     f"Gonna flush {len(self._buffer)} msgs to DocDB!"
                 )
                 inserted = self._doc_dao.insert_and_update_many(
-                    TaskMessage.get_index_field(), self._buffer
+                    TaskMessage.task_id_field(), self._buffer
                 )
                 if not inserted:
                     self.logger.warning(

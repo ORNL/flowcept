@@ -26,13 +26,15 @@ class DBAPI(object):
         self._dao.insert_one(task.to_dict())
 
     def insert_or_update_workflow(
-        self, workflow_id: str, workflow_info: Dict = {}
+        self,
+        workflow_id: str,
+        workflow_info: Dict = {},  # TODO :ml-refactor: :code-reorg: :usability: use a DataClass for workflow_info https://github.com/ORNL/flowcept/issues/108
     ) -> bool:
         return self._dao.workflow_insert_or_update(workflow_id, workflow_info)
 
     def get_workflow(self, workflow_id):
         results = self._dao.workflow_query(
-            filter={TaskMessage.get_workflow_id_field(): workflow_id}
+            filter={TaskMessage.workflow_id_field(): workflow_id}
         )
         if results is None:
             self.logger.error("Could not retrieve workflow")
