@@ -7,47 +7,18 @@ from torch import nn, optim
 from torch.nn import functional as F
 
 import flowcept.commons
+import flowcept.instrumentation.decorators
 from flowcept import (
     model_explainer,
     model_profiler,
     DBAPI,
     FlowceptConsumerAPI,
 )
-from flowcept.commons.decorators.flowcept_task import flowcept_task
-
-
-@flowcept_task  # TODO :ml-refactor: consider specializing this task
-def _our_forward(self, *args, **kwargs):
-    return super(self.__class__, self).forward(*args, **kwargs)
-
-
-def create_dynamic_class(base_class, class_name, extra_attributes):
-    attributes = {
-        "__init__": lambda self, *args, **kwargs: super(
-            self.__class__, self
-        ).__init__(*args, **kwargs),
-        "forward": lambda self, *args, **kwargs: _our_forward(
-            self, *args, **kwargs
-        ),
-        **extra_attributes,
-    }
-
-    return type(class_name, (base_class,), attributes)
-
-
-# TODO :ml-refactor: this function should not be here
-def register_modules(
-    modules: List[nn.Module], workflow_id: str = None
-) -> Dict[nn.Module, nn.Module]:
-    flowcept_torch_modules = {}
-
-    for module in modules:
-        new_module = create_dynamic_class(
-            module, f"Flowcept{module.__name__}", {"workflow_id": workflow_id}
-        )
-        flowcept_torch_modules[module] = new_module
-
-    return flowcept_torch_modules
+from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
+from flowcept.instrumentation.decorators.flowcept_torch import (
+    torch_args_handler,
+    register_modules,
+)
 
 
 class TestNet(nn.Module):
@@ -101,17 +72,6 @@ class TestNet(nn.Module):
             self.conv_layers.append(m.get(nn.MaxPool2d)(conv_pool_sizes[i]))
             self.conv_layers.append(m.get(nn.ReLU)())
 
-        # self.conv_layers = nn.Sequential(
-        #     nn.Conv2d(1, 10, kernel_size=5),
-        #     nn.MaxPool2d(2),
-        #     nn.ReLU(),
-
-        #     nn.Conv2d(10, 20, kernel_size=5),
-        #     nn.Dropout(),
-        #     nn.MaxPool2d(2),
-        #     nn.ReLU(),
-        # )
-
         # TODO: add if len fc inouts>0
         self.fc_layers = nn.Sequential()
         for i in range(0, len(fc_in_outs)):
@@ -125,15 +85,7 @@ class TestNet(nn.Module):
                 self.fc_layers.append(m.get(nn.Softmax)(dim=softmax_dims[i]))
         self.view_size = fc_in_outs[0][0]
 
-        # self.fc_layers = nn.Sequential(
-        #     nn.Linear(320, 50),
-        #     nn.ReLU(),
-        #     nn.Dropout(),
-        #     nn.Linear(50, 10),
-        #     nn.Softmax(dim=1)
-        # )
-
-    @flowcept_task
+    @flowcept_task(args_handler=torch_args_handler)
     def forward(self, x):
         x = self.conv_layers(x)
         x = x.view(-1, self.view_size)
@@ -222,8 +174,9 @@ class ModelTrainer(object):
         max_epochs=2,
         workflow_id=None,
     ):
+        # TODO :ml-refactor: :base-interceptor-refactor: Can we do it better?
         with FlowceptConsumerAPI(
-            flowcept.commons.instrumentation_interceptor
+            flowcept.instrumentation.decorators.instrumentation_interceptor
         ):
             train_loader, test_loader = ModelTrainer.build_train_test_loader()
             device = torch.device("cpu")
