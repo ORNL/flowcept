@@ -25,7 +25,7 @@ from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 from flowcept.version import __version__
 
 
-# TODO :ml-refactor: :code-reorg: :usability:
+# TODO :base-interceptor-refactor: :ml-refactor: :code-reorg: :usability:
 #  Consider creating a new concept for instrumentation-based 'interception'.
 #  These adaptors were made for data observability.
 #  Perhaps we should have a BaseAdaptor that would work for both and
@@ -37,7 +37,7 @@ class BaseInterceptor(object):
         self.logger = FlowceptLogger()
         if (
             plugin_key is not None
-        ):  # TODO :ml-refactor: :code-reorg: :usability:
+        ):  # TODO :base-interceptor-refactor: :code-reorg: :usability:
             self.settings = get_settings(plugin_key)
         else:
             self.settings = None
@@ -156,7 +156,7 @@ class BaseInterceptor(object):
     def intercept(self, task_msg: TaskMessage):
         if (
             self._mq_dao._buffer is None
-        ):  # TODO :ml-refactor: :code-reorg: :usability:
+        ):  # TODO :base-interceptor-refactor: :code-reorg: :usability:
             raise Exception(
                 f"This interceptor {id(self)} has never been started!"
             )
@@ -164,7 +164,7 @@ class BaseInterceptor(object):
         if ENRICH_MESSAGES:
             if (
                 self.settings is not None
-            ):  # TODO :ml-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
+            ):  # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
                 key = self.settings.key
             else:
                 key = None
