@@ -8,6 +8,9 @@ from flowcept.flowcept_api.consumer_api import FlowceptConsumerAPI
 from flowcept.flowcept_api.task_query_api import TaskQueryAPI
 from flowcept.flowcept_api.db_api import DBAPI
 
+from flowcept.commons.flowcept_dataclasses.workflow_object import (
+    WorkflowObject,
+)
 
 try:
     from flowcept.instrumentation.decorators.responsible_ai import (
