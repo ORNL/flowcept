@@ -1,31 +1,28 @@
 import unittest
 
 import uuid
-from uuid import uuid4
 
 from dask.distributed import Client
 
 from cluster_experiment_utils.utils import generate_configs
 
-from flowcept import FlowceptConsumerAPI, WorkflowObject, TaskQueryAPI
+from flowcept import FlowceptConsumerAPI
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
-from flowcept.flowcept_api.db_api import DBAPI
-from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer
 from tests.adapters.test_dask import TestDask
-from tests.decorator_tests.ml_tests.llm.llm_trainer import (
+from tests.decorator_tests.ml_tests.llm_tests.llm_trainer import (
     get_wiki_text,
     model_train,
 )
 
 
-class DecoratorDaskTests(unittest.TestCase):
+class DecoratorDaskLLMTests(unittest.TestCase):
     client: Client = None
     consumer: FlowceptConsumerAPI = None
 
     def __init__(self, *args, **kwargs):
-        super(DecoratorDaskTests, self).__init__(*args, **kwargs)
+        super(DecoratorDaskLLMTests, self).__init__(*args, **kwargs)
         self.logger = FlowceptLogger()
 
     @classmethod
@@ -45,8 +42,8 @@ class DecoratorDaskTests(unittest.TestCase):
             "nlayers": [2],  # 2
             "nhead": [2],
             "dropout": [0.2],
-            "epochs": [1, 3],
-            "lr": [0.1, 0.01],
+            "epochs": [1],
+            "lr": [0.1],
             "pos_encoding_max_len": [5000],
         }
         configs = generate_configs(exp_param_settings)

@@ -34,6 +34,7 @@ class DecoratorTests(unittest.TestCase):
 
     def test_decorated_function(self):
         workflow_id = str(uuid.uuid4())
+        # TODO :refactor-base-interceptor:
         with FlowceptConsumerAPI(
             interceptors=flowcept.instrumentation.decorators.instrumentation_interceptor
         ):

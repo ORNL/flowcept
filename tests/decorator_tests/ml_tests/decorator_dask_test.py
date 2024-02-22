@@ -1,11 +1,8 @@
 import unittest
 
-import uuid
 from uuid import uuid4
 
 from dask.distributed import Client
-
-from cluster_experiment_utils.utils import generate_configs
 
 from flowcept import FlowceptConsumerAPI, WorkflowObject, TaskQueryAPI
 
@@ -14,10 +11,6 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowcept_api.db_api import DBAPI
 from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer
 from tests.adapters.test_dask import TestDask
-from tests.decorator_tests.ml_tests.llm.llm_trainer import (
-    get_wiki_text,
-    model_train,
-)
 
 
 class DecoratorDaskTests(unittest.TestCase):
@@ -73,8 +66,7 @@ class DecoratorDaskTests(unittest.TestCase):
         #     output_file="tmp_sample_data_with_telemetry_and_rai.json",
         # )
 
-    @staticmethod
-    def test_model_trainer():
+    def test_model_trainer(self):
         trainer = ModelTrainer()
         result = trainer.model_fit(max_epochs=1)
         print(result)

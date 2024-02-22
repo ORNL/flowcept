@@ -7,14 +7,14 @@ from flowcept import model_profiler
 import unittest
 
 
-from tests.decorator_tests.ml_tests.llm.llm_trainer import (
+from tests.decorator_tests.ml_tests.llm_tests.llm_trainer import (
     model_train,
     get_wiki_text,
     TransformerModel,
 )
 
 
-class MLDecoratorTests(unittest.TestCase):
+class LLMDecoratorTests(unittest.TestCase):
     @staticmethod
     def test_llm_model_trainer():
         ntokens, train_data, val_data, test_data = get_wiki_text()
@@ -56,7 +56,7 @@ class MLDecoratorTests(unittest.TestCase):
         )
         result = model_train(**conf)
         assert result
-        print(MLDecoratorTests.debug_model_profiler(conf, ntokens, test_data))
+        print(LLMDecoratorTests.debug_model_profiler(conf, ntokens, test_data))
 
     @staticmethod
     @model_profiler()
