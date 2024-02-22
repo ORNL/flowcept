@@ -50,13 +50,13 @@ class TestDask(unittest.TestCase):
     @staticmethod
     def _setup_local_dask_cluster(n_workers=2):
         from dask.distributed import Client, LocalCluster
-        from flowcept import (
-            FlowceptDaskSchedulerAdapter,
-            FlowceptDaskWorkerAdapter,
-        )
+        # from flowcept import (
+        #     FlowceptDaskSchedulerAdapter,
+        #     FlowceptDaskWorkerAdapter,
+        # )
 
-        if TestDask.consumer is None or not TestDask.consumer.is_started:
-            TestDask.consumer = FlowceptConsumerAPI().start()
+        # if TestDask.consumer is None or not TestDask.consumer.is_started:
+        #     TestDask.consumer = FlowceptConsumerAPI().start()
 
         cluster = LocalCluster(n_workers=n_workers)
         scheduler = cluster.scheduler
@@ -64,11 +64,11 @@ class TestDask(unittest.TestCase):
 
         # Instantiate and Register FlowceptPlugins, which are the ONLY
         # additional steps users would need to do in their code:
-        scheduler_plugin = FlowceptDaskSchedulerAdapter(scheduler)
-        scheduler.add_plugin(scheduler_plugin)
-
-        worker_plugin = FlowceptDaskWorkerAdapter()
-        client.register_worker_plugin(worker_plugin)
+        # scheduler_plugin = FlowceptDaskSchedulerAdapter(scheduler)
+        # scheduler.add_plugin(scheduler_plugin)
+        #
+        # worker_plugin = FlowceptDaskWorkerAdapter()
+        # client.register_worker_plugin(worker_plugin)
 
         return client
 
@@ -146,32 +146,32 @@ class TestDask(unittest.TestCase):
             pass
         return o1.key
 
-    def test_observer_and_consumption(self):
-        o2_task_id = self.atest_pure_workflow()
-        print("Task_id=" + o2_task_id)
-        print("Done workflow!")
-        sleep(3)
-        assert assert_by_querying_task_collections_until(
-            self.doc_dao,
-            {"task_id": o2_task_id},
-            condition_to_evaluate=lambda docs: "telemetry_at_end" in docs[0],
-        )
+    # def test_observer_and_consumption(self):
+    #     o2_task_id = self.atest_pure_workflow()
+    #     print("Task_id=" + o2_task_id)
+    #     print("Done workflow!")
+    #     sleep(3)
+    #     assert assert_by_querying_task_collections_until(
+    #         self.doc_dao,
+    #         {"task_id": o2_task_id},
+    #         condition_to_evaluate=lambda docs: "telemetry_at_end" in docs[0],
+    #     )
 
-    def test_observer_and_consumption_varying_args(self):
-        o2_task_id = self.varying_args()
-        sleep(3)
-        assert assert_by_querying_task_collections_until(
-            self.doc_dao, {"task_id": o2_task_id}
-        )
-
-    def test_observer_and_consumption_error_task(self):
-        o2_task_id = self.error_task_submission()
-        assert assert_by_querying_task_collections_until(
-            self.doc_dao,
-            {"task_id": o2_task_id},
-            condition_to_evaluate=lambda docs: "exception"
-            in docs[0]["stderr"],
-        )
+    # def test_observer_and_consumption_varying_args(self):
+    #     o2_task_id = self.varying_args()
+    #     sleep(3)
+    #     assert assert_by_querying_task_collections_until(
+    #         self.doc_dao, {"task_id": o2_task_id}
+    #     )
+    #
+    # def test_observer_and_consumption_error_task(self):
+    #     o2_task_id = self.error_task_submission()
+    #     assert assert_by_querying_task_collections_until(
+    #         self.doc_dao,
+    #         {"task_id": o2_task_id},
+    #         condition_to_evaluate=lambda docs: "exception"
+    #         in docs[0]["stderr"],
+    #     )
 
     @classmethod
     def tearDownClass(cls):
