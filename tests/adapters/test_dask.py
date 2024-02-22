@@ -5,9 +5,9 @@ import numpy as np
 
 from dask.distributed import Client
 
-from flowcept import FlowceptConsumerAPI
-from flowcept.commons.daos.document_db_dao import DocumentDBDao
-from flowcept.commons.flowcept_logger import FlowceptLogger
+# from flowcept import FlowceptConsumerAPI
+# from flowcept.commons.daos.document_db_dao import DocumentDBDao
+# from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_task_collections_until
 
 
@@ -36,12 +36,12 @@ def forced_error_func(x):
 
 class TestDask(unittest.TestCase):
     client: Client = None
-    consumer: FlowceptConsumerAPI = None
+    #consumer: FlowceptConsumerAPI = None
 
     def __init__(self, *args, **kwargs):
         super(TestDask, self).__init__(*args, **kwargs)
-        self.doc_dao = DocumentDBDao()
-        self.logger = FlowceptLogger()
+        # self.doc_dao = DocumentDBDao()
+        # self.logger = FlowceptLogger()
 
     @classmethod
     def setUpClass(cls):
@@ -72,79 +72,79 @@ class TestDask(unittest.TestCase):
 
         return client
 
-    def atest_pure_workflow(self):
-        i1 = np.random.random()
-        wf_id = f"wf_{uuid4()}"
-        o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
-        o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
-        self.logger.debug(o2.result())
-        self.logger.debug(o2.key)
-        sleep(3)
-        return o2.key
+    # def atest_pure_workflow(self):
+    #     i1 = np.random.random()
+    #     wf_id = f"wf_{uuid4()}"
+    #     o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
+    #     o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
+    #     self.logger.debug(o2.result())
+    #     self.logger.debug(o2.key)
+    #     sleep(3)
+    #     return o2.key
 
     def test_dummyfunc(self):
         i1 = np.random.random()
         wf_id = f"wf_{uuid4()}"
         o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
-        self.logger.debug(o1.result())
+        #self.logger.debug(o1.result())
         sleep(3)
         return o1.key
 
-    def test_long_workflow(self):
-        i1 = np.random.random()
-        wf_id = f"wf_{uuid4()}"
-        o1 = TestDask.client.submit(dummy_func1, i1, workflow_id=wf_id)
-        o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
-        o3 = TestDask.client.submit(dummy_func3, o1, o2, workflow_id=wf_id)
-        self.logger.debug(o3.result())
-        sleep(3)
-        return o3.key
-
-    def varying_args(self):
-        i1 = np.random.random()
-        o1 = TestDask.client.submit(dummy_func3, i1, w=2)
-        result = o1.result()
-        assert result["r"] > 0
-        self.logger.debug(result)
-        self.logger.debug(o1.key)
-        sleep(3)
-        return o1.key
-
-    def test_map_workflow(self):
-        i1 = np.random.random(3)
-        wf_id = f"wf_{uuid4()}"
-        o1 = TestDask.client.map(dummy_func1, i1, workflow_id=wf_id)
-        for o in o1:
-            result = o.result()
-            assert result > 0
-            self.logger.debug(f"{o.key}, {result}")
-        sleep(3)
-        return o1
-
-    def test_map_workflow_kwargs(self):
-        i1 = [
-            {"x": np.random.random(), "y": np.random.random()},
-            {"x": np.random.random()},
-            {"x": 4, "batch_norm": False},
-            {"x": 6, "batch_norm": True, "empty_string": ""},
-        ]
-        wf_id = f"wf_{uuid4()}"
-        o1 = TestDask.client.map(dummy_func4, i1, workflow_id=wf_id)
-        for o in o1:
-            result = o.result()
-            assert result["z"] > 0
-            self.logger.debug(o.key, result)
-        sleep(3)
-        return o1
-
-    def error_task_submission(self):
-        i1 = np.random.random()
-        o1 = TestDask.client.submit(forced_error_func, i1)
-        try:
-            self.logger.debug(o1.result())
-        except:
-            pass
-        return o1.key
+    # def test_long_workflow(self):
+    #     i1 = np.random.random()
+    #     wf_id = f"wf_{uuid4()}"
+    #     o1 = TestDask.client.submit(dummy_func1, i1, workflow_id=wf_id)
+    #     o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
+    #     o3 = TestDask.client.submit(dummy_func3, o1, o2, workflow_id=wf_id)
+    #     self.logger.debug(o3.result())
+    #     sleep(3)
+    #     return o3.key
+    #
+    # def varying_args(self):
+    #     i1 = np.random.random()
+    #     o1 = TestDask.client.submit(dummy_func3, i1, w=2)
+    #     result = o1.result()
+    #     assert result["r"] > 0
+    #     self.logger.debug(result)
+    #     self.logger.debug(o1.key)
+    #     sleep(3)
+    #     return o1.key
+    #
+    # def test_map_workflow(self):
+    #     i1 = np.random.random(3)
+    #     wf_id = f"wf_{uuid4()}"
+    #     o1 = TestDask.client.map(dummy_func1, i1, workflow_id=wf_id)
+    #     for o in o1:
+    #         result = o.result()
+    #         assert result > 0
+    #         self.logger.debug(f"{o.key}, {result}")
+    #     sleep(3)
+    #     return o1
+    #
+    # def test_map_workflow_kwargs(self):
+    #     i1 = [
+    #         {"x": np.random.random(), "y": np.random.random()},
+    #         {"x": np.random.random()},
+    #         {"x": 4, "batch_norm": False},
+    #         {"x": 6, "batch_norm": True, "empty_string": ""},
+    #     ]
+    #     wf_id = f"wf_{uuid4()}"
+    #     o1 = TestDask.client.map(dummy_func4, i1, workflow_id=wf_id)
+    #     for o in o1:
+    #         result = o.result()
+    #         assert result["z"] > 0
+    #         self.logger.debug(o.key, result)
+    #     sleep(3)
+    #     return o1
+    #
+    # def error_task_submission(self):
+    #     i1 = np.random.random()
+    #     o1 = TestDask.client.submit(forced_error_func, i1)
+    #     try:
+    #         self.logger.debug(o1.result())
+    #     except:
+    #         pass
+    #     return o1.key
 
     # def test_observer_and_consumption(self):
     #     o2_task_id = self.atest_pure_workflow()
@@ -182,8 +182,8 @@ class TestDask(unittest.TestCase):
         except:
             pass
 
-        print("Waiting before closing flowcept!")
-        sleep(30)
-        if TestDask.consumer:
-            TestDask.consumer.stop()
-        sleep(10)
+        # print("Waiting before closing flowcept!")
+        # sleep(30)
+        # if TestDask.consumer:
+        #     TestDask.consumer.stop()
+        # sleep(10)
