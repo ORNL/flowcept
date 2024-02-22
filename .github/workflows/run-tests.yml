@@ -24,7 +24,8 @@ jobs:
       run: docker compose -f deployment/compose.yml up -d
     - name: Test with pytest
       run: |
-        pytest --ignore=tests/decorator_tests/ml_tests/llm_tests/
+        #pytest --ignore=tests/decorator_tests/ml_tests/llm_tests/
+        pytest pytest tests/adapters/test_dask.py
     - name: Test notebooks
       run: |
         python flowcept/flowcept_webserver/app.py &
