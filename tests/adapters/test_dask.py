@@ -173,14 +173,14 @@ class TestDask(unittest.TestCase):
     #         in docs[0]["stderr"],
     #     )
 
-    @classmethod
-    def tearDownClass(cls):
-        print("Closing scheduler and workers!")
-        sleep(10)
-        try:
-            TestDask.client.shutdown()
-        except:
-            pass
+    # @classmethod
+    # def tearDownClass(cls):
+    #     print("Closing scheduler and workers!")
+    #     sleep(10)
+    #     try:
+    #         TestDask.client.shutdown()
+    #     except:
+    #         pass
 
         # print("Waiting before closing flowcept!")
         # sleep(30)
