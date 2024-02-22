@@ -31,42 +31,39 @@ def flowcept_task(func=None, **decorator_kwargs):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            task_message = TaskObject()
-            task_message.activity_id = func.__name__
-            task_message.task_id = str(uuid.uuid4())
+            task_obj = TaskObject()
+            task_obj.activity_id = func.__name__
+            task_obj.task_id = str(uuid.uuid4())
 
             args_handler = decorator_kwargs.get(
                 "args_handler", default_args_handler
             )
 
-            task_message.telemetry_at_start = (
+            task_obj.telemetry_at_start = (
                 instrumentation_interceptor.telemetry_capture.capture()
             )
-            task_message.started_at = time()
-            task_message.used = args_handler(task_message, *args, **kwargs)
+            task_obj.started_at = time()
+            task_obj.used = args_handler(task_obj, *args, **kwargs)
             try:
                 result = func(*args, **kwargs)
-                task_message.status = Status.FINISHED
+                task_obj.status = Status.FINISHED
             except Exception as e:
-                task_message.status = Status.ERROR
+                task_obj.status = Status.ERROR
                 result = None
-                task_message.stderr = str(e)
-            task_message.ended_at = time()
-            task_message.telemetry_at_end = (
+                task_obj.stderr = str(e)
+            task_obj.ended_at = time()
+            task_obj.telemetry_at_end = (
                 instrumentation_interceptor.telemetry_capture.capture()
             )
             try:
                 if isinstance(result, dict):
-                    task_message.generated = args_handler(
-                        task_message, **result
-                    )
+                    task_obj.generated = args_handler(task_obj, **result)
                 else:
-                    task_message.generated = args_handler(
-                        task_message, result
-                    )
+                    task_obj.generated = args_handler(task_obj, result)
             except Exception as e:
                 flowcept.commons.logger.exception(e)
 
+            instrumentation_interceptor.intercept(task_obj)
             return result
 
         return wrapper
