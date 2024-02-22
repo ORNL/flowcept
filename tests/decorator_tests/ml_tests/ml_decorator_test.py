@@ -1,21 +1,15 @@
 import uuid
 
+import unittest
 import numpy as np
-import torch
 
 import flowcept.commons
 import flowcept.instrumentation.decorators
-from flowcept import model_explainer, model_profiler, FlowceptConsumerAPI
+from flowcept import model_explainer, FlowceptConsumerAPI
 
-import unittest
 
 from tests.decorator_tests.ml_tests.dl_trainer import (
     ModelTrainer,
-)
-from tests.decorator_tests.ml_tests.llm.llm_trainer import (
-    model_train,
-    get_wiki_text,
-    TransformerModel,
 )
 
 
