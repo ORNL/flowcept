@@ -7,7 +7,14 @@ from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from datasets import load_dataset
 
-from flowcept import model_profiler
+import flowcept
+from flowcept import model_profiler, FlowceptConsumerAPI
+from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
+from flowcept.instrumentation.decorators.flowcept_torch import (
+    register_modules,
+    register_module_as_workflow,
+    torch_args_handler,
+)
 
 tokenizer = get_tokenizer("basic_english")
 
@@ -80,22 +87,41 @@ class TransformerModel(nn.Module):
         nlayers,
         dropout=0.5,
         pos_encoding_max_len=5000,
+        parent_workflow_id=None,
     ):
         super(TransformerModel, self).__init__()
+        self.workflow_id = register_module_as_workflow(
+            self, parent_workflow_id
+        )
+        (
+            TransformerEncoderLayer,
+            TransformerEncoder,
+            Embedding,
+            Linear,
+        ) = register_modules(
+            [
+                nn.TransformerEncoderLayer,
+                nn.TransformerEncoder,
+                nn.Embedding,
+                nn.Linear,
+            ],
+            workflow_id=self.workflow_id,
+        )
         self.model_type = "Transformer"
         self.src_mask = None
         self.pos_encoder = PositionalEncoding(
-            d_model, dropout, max_len=pos_encoding_max_len
+            d_model,
+            dropout,
+            max_len=pos_encoding_max_len,
+            workflow_id=self.workflow_id,
         )
-        encoder_layers = nn.TransformerEncoderLayer(
+        encoder_layers = TransformerEncoderLayer(
             d_model, nhead, d_hid, dropout
         )
-        self.transformer_encoder = nn.TransformerEncoder(
-            encoder_layers, nlayers
-        )
-        self.encoder = nn.Embedding(ntoken, d_model)
+        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
+        self.encoder = Embedding(ntoken, d_model)
         self.d_model = d_model
-        self.decoder = nn.Linear(d_model, ntoken)
+        self.decoder = Linear(d_model, ntoken)
 
     ##Generate a mask for the input sequence
     def _generate_square_subsequent_mask(self, sz):
@@ -108,7 +134,7 @@ class TransformerModel(nn.Module):
         )
         return mask
 
-    # Define the forward pass
+    @flowcept_task(args_handler=torch_args_handler)
     def forward(self, src):
         if self.src_mask is None or self.src_mask.size(0) != len(src):
             device = src.device
@@ -124,9 +150,17 @@ class TransformerModel(nn.Module):
 
 # Define the PositionalEncoding class
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
+    def __init__(self, d_model, dropout=0.1, max_len=5000, workflow_id=None):
         super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(p=dropout)
+        self.workflow_id = workflow_id
+        Dropout = register_modules(
+            [
+                nn.Dropout,
+            ],
+            workflow_id=self.workflow_id,
+        )
+
+        self.dropout = Dropout(p=dropout)
 
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
@@ -139,6 +173,7 @@ class PositionalEncoding(nn.Module):
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer("pe", pe)
 
+    @flowcept_task(args_handler=torch_args_handler)
     def forward(self, x):
         x = x + self.pe[: x.size(0), :]
         return self.dropout(x)
@@ -209,66 +244,77 @@ def model_train(
 ):
     # TODO save random seed: https://pytorch.org/docs/stable/notes/randomness.html
 
-    train_data = batchify(train_data, batch_size)
-    val_data = batchify(val_data, eval_batch_size)
-    test_data = batchify(test_data, eval_batch_size)
+    # TODO :base-interceptor-refactor: Can we do it better?
+    with FlowceptConsumerAPI(
+        flowcept.instrumentation.decorators.instrumentation_interceptor
+    ):
+        train_data = batchify(train_data, batch_size)
+        val_data = batchify(val_data, eval_batch_size)
+        test_data = batchify(test_data, eval_batch_size)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = TransformerModel(
-        ntokens, emsize, nhead, nhid, nlayers, dropout, pos_encoding_max_len
-    ).to(device)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
-    best_val_loss = float(
-        "inf"
-    )  # Initialize the best validation loss to infinity
-    # best_m = None
-    # Iterate through the epochs
-    for epoch in range(1, epochs + 1):
-        print(f"Starting training for epoch {epoch}/{epochs}")
-        # Train the model on the training data and calculate the training loss
-        train_loss = train_epoch(
-            ntokens, model, train_data, criterion, optimizer, batch_size
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model = TransformerModel(
+            ntokens,
+            emsize,
+            nhead,
+            nhid,
+            nlayers,
+            dropout,
+            pos_encoding_max_len,
+            parent_workflow_id=workflow_id,
+        ).to(device)
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.Adam(model.parameters(), lr=lr)
+        best_val_loss = float(
+            "inf"
+        )  # Initialize the best validation loss to infinity
+        # best_m = None
+        # Iterate through the epochs
+        for epoch in range(1, epochs + 1):
+            print(f"Starting training for epoch {epoch}/{epochs}")
+            # Train the model on the training data and calculate the training loss
+            train_loss = train_epoch(
+                ntokens, model, train_data, criterion, optimizer, batch_size
+            )
+
+            # Evaluate the model on the validation data and calculate the validation loss
+            val_loss = evaluate(
+                ntokens, model, val_data, criterion, eval_batch_size
+            )
+
+            # Print the training and validation losses for the current epoch
+            print(
+                f"Epoch: {epoch}, Train loss: {train_loss:.2f}, Validation loss: {val_loss:.2f}"
+            )
+
+            # If the validation loss has improved, save the model's state
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                # best_m = model
+                torch.save(model.state_dict(), "transformer_wikitext2.pth")
+
+        print("Finished training")
+        # Load the best model's state
+        best_m = TransformerModel(
+            ntokens, emsize, nhead, nhid, nlayers, dropout
+        ).to(device)
+        print("Loading model")
+        torch_loaded = torch.load("transformer_wikitext2.pth")
+        best_m.load_state_dict(torch_loaded)
+
+        print("Evaluating")
+        # Evaluate the best model on the test dataset
+        test_loss = evaluate(
+            ntokens, best_m, test_data, criterion, eval_batch_size
         )
+        print(f"Test loss: {test_loss:.2f}")
 
-        # Evaluate the model on the validation data and calculate the validation loss
-        val_loss = evaluate(
-            ntokens, model, val_data, criterion, eval_batch_size
-        )
-
-        # Print the training and validation losses for the current epoch
-        print(
-            f"Epoch: {epoch}, Train loss: {train_loss:.2f}, Validation loss: {val_loss:.2f}"
-        )
-
-        # If the validation loss has improved, save the model's state
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            # best_m = model
-            torch.save(model.state_dict(), "transformer_wikitext2.pth")
-
-    print("Finished training")
-    # Load the best model's state
-    best_m = TransformerModel(
-        ntokens, emsize, nhead, nhid, nlayers, dropout
-    ).to(device)
-    print("Loading model")
-    torch_loaded = torch.load("transformer_wikitext2.pth")
-    best_m.load_state_dict(torch_loaded)
-
-    print("Evaluating")
-    # Evaluate the best model on the test dataset
-    test_loss = evaluate(
-        ntokens, best_m, test_data, criterion, eval_batch_size
-    )
-    print(f"Test loss: {test_loss:.2f}")
-
-    return {
-        "test_loss": test_loss,
-        "train_loss": train_loss,
-        "val_loss": val_loss,
-        "model": model,
-    }
+        return {
+            "test_loss": test_loss,
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+            "model": model,
+        }
 
 
 # Set the batch sizes and batchify the data

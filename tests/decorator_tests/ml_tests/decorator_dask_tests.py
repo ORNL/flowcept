@@ -7,7 +7,7 @@ from dask.distributed import Client
 
 from cluster_experiment_utils.utils import generate_configs
 
-from flowcept import FlowceptConsumerAPI, WorkflowObject
+from flowcept import FlowceptConsumerAPI, WorkflowObject, TaskQueryAPI
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
@@ -63,6 +63,11 @@ class DecoratorDaskTests(unittest.TestCase):
             print(r)
             assert "responsible_ai_metrics" in r
 
+        module_wf = db.workflow_query({"parent_workflow_id": wf_id})
+        task_query = TaskQueryAPI()
+        module_docs = task_query.query({"workflow_id": module_wf.workflow_id})
+        assert len(module_docs) > 0
+
         # db.dump_to_file(
         #     filter={"workflow_id": wf_id},
         #     output_file="tmp_sample_data_with_telemetry_and_rai.json",
@@ -103,7 +108,7 @@ class DecoratorDaskTests(unittest.TestCase):
             "dropout": [0.2],
             "epochs": [1, 3],
             "lr": [0.1, 0.01],
-            "pos_encoding_max_len": 5000,
+            "pos_encoding_max_len": [5000],
         }
         configs = generate_configs(exp_param_settings)
         outputs = []

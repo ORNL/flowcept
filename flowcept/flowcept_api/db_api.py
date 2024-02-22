@@ -42,11 +42,14 @@ class DBAPI(object):
             return workflow_obj
 
     def get_workflow(self, workflow_id) -> WorkflowObject:
-        results = self._dao.workflow_query(
+        return self.workflow_query(
             filter={TaskObject.workflow_id_field(): workflow_id}
         )
+
+    def workflow_query(self, filter) -> WorkflowObject:
+        results = self._dao.workflow_query(filter=filter)
         if results is None:
-            self.logger.error("Could not retrieve workflow")
+            self.logger.error("Could not retrieve workflow with that filter.")
             return None
         if len(results):
             try:

@@ -1,6 +1,3 @@
-import uuid
-from typing import List, Dict
-
 import torch
 from torchvision import datasets, transforms
 from torch import nn, optim
@@ -11,11 +8,7 @@ import flowcept.instrumentation.decorators
 from flowcept import (
     model_explainer,
     model_profiler,
-    DBAPI,
     FlowceptConsumerAPI,
-)
-from flowcept.commons.flowcept_dataclasses.workflow_object import (
-    WorkflowObject,
 )
 from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 from flowcept.instrumentation.decorators.flowcept_torch import (
@@ -40,7 +33,7 @@ class TestNet(nn.Module):
         self.workflow_id = register_module_as_workflow(
             self, parent_workflow_id
         )
-        m = register_modules(
+        Conv2d, Dropout, MaxPool2d, ReLU, Softmax, Linear = register_modules(
             [
                 nn.Conv2d,
                 nn.Dropout,
@@ -57,28 +50,26 @@ class TestNet(nn.Module):
         self.conv_layers = nn.Sequential()
         for i in range(0, len(conv_in_outs)):
             self.conv_layers.append(
-                m.get(nn.Conv2d)(
+                Conv2d(
                     conv_in_outs[i][0],
                     conv_in_outs[i][1],
                     kernel_size=conv_kernel_sizes[i],
                 )
             )
             if i > 0:
-                self.conv_layers.append(m.get(nn.Dropout)())
-            self.conv_layers.append(m.get(nn.MaxPool2d)(conv_pool_sizes[i]))
-            self.conv_layers.append(m.get(nn.ReLU)())
+                self.conv_layers.append(Dropout())
+            self.conv_layers.append(MaxPool2d(conv_pool_sizes[i]))
+            self.conv_layers.append(ReLU())
 
         # TODO: add if len fc inouts>0
         self.fc_layers = nn.Sequential()
         for i in range(0, len(fc_in_outs)):
-            self.fc_layers.append(
-                m.get(nn.Linear)(fc_in_outs[i][0], fc_in_outs[i][1])
-            )
+            self.fc_layers.append(Linear(fc_in_outs[i][0], fc_in_outs[i][1]))
             if i == 0:
-                self.fc_layers.append(m.get(nn.ReLU)())
-                self.fc_layers.append(m.get(nn.Dropout)())
+                self.fc_layers.append(ReLU())
+                self.fc_layers.append(Dropout())
             else:
-                self.fc_layers.append(m.get(nn.Softmax)(dim=softmax_dims[i]))
+                self.fc_layers.append(Softmax(dim=softmax_dims[i]))
         self.view_size = fc_in_outs[0][0]
 
     @flowcept_task(args_handler=torch_args_handler)
@@ -170,7 +161,7 @@ class ModelTrainer(object):
         max_epochs=2,
         workflow_id=None,
     ):
-        # TODO :ml-refactor: :base-interceptor-refactor: Can we do it better?
+        # TODO :base-interceptor-refactor: Can we do it better?
         with FlowceptConsumerAPI(
             flowcept.instrumentation.decorators.instrumentation_interceptor
         ):
