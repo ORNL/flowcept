@@ -291,7 +291,7 @@ def model_train(
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 # best_m = model
-                torch.save(model.state_dict(), "transformer_wikitext2.pth")
+                torch.save(model.state_dict(), "../transformer_wikitext2.pth")
 
         print("Finished training")
         # Load the best model's state
@@ -299,7 +299,7 @@ def model_train(
             ntokens, emsize, nhead, nhid, nlayers, dropout
         ).to(device)
         print("Loading model")
-        torch_loaded = torch.load("transformer_wikitext2.pth")
+        torch_loaded = torch.load("../transformer_wikitext2.pth")
         best_m.load_state_dict(torch_loaded)
 
         print("Evaluating")
