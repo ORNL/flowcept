@@ -19,6 +19,7 @@ from tests.decorator_tests.ml_tests.llm_tests.llm_trainer import (
 
 class DecoratorDaskLLMTests(unittest.TestCase):
     client: Client = None
+    cluster = None
     consumer: FlowceptConsumerAPI = None
 
     def __init__(self, *args, **kwargs):
@@ -27,7 +28,10 @@ class DecoratorDaskLLMTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        TestDask.client = TestDask._setup_local_dask_cluster(n_workers=1)
+        (
+            DecoratorDaskLLMTests.client,
+            DecoratorDaskLLMTests.cluster,
+        ) = TestDask.setup_local_dask_cluster()
 
     def test_llm(self):
         ntokens, train_data, val_data, test_data = get_wiki_text()
@@ -64,11 +68,14 @@ class DecoratorDaskLLMTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        print("Closing scheduler and workers!")
+        print("Ending tests!")
         try:
-            TestDask.client.shutdown()
-        except:
+            TestDask.close_dask(
+                DecoratorDaskLLMTests.client, DecoratorDaskLLMTests.cluster
+            )
+        except Exception as e:
+            print(e)
             pass
-        print("Closing flowcept!")
+
         if TestDask.consumer:
             TestDask.consumer.stop()
