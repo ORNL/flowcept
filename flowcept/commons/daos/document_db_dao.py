@@ -290,6 +290,10 @@ class DocumentDBDao(object):
             for k in machine_info:
                 _dict[f"machine_info.{k}"] = machine_info[k]
 
+        # TODO: for dictionary fields, like custom_metadata especially,
+        #  test if we are updating or replacing when
+        #  an existing wf already has custom_metadata and we call this method
+
         update_query.update(
             {
                 "$set": _dict,
