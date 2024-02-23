@@ -4,7 +4,7 @@ from typing import List, Dict
 
 import pandas as pd
 
-from flowcept.commons.flowcept_dataclasses.task_message import Status
+from flowcept.commons.flowcept_dataclasses.task_object import Status
 
 
 def get_doc_status(row):

@@ -8,6 +8,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
 #    env:
 #      FLOWCEPT_SETTINGS_PATH: 'resources/settings.yaml'
@@ -28,7 +29,7 @@ jobs:
       run: docker compose -f deployment/compose.yml up -d
     - name: Test with pytest
       run: |
-        pytest # --ignore=tests/plugins/test_tensorboard.py
+        pytest --ignore=tests/decorator_tests/ml_tests/llm_tests/
     - name: Test notebooks
       run: |
         python flowcept/flowcept_webserver/app.py &

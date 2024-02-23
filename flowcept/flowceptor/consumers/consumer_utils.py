@@ -1,11 +1,11 @@
 from typing import List, Dict
 
-from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
+from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 
 
 def curate_task_msg(task_msg_dict: dict):
     # Converting any arg to kwarg in the form {"arg1": val1, "arg2: val2}
-    for field in TaskMessage.get_dict_field_names():
+    for field in TaskObject.get_dict_field_names():
         if field not in task_msg_dict:
             continue
         field_val = task_msg_dict[field]
@@ -75,7 +75,7 @@ def curate_dict_task_messages(
         # causing inconsistencies in the DB.
         if "status" in doc:
             doc[doc["status"].lower()] = True
-            doc.pop("status")
+            # doc.pop("status")
 
         if utc_time_at_insertion > 0:
             doc["utc_time_at_insertion"] = utc_time_at_insertion
@@ -99,7 +99,7 @@ def curate_dict_task_messages(
         #             indexed_buffer[indexing_key_value]["finished"] = True
         #             break
 
-        for field in TaskMessage.get_dict_field_names():
+        for field in TaskObject.get_dict_field_names():
             if field in doc:
                 if doc[field] is not None and len(doc[field]):
                     if field in indexed_buffer[indexing_key_value]:

@@ -5,8 +5,8 @@ from watchdog.observers import Observer
 from tbparse import SummaryReader
 from watchdog.observers.polling import PollingObserver
 
-from flowcept.commons.flowcept_dataclasses.task_message import (
-    TaskMessage,
+from flowcept.commons.flowcept_dataclasses.task_object import (
+    TaskObject,
     Status,
 )
 from flowcept.commons.utils import get_utc_now
@@ -61,7 +61,7 @@ class TensorboardInterceptor(BaseInterceptor):
             if tracked_tags.get("tensors") and len(
                 self.log_metrics.intersection(tracked_tags["tensors"].keys())
             ):
-                task_msg = TaskMessage()
+                task_msg = TaskObject()
                 hparams = tracked_tags.get("hparams")
                 if "workflow_id" in hparams:
                     task_msg.workflow_id = hparams.pop("workflow_id")
