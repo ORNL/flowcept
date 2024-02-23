@@ -17,24 +17,24 @@ from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer
 from tests.adapters.test_dask import TestDask
 
 
-class DecoratorDaskTests(unittest.TestCase):
+class MLDecoratorDaskTests(unittest.TestCase):
     client: Client = None
     cluster = None
     consumer: FlowceptConsumerAPI = None
 
     def __init__(self, *args, **kwargs):
-        super(DecoratorDaskTests, self).__init__(*args, **kwargs)
+        super(MLDecoratorDaskTests, self).__init__(*args, **kwargs)
         self.logger = FlowceptLogger()
 
     @classmethod
     def setUpClass(cls):
         (
-            DecoratorDaskTests.client,
-            DecoratorDaskTests.cluster,
-            DecoratorDaskTests.consumer,
-        ) = setup_local_dask_cluster(DecoratorDaskTests.consumer)
+            MLDecoratorDaskTests.client,
+            MLDecoratorDaskTests.cluster,
+            MLDecoratorDaskTests.consumer,
+        ) = setup_local_dask_cluster(MLDecoratorDaskTests.consumer)
 
-    def test_model_trains(self):
+    def test_model_trains_with_dask(self):
         hp_conf = {
             "n_conv_layers": [2, 3, 4],
             "conv_incrs": [10, 20, 30],
@@ -58,7 +58,9 @@ class DecoratorDaskTests(unittest.TestCase):
         for conf in confs[:1]:
             conf["workflow_id"] = wf_id
             outputs.append(
-                TestDask.client.submit(ModelTrainer.model_fit, **conf)
+                MLDecoratorDaskTests.client.submit(
+                    ModelTrainer.model_fit, **conf
+                )
             )
         for o in outputs:
             r = o.result()
@@ -75,7 +77,7 @@ class DecoratorDaskTests(unittest.TestCase):
         #     output_file="tmp_sample_data_with_telemetry_and_rai.json",
         # )
 
-    def test_model_trainer(self):
+    def test_model_trainer_pure(self):
         trainer = ModelTrainer()
         result = trainer.model_fit(max_epochs=1)
         print(result)
@@ -85,10 +87,12 @@ class DecoratorDaskTests(unittest.TestCase):
     def tearDownClass(cls):
         print("Ending tests!")
         try:
-            close_dask(DecoratorDaskTests.client, DecoratorDaskTests.cluster)
+            close_dask(
+                MLDecoratorDaskTests.client, MLDecoratorDaskTests.cluster
+            )
         except Exception as e:
             print(e)
             pass
 
-        if TestDask.consumer:
-            TestDask.consumer.stop()
+        if MLDecoratorDaskTests.consumer:
+            MLDecoratorDaskTests.consumer.stop()
