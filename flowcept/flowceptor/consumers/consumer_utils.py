@@ -75,7 +75,7 @@ def curate_dict_task_messages(
         # causing inconsistencies in the DB.
         if "status" in doc:
             doc[doc["status"].lower()] = True
-            doc.pop("status")
+            # doc.pop("status")
 
         if utc_time_at_insertion > 0:
             doc["utc_time_at_insertion"] = utc_time_at_insertion

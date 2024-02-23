@@ -42,7 +42,7 @@ class FlowceptConsumerAPI(object):
         self._document_inserter = DocumentInserter(
             check_safe_stops=True
         ).start()
-        sleep(1)
+        # sleep(1)
         self.logger.debug("Ok, we're consuming messages!")
         self.is_started = True
         return self
@@ -52,7 +52,7 @@ class FlowceptConsumerAPI(object):
             self.logger.warning("Consumer is already stopped!")
             return
 
-        sleep_time = 5
+        sleep_time = 1
         self.logger.debug(
             f"Received the stop signal. We're going to wait {sleep_time} secs."
             f" before gracefully stopping..."
@@ -68,8 +68,8 @@ class FlowceptConsumerAPI(object):
                 self.logger.debug(f"Flowceptor {key} stopping...")
                 interceptor.stop()
                 self.logger.debug("... ok!")
-        self.logger.debug("Stopping Consumer...")
-        self._document_inserter.stop()
+        self.logger.debug("Stopping Doc Inserter...")
+        self._document_inserter.stop(bundle_exec_id=id(self))
         self.is_started = False
         self.logger.debug("All stopped!")
 

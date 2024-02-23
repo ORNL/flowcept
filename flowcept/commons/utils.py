@@ -81,7 +81,7 @@ def get_adapter_exception_msg(adapter_kind):
 
 
 def assert_by_querying_task_collections_until(
-    doc_dao,
+    query_api,
     filter,
     condition_to_evaluate: Callable = None,
     max_trials=30,
@@ -91,13 +91,19 @@ def assert_by_querying_task_collections_until(
     trials = 0
 
     while (time() - start_time) < max_time and trials < max_trials:
-        docs = doc_dao.task_query(filter)
+        docs = query_api.query(filter)
         if condition_to_evaluate is None:
             if docs is not None and len(docs):
+                flowcept.commons.logger.debug(
+                    "Query conditions have been met! :D"
+                )
                 return True
         else:
             try:
                 if condition_to_evaluate(docs):
+                    flowcept.commons.logger.debug(
+                        "Query conditions have been met! :D"
+                    )
                     return True
             except:
                 pass
@@ -107,7 +113,9 @@ def assert_by_querying_task_collections_until(
             f"Task Query condition not yet met. Trials={trials}/{max_trials}."
         )
         sleep(1)
-
+    flowcept.commons.logger.debug(
+        "We couldn't meet the query conditions after all trials or timeout! :("
+    )
     return False
 
 
