@@ -161,7 +161,10 @@ class ModelTrainer(object):
         max_epochs=2,
         workflow_id=None,
     ):
-        # TODO :base-interceptor-refactor: Can we do it better?
+        # TODO :base-interceptor-refactor:
+        #  We are calling the consumer api here (sometimes for the second time)
+        #  because we are capturing at two levels: at the model.fit and at
+        #  every layer. Can we do it better?
         with FlowceptConsumerAPI(
             flowcept.instrumentation.decorators.instrumentation_interceptor
         ):

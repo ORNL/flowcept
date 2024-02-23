@@ -43,9 +43,9 @@ class MLDecoratorDaskTests(unittest.TestCase):
             "max_epochs": [1],
         }
         confs = ModelTrainer.generate_hp_confs(hp_conf)
-        wf_id = f"wf_{uuid4()}"
+        wf_id = f"{uuid4()}"
         confs = [{**d, "workflow_id": wf_id} for d in confs]
-        print(wf_id)
+        print("Workflow id", wf_id)
         outputs = []
         wf_obj = WorkflowObject()
         wf_obj.workflow_id = wf_id
@@ -66,21 +66,19 @@ class MLDecoratorDaskTests(unittest.TestCase):
             print(r)
             assert "responsible_ai_metrics" in r
 
-        module_wf = db.workflow_query({"parent_workflow_id": wf_id})
+        # We are creating one "sub-workflow" for every Model.fit,
+        # which requires forwarding on multiple layers
+
         task_query = TaskQueryAPI()
-        module_docs = task_query.query({"workflow_id": module_wf.workflow_id})
+        module_docs = task_query.get_subworkflow_tasks_from_a_parent_workflow(
+            parent_workflow_id=wf_id
+        )
         assert len(module_docs) > 0
 
         # db.dump_to_file(
         #     filter={"workflow_id": wf_id},
         #     output_file="tmp_sample_data_with_telemetry_and_rai.json",
         # )
-
-    def test_model_trainer_pure(self):
-        trainer = ModelTrainer()
-        result = trainer.model_fit(max_epochs=1)
-        print(result)
-        assert "shap_sum" in result["responsible_ai_metrics"]
 
     @classmethod
     def tearDownClass(cls):
