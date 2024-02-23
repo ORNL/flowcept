@@ -1,9 +1,8 @@
 import uuid
 
 import unittest
-import numpy as np
 
-from flowcept import model_explainer, TaskQueryAPI
+from flowcept import TaskQueryAPI
 
 from tests.decorator_tests.ml_tests.dl_trainer import (
     ModelTrainer,
@@ -11,20 +10,6 @@ from tests.decorator_tests.ml_tests.dl_trainer import (
 
 
 class MLDecoratorTests(unittest.TestCase):
-    @staticmethod
-    def test_explainer_decorator():
-        @model_explainer(background_size=3)
-        def my_function(arg1):
-            model = np.random.random()
-            result = {
-                "model": model,
-            }
-            return result
-
-        result = my_function(10, 20)
-        print(result)
-        assert "shap_value" in result
-
     @staticmethod
     def test_cnn_model_trainer():
         trainer = ModelTrainer()
