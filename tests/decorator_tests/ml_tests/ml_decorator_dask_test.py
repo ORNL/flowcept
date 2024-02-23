@@ -14,7 +14,6 @@ from tests.adapters.dask_test_utils import (
     close_dask,
 )
 from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer
-from tests.adapters.test_dask import TestDask
 
 
 class MLDecoratorDaskTests(unittest.TestCase):
