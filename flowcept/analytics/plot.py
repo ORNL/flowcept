@@ -30,7 +30,7 @@ def heatmap(
     )
 
 
-# TODO: idea: consider finding xcol, ycol, color_col automatically based on high
+# TODO: :idea: consider finding xcol, ycol, color_col automatically based on high
 #  correlations for eg
 def scatter2d_with_colors(
     df,

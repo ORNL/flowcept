@@ -5,7 +5,7 @@ import json
 from typing import Dict
 
 from flowcept.commons.utils import get_utc_now, get_status_from_str
-from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
+from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.flowceptor.adapters.base_interceptor import (
     BaseInterceptor,
 )
@@ -18,8 +18,8 @@ class ZambezeInterceptor(BaseInterceptor):
         self._channel = None
         self._observer_thread: Thread = None
 
-    def prepare_task_msg(self, zambeze_msg: Dict) -> TaskMessage:
-        task_msg = TaskMessage()
+    def prepare_task_msg(self, zambeze_msg: Dict) -> TaskObject:
+        task_msg = TaskObject()
         task_msg.utc_timestamp = get_utc_now()
         task_msg.campaign_id = zambeze_msg.get("campaign_id", None)
         task_msg.task_id = zambeze_msg.get("activity_id", None)

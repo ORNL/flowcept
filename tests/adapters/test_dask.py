@@ -3,12 +3,15 @@ from time import sleep
 from uuid import uuid4
 import numpy as np
 
-from dask.distributed import Client
+from dask.distributed import Client, LocalCluster
 
-from flowcept import FlowceptConsumerAPI
-from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept import FlowceptConsumerAPI, TaskQueryAPI
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.utils import assert_by_querying_task_collections_until
+from flowcept.commons.utils import assert_by_querying_tasks_until
+from tests.adapters.dask_test_utils import (
+    setup_local_dask_cluster,
+    close_dask,
+)
 
 
 def dummy_func1(x, workflow_id=None):
@@ -36,41 +39,21 @@ def forced_error_func(x):
 
 class TestDask(unittest.TestCase):
     client: Client = None
+    cluster: LocalCluster = None
     consumer: FlowceptConsumerAPI = None
 
     def __init__(self, *args, **kwargs):
         super(TestDask, self).__init__(*args, **kwargs)
-        self.doc_dao = DocumentDBDao()
+        self.query_api = TaskQueryAPI()
         self.logger = FlowceptLogger()
 
     @classmethod
     def setUpClass(cls):
-        TestDask.client = TestDask._setup_local_dask_cluster()
-
-    @staticmethod
-    def _setup_local_dask_cluster(n_workers=2):
-        from dask.distributed import Client, LocalCluster
-        from flowcept import (
-            FlowceptDaskSchedulerAdapter,
-            FlowceptDaskWorkerAdapter,
-        )
-
-        if TestDask.consumer is None or not TestDask.consumer.is_started:
-            TestDask.consumer = FlowceptConsumerAPI().start()
-
-        cluster = LocalCluster(n_workers=n_workers)
-        scheduler = cluster.scheduler
-        client = Client(scheduler.address)
-
-        # Instantiate and Register FlowceptPlugins, which are the ONLY
-        # additional steps users would need to do in their code:
-        scheduler_plugin = FlowceptDaskSchedulerAdapter(scheduler)
-        scheduler.add_plugin(scheduler_plugin)
-
-        worker_plugin = FlowceptDaskWorkerAdapter()
-        client.register_worker_plugin(worker_plugin)
-
-        return client
+        (
+            TestDask.client,
+            TestDask.cluster,
+            TestDask.consumer,
+        ) = setup_local_dask_cluster(TestDask.consumer, 2)
 
     def atest_pure_workflow(self):
         i1 = np.random.random()
@@ -86,7 +69,7 @@ class TestDask(unittest.TestCase):
         i1 = np.random.random()
         wf_id = f"wf_{uuid4()}"
         o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
-        self.logger.debug(o1.result())
+        # self.logger.debug(o1.result())
         sleep(3)
         return o1.key
 
@@ -150,24 +133,20 @@ class TestDask(unittest.TestCase):
         o2_task_id = self.atest_pure_workflow()
         print("Task_id=" + o2_task_id)
         print("Done workflow!")
-        sleep(3)
-        assert assert_by_querying_task_collections_until(
-            self.doc_dao,
+        assert assert_by_querying_tasks_until(
             {"task_id": o2_task_id},
             condition_to_evaluate=lambda docs: "telemetry_at_end" in docs[0],
         )
+        print("Query condition met!")
 
     def test_observer_and_consumption_varying_args(self):
         o2_task_id = self.varying_args()
         sleep(3)
-        assert assert_by_querying_task_collections_until(
-            self.doc_dao, {"task_id": o2_task_id}
-        )
+        assert assert_by_querying_tasks_until({"task_id": o2_task_id})
 
     def test_observer_and_consumption_error_task(self):
         o2_task_id = self.error_task_submission()
-        assert assert_by_querying_task_collections_until(
-            self.doc_dao,
+        assert assert_by_querying_tasks_until(
             {"task_id": o2_task_id},
             condition_to_evaluate=lambda docs: "exception"
             in docs[0]["stderr"],
@@ -175,15 +154,12 @@ class TestDask(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        print("Closing scheduler and workers!")
-        sleep(10)
+        print("Ending tests!")
         try:
-            TestDask.client.shutdown()
-        except:
+            close_dask(TestDask.client, TestDask.cluster)
+        except Exception as e:
+            print(e)
             pass
 
-        print("Waiting before closing flowcept!")
-        sleep(30)
         if TestDask.consumer:
             TestDask.consumer.stop()
-        sleep(10)

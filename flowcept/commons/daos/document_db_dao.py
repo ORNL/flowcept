@@ -7,10 +7,13 @@ from bson import ObjectId
 from bson.json_util import dumps
 from pymongo import MongoClient, UpdateOne
 
+from flowcept.commons.flowcept_dataclasses.workflow_object import (
+    WorkflowObject,
+)
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
+from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.utils import perf_log, get_utc_now_str
-from flowcept.commons.decorators import singleton
+from flowcept.commons import singleton
 from flowcept.configs import (
     MONGO_HOST,
     MONGO_PORT,
@@ -38,10 +41,11 @@ class DocumentDBDao(object):
         self._db = client[MONGO_DB]
 
         self._tasks_collection = self._db[MONGO_TASK_COLLECTION]
-        self._tasks_collection.create_index(TaskMessage.get_index_field())
+        self._tasks_collection.create_index(TaskObject.task_id_field())
+        self._tasks_collection.create_index(TaskObject.workflow_id_field())
 
         self._wfs_collection = self._db[MONGO_WORKFLOWS_COLLECTION]
-        self._wfs_collection.create_index(TaskMessage.get_workflow_id_field())
+        self._wfs_collection.create_index(TaskObject.workflow_id_field())
 
     def task_query(
         self,
@@ -262,26 +266,33 @@ class DocumentDBDao(object):
             self.logger.exception(e)
             return -1
 
-    def workflow_insert_or_update(
-        self, workflow_id: str, _dict: Dict = {}
-    ) -> bool:
-        _filter = {TaskMessage.get_workflow_id_field(): workflow_id}
+    def workflow_insert_or_update(self, workflow_obj: WorkflowObject) -> bool:
+        _dict = workflow_obj.to_dict().copy()
+        workflow_id = _dict.pop(WorkflowObject.workflow_id_field(), None)
+        if workflow_id is None:
+            self.logger.exception("The workflow identifier cannot be none.")
+            return False
+        _filter = {WorkflowObject.workflow_id_field(): workflow_id}
         update_query = {}
-        interceptor_id = _dict.pop("interceptor_id", None)
-        if interceptor_id is not None:
-            if not isinstance(interceptor_id, str):
-                self.logger.exception(
-                    "Interceptor_ID must be a string, as Mongo can only record string keys."
-                )
-                return False
+        interceptor_ids = _dict.pop("interceptor_ids", None)
+        if interceptor_ids is not None and len(interceptor_ids):
+            # if not isinstance(interceptor_id, str):
+            #     self.logger.exception(
+            #         "Interceptor_ID must be a string, as Mongo can only record string keys."
+            #     )
+            #     return False
             update_query.update(
-                {"$push": {"interceptor_ids": interceptor_id}}
+                {"$push": {"interceptor_ids": {"$each": interceptor_ids}}}
             )
 
         machine_info = _dict.pop("machine_info", None)
         if machine_info is not None:
             for k in machine_info:
                 _dict[f"machine_info.{k}"] = machine_info[k]
+
+        # TODO: for dictionary fields, like custom_metadata especially,
+        #  test if we are updating or replacing when
+        #  an existing wf already has custom_metadata and we call this method
 
         update_query.update(
             {

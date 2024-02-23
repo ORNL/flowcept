@@ -3,7 +3,19 @@ from torchvision import datasets, transforms
 from torch import nn, optim
 from torch.nn import functional as F
 
-from flowcept import model_explainer, model_profiler
+import flowcept.commons
+import flowcept.instrumentation.decorators
+from flowcept import (
+    model_explainer,
+    model_profiler,
+    FlowceptConsumerAPI,
+)
+from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
+from flowcept.instrumentation.decorators.flowcept_torch import (
+    torch_args_handler,
+    register_modules,
+    register_module_as_workflow,
+)
 
 
 class TestNet(nn.Module):
@@ -14,56 +26,53 @@ class TestNet(nn.Module):
         conv_pool_sizes=[2, 2],
         fc_in_outs=[[320, 50], [50, 10]],
         softmax_dims=[-9999, 1],  # first value will be ignored
+        parent_workflow_id=None,
     ):
         super(TestNet, self).__init__()
 
+        self.workflow_id = register_module_as_workflow(
+            self, parent_workflow_id
+        )
+        Conv2d, Dropout, MaxPool2d, ReLU, Softmax, Linear = register_modules(
+            [
+                nn.Conv2d,
+                nn.Dropout,
+                nn.MaxPool2d,
+                nn.ReLU,
+                nn.Softmax,
+                nn.Linear,
+            ],
+            workflow_id=self.workflow_id,
+        )
+
+        self.model_type = "CNN"
         # TODO: add if len conv_in_outs > 0
         self.conv_layers = nn.Sequential()
         for i in range(0, len(conv_in_outs)):
             self.conv_layers.append(
-                nn.Conv2d(
+                Conv2d(
                     conv_in_outs[i][0],
                     conv_in_outs[i][1],
                     kernel_size=conv_kernel_sizes[i],
                 )
             )
             if i > 0:
-                self.conv_layers.append(nn.Dropout())
-            self.conv_layers.append(nn.MaxPool2d(conv_pool_sizes[i]))
-            self.conv_layers.append(nn.ReLU())
-
-        # self.conv_layers = nn.Sequential(
-        #     nn.Conv2d(1, 10, kernel_size=5),
-        #     nn.MaxPool2d(2),
-        #     nn.ReLU(),
-
-        #     nn.Conv2d(10, 20, kernel_size=5),
-        #     nn.Dropout(),
-        #     nn.MaxPool2d(2),
-        #     nn.ReLU(),
-        # )
+                self.conv_layers.append(Dropout())
+            self.conv_layers.append(MaxPool2d(conv_pool_sizes[i]))
+            self.conv_layers.append(ReLU())
 
         # TODO: add if len fc inouts>0
         self.fc_layers = nn.Sequential()
         for i in range(0, len(fc_in_outs)):
-            self.fc_layers.append(
-                nn.Linear(fc_in_outs[i][0], fc_in_outs[i][1])
-            )
+            self.fc_layers.append(Linear(fc_in_outs[i][0], fc_in_outs[i][1]))
             if i == 0:
-                self.fc_layers.append(nn.ReLU())
-                self.fc_layers.append(nn.Dropout())
+                self.fc_layers.append(ReLU())
+                self.fc_layers.append(Dropout())
             else:
-                self.fc_layers.append(nn.Softmax(dim=softmax_dims[i]))
+                self.fc_layers.append(Softmax(dim=softmax_dims[i]))
         self.view_size = fc_in_outs[0][0]
 
-        # self.fc_layers = nn.Sequential(
-        #     nn.Linear(320, 50),
-        #     nn.ReLU(),
-        #     nn.Dropout(),
-        #     nn.Linear(50, 10),
-        #     nn.Softmax(dim=1)
-        # )
-
+    @flowcept_task(args_handler=torch_args_handler)
     def forward(self, x):
         x = self.conv_layers(x)
         x = x.view(-1, self.view_size)
@@ -152,28 +161,38 @@ class ModelTrainer(object):
         max_epochs=2,
         workflow_id=None,
     ):
-        train_loader, test_loader = ModelTrainer.build_train_test_loader()
-        device = torch.device("cpu")
-        model = TestNet(
-            conv_in_outs=conv_in_outs,
-            conv_kernel_sizes=conv_kernel_sizes,
-            conv_pool_sizes=conv_pool_sizes,
-            fc_in_outs=fc_in_outs,
-            softmax_dims=softmax_dims,
-        )
-        model = model.to(device)
-        optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
-        test_info = {}
-        print("Starting training....")
-        for epoch in range(1, max_epochs + 1):
-            ModelTrainer._train(model, device, train_loader, optimizer, epoch)
-            test_info = ModelTrainer._test(model, device, test_loader)
-        print("Finished training....")
-        batch = next(iter(test_loader))
-        test_data, _ = batch
-        result = test_info.copy()
-        result.update({"model": model, "test_data": test_data})
-        return result
+        # TODO :base-interceptor-refactor:
+        #  We are calling the consumer api here (sometimes for the second time)
+        #  because we are capturing at two levels: at the model.fit and at
+        #  every layer. Can we do it better?
+        with FlowceptConsumerAPI(
+            flowcept.instrumentation.decorators.instrumentation_interceptor
+        ):
+            train_loader, test_loader = ModelTrainer.build_train_test_loader()
+            device = torch.device("cpu")
+            model = TestNet(
+                conv_in_outs=conv_in_outs,
+                conv_kernel_sizes=conv_kernel_sizes,
+                conv_pool_sizes=conv_pool_sizes,
+                fc_in_outs=fc_in_outs,
+                softmax_dims=softmax_dims,
+                parent_workflow_id=workflow_id,
+            )
+            model = model.to(device)
+            optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
+            test_info = {}
+            print("Starting training....")
+            for epoch in range(1, max_epochs + 1):
+                ModelTrainer._train(
+                    model, device, train_loader, optimizer, epoch
+                )
+                test_info = ModelTrainer._test(model, device, test_loader)
+            print("Finished training....")
+            batch = next(iter(test_loader))
+            test_data, _ = batch
+            result = test_info.copy()
+            result.update({"model": model, "test_data": test_data})
+            return result
 
     @staticmethod
     def generate_hp_confs(hp_conf: dict):

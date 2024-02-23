@@ -1,8 +1,11 @@
 import unittest
 from uuid import uuid4
 
-from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
+from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
+from flowcept.commons.flowcept_dataclasses.workflow_object import (
+    WorkflowObject,
+)
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 
@@ -10,44 +13,40 @@ from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 class WorkflowDBTest(unittest.TestCase):
     def test_wf_dao(self):
         dbapi = DBAPI()
-        wf1 = str(uuid4())
+        workflow1_id = str(uuid4())
+        wf1 = WorkflowObject()
+        wf1.workflow_id = workflow1_id
 
-        assert dbapi.insert_or_update_workflow(workflow_id=wf1)
+        assert dbapi.insert_or_update_workflow(wf1)
 
-        assert dbapi.insert_or_update_workflow(
-            workflow_id=wf1, workflow_info={"test": "abc"}
-        )
+        wf1.custom_metadata = {"test": "abc"}
+        assert dbapi.insert_or_update_workflow(wf1)
 
-        wfdata = dbapi.get_workflow(workflow_id=wf1)
-        assert wfdata is not None
-        print(wfdata)
+        wf_obj = dbapi.get_workflow(workflow_id=workflow1_id)
+        assert wf_obj is not None
+        print(wf_obj)
 
-        wf2 = str(uuid4())
-        print(wf2)
+        wf2_id = str(uuid4())
+        print(wf2_id)
+
+        wf2 = WorkflowObject(workflow_id=wf2_id)
 
         tel = TelemetryCapture()
-        assert dbapi.insert_or_update_workflow(workflow_id=wf2)
-        assert dbapi.insert_or_update_workflow(
-            workflow_id=wf2, workflow_info={"interceptor_id": "123"}
-        )
-        assert dbapi.insert_or_update_workflow(
-            workflow_id=wf2, workflow_info={"interceptor_id": "1234"}
-        )
-        assert dbapi.insert_or_update_workflow(
-            workflow_id=wf2,
-            workflow_info={
-                "machine_info": {"123": tel.capture_machine_info()}
-            },
-        )
-        assert dbapi.insert_or_update_workflow(
-            workflow_id=wf2,
-            workflow_info={
-                "machine_info": {"1234": tel.capture_machine_info()}
-            },
-        )
-        wfdata = dbapi.get_workflow(workflow_id=wf2)
-        print(wfdata)
-        assert wfdata is not None
+        assert dbapi.insert_or_update_workflow(wf2)
+        wf2.interceptor_ids = ["123"]
+        assert dbapi.insert_or_update_workflow(wf2)
+        wf2.interceptor_ids = ["1234"]
+        assert dbapi.insert_or_update_workflow(wf2)
+        wf_obj = dbapi.get_workflow(wf2_id)
+        assert len(wf_obj.interceptor_ids) == 2
+        wf2.machine_info = {"123": tel.capture_machine_info()}
+        assert dbapi.insert_or_update_workflow(wf2)
+        wf_obj = dbapi.get_workflow(wf2_id)
+        assert wf_obj
+        wf2.machine_info = {"1234": tel.capture_machine_info()}
+        assert dbapi.insert_or_update_workflow(wf2)
+        wf_obj = dbapi.get_workflow(wf2_id)
+        assert len(wf_obj.machine_info) == 2
 
     def test_dump(self):
         dbapi = DBAPI()
@@ -56,7 +55,7 @@ class WorkflowDBTest(unittest.TestCase):
         c0 = dbapi._dao.count()
 
         for i in range(10):
-            t = TaskMessage()
+            t = TaskObject()
             t.workflow_id = wf_id
             t.task_id = str(uuid4())
             dbapi.insert_or_update_task(t)

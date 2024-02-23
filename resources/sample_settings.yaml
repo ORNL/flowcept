@@ -1,8 +1,10 @@
 project:
   debug: true
   json_serializer: default # or complex. If "complex", FlowCept will deal with complex python dicts that may contain JSON unserializable values
+  replace_non_json_serializable: true
   performance_logging: false
   register_workflow: true
+  enrich_messages: true
   telemetry_capture:
     gpu: false
     cpu: true
@@ -74,7 +76,6 @@ adapters:
 #    key_values_to_filter:
 #      - key: activity_status
 #        value: CREATED
-    enrich_messages: true
 
   mlflow:
     kind: mlflow
@@ -84,7 +85,6 @@ adapters:
     redis_host: localhost
     redis_port: 6379
     watch_interval_sec: 2
-    enrich_messages: true
 
   tensorboard:
     kind: tensorboard
@@ -94,13 +94,11 @@ adapters:
     redis_host: localhost
     redis_port: 6379
     watch_interval_sec: 5
-    enrich_messages: true
 
   dask:
     kind: dask
     redis_host: localhost
     redis_port: 6379
-    enrich_messages: true
     worker_should_get_input: true
     scheduler_should_get_input: true
     worker_should_get_output: true
