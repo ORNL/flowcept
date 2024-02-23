@@ -87,6 +87,7 @@ def assert_by_querying_tasks_until(
     max_time=60,
 ):
     from flowcept.flowcept_api.task_query_api import TaskQueryAPI
+
     query_api = TaskQueryAPI()
     start_time = time()
     trials = 0
