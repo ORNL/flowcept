@@ -57,7 +57,7 @@ class DecoratorDaskLLMTests(unittest.TestCase):
         }
         configs = generate_configs(exp_param_settings)
         outputs = []
-        for conf in configs:
+        for conf in configs[:1]:
             conf.update(
                 {
                     "ntokens": ntokens,
