@@ -4,11 +4,14 @@ from uuid import uuid4
 import numpy as np
 
 from dask.distributed import Client, LocalCluster
-from distributed import Status
 
 from flowcept import FlowceptConsumerAPI, TaskQueryAPI
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_task_collections_until
+from tests.adapters.dask_test_utils import (
+    setup_local_dask_cluster,
+    close_dask,
+)
 
 
 def dummy_func1(x, workflow_id=None):
@@ -49,44 +52,8 @@ class TestDask(unittest.TestCase):
         (
             TestDask.client,
             TestDask.cluster,
-        ) = TestDask.setup_local_dask_cluster(2)
-
-    @staticmethod
-    def close_dask(client, cluster):
-        """
-        We must close dask so that the Dask plugins at the workers and scheduler will send the stop signal, which is required for flowcept to stop gracefully (otherwise it will run forever waiting for this stop signal.
-        The trick part was to find the correct order of closures for dask, that's why I created this [very simple] method, which might be reused in other tests.
-        From all alternatives, after several trial and errors, what worked best without exceptions being thrown is here in this method. client.shutdown causes the workers to die unexpectedly.
-
-        :param client:
-        :param cluster:
-        :return:
-        """
-        print("Going to close Dask, hopefully gracefully!")
-        client.close()
-        cluster.close()
-
-        assert cluster.status == Status.closed
-        assert client.status == "closed"
-
-    @staticmethod
-    def setup_local_dask_cluster(n_workers=1):
-        from flowcept import (
-            FlowceptDaskSchedulerAdapter,
-            FlowceptDaskWorkerAdapter,
-        )
-
-        if TestDask.consumer is None or not TestDask.consumer.is_started:
-            TestDask.consumer = FlowceptConsumerAPI().start()
-
-        cluster = LocalCluster(n_workers=n_workers)
-        scheduler = cluster.scheduler
-        client = Client(scheduler.address)
-
-        scheduler.add_plugin(FlowceptDaskSchedulerAdapter(scheduler))
-        client.register_worker_plugin(FlowceptDaskWorkerAdapter())
-
-        return client, cluster
+            TestDask.consumer,
+        ) = setup_local_dask_cluster(TestDask.consumer, 2)
 
     def atest_pure_workflow(self):
         i1 = np.random.random()
@@ -193,7 +160,7 @@ class TestDask(unittest.TestCase):
     def tearDownClass(cls):
         print("Ending tests!")
         try:
-            TestDask.close_dask(TestDask.client, TestDask.cluster)
+            close_dask(TestDask.client, TestDask.cluster)
         except Exception as e:
             print(e)
             pass

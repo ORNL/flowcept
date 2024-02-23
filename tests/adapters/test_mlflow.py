@@ -1,9 +1,8 @@
 import unittest
 from time import sleep
 
-from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept import MLFlowInterceptor, FlowceptConsumerAPI
+from flowcept import MLFlowInterceptor, FlowceptConsumerAPI, TaskQueryAPI
 from flowcept.commons.utils import (
     assert_by_querying_task_collections_until,
     evaluate_until,
@@ -93,7 +92,7 @@ class TestMLFlow(unittest.TestCase):
             lambda: self.interceptor.state_manager.has_element_id(run_uuid)
         )
         assert assert_by_querying_task_collections_until(
-            DocumentDBDao(),
+            TaskQueryAPI(),
             {"task_id": run_uuid},
         )
 
