@@ -6,7 +6,7 @@ from dask.distributed import Client
 
 from flowcept import FlowceptConsumerAPI, TaskQueryAPI
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.utils import assert_by_querying_task_collections_until
+from flowcept.commons.utils import assert_by_querying_tasks_until
 from tests.adapters.dask_test_utils import (
     setup_local_dask_cluster,
     close_dask,
@@ -45,8 +45,7 @@ class TestDaskContextMgmt(unittest.TestCase):
             self.logger.debug(o1.result())
             self.logger.debug(o1.key)
 
-            assert assert_by_querying_task_collections_until(
-                TaskQueryAPI(),
+            assert assert_by_querying_tasks_until(
                 {"task_id": o1.key},
                 condition_to_evaluate=lambda docs: "ended_at" in docs[0],
             )

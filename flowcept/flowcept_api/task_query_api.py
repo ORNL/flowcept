@@ -141,7 +141,17 @@ class TaskQueryAPI(object):
 
     def get_subworkflow_tasks_from_a_parent_workflow(
         self, parent_workflow_id: str
-    ):
+    ) -> List[Dict]:
+        """
+
+        Parameters
+        ----------
+        parent_workflow_id
+
+        Returns
+        -------
+
+        """
         db_api = DBAPI()
         sub_wf = db_api.workflow_query(
             {"parent_workflow_id": parent_workflow_id}

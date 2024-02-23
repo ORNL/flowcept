@@ -7,7 +7,7 @@ from flowcept.configs import MONGO_INSERTION_BUFFER_TIME
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import TensorboardInterceptor, FlowceptConsumerAPI, TaskQueryAPI
 from flowcept.commons.utils import (
-    assert_by_querying_task_collections_until,
+    assert_by_querying_tasks_until,
     evaluate_until,
 )
 
@@ -153,14 +153,13 @@ class TestTensorboard(unittest.TestCase):
             lambda: self.interceptor.state_manager.count() == 16,
             msg="Checking if state count == 16",
         )
-        assert assert_by_querying_task_collections_until(
-            TaskQueryAPI(), {"workflow_id": wf_id}
-        )
+        assert assert_by_querying_tasks_until({"workflow_id": wf_id})
 
         # TODO: Sometimes this fails. It's been hard to debug and tensorboard
         #  is not a priority. Need to investigate later
         # May be related: https://github.com/ORNL/flowcept/issues/49
-        # assert len(docs) == 16
+        docs = TaskQueryAPI().query({"workflow_id": wf_id})
+        assert len(docs) == 16
 
     def test_read_tensorboard_hparam_tuning(self):
         self.reset_log_dir()

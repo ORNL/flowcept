@@ -80,13 +80,14 @@ def get_adapter_exception_msg(adapter_kind):
     )
 
 
-def assert_by_querying_task_collections_until(
-    query_api,
+def assert_by_querying_tasks_until(
     filter,
     condition_to_evaluate: Callable = None,
     max_trials=30,
     max_time=60,
 ):
+    from flowcept.flowcept_api.task_query_api import TaskQueryAPI
+    query_api = TaskQueryAPI()
     start_time = time()
     trials = 0
 

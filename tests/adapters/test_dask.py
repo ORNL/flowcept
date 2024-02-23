@@ -7,7 +7,7 @@ from dask.distributed import Client, LocalCluster
 
 from flowcept import FlowceptConsumerAPI, TaskQueryAPI
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.utils import assert_by_querying_task_collections_until
+from flowcept.commons.utils import assert_by_querying_tasks_until
 from tests.adapters.dask_test_utils import (
     setup_local_dask_cluster,
     close_dask,
@@ -133,8 +133,7 @@ class TestDask(unittest.TestCase):
         o2_task_id = self.atest_pure_workflow()
         print("Task_id=" + o2_task_id)
         print("Done workflow!")
-        assert assert_by_querying_task_collections_until(
-            self.query_api,
+        assert assert_by_querying_tasks_until(
             {"task_id": o2_task_id},
             condition_to_evaluate=lambda docs: "telemetry_at_end" in docs[0],
         )
@@ -143,14 +142,11 @@ class TestDask(unittest.TestCase):
     def test_observer_and_consumption_varying_args(self):
         o2_task_id = self.varying_args()
         sleep(3)
-        assert assert_by_querying_task_collections_until(
-            self.query_api, {"task_id": o2_task_id}
-        )
+        assert assert_by_querying_tasks_until({"task_id": o2_task_id})
 
     def test_observer_and_consumption_error_task(self):
         o2_task_id = self.error_task_submission()
-        assert assert_by_querying_task_collections_until(
-            self.query_api,
+        assert assert_by_querying_tasks_until(
             {"task_id": o2_task_id},
             condition_to_evaluate=lambda docs: "exception"
             in docs[0]["stderr"],

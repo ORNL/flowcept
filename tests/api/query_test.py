@@ -5,7 +5,6 @@ import json
 import random
 from threading import Thread
 
-import pandas as pd
 import requests
 import inspect
 from time import sleep

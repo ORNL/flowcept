@@ -4,7 +4,7 @@ from time import sleep
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import MLFlowInterceptor, FlowceptConsumerAPI, TaskQueryAPI
 from flowcept.commons.utils import (
-    assert_by_querying_task_collections_until,
+    assert_by_querying_tasks_until,
     evaluate_until,
 )
 
@@ -91,8 +91,7 @@ class TestMLFlow(unittest.TestCase):
         assert evaluate_until(
             lambda: self.interceptor.state_manager.has_element_id(run_uuid)
         )
-        assert assert_by_querying_task_collections_until(
-            TaskQueryAPI(),
+        assert assert_by_querying_tasks_until(
             {"task_id": run_uuid},
         )
 
