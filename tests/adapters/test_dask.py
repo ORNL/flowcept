@@ -49,7 +49,7 @@ class TestDask(unittest.TestCase):
         (
             TestDask.client,
             TestDask.cluster,
-        ) = TestDask._setup_local_dask_cluster()
+        ) = TestDask.setup_local_dask_cluster(2)
 
     @staticmethod
     def close_dask(client, cluster):
@@ -70,7 +70,7 @@ class TestDask(unittest.TestCase):
         assert client.status == "closed"
 
     @staticmethod
-    def _setup_local_dask_cluster(n_workers=1):
+    def setup_local_dask_cluster(n_workers=1):
         from flowcept import (
             FlowceptDaskSchedulerAdapter,
             FlowceptDaskWorkerAdapter,

@@ -15,6 +15,7 @@ from tests.adapters.test_dask import TestDask
 
 class DecoratorDaskTests(unittest.TestCase):
     client: Client = None
+    cluster = None
     consumer: FlowceptConsumerAPI = None
 
     def __init__(self, *args, **kwargs):
@@ -23,7 +24,10 @@ class DecoratorDaskTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        TestDask.client = TestDask._setup_local_dask_cluster(n_workers=1)
+        (
+            DecoratorDaskTests.client,
+            DecoratorDaskTests.cluster,
+        ) = TestDask.setup_local_dask_cluster()
 
     def test_model_trains(self):
         hp_conf = {
@@ -74,11 +78,14 @@ class DecoratorDaskTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        print("Closing scheduler and workers!")
+        print("Ending tests!")
         try:
-            TestDask.client.shutdown()
-        except:
+            TestDask.close_dask(
+                DecoratorDaskTests.client, DecoratorDaskTests.cluster
+            )
+        except Exception as e:
+            print(e)
             pass
-        print("Closing flowcept!")
+
         if TestDask.consumer:
             TestDask.consumer.stop()
