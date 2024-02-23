@@ -9,6 +9,10 @@ from cluster_experiment_utils.utils import generate_configs
 from flowcept import FlowceptConsumerAPI
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from tests.adapters.dask_test_utils import (
+    setup_local_dask_cluster,
+    close_dask,
+)
 
 from tests.adapters.test_dask import TestDask
 from tests.decorator_tests.ml_tests.llm_tests.llm_trainer import (
@@ -31,7 +35,8 @@ class DecoratorDaskLLMTests(unittest.TestCase):
         (
             DecoratorDaskLLMTests.client,
             DecoratorDaskLLMTests.cluster,
-        ) = TestDask.setup_local_dask_cluster()
+            DecoratorDaskLLMTests.consumer,
+        ) = setup_local_dask_cluster(DecoratorDaskLLMTests.consumer)
 
     def test_llm(self):
         ntokens, train_data, val_data, test_data = get_wiki_text()
@@ -70,7 +75,7 @@ class DecoratorDaskLLMTests(unittest.TestCase):
     def tearDownClass(cls):
         print("Ending tests!")
         try:
-            TestDask.close_dask(
+            close_dask(
                 DecoratorDaskLLMTests.client, DecoratorDaskLLMTests.cluster
             )
         except Exception as e:

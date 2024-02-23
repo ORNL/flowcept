@@ -9,6 +9,10 @@ from flowcept import FlowceptConsumerAPI, WorkflowObject, TaskQueryAPI
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 from flowcept.flowcept_api.db_api import DBAPI
+from tests.adapters.dask_test_utils import (
+    setup_local_dask_cluster,
+    close_dask,
+)
 from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer
 from tests.adapters.test_dask import TestDask
 
@@ -27,7 +31,8 @@ class DecoratorDaskTests(unittest.TestCase):
         (
             DecoratorDaskTests.client,
             DecoratorDaskTests.cluster,
-        ) = TestDask.setup_local_dask_cluster()
+            DecoratorDaskTests.consumer,
+        ) = setup_local_dask_cluster(DecoratorDaskTests.consumer)
 
     def test_model_trains(self):
         hp_conf = {
@@ -80,9 +85,7 @@ class DecoratorDaskTests(unittest.TestCase):
     def tearDownClass(cls):
         print("Ending tests!")
         try:
-            TestDask.close_dask(
-                DecoratorDaskTests.client, DecoratorDaskTests.cluster
-            )
+            close_dask(DecoratorDaskTests.client, DecoratorDaskTests.cluster)
         except Exception as e:
             print(e)
             pass
