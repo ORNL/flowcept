@@ -25,6 +25,7 @@ from flowcept.commons.query_utils import (
     to_datetime,
     calculate_telemetry_diff_for_docs,
 )
+from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.commons import singleton
 from flowcept.configs import WEBSERVER_HOST, WEBSERVER_PORT, ANALYTICS
 from flowcept.flowcept_webserver.app import BASE_ROUTE
@@ -137,6 +138,16 @@ class TaskQueryAPI(object):
                 return docs
             else:
                 self.logger.error("Error when executing query.")
+
+    def get_subworkflow_tasks_from_a_parent_workflow(
+        self, parent_workflow_id: str
+    ):
+        db_api = DBAPI()
+        sub_wf = db_api.workflow_query(
+            {"parent_workflow_id": parent_workflow_id}
+        )
+        sub_wf_docs = self.query({"workflow_id": sub_wf.workflow_id})
+        return sub_wf_docs
 
     def df_query(
         self,
@@ -441,9 +452,9 @@ class TaskQueryAPI(object):
 
     def find_interesting_tasks_based_on_xyz(
         self,
-        pattern_x="^generated\.(?!responsible_ai_metrics\.).*",  # loss, acc
-        pattern_y="^telemetry_diff\..*",  # telemetry
-        pattern_z="^generated\.responsible_ai_metrics\..*$",  # params
+        pattern_x="^generated[.](?!responsible_ai_metrics[.]).*",  # loss, acc
+        pattern_y="^telemetry_diff[.].*",  # telemetry
+        pattern_z="^generated[.]responsible_ai_metrics[.].*$",  # params
         filter=None,
         correlation_threshold=0.5,
         top_k=50,

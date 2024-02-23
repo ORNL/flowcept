@@ -43,7 +43,7 @@ class LLMDecoratorTests(unittest.TestCase):
             "dropout": 0.2,
             "epochs": 1,
             "lr": 0.1,
-            "pos_encoding_max_len": [5000],
+            "pos_encoding_max_len": 5000,
         }
         conf.update(
             {
@@ -71,7 +71,7 @@ class LLMDecoratorTests(unittest.TestCase):
             conf["nlayers"],
             conf["dropout"],
         ).to("cpu")
-        m = torch.load("../transformer_wikitext2.pth")
+        m = torch.load("transformer_wikitext2.pth")
         best_m.load_state_dict(m)
         return {
             "test_loss": 0.01,
