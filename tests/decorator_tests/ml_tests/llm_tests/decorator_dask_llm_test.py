@@ -67,7 +67,9 @@ class DecoratorDaskLLMTests(unittest.TestCase):
                     "workflow_id": wf_id,
                 }
             )
-            outputs.append(TestDask.client.submit(model_train, **conf))
+            outputs.append(
+                DecoratorDaskLLMTests.client.submit(model_train, **conf)
+            )
         for o in outputs:
             o.result()
 

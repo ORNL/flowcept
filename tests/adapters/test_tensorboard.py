@@ -55,7 +55,7 @@ class TestTensorboard(unittest.TestCase):
         HP_NUM_UNITS = hp.HParam("num_units", hp.Discrete([16, 32]))
         HP_DROPOUT = hp.HParam("dropout", hp.RealInterval(0.1, 0.2))
         HP_OPTIMIZER = hp.HParam("optimizer", hp.Discrete(["adam", "sgd"]))
-        #HP_BATCHSIZES = hp.HParam("batch_size", hp.Discrete([32, 64]))
+        # HP_BATCHSIZES = hp.HParam("batch_size", hp.Discrete([32, 64]))
         HP_BATCHSIZES = hp.HParam("batch_size", hp.Discrete([32, 64]))
 
         HP_MODEL_CONFIG = hp.HParam("model_config")
