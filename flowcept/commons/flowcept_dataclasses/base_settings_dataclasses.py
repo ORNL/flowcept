@@ -13,6 +13,5 @@ class KeyValue:
 class BaseSettings(abc.ABC):
     key: str
     kind: str
-    enrich_messages: bool
     observer_type: str = field(init=False)
     observer_subtype: Optional[str] = field(init=False)

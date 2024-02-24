@@ -5,15 +5,14 @@ import json
 import random
 from threading import Thread
 
-import pandas as pd
 import requests
 import inspect
 from time import sleep
 from uuid import uuid4
 from datetime import datetime, timedelta
 
-from flowcept.commons.flowcept_dataclasses.task_message import (
-    TaskMessage,
+from flowcept.commons.flowcept_dataclasses.task_object import (
+    TaskObject,
     Status,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -44,7 +43,7 @@ def gen_mock_multi_workflow_data(size=1):
     _end = datetime.now()
 
     for i in range(0, size):
-        t1 = TaskMessage()
+        t1 = TaskObject()
         t1.task_id = str(uuid4())
         t1.workflow_name = "generate_hyperparams"
         t1.workflow_id = t1.workflow_name + str(uuid4())
@@ -67,7 +66,7 @@ def gen_mock_multi_workflow_data(size=1):
         new_docs.append(t1.to_dict())
         new_task_ids.append(t1.task_id)
 
-        t2 = TaskMessage()
+        t2 = TaskObject()
         t2.task_id = str(uuid4())
         t1.adapter_id = "adapter2"
         t2.workflow_name = "train"
