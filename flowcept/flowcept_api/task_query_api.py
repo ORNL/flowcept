@@ -25,7 +25,8 @@ from flowcept.commons.query_utils import (
     to_datetime,
     calculate_telemetry_diff_for_docs,
 )
-from flowcept.commons.decorators import singleton
+from flowcept.flowcept_api.db_api import DBAPI
+from flowcept.commons import singleton
 from flowcept.configs import WEBSERVER_HOST, WEBSERVER_PORT, ANALYTICS
 from flowcept.flowcept_webserver.app import BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
@@ -137,6 +138,26 @@ class TaskQueryAPI(object):
                 return docs
             else:
                 self.logger.error("Error when executing query.")
+
+    def get_subworkflow_tasks_from_a_parent_workflow(
+        self, parent_workflow_id: str
+    ) -> List[Dict]:
+        """
+
+        Parameters
+        ----------
+        parent_workflow_id
+
+        Returns
+        -------
+
+        """
+        db_api = DBAPI()
+        sub_wf = db_api.workflow_query(
+            {"parent_workflow_id": parent_workflow_id}
+        )
+        sub_wf_docs = self.query({"workflow_id": sub_wf.workflow_id})
+        return sub_wf_docs
 
     def df_query(
         self,
@@ -374,7 +395,7 @@ class TaskQueryAPI(object):
         :param limit:
         :return:
         """
-        # TODO: idea: think of finding the clauses, quantile threshold, and sort order automatically
+        # TODO: :idea: think of finding the clauses, quantile threshold, and sort order automatically
         df = self.df_query(
             filter=filter,
             calculate_telemetry_diff=calculate_telemetry_diff,
@@ -441,9 +462,9 @@ class TaskQueryAPI(object):
 
     def find_interesting_tasks_based_on_xyz(
         self,
-        pattern_x="^generated\.(?!responsible_ai_metrics\.).*",  # loss, acc
-        pattern_y="^telemetry_diff\..*",  # telemetry
-        pattern_z="^generated\.responsible_ai_metrics\..*$",  # params
+        pattern_x="^generated[.](?!responsible_ai_metrics[.]).*",  # loss, acc
+        pattern_y="^telemetry_diff[.].*",  # telemetry
+        pattern_z="^generated[.]responsible_ai_metrics[.].*$",  # params
         filter=None,
         correlation_threshold=0.5,
         top_k=50,

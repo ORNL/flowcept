@@ -5,7 +5,7 @@ from typing import Dict
 from datetime import datetime
 
 from flowcept.commons.utils import GenericJSONDecoder
-from flowcept.commons.flowcept_dataclasses.task_message import TaskMessage
+from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.configs import (
     MONGO_INSERTION_BUFFER_TIME,
     MONGO_MAX_BUFFER_SIZE,
@@ -27,7 +27,7 @@ class DocumentInserter:
     DECODER = GenericJSONDecoder if JSON_SERIALIZER == "complex" else None
 
     @staticmethod
-    def remove_empty_fields(d):
+    def remove_empty_fields(d):  # TODO: :code-reorg: Should this be in utils?
         """Remove empty fields from a dictionary recursively."""
         for key, value in list(d.items()):
             if isinstance(value, dict):
@@ -46,7 +46,8 @@ class DocumentInserter:
         self._main_thread: Thread = None
         self._curr_max_buffer_size = MONGO_MAX_BUFFER_SIZE
         self._lock = Lock()
-        self._safe_to_stop = not check_safe_stops
+        self.check_safe_stops = check_safe_stops
+        # self._safe_to_stop = not check_safe_stops
 
     def _set_buffer_size(self):
         if not MONGO_ADAPTIVE_BUFFER_SIZE:
@@ -82,7 +83,7 @@ class DocumentInserter:
                     f"Gonna flush {len(self._buffer)} msgs to DocDB!"
                 )
                 inserted = self._doc_dao.insert_and_update_many(
-                    TaskMessage.get_index_field(), self._buffer
+                    TaskObject.task_id_field(), self._buffer
                 )
                 if not inserted:
                     self.logger.warning(
@@ -145,6 +146,7 @@ class DocumentInserter:
         while should_continue:
             try:
                 for message in pubsub.listen():
+                    self.logger.debug("Doc inserter Received a message!")
                     if message["type"] in MQDao.MESSAGE_TYPES_IGNORE:
                         continue
                     _dict_obj = json.loads(
@@ -155,24 +157,25 @@ class DocumentInserter:
                         and _dict_obj["type"] == "flowcept_control"
                     ):
                         if _dict_obj["info"] == "mq_dao_thread_stopped":
-                            self.logger.debug(
-                                "Received mq_dao_thread_stopped message "
-                                "in DocInserter!"
-                            )
                             exec_bundle_id = _dict_obj.get(
                                 "exec_bundle_id", None
                             )
                             interceptor_instance_id = _dict_obj.get(
                                 "interceptor_instance_id"
                             )
+                            self.logger.debug(
+                                f"Received mq_dao_thread_stopped message "
+                                f"in DocInserter from the interceptor "
+                                f"{''if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
+                            )
                             self._mq_dao.register_time_based_thread_end(
                                 interceptor_instance_id, exec_bundle_id
                             )
-                            if self._mq_dao.all_time_based_threads_ended(
-                                exec_bundle_id
-                            ):
-                                self._safe_to_stop = True
-                                self.logger.debug("It is safe to stop.")
+                            # if self._mq_dao.all_time_based_threads_ended(
+                            #     exec_bundle_id
+                            # ):
+                            #     self._safe_to_stop = True
+                            #     self.logger.debug("It is safe to stop.")
 
                         elif _dict_obj["info"] == "stop_document_inserter":
                             self.logger.info(
@@ -184,21 +187,44 @@ class DocumentInserter:
                             break
                     else:
                         self.handle_task_message(_dict_obj)
+                    self.logger.debug(
+                        "Processed all MQ msgs in doc_inserter we got so far. "
+                        "Now waiting (hopefully not forever!) on the "
+                        "pubsub.listen() loop for new messages."
+                    )
             except Exception as e:
                 self.logger.exception(e)
                 sleep(2)
-
+            self.logger.debug("Still in the doc insert. message listen loop")
+        self.logger.debug(
+            "Ok, we broke the doc inserter message listen loop!"
+        )
         time_thread.join()
 
-    def stop(self):
-        while not self._safe_to_stop:
-            sleep_time = 5
-            self.logger.debug(
-                f"It's still not safe to stop DocInserter. "
-                f"Checking again in {sleep_time} secs."
-            )
-            sleep(sleep_time)
-
+    def stop(self, bundle_exec_id=None):
+        if self.check_safe_stops:
+            while not self._mq_dao.all_time_based_threads_ended(
+                bundle_exec_id
+            ):
+                sleep_time = 3
+                self.logger.debug(
+                    f"It's still not safe to stop DocInserter. "
+                    f"Checking again in {sleep_time} secs."
+                )
+                sleep(sleep_time)
         self._mq_dao.stop_document_inserter()
         self._main_thread.join()
         self.logger.info("Document Inserter is stopped.")
+
+    # def stop(self):
+    #     while not self._safe_to_stop:
+    #         sleep_time = 3
+    #         self.logger.debug(
+    #             f"It's still not safe to stop DocInserter. "
+    #             f"Checking again in {sleep_time} secs."
+    #         )
+    #         sleep(sleep_time)
+    #
+    #     self._mq_dao.stop_document_inserter()
+    #     self._main_thread.join()
+    #     self.logger.info("Document Inserter is stopped.")

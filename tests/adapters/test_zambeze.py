@@ -5,12 +5,11 @@ import pika
 from uuid import uuid4
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.daos.document_db_dao import DocumentDBDao
-from flowcept import ZambezeInterceptor, FlowceptConsumerAPI
+from flowcept import ZambezeInterceptor, FlowceptConsumerAPI, TaskQueryAPI
 from flowcept.flowceptor.adapters.zambeze.zambeze_dataclasses import (
     ZambezeMessage,
 )
-from flowcept.commons.utils import assert_by_querying_task_collections_until
+from flowcept.commons.utils import assert_by_querying_tasks_until
 
 
 class TestZambeze(unittest.TestCase):
@@ -65,10 +64,7 @@ class TestZambeze(unittest.TestCase):
         self.logger.debug(" [x] Sent msg")
         sleep(5)
         self._connection.close()
-        assert assert_by_querying_task_collections_until(
-            DocumentDBDao(),
-            {"task_id": act_id},
-        )
+        assert assert_by_querying_tasks_until({"task_id": act_id})
         self.consumer.stop()
 
 

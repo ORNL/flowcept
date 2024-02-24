@@ -1,7 +1,7 @@
 from redis import Redis
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.decorators import singleton
+from flowcept.commons import singleton
 from flowcept.configs import (
     REDIS_HOST,
     REDIS_PORT,
