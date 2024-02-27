@@ -71,6 +71,14 @@ def get_wiki_text():
     val_data = data_process(vocab, validation_dataset)
     test_data = data_process(vocab, test_dataset)
 
+    try:
+        if torch.backends.mps.is_available():
+            train_data = train_data.to(torch.device('mps'))
+            val_data = val_data.to(torch.device('mps'))
+            test_data = test_data.to(torch.device('mps'))
+    except:
+        pass
+
     print("Train data", train_data.shape)
     print("Validation data", val_data.shape)
     print("Test data", test_data.shape)
@@ -193,6 +201,7 @@ def train_epoch(ntokens, model, train_data, criterion, optimizer, bptt=35):
         output = model(
             data
         )  # Forward pass: compute the output of the model given the input data
+
         loss = criterion(
             output.view(-1, ntokens), targets
         )  # Calculate the loss between the model output and the targets
@@ -243,8 +252,7 @@ def model_train(
     pos_encoding_max_len,
     workflow_id=None,
 ):
-    # TODO save random seed: https://pytorch.org/docs/stable/notes/randomness.html
-
+    # TODO :ml-refactor: save device type and random seed: https://pytorch.org/docs/stable/notes/randomness.html
     # TODO :base-interceptor-refactor: Can we do it better?
     with FlowceptConsumerAPI(
         flowcept.instrumentation.decorators.instrumentation_interceptor
@@ -253,7 +261,16 @@ def model_train(
         val_data = batchify(val_data, eval_batch_size)
         test_data = batchify(test_data, eval_batch_size)
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device_type = "cpu"
+        try:
+            if torch.cuda.is_available():
+                device_type = "gpu"
+            elif torch.backends.mps.is_available():
+                device_type = "mps"
+        except:
+            pass
+        device = torch.device(device_type)
+
         model = TransformerModel(
             ntokens,
             emsize,
@@ -292,7 +309,7 @@ def model_train(
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 # best_m = model
-                torch.save(model.state_dict(), "../transformer_wikitext2.pth")
+                torch.save(model.state_dict(), "transformer_wikitext2.pth")
 
         print("Finished training")
         # Load the best model's state
@@ -300,7 +317,7 @@ def model_train(
             ntokens, emsize, nhead, nhid, nlayers, dropout
         ).to(device)
         print("Loading model")
-        torch_loaded = torch.load("../transformer_wikitext2.pth")
+        torch_loaded = torch.load("transformer_wikitext2.pth")
         best_m.load_state_dict(torch_loaded)
 
         print("Evaluating")
@@ -316,18 +333,3 @@ def model_train(
             "val_loss": val_loss,
             "model": model,
         }
-
-
-# Set the batch sizes and batchify the data
-# batch_size = 20
-# eval_batch_size = 10
-#
-# emsize = 200  # 200 embedding dimension
-# nhid = 200  # 200 dimension of the feedforward network model in ``nn.TransformerEncoder``
-# nlayers = 2  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder`
-# nhead = 2  # number of heads in ``nn.MultiheadAttention``
-# dropout = 0.2  # dropout probability
-# epochs = 1  # Set the number of epochs for training
-# # lr=0.001
-# lr = 0.5
-# pos_encoding_max_len=500 #5000
