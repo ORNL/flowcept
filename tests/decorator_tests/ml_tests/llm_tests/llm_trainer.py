@@ -73,9 +73,9 @@ def get_wiki_text():
 
     try:
         if torch.backends.mps.is_available():
-            train_data = train_data.to(torch.device('mps'))
-            val_data = val_data.to(torch.device('mps'))
-            test_data = test_data.to(torch.device('mps'))
+            train_data = train_data.to(torch.device("mps"))
+            val_data = val_data.to(torch.device("mps"))
+            test_data = test_data.to(torch.device("mps"))
     except:
         pass
 
