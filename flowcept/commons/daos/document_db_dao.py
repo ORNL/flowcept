@@ -39,13 +39,20 @@ class DocumentDBDao(object):
         else:
             client = MongoClient(MONGO_HOST, MONGO_PORT)
         self._db = client[MONGO_DB]
+        existing_collections = self._db.list_collection_names()
 
         self._tasks_collection = self._db[MONGO_TASK_COLLECTION]
-        self._tasks_collection.create_index(TaskObject.task_id_field())
-        self._tasks_collection.create_index(TaskObject.workflow_id_field())
-
         self._wfs_collection = self._db[MONGO_WORKFLOWS_COLLECTION]
-        self._wfs_collection.create_index(TaskObject.workflow_id_field())
+
+        # Creation of indices
+        if MONGO_TASK_COLLECTION not in existing_collections:
+            self._tasks_collection.create_index(TaskObject.task_id_field())
+            self._tasks_collection.create_index(
+                TaskObject.workflow_id_field()
+            )
+
+        if MONGO_WORKFLOWS_COLLECTION not in existing_collections:
+            self._wfs_collection.create_index(TaskObject.workflow_id_field())
 
     def task_query(
         self,
