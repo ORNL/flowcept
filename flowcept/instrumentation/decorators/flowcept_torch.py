@@ -14,11 +14,10 @@ from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE
 from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 
 
-def _inspect_torch_tensor(tensor):
+def _inspect_torch_tensor(tensor: torch.Tensor):
     tensor_inspection = {
         "id": id(tensor),
-        "is_cuda": tensor.is_cuda,
-        "is_cpu": tensor.is_cpu,
+        "device": tensor.device.type,
         "is_sparse": tensor.is_sparse,
         "shape": list(tensor.shape),
         "nbytes": tensor.nbytes,
