@@ -123,15 +123,24 @@ TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
 N_GPUS = dict()
 if TELEMETRY_CAPTURE.get("gpu", False):
     try:
-        from pynvml import nvmlDeviceGetCount
-
-        N_GPUS["nvidia"] = nvmlDeviceGetCount()
+        visible_devices_var = os.environ.get("CUDA_VISIBLE_DEVICES", None)
+        if visible_devices_var is not None:
+            visible_devices = [int(i) for i in visible_devices_var.split(",")]
+            N_GPUS["nvidia"] = visible_devices
+        else:
+            from pynvml import nvmlDeviceGetCount  
+            N_GPUS["nvidia"] = list(range(0, nvmlDeviceGetCount()))        
     except:
         pass
     try:
-        import pyamdgpuinfo
-
-        N_GPUS["amd"] = pyamdgpuinfo.detect_gpus()
+        visible_devices_var = os.environ.get("ROCR_VISIBLE_DEVICES", None)
+        if visible_devices_var is not None:
+            visible_devices = [int(i) for i in visible_devices_var.split(",")]
+            N_GPUS["amd"] = visible_devices
+        else:
+            import pyamdgpuinfo    
+            N_GPUS["amd"] = list(range(0, pyamdgpuinfo.detect_gpus()))
+            
     except:
         pass
 
