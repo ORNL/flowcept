@@ -9,4 +9,4 @@ from flowcept.analytics.analytics_utils import (
     describe_cols,
 )
 
-from flowcept.analytics.plot import heatmap, scatter2d_with_colors
+#from flowcept.analytics.plot import heatmap, scatter2d_with_colors
