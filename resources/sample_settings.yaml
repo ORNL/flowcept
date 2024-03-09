@@ -22,7 +22,7 @@ log:
 
 experiment:
   user: root
-  experiment_id: flowcept_experiment
+  campaign_id: super_campaign
 
 main_redis:
   host: localhost

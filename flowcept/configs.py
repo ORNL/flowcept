@@ -155,6 +155,7 @@ PUBLIC_IP = None
 PRIVATE_IP = None
 SYS_NAME = None
 NODE_NAME = None
+ENVIRONMENT_ID = None
 
 sys_metadata = settings.get("sys_metadata", None)
 if sys_metadata is not None:

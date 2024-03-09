@@ -55,10 +55,13 @@ class BaseInterceptor(object):
         self._generated_workflow_id = False
         # self._registered_workflow = False
 
-    @staticmethod
-    def _enrich_workflow_message(workflow_obj: WorkflowObject):
+    def _enrich_workflow_message(self, workflow_obj: WorkflowObject):
         workflow_obj.utc_timestamp = get_utc_now()
         workflow_obj.flowcept_settings = settings
+
+        if self.settings is not None:
+            # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
+            workflow_obj.adapter_id = self.settings.key
 
         if workflow_obj.user is None:
             workflow_obj.user = FLOWCEPT_USER
@@ -81,6 +84,13 @@ class BaseInterceptor(object):
     def _enrich_task_message(self, task_msg: TaskObject):
         if task_msg.utc_timestamp is None:
             task_msg.utc_timestamp = get_utc_now()
+
+        if self.settings is not None:
+            # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
+            task_msg.adapter_id = self.settings.key
+
+        if task_msg.campaign_id is None:
+            task_msg.campaign_id = CAMPAIGN_ID
 
         if task_msg.node_name is None and NODE_NAME is not None:
             task_msg.node_name = NODE_NAME
@@ -192,10 +202,7 @@ class BaseInterceptor(object):
             ] = machine_info
 
         if ENRICH_MESSAGES:
-            if self.settings is not None:
-                # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
-                workflow_obj.adapter_id = self.settings.key
-            BaseInterceptor._enrich_workflow_message(workflow_obj)
+            self._enrich_workflow_message(workflow_obj)
         _msg = workflow_obj.to_dict()
         self.logger.debug(
             f"Going to send to Redis an WORKFLOW message:"
