@@ -8,6 +8,7 @@ from flowcept import DBAPI
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
+from flowcept.commons import logger
 from flowcept.commons.utils import replace_non_serializable
 from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE
 
@@ -15,15 +16,40 @@ from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 
 
 def _inspect_torch_tensor(tensor: torch.Tensor):
-    tensor_inspection = {
-        "id": id(tensor),
-        "device": tensor.device.type,
-        "is_sparse": tensor.is_sparse,
-        "shape": list(tensor.shape),
-        "nbytes": tensor.nbytes,
-        "numel": tensor.numel(),
-        "density": torch.nonzero(tensor).size(0) / tensor.numel(),
-    }
+    _id = id(tensor)
+    tensor_inspection = {"id": _id}
+    try:
+        tensor_inspection["device"] = tensor.device.type
+    except Exception as e:
+        logger.warning(f"For tensor {_id} could not get its device. Exc: {e}")
+    try:
+        tensor_inspection["is_sparse"] = tensor.is_sparse
+    except Exception as e:
+        logger.warning(
+            f"For tensor {_id} could not get its is_sparse. Exc: {e}"
+        )
+    try:
+        tensor_inspection["shape"] = list(tensor.shape)
+    except Exception as e:
+        logger.warning(f"For tensor {_id} could not get its shape. Exc: {e}")
+    try:
+        tensor_inspection["nbytes"] = tensor.nbytes
+    except Exception as e:
+        logger.warning(
+            f"For tensor {_id}, could not get its nbytes. Exc: {e}"
+        )
+    try:
+        tensor_inspection["numel"] = tensor.numel()
+    except Exception as e:
+        logger.warning(f"For tensor {_id}, could not get its numel. Exc: {e}")
+    try:
+        tensor_inspection["density"] = (
+            torch.nonzero(tensor).size(0) / tensor.numel()
+        )
+    except Exception as e:
+        logger.warning(
+            f"For tensor {_id}, could not get its density. Exc: {e}"
+        )
     return tensor_inspection
 
 
