@@ -20,6 +20,7 @@ class Status(str, Enum):  # inheriting from str here for JSON serialization
 # Not a dataclass because a dataclass stores keys even when there's no value,
 # adding unnecessary overhead.
 class TaskObject:
+    type = "task"
     task_id: AnyStr = None  # Any way to identify a task
     utc_timestamp: float = None
     adapter_id: AnyStr = None
@@ -45,12 +46,9 @@ class TaskObject:
     public_ip: AnyStr = None
     private_ip: AnyStr = None
     hostname: AnyStr = None
-    extra_metadata: Dict = None
-    sys_name: AnyStr = None
     address: AnyStr = None
     dependencies: List = None
     dependents: List = None
-    flowcept_version: str = None
 
     @staticmethod
     def get_dict_field_names():
@@ -71,9 +69,14 @@ class TaskObject:
         return "workflow_id"
 
     def to_dict(self):
-        ret = self.__dict__
-        if self.telemetry_at_start is not None:
-            ret["telemetry_at_start"] = self.telemetry_at_start.to_dict()
-        if self.telemetry_at_end is not None:
-            ret["telemetry_at_end"] = self.telemetry_at_end.to_dict()
-        return ret
+        result_dict = {}
+        for attr, value in self.__dict__.items():
+            if value is not None:
+                if attr == "telemetry_at_start":
+                    result_dict[attr] = self.telemetry_at_start.to_dict()
+                elif attr == "telemetry_at_end":
+                    result_dict[attr] = self.telemetry_at_end.to_dict()
+                else:
+                    result_dict[attr] = value
+        result_dict["type"] = "task"
+        return result_dict

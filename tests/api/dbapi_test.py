@@ -29,7 +29,8 @@ class WorkflowDBTest(unittest.TestCase):
         wf2_id = str(uuid4())
         print(wf2_id)
 
-        wf2 = WorkflowObject(workflow_id=wf2_id)
+        wf2 = WorkflowObject()
+        wf2.workflow_id = wf2_id
 
         tel = TelemetryCapture()
         assert dbapi.insert_or_update_workflow(wf2)

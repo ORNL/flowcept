@@ -9,13 +9,14 @@ from torchtext.vocab import build_vocab_from_iterator
 from datasets import load_dataset
 
 import flowcept
-from flowcept import model_profiler, FlowceptConsumerAPI
+from flowcept import FlowceptConsumerAPI
 from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 from flowcept.instrumentation.decorators.flowcept_torch import (
     register_modules,
     register_module_as_workflow,
     torch_args_handler,
 )
+from flowcept.instrumentation.decorators.responsible_ai import model_profiler
 
 tokenizer = get_tokenizer("basic_english")
 

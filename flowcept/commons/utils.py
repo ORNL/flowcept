@@ -61,14 +61,6 @@ def get_status_from_str(status_str: str) -> Status:
         return Status.UNKNOWN
 
 
-def fill_with_basic_workflow_info(workflow_obj: WorkflowObject):
-    workflow_obj.campaign_id = CAMPAIGN_ID
-    workflow_obj.utc_timestamp = get_utc_now()
-    workflow_obj.user = FLOWCEPT_USER
-    workflow_obj.flowcept_settings = settings
-    workflow_obj.flowcept_version = __version__
-
-
 def get_adapter_exception_msg(adapter_kind):
     return (
         f"You have an adapter for {adapter_kind} in"

@@ -53,7 +53,8 @@ class DBAPI(object):
             return None
         if len(results):
             try:
-                return WorkflowObject(**results[0])
+                wf_dict = results[0]
+                return WorkflowObject.from_dict(wf_dict)
             except Exception as e:
                 self.logger.exception(e)
                 return None

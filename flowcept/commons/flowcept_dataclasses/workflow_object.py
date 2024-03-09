@@ -4,46 +4,75 @@ from typing import Dict, AnyStr, List
 # Not a dataclass because a dataclass stores keys even when there's no value,
 # adding unnecessary overhead.
 class WorkflowObject:
-    def __init__(
-        self,
-        workflow_id: AnyStr = None,
-        parent_workflow_id: AnyStr = None,
-        machine_info: Dict = None,
-        flowcept_settings: Dict = None,
-        flowcept_version: AnyStr = None,
-        utc_timestamp: float = None,
-        user: AnyStr = None,
-        campaign_id: AnyStr = None,
-        adapter_id: AnyStr = None,
-        interceptor_ids: List[AnyStr] = None,
-        name: AnyStr = None,
-        custom_metadata: Dict = None,
-    ):
-        self.workflow_id = workflow_id
-        self.parent_workflow_id = parent_workflow_id
-        self.machine_info = machine_info
-        self.flowcept_settings = flowcept_settings
-        self.flowcept_version = flowcept_version
-        self.utc_timestamp = utc_timestamp
-        self.user = user
-        self.campaign_id = campaign_id
-        self.adapter_id = adapter_id
-        self.interceptor_ids = interceptor_ids
-        self.name = name
-        self.custom_metadata = custom_metadata
+    workflow_id: AnyStr = None
+    parent_workflow_id: AnyStr = None
+    machine_info: Dict = None
+    flowcept_settings: Dict = None
+    flowcept_version: AnyStr = None
+    utc_timestamp: float = None
+    user: AnyStr = None
+    campaign_id: AnyStr = None
+    adapter_id: AnyStr = None
+    interceptor_ids: List[AnyStr] = None
+    name: AnyStr = None
+    custom_metadata: Dict = None
+    environment_id: str = None
+    sys_name: str = None
+    extra_metadata: str = None
+
+    # def __init__(
+    #     self,
+    #     workflow_id: AnyStr = None,
+    #     parent_workflow_id: AnyStr = None,
+    #     machine_info: Dict = None,
+    #     flowcept_settings: Dict = None,
+    #     flowcept_version: AnyStr = None,
+    #     utc_timestamp: float = None,
+    #     user: AnyStr = None,
+    #     campaign_id: AnyStr = None,
+    #     adapter_id: AnyStr = None,
+    #     interceptor_ids: List[AnyStr] = None,
+    #     name: AnyStr = None,
+    #     custom_metadata: Dict = None,
+    #     environment_id: str = None,
+    #     sys_name: str = None,
+    #     extra_metadata: str = None,
+    # ):
+    # self.type = "workflow"
+    # self.workflow_id = workflow_id
+    # self.environment_id = environment_id
+    # self.parent_workflow_id = parent_workflow_id
+    # self.machine_info = machine_info
+    # self.flowcept_settings = flowcept_settings
+    # self.flowcept_version = flowcept_version
+    # self.utc_timestamp = utc_timestamp
+    # self.user = user
+    # self.campaign_id = campaign_id
+    # self.adapter_id = adapter_id
+    # self.interceptor_ids = interceptor_ids
+    # self.name = name
+    # self.custom_metadata = custom_metadata
+    # self.sys_name = sys_name
+    # self.extra_metadata = extra_metadata
 
     @staticmethod
     def workflow_id_field():
         return "workflow_id"
 
+    @staticmethod
+    def from_dict(dict_obj: Dict) -> "WorkflowObject":
+        wf_obj = WorkflowObject()
+        for k, v in dict_obj.items():
+            setattr(wf_obj, k, v)
+        return wf_obj
+
     def to_dict(self):
-        ret = self.__dict__
-        # I'm just leaving these comments below in case we need to add specific to_dict stuff
-        # if self.telemetry_at_start is not None:
-        #     ret["telemetry_at_start"] = self.telemetry_at_start.to_dict()
-        # if self.telemetry_at_end is not None:
-        #     ret["telemetry_at_end"] = self.telemetry_at_end.to_dict()
-        return ret
+        result_dict = {}
+        for attr, value in self.__dict__.items():
+            if value is not None:
+                result_dict[attr] = value
+        result_dict["type"] = "workflow"
+        return result_dict
 
     def __repr__(self):
         return (

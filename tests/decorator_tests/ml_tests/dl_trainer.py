@@ -6,8 +6,6 @@ from torch.nn import functional as F
 import flowcept.commons
 import flowcept.instrumentation.decorators
 from flowcept import (
-    model_explainer,
-    model_profiler,
     FlowceptConsumerAPI,
 )
 from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
@@ -15,6 +13,10 @@ from flowcept.instrumentation.decorators.flowcept_torch import (
     torch_args_handler,
     register_modules,
     register_module_as_workflow,
+)
+from flowcept.instrumentation.decorators.responsible_ai import (
+    model_explainer,
+    model_profiler,
 )
 
 

@@ -4,6 +4,9 @@ from threading import Thread, Event, Lock
 from typing import Dict
 from datetime import datetime
 
+from flowcept.commons.flowcept_dataclasses.workflow_object import (
+    WorkflowObject,
+)
 from flowcept.commons.utils import GenericJSONDecoder
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.configs import (
@@ -47,7 +50,6 @@ class DocumentInserter:
         self._curr_max_buffer_size = MONGO_MAX_BUFFER_SIZE
         self._lock = Lock()
         self.check_safe_stops = check_safe_stops
-        # self._safe_to_stop = not check_safe_stops
 
     def _set_buffer_size(self):
         if not MONGO_ADAPTIVE_BUFFER_SIZE:
@@ -104,6 +106,8 @@ class DocumentInserter:
         if DEBUG_MODE:
             message["debug"] = True
 
+        message.pop("type")
+
         self.logger.debug(
             f"Received following msg in DocInserter:"
             f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
@@ -115,6 +119,37 @@ class DocumentInserter:
         if len(self._buffer) >= self._curr_max_buffer_size:
             self.logger.debug("Docs buffer exceeded, flushing...")
             self._flush()
+
+    def handle_workflow_message(self, message: Dict):
+        message.pop("type")
+
+        self.logger.debug(
+            f"Received following msg in DocInserter:"
+            f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
+        )
+        if MONGO_REMOVE_EMPTY_FIELDS:
+            remove_empty_fields_from_dict(message)
+
+        wf_obj = WorkflowObject.from_dict(message)
+        inserted = self._doc_dao.workflow_insert_or_update(wf_obj)
+        return inserted
+
+    def handle_control_message(self, message):
+        if message["info"] == "mq_dao_thread_stopped":
+            exec_bundle_id = message.get("exec_bundle_id", None)
+            interceptor_instance_id = message.get("interceptor_instance_id")
+            self.logger.debug(
+                f"Received mq_dao_thread_stopped message "
+                f"in DocInserter from the interceptor "
+                f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
+            )
+            self._mq_dao.register_time_based_thread_end(
+                interceptor_instance_id, exec_bundle_id
+            )
+            return "continue"
+        elif message["info"] == "stop_document_inserter":
+            self.logger.info("Document Inserter is stopping...")
+            return "stop"
 
     def time_based_flushing(self, event: Event):
         while not event.is_set():
@@ -149,44 +184,24 @@ class DocumentInserter:
                     self.logger.debug("Doc inserter Received a message!")
                     if message["type"] in MQDao.MESSAGE_TYPES_IGNORE:
                         continue
+
                     _dict_obj = json.loads(
                         message["data"], cls=DocumentInserter.DECODER
                     )
-                    if (
-                        "type" in _dict_obj
-                        and _dict_obj["type"] == "flowcept_control"
-                    ):
-                        if _dict_obj["info"] == "mq_dao_thread_stopped":
-                            exec_bundle_id = _dict_obj.get(
-                                "exec_bundle_id", None
-                            )
-                            interceptor_instance_id = _dict_obj.get(
-                                "interceptor_instance_id"
-                            )
-                            self.logger.debug(
-                                f"Received mq_dao_thread_stopped message "
-                                f"in DocInserter from the interceptor "
-                                f"{''if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
-                            )
-                            self._mq_dao.register_time_based_thread_end(
-                                interceptor_instance_id, exec_bundle_id
-                            )
-                            # if self._mq_dao.all_time_based_threads_ended(
-                            #     exec_bundle_id
-                            # ):
-                            #     self._safe_to_stop = True
-                            #     self.logger.debug("It is safe to stop.")
-
-                        elif _dict_obj["info"] == "stop_document_inserter":
-                            self.logger.info(
-                                "Document Inserter is stopping..."
-                            )
+                    msg_type = _dict_obj.get("type")
+                    if msg_type == "flowcept_control":
+                        r = self.handle_control_message(_dict_obj)
+                        if r == "stop":
                             stop_event.set()
                             self._flush()
                             should_continue = False
                             break
-                    else:
+                    elif msg_type == "task":
                         self.handle_task_message(_dict_obj)
+                    elif msg_type == "workflow":
+                        self.handle_workflow_message(_dict_obj)
+                    else:
+                        self.logger.error("Unexpected message type")
                     self.logger.debug(
                         "Processed all MQ msgs in doc_inserter we got so far. "
                         "Now waiting (hopefully not forever!) on the "
@@ -215,16 +230,3 @@ class DocumentInserter:
         self._mq_dao.stop_document_inserter()
         self._main_thread.join()
         self.logger.info("Document Inserter is stopped.")
-
-    # def stop(self):
-    #     while not self._safe_to_stop:
-    #         sleep_time = 3
-    #         self.logger.debug(
-    #             f"It's still not safe to stop DocInserter. "
-    #             f"Checking again in {sleep_time} secs."
-    #         )
-    #         sleep(sleep_time)
-    #
-    #     self._mq_dao.stop_document_inserter()
-    #     self._main_thread.join()
-    #     self.logger.info("Document Inserter is stopped.")

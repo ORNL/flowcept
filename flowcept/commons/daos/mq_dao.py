@@ -131,10 +131,14 @@ class MQDao:
                             json.dumps(message, cls=MQDao.ENCODER),
                         )
                     except Exception as e:
+                        self.logger.exception(e)
                         self.logger.error(
                             "Critical error as some messages couldn't be flushed! Check the messages' contents!"
                         )
-                        self.logger.exception(e)
+                        self.logger.error(
+                            f"Message that caused error: {message}"
+                        )
+
                 t0 = 0
                 if PERF_LOG:
                     t0 = time()
