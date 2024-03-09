@@ -128,8 +128,9 @@ if TELEMETRY_CAPTURE.get("gpu", False):
             visible_devices = [int(i) for i in visible_devices_var.split(",")]
             N_GPUS["nvidia"] = visible_devices
         else:
-            from pynvml import nvmlDeviceGetCount  
-            N_GPUS["nvidia"] = list(range(0, nvmlDeviceGetCount()))        
+            from pynvml import nvmlDeviceGetCount
+
+            N_GPUS["nvidia"] = list(range(0, nvmlDeviceGetCount()))
     except:
         pass
     try:
@@ -138,9 +139,10 @@ if TELEMETRY_CAPTURE.get("gpu", False):
             visible_devices = [int(i) for i in visible_devices_var.split(",")]
             N_GPUS["amd"] = visible_devices
         else:
-            import pyamdgpuinfo    
+            import pyamdgpuinfo
+
             N_GPUS["amd"] = list(range(0, pyamdgpuinfo.detect_gpus()))
-            
+
     except:
         pass
 
@@ -156,6 +158,7 @@ NODE_NAME = None
 
 sys_metadata = settings.get("sys_metadata", None)
 if sys_metadata is not None:
+    ENVIRONMENT_ID = sys_metadata.get("environment_id", None)
     SYS_NAME = sys_metadata.get("sys_name", None)
     NODE_NAME = sys_metadata.get("node_name", None)
     LOGIN_NAME = sys_metadata.get("login_name", None)

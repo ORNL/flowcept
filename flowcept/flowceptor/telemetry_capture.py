@@ -28,10 +28,10 @@ from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
 
 
 class TelemetryCapture:
+    _gpu_unsuccessful_queries = (
+        dict()
+    )  # TODO: refactor; I need this to avoid querying GPU stuff that is generating errors. The idea is to try once and if it fails, add this in this dictionary to avoid trying again. The mapping will be {gpu_device_id: {query_type: True or False}}; False if it found that it's unsuccessful. If it's mapping to an empty dict, the whole GPU is bad for capture.
 
-    _gpu_unsuccessful_queries = dict() # TODO: refactor; I need this to avoid querying GPU stuff that is generating errors. The idea is to try once and if it fails, add this in this dictionary to avoid trying again. The mapping will be {gpu_device_id: {query_type: True or False}}; False if it found that it's unsuccessful. If it's mapping to an empty dict, the whole GPU is bad for capture.
-    
-    
     def __init__(self, conf=TELEMETRY_CAPTURE):
         self.conf = conf
         self.logger = FlowceptLogger()
@@ -89,7 +89,7 @@ class TelemetryCapture:
                 "platform": platform_info,
                 "cpu": processor_info,
                 "network": network_info,
-                "environment": os.environ,
+                "environment": dict(os.environ),
                 "hostname": HOSTNAME,
                 "login_name": LOGIN_NAME,
                 "process": self._capture_process_info().__dict__,
@@ -199,16 +199,19 @@ class TelemetryCapture:
             ),
             "power_usage": nvmlDeviceGetPowerUsage(handle),
             "name": nvmlDeviceGetName(handle),
-            "device_ix": gpu_ix
+            "device_ix": gpu_ix,
         }
         return flowcept_gpu_info
 
-    
     def __register_unsuccessful_gpu_query(self, gpu_ix, gpu_info_key):
-        self.logger.error(f"Error to get {gpu_info_key} for the GPU device ix {gpu_ix}")
+        self.logger.error(
+            f"Error to get {gpu_info_key} for the GPU device ix {gpu_ix}"
+        )
         if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries:
             TelemetryCapture._gpu_unsuccessful_queries[gpu_ix] = {}
-        TelemetryCapture._gpu_unsuccessful_queries[gpu_ix][gpu_info_key] = True
+        TelemetryCapture._gpu_unsuccessful_queries[gpu_ix][
+            gpu_info_key
+        ] = True
 
     # TODO: finish adding the else: None
     def __get_gpu_info_amd(self, gpu_ix: int = 0):
@@ -223,33 +226,50 @@ class TelemetryCapture:
         flowcept_gpu_info["device_ix"] = gpu_ix
 
         flowcept_gpu_info["gpu_id"] = amd_info.gpu_id
-
         memory_info = amd_info.memory_info.copy()
         try:
-            if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries or "total" not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]:
+            if (
+                gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries
+                or "total"
+                not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]
+            ):
                 flowcept_gpu_info["total"] = memory_info.pop("vram_size")
-        except Exception as e:            
+        except Exception as e:
             self.__register_unsuccessful_gpu_query(gpu_ix, "total")
             self.logger.exception(e)
 
         try:
-            if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries or "temperature" not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]:
-                flowcept_gpu_info["temperature"] = amd_info.query_temperature()
+            if (
+                gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries
+                or "temperature"
+                not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]
+            ):
+                flowcept_gpu_info[
+                    "temperature"
+                ] = amd_info.query_temperature()
         except Exception as e:
             flowcept_gpu_info["temperature"] = None
             self.__register_unsuccessful_gpu_query(gpu_ix, "temperature")
             self.logger.exception(e)
 
         try:
-            if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries or "power_usage" not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]:
+            if (
+                gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries
+                or "power_usage"
+                not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]
+            ):
                 flowcept_gpu_info["power_usage"] = amd_info.query_power()
         except Exception as e:
             flowcept_gpu_info["power_usage"] = None
-            self.__register_unsuccessful_gpu_query(gpu_ix, "power_usage")            
+            self.__register_unsuccessful_gpu_query(gpu_ix, "power_usage")
             self.logger.exception(e)
 
         try:
-            if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries or "used" not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]:
+            if (
+                gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries
+                or "used"
+                not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]
+            ):
                 flowcept_gpu_info["used"] = amd_info.query_vram_usage()
         except Exception as e:
             flowcept_gpu_info["used"] = None
@@ -257,7 +277,11 @@ class TelemetryCapture:
             self.logger.exception(e)
 
         try:
-            if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries or "max_shader_clock" not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]:
+            if (
+                gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries
+                or "max_shader_clock"
+                not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]
+            ):
                 max_clocks = amd_info.query_max_clocks()
                 flowcept_gpu_info["max_shader_clock"] = max_clocks["sclk_max"]
                 flowcept_gpu_info["max_memory_clock"] = max_clocks["mclk_max"]
@@ -266,36 +290,58 @@ class TelemetryCapture:
             self.logger.exception(e)
 
         try:
-            if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries or "shader_clock" not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]:
+            if (
+                gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries
+                or "shader_clock"
+                not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]
+            ):
                 flowcept_gpu_info["shader_clock"] = amd_info.query_sclk()
         except Exception as e:
             self.__register_unsuccessful_gpu_query(gpu_ix, "shader_clock")
             self.logger.exception(e)
 
         try:
-            if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries or "memory_clock" not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]:
+            if (
+                gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries
+                or "memory_clock"
+                not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]
+            ):
                 flowcept_gpu_info["memory_clock"] = amd_info.query_mclk()
         except Exception as e:
             self.__register_unsuccessful_gpu_query(gpu_ix, "memory_clock")
             self.logger.exception(e)
 
         try:
-            if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries or "gtt_usage" not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]:
+            if (
+                gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries
+                or "gtt_usage"
+                not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]
+            ):
                 flowcept_gpu_info["gtt_usage"] = amd_info.query_gtt_usage()
         except Exception as e:
             self.__register_unsuccessful_gpu_query(gpu_ix, "gtt_usage")
             self.logger.exception(e)
 
         try:
-            if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries or "load" not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]:
+            if (
+                gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries
+                or "load"
+                not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]
+            ):
                 flowcept_gpu_info["load"] = amd_info.query_load()
         except Exception as e:
             self.__register_unsuccessful_gpu_query(gpu_ix, "load")
             self.logger.exception(e)
 
         try:
-            if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries or "graphics_voltage" not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]:
-                flowcept_gpu_info["graphics_voltage"] = amd_info.query_graphics_voltage()
+            if (
+                gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries
+                or "graphics_voltage"
+                not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]
+            ):
+                flowcept_gpu_info[
+                    "graphics_voltage"
+                ] = amd_info.query_graphics_voltage()
         except Exception as e:
             self.__register_unsuccessful_gpu_query(gpu_ix, "graphics_voltage")
             self.logger.exception(e)
@@ -303,7 +349,11 @@ class TelemetryCapture:
         flowcept_gpu_info.update(memory_info)
 
         try:
-            if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries or "name" not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]:
+            if (
+                gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries
+                or "name"
+                not in TelemetryCapture._gpu_unsuccessful_queries[gpu_ix]
+            ):
                 name = amd_info.name
                 if name is not None:
                     flowcept_gpu_info["name"] = name
@@ -314,8 +364,10 @@ class TelemetryCapture:
         return flowcept_gpu_info
 
     def _capture_gpu(self):
-        try:      
-            self.logger.debug(f"These are the visible GPUs by Flowcept Capture: {N_GPUS}")
+        try:
+            self.logger.debug(
+                f"These are the visible GPUs by Flowcept Capture: {N_GPUS}"
+            )
             if len(N_GPUS) == 0:
                 self.logger.exception(
                     "You are trying to capture telemetry GPU info, but we"
@@ -338,7 +390,7 @@ class TelemetryCapture:
                 return None
 
             gpu_telemetry = {}
-            for gpu_ix in n_gpus:   
+            for gpu_ix in n_gpus:
                 gpu_telemetry[gpu_ix] = gpu_capture_func(gpu_ix)
 
             return gpu_telemetry

@@ -1,5 +1,8 @@
 import pickle
 
+from flowcept.commons.flowcept_dataclasses.workflow_object import (
+    WorkflowObject,
+)
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
     Status,
@@ -95,11 +98,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
             if ts.state == "waiting":
                 task_msg = TaskObject()
                 task_msg.task_id = task_id
-                task_msg.custom_metadata = {
-                    "scheduler": self._scheduler.address_safe,
-                    "scheduler_id": self._scheduler.id,
-                    "scheduler_pid": self._scheduler.proc.pid,
-                }
+
                 task_msg.status = Status.SUBMITTED
                 if self.settings.scheduler_create_timestamps:
                     task_msg.submitted_at = get_utc_now()
@@ -112,6 +111,22 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                 if self.settings.scheduler_should_get_input:
                     if hasattr(ts, "run_spec"):
                         get_run_spec_data(task_msg, ts.run_spec)
+
+                wf_obj = WorkflowObject()
+                if task_msg.workflow_id:
+                    wf_obj.workflow_id = task_msg.workflow_id
+                    wf_obj.custom_metadata = {
+                        "scheduler": self._scheduler.address_safe,
+                        "scheduler_id": self._scheduler.id,
+                        "scheduler_pid": self._scheduler.proc.pid,
+                    }
+                    self.send_workflow_message(wf_obj)
+                else:
+                    # TODO: we can't do much if the user doesn't specify a workflow_id
+                    # The reason why I'm marking this as TODO is because
+                    # there might be some clever way that I couldn't think of now.
+                    pass
+
                 self.intercept(task_msg)
 
         except Exception as e:
@@ -132,8 +147,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
         """
         self._worker = worker
         super().__init__(self._plugin_key)
-        self._generated_workflow_id = True # TODO: :refactor: This is to avoid workers to register workflows. The schedulers do that.
-        self._registered_workflow = True
+        self._generated_workflow_id = True  # TODO: :refactor: This is just to avoid the auto-generation of workflow id, which doesnt make sense in Dask case..
         super().start(bundle_exec_id=self._worker.scheduler.address)
         # Note that both scheduler and worker get the exact same input.
         # Worker does not resolve intermediate inputs, just like the scheduler.

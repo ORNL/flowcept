@@ -47,13 +47,7 @@ web_server:
   port: 5000
 
 sys_metadata:
-  place_holder: ""
-#  sys_name: 0
-#  node_name: 0
-#  login_name: 0
-#  public_ip: 0
-#  private_ip: 0
-#
+  environment_id: "frontier"
 
 extra_metadata:
   place_holder: ""
