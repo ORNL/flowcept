@@ -70,8 +70,10 @@ class MLDecoratorDaskTests(unittest.TestCase):
         # which requires forwarding on multiple layers
 
         task_query = TaskQueryAPI()
-        module_docs = task_query.get_subworkflow_tasks_from_a_parent_workflow(
-            parent_workflow_id=wf_id
+        module_docs = (
+            task_query.get_subworkflows_tasks_from_a_parent_workflow(
+                parent_workflow_id=wf_id
+            )
         )
         assert len(module_docs) > 0
 

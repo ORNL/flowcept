@@ -40,6 +40,7 @@ class TaskObject:
     stdout: Union[AnyStr, Dict] = None
     stderr: Union[AnyStr, Dict] = None
     custom_metadata: Dict[AnyStr, Any] = None
+    mq_host: str = None
     environment_id: AnyStr = None
     node_name: AnyStr = None
     login_name: AnyStr = None
