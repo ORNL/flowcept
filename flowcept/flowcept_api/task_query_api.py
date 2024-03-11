@@ -139,7 +139,7 @@ class TaskQueryAPI(object):
             else:
                 self.logger.error("Error when executing query.")
 
-    def get_subworkflow_tasks_from_a_parent_workflow(
+    def get_subworkflows_tasks_from_a_parent_workflow(
         self, parent_workflow_id: str
     ) -> List[Dict]:
         """
@@ -153,11 +153,14 @@ class TaskQueryAPI(object):
 
         """
         db_api = DBAPI()
-        sub_wf = db_api.workflow_query(
+        sub_wfs = db_api.workflow_query(
             {"parent_workflow_id": parent_workflow_id}
         )
-        sub_wf_docs = self.query({"workflow_id": sub_wf.workflow_id})
-        return sub_wf_docs
+        tasks = []
+        for sub_wf in sub_wfs:
+            sub_wf_tasks = self.query({"workflow_id": sub_wf.workflow_id})
+            tasks.extend(sub_wf_tasks)
+        return tasks
 
     def df_query(
         self,

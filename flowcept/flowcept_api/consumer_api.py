@@ -2,6 +2,7 @@ from typing import List, Union
 from time import sleep
 
 from flowcept.commons.daos.mq_dao import MQDao
+from flowcept.configs import REDIS_INSTANCES
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
@@ -14,9 +15,9 @@ class FlowceptConsumerAPI(object):
         interceptors: Union[BaseInterceptor, List[BaseInterceptor]] = None,
     ):
         self.logger = FlowceptLogger()
-        self._document_inserter: DocumentInserter = None
-        self._mq_dao = MQDao()
-
+        # self._document_inserter: DocumentInserter = None
+        # self._mq_dao = MQDao()
+        self._document_inserters: List[DocumentInserter] = []
         if interceptors is not None and type(interceptors) != list:
             interceptors = [interceptors]
         self._interceptors: List[BaseInterceptor] = interceptors
@@ -39,9 +40,26 @@ class FlowceptConsumerAPI(object):
                 self.logger.debug(f"...Flowceptor {key} started ok!")
 
         self.logger.debug("Flowcept Consumer starting...")
-        self._document_inserter = DocumentInserter(
-            check_safe_stops=True
-        ).start()
+
+        if REDIS_INSTANCES is not None and len(REDIS_INSTANCES):
+            for mq_host_port in REDIS_INSTANCES:
+                split = mq_host_port.split(":")
+                mq_host = split[0]
+                mq_port = int(split[1])
+                self._document_inserters.append(
+                    DocumentInserter(
+                        check_safe_stops=True,
+                        mq_host=mq_host,
+                        mq_port=mq_port,
+                    ).start()
+                )
+        else:
+            self._document_inserters.append(
+                DocumentInserter(
+                    check_safe_stops=True,
+                ).start()
+            )
+
         # sleep(1)
         self.logger.debug("Ok, we're consuming messages!")
         self.is_started = True
@@ -68,13 +86,14 @@ class FlowceptConsumerAPI(object):
                 self.logger.debug(f"Flowceptor {key} stopping...")
                 interceptor.stop()
                 self.logger.debug("... ok!")
-        self.logger.debug("Stopping Doc Inserter...")
-        self._document_inserter.stop(bundle_exec_id=id(self))
+        self.logger.debug("Stopping Doc Inserters...")
+        for doc_inserter in self._document_inserters:
+            doc_inserter.stop(bundle_exec_id=id(self))
         self.is_started = False
         self.logger.debug("All stopped!")
 
-    def reset_time_based_threads_tracker(self):
-        self._mq_dao.delete_all_time_based_threads_sets()
+    # def reset_time_based_threads_tracker(self): # TODO are we using this?
+    #     self._mq_dao.delete_all_time_based_threads_sets()
 
     def __enter__(self):
         self.start()

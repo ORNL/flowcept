@@ -119,6 +119,8 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                         "scheduler": self._scheduler.address_safe,
                         "scheduler_id": self._scheduler.id,
                         "scheduler_pid": self._scheduler.proc.pid,
+                        "clients": len(self._scheduler.clients),
+                        "n_workers": len(self._scheduler.workers),
                     }
                     self.send_workflow_message(wf_obj)
                 else:
