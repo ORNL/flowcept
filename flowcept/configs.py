@@ -58,16 +58,8 @@ REDIS_INSTANCES = settings["main_redis"].get("instances", None)
 
 REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
 REDIS_PASSWORD = settings["main_redis"].get("password", None)
-
-if REDIS_INSTANCES is not None and len(REDIS_INSTANCES):
-    _redis_id = random.randint(0, len(REDIS_INSTANCES) - 1)
-    redis_host_port = REDIS_INSTANCES[_redis_id].split(":")
-    REDIS_HOST = redis_host_port[0]
-    REDIS_PORT = int(redis_host_port[1])
-else:
-    REDIS_ID = None
-    REDIS_HOST = settings["main_redis"].get("host", "localhost")
-    REDIS_PORT = int(settings["main_redis"].get("port", "6379"))
+REDIS_HOST = settings["main_redis"].get("host", os.getenv("REDIS_HOST", "localhost"))
+REDIS_PORT = int(settings["main_redis"].get("port", os.getenv("REDIS_PORT", "6379")))
 
 REDIS_BUFFER_SIZE = int(settings["main_redis"].get("buffer_size", 50))
 REDIS_INSERTION_BUFFER_TIME = int(
@@ -204,6 +196,7 @@ except:
 
 EXTRA_METADATA = settings.get("extra_metadata", {})
 EXTRA_METADATA.update({"mq_host": REDIS_HOST})
+EXTRA_METADATA.update({"mq_port": REDIS_PORT})
 
 ######################
 #    Web Server      #
