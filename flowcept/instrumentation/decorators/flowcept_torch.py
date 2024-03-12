@@ -137,7 +137,8 @@ def register_module_as_workflow(module: nn.Module, parent_workflow_id=None):
     workflow_obj = WorkflowObject()
     workflow_obj.parent_workflow_id = parent_workflow_id
     workflow_obj.name = module.__class__.__name__
-    DBAPI().insert_or_update_workflow(
+
+    flowcept.instrumentation.decorators.instrumentation_interceptor.send_workflow_message(
         workflow_obj
-    )  # TODO :refactor: we should be using workflow message intercept instead
+    )
     return workflow_obj.workflow_id

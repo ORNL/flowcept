@@ -58,8 +58,12 @@ REDIS_INSTANCES = settings["main_redis"].get("instances", None)
 
 REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
 REDIS_PASSWORD = settings["main_redis"].get("password", None)
-REDIS_HOST = settings["main_redis"].get("host", os.getenv("REDIS_HOST", "localhost"))
-REDIS_PORT = int(settings["main_redis"].get("port", os.getenv("REDIS_PORT", "6379")))
+REDIS_HOST = settings["main_redis"].get(
+    "host", os.getenv("REDIS_HOST", "localhost")
+)
+REDIS_PORT = int(
+    settings["main_redis"].get("port", os.getenv("REDIS_PORT", "6379"))
+)
 
 REDIS_BUFFER_SIZE = int(settings["main_redis"].get("buffer_size", 50))
 REDIS_INSERTION_BUFFER_TIME = int(

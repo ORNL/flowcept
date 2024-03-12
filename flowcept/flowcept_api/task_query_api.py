@@ -258,7 +258,7 @@ class TaskQueryAPI(object):
                     + timedelta(hours=shift_hours)
                 )
             except Exception as e:
-                self.logger.exception(e)
+                self.logger.info(e)
 
         try:
             df["elapsed_time"] = df["ended_at"] - df["started_at"]
@@ -268,7 +268,7 @@ class TaskQueryAPI(object):
                 else -1
             )
         except Exception as e:
-            self.logger.exception(e)
+            self.logger.info(e)
 
         return df
 
