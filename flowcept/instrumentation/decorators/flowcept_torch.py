@@ -1,3 +1,4 @@
+import uuid
 from typing import List, Dict
 
 import torch
@@ -135,9 +136,9 @@ def register_modules(
 
 def register_module_as_workflow(module: nn.Module, parent_workflow_id=None):
     workflow_obj = WorkflowObject()
+    workflow_obj.workflow_id = str(uuid.uuid4())
     workflow_obj.parent_workflow_id = parent_workflow_id
     workflow_obj.name = module.__class__.__name__
-
     flowcept.instrumentation.decorators.instrumentation_interceptor.send_workflow_message(
         workflow_obj
     )
