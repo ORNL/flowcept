@@ -52,7 +52,9 @@ class DocumentDBDao(object):
             for x in self._tasks_collection.list_indexes()
         ]
         if not TaskObject.task_id_field() in existing_indices:
-            self._tasks_collection.create_index(TaskObject.task_id_field(), unique=True)
+            self._tasks_collection.create_index(
+                TaskObject.task_id_field(), unique=True
+            )
         if not TaskObject.workflow_id_field() in existing_indices:
             self._tasks_collection.create_index(
                 TaskObject.workflow_id_field()
@@ -64,7 +66,9 @@ class DocumentDBDao(object):
             for x in self._wfs_collection.list_indexes()
         ]
         if not WorkflowObject.workflow_id_field() in existing_indices:
-            self._wfs_collection.create_index(WorkflowObject.workflow_id_field(), unique=True)
+            self._wfs_collection.create_index(
+                WorkflowObject.workflow_id_field(), unique=True
+            )
 
     def task_query(
         self,
