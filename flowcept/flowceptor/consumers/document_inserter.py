@@ -40,7 +40,13 @@ class DocumentInserter:
             elif value in (None, ""):
                 del d[key]
 
-    def __init__(self, check_safe_stops=True, mq_host=None, mq_port=None, bundle_exec_id=None):
+    def __init__(
+        self,
+        check_safe_stops=True,
+        mq_host=None,
+        mq_port=None,
+        bundle_exec_id=None,
+    ):
         self._buffer = list()
         self._mq_dao = MQDao(mq_host, mq_port)
         self._doc_dao = DocumentDBDao()
@@ -136,7 +142,9 @@ class DocumentInserter:
         return inserted
 
     def handle_control_message(self, message):
-        self.logger.info(f"I'm doc inserter {id(self)}. I received this control msg received: {message}")
+        self.logger.info(
+            f"I'm doc inserter {id(self)}. I received this control msg received: {message}"
+        )
         if message["info"] == "mq_dao_thread_stopped":
             exec_bundle_id = message.get("exec_bundle_id", None)
             interceptor_instance_id = message.get("interceptor_instance_id")
@@ -155,7 +163,7 @@ class DocumentInserter:
             self.logger.info(
                 f"Done register_time_based_thread_end "
                 f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
-            )                
+            )
             return "continue"
         elif message["info"] == "stop_document_inserter":
             self.logger.info("Document Inserter is stopping...")
@@ -220,9 +228,7 @@ class DocumentInserter:
                 self.logger.exception(e)
                 sleep(2)
             self.logger.debug("Still in the doc insert. message listen loop")
-        self.logger.info(
-            "Ok, we broke the doc inserter message listen loop!"
-        )
+        self.logger.info("Ok, we broke the doc inserter message listen loop!")
         time_thread.join()
         self.logger.info("Joined time thread in doc inserter.")
 
@@ -242,12 +248,17 @@ class DocumentInserter:
                 sleep(sleep_time)
 
                 if trial >= max_trials:
-                    if len(self._buffer) == 0:# and len(self._mq_dao._buffer) == 0:
-                        self.logger.warning(f"Doc Inserter {id(self)} gave up on waiting for the signal. It is probably safe to stop by now.")
+                    if (
+                        len(self._buffer) == 0
+                    ):  # and len(self._mq_dao._buffer) == 0:
+                        self.logger.warning(
+                            f"Doc Inserter {id(self)} gave up on waiting for the signal. It is probably safe to stop by now."
+                        )
                         break
         self.logger.info("Sending message to stop document inserter.")
         self._mq_dao.stop_document_inserter()
-        self.logger.info(f"Doc Inserter {id(self)} Sent message to stop itself.")
+        self.logger.info(
+            f"Doc Inserter {id(self)} Sent message to stop itself."
+        )
         self._main_thread.join()
         self.logger.info("Document Inserter is stopped.")
-        

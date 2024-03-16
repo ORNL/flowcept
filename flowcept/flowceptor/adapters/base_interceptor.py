@@ -119,20 +119,20 @@ class BaseInterceptor(object):
         :return:
         """
         self._bundle_exec_id = bundle_exec_id
-        self._mq_dao.start_time_based_flushing( 
+        self._mq_dao.start_time_based_flushing(
             self._interceptor_instance_id, bundle_exec_id
-        )        
+        )
         return self
 
     def stop(self) -> bool:
         """
         Gracefully stops an interceptor
         :return:
-        """        
+        """
         self._mq_dao.stop_time_based_flushing(
             self._interceptor_instance_id, self._bundle_exec_id
-        ) 
-        self.telemetry_capture.shutdown_gpu_telemetry() 
+        )
+        self.telemetry_capture.shutdown_gpu_telemetry()
 
     def observe(self, *args, **kwargs):
         """
@@ -152,8 +152,7 @@ class BaseInterceptor(object):
         """
         raise NotImplementedError()
 
-
-    def send_workflow_message(self, workflow_obj: WorkflowObject):        
+    def send_workflow_message(self, workflow_obj: WorkflowObject):
         wf_id = workflow_obj.workflow_id
         if wf_id is None:
             self.logger.warning(
@@ -163,7 +162,7 @@ class BaseInterceptor(object):
         if wf_id in self._saved_workflows:
             return
         self._saved_workflows.add(wf_id)
-        if ( # NO MQ
+        if (  # NO MQ
             self._mq_dao._buffer is None
         ):  # TODO :base-interceptor-refactor: :code-reorg: :usability:
             raise Exception(

@@ -13,8 +13,8 @@ class FlowceptConsumerAPI(object):
     def __init__(
         self,
         interceptors: Union[BaseInterceptor, List[BaseInterceptor]] = None,
-        bundle_exec_id = None,
-        start_doc_inserter=True
+        bundle_exec_id=None,
+        start_doc_inserter=True,
     ):
         self.logger = FlowceptLogger()
 
@@ -46,30 +46,28 @@ class FlowceptConsumerAPI(object):
                 self.logger.debug(f"...Flowceptor {key} started ok!")
 
         if self._start_doc_inserter:
-                
+            self.logger.debug("Flowcept Consumer starting...")
 
-          self.logger.debug("Flowcept Consumer starting...")
-
-          if REDIS_INSTANCES is not None and len(REDIS_INSTANCES):
-              for mq_host_port in REDIS_INSTANCES:
-                  split = mq_host_port.split(":")
-                  mq_host = split[0]
-                  mq_port = int(split[1])
-                  self._document_inserters.append(
-                      DocumentInserter(
-                          check_safe_stops=True,
-                          mq_host=mq_host,
-                          mq_port=mq_port,
-                          bundle_exec_id=self._bundle_exec_id
-                      ).start()
-                  )
-          else:
-              self._document_inserters.append(
-                  DocumentInserter(
-                      check_safe_stops=True,
-                      bundle_exec_id=self._bundle_exec_id
-                  ).start()
-              )
+            if REDIS_INSTANCES is not None and len(REDIS_INSTANCES):
+                for mq_host_port in REDIS_INSTANCES:
+                    split = mq_host_port.split(":")
+                    mq_host = split[0]
+                    mq_port = int(split[1])
+                    self._document_inserters.append(
+                        DocumentInserter(
+                            check_safe_stops=True,
+                            mq_host=mq_host,
+                            mq_port=mq_port,
+                            bundle_exec_id=self._bundle_exec_id,
+                        ).start()
+                    )
+            else:
+                self._document_inserters.append(
+                    DocumentInserter(
+                        check_safe_stops=True,
+                        bundle_exec_id=self._bundle_exec_id,
+                    ).start()
+                )
         self.logger.debug("Ok, we're consuming messages!")
         self.is_started = True
         return self
