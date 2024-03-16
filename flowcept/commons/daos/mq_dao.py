@@ -38,7 +38,7 @@ class MQDao:
             set_id += "_" + str(exec_bundle_id)
         return set_id
 
-    def __init__(self):
+    def __init__(self, mq_host=None, mq_port=None):
         self.logger = FlowceptLogger()
 
         if REDIS_URI is not None:
@@ -47,12 +47,11 @@ class MQDao:
         else:
             # Otherwise, use the host, port, and password settings
             self._redis = Redis(
-                host=REDIS_HOST,
-                port=REDIS_PORT,
+                host=REDIS_HOST if mq_host is None else mq_host,
+                port=REDIS_PORT if mq_port is None else mq_port,
                 db=0,
                 password=REDIS_PASSWORD if REDIS_PASSWORD else None,
             )
-
         self._keyvalue_dao = KeyValueDAO(connection=self._redis)
         self._buffer = None
         self._time_thread: Thread = None

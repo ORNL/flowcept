@@ -2,6 +2,7 @@ from typing import List, Union
 from time import sleep
 
 from flowcept.commons.daos.mq_dao import MQDao
+from flowcept.configs import REDIS_INSTANCES
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
@@ -16,8 +17,8 @@ class FlowceptConsumerAPI(object):
         start_doc_inserter=True
     ):
         self.logger = FlowceptLogger()
-        self._document_inserter: DocumentInserter = None
-        self._mq_dao = MQDao()
+
+        self._document_inserters: List[DocumentInserter] = []
         self._start_doc_inserter = start_doc_inserter
         if bundle_exec_id is None:
             self._bundle_exec_id = id(self)
@@ -45,13 +46,31 @@ class FlowceptConsumerAPI(object):
                 self.logger.debug(f"...Flowceptor {key} started ok!")
 
         if self._start_doc_inserter:
-            self.logger.debug("Flowcept Consumer starting...")
-            self._document_inserter = DocumentInserter(
-                check_safe_stops=True,
-                bundle_exec_id=self._bundle_exec_id
-            ).start()
-            # sleep(1)
-            self.logger.debug("Ok, we're consuming messages!")
+                
+
+          self.logger.debug("Flowcept Consumer starting...")
+
+          if REDIS_INSTANCES is not None and len(REDIS_INSTANCES):
+              for mq_host_port in REDIS_INSTANCES:
+                  split = mq_host_port.split(":")
+                  mq_host = split[0]
+                  mq_port = int(split[1])
+                  self._document_inserters.append(
+                      DocumentInserter(
+                          check_safe_stops=True,
+                          mq_host=mq_host,
+                          mq_port=mq_port,
+                          bundle_exec_id=self._bundle_exec_id
+                      ).start()
+                  )
+          else:
+              self._document_inserters.append(
+                  DocumentInserter(
+                      check_safe_stops=True,
+                      bundle_exec_id=self._bundle_exec_id
+                  ).start()
+              )
+        self.logger.debug("Ok, we're consuming messages!")
         self.is_started = True
         return self
 
@@ -74,10 +93,10 @@ class FlowceptConsumerAPI(object):
                     key = interceptor.settings.key
                 self.logger.info(f"Flowceptor {key} stopping...")
                 interceptor.stop()
-                self.logger.info("... ok!")
         if self._start_doc_inserter:
-            self.logger.info("Stopping Doc Inserter...")
-            self._document_inserter.stop(bundle_exec_id=self._bundle_exec_id)
+            self.logger.info("Stopping Doc Inserters...")
+            for doc_inserter in self._document_inserters:
+                doc_inserter.stop(bundle_exec_id=id(self))
         self.is_started = False
         self.logger.debug("All stopped!")
 
