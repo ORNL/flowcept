@@ -79,7 +79,9 @@ def torch_args_handler(task_message, *args, **kwargs):
                         task_message.custom_metadata = custom_metadata
 
                 elif isinstance(arg, torch.Tensor):
-                    args_handled[f"tensor_{i}"] = 1 #_inspect_torch_tensor(arg) #NO TORCH
+                    args_handled[
+                        f"tensor_{i}"
+                    ] = 1  # _inspect_torch_tensor(arg) #NO TORCH
                 else:
                     args_handled[f"arg_{i}"] = arg
 
