@@ -6,7 +6,7 @@ project:
   register_workflow: true
   enrich_messages: true
   telemetry_capture:
-    gpu: false
+    gpu: ~
     cpu: true
     per_cpu: true
     process_info: true
@@ -26,6 +26,7 @@ experiment:
 
 main_redis:
   host: localhost
+  instances: ["localhost:6379"] # We can have multiple redis instances being accessed by the consumers but each interceptor will currently access one single redis.
   port: 6379
   channel: interception
   buffer_size: 50

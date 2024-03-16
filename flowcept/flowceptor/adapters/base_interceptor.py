@@ -7,6 +7,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.commons.utils import get_utc_now
 from flowcept.configs import (
+    settings,
     FLOWCEPT_USER,
     SYS_NAME,
     NODE_NAME,
@@ -18,7 +19,6 @@ from flowcept.configs import (
     EXTRA_METADATA,
     ENRICH_MESSAGES,
     ENVIRONMENT_ID,
-    settings,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao import MQDao

@@ -40,9 +40,9 @@ class DocumentInserter:
             elif value in (None, ""):
                 del d[key]
 
-    def __init__(self, check_safe_stops=True, bundle_exec_id=None):
+    def __init__(self, check_safe_stops=True, mq_host=None, mq_port=None, bundle_exec_id=None):
         self._buffer = list()
-        self._mq_dao = MQDao()
+        self._mq_dao = MQDao(mq_host, mq_port)
         self._doc_dao = DocumentDBDao()
         self._previous_time = time()
         self.logger = FlowceptLogger()
@@ -145,7 +145,6 @@ class DocumentInserter:
                 f"in DocInserter from the interceptor "
                 f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
             )
-            #if self._bundle_exec_id == exec_bundle_id:
             self.logger.info(
                 f"Begin register_time_based_thread_end "
                 f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
@@ -176,7 +175,7 @@ class DocumentInserter:
             )
             sleep(MONGO_INSERTION_BUFFER_TIME)
 
-    def start(self):
+    def start(self) -> "DocumentInserter":
         self._main_thread = Thread(target=self._start)
         self._main_thread.start()
         return self
