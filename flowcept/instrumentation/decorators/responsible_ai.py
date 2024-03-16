@@ -1,4 +1,5 @@
 # import shap
+from functools import wraps
 import numpy as np
 from torch import nn
 
@@ -61,15 +62,16 @@ def _inspect_inner_modules(model, modules_dict={}, in_named=None):
     return modules_dict
 
 
-def model_profiler(name=None):
+def model_profiler():
     def decorator(func):
+        @wraps(func)
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
-            error_format_msg = (
-                "You must return a dict in the form:" " {'model': model,"
-            )
-            if type(result) != dict:
-                raise Exception(error_format_msg)
+            if type(result) != dict or "model" not in result:
+                raise Exception(
+                    "We expect that you give us the model so we can profile it. Return a dict with a 'model' key in it with the pytorch model to be profiled."
+                )
+
             model = result.pop("model", None)
             nparams = 0
             max_width = -1
@@ -91,8 +93,6 @@ def model_profiler(name=None):
                 "modules": modules,
                 "model_repr": repr(model),
             }
-            if name is not None:
-                this_result["name"] = name
             ret = {}
             if not isinstance(result, dict):
                 ret["result"] = result

@@ -15,7 +15,6 @@ from flowcept.instrumentation.decorators.flowcept_torch import (
     register_module_as_workflow,
 )
 from flowcept.instrumentation.decorators.responsible_ai import (
-    model_explainer,
     model_profiler,
 )
 
@@ -168,7 +167,8 @@ class ModelTrainer(object):
         #  because we are capturing at two levels: at the model.fit and at
         #  every layer. Can we do it better?
         with FlowceptConsumerAPI(
-            flowcept.instrumentation.decorators.instrumentation_interceptor
+            flowcept.instrumentation.decorators.instrumentation_interceptor,
+            start_doc_inserter=False,
         ):
             train_loader, test_loader = ModelTrainer.build_train_test_loader()
             device = torch.device("cpu")

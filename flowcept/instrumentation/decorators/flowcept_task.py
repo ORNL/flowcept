@@ -1,4 +1,3 @@
-import uuid
 from time import time
 
 import flowcept.commons

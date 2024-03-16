@@ -1,10 +1,11 @@
 import uuid
 from abc import ABCMeta, abstractmethod
 
+from omegaconf import OmegaConf
+
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
-from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.commons.utils import get_utc_now
 from flowcept.configs import (
     settings,
@@ -56,7 +57,7 @@ class BaseInterceptor(object):
 
     def _enrich_workflow_message(self, workflow_obj: WorkflowObject):
         workflow_obj.utc_timestamp = get_utc_now()
-        workflow_obj.flowcept_settings = settings
+        workflow_obj.flowcept_settings = OmegaConf.to_container(settings)
 
         if self.settings is not None:
             # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
@@ -75,7 +76,9 @@ class BaseInterceptor(object):
             workflow_obj.sys_name = SYS_NAME
 
         if workflow_obj.extra_metadata is None and EXTRA_METADATA is not None:
-            workflow_obj.extra_metadata = EXTRA_METADATA
+            workflow_obj.extra_metadata = OmegaConf.to_container(
+                EXTRA_METADATA
+            )
 
         if workflow_obj.flowcept_version is None:
             workflow_obj.flowcept_version = __version__
@@ -162,9 +165,8 @@ class BaseInterceptor(object):
         if wf_id in self._saved_workflows:
             return
         self._saved_workflows.add(wf_id)
-        if (  # NO MQ
-            self._mq_dao._buffer is None
-        ):  # TODO :base-interceptor-refactor: :code-reorg: :usability:
+        # TODO :base-interceptor-refactor: :code-reorg: :usability:
+        if self._mq_dao._buffer is None:
             raise Exception(
                 f"This interceptor {id(self)} has never been started!"
             )
@@ -188,7 +190,6 @@ class BaseInterceptor(object):
         self._mq_dao.publish(_msg)
 
     def intercept(self, task_msg: TaskObject):
-        return
         if (
             self._mq_dao._buffer is None
         ):  # TODO :base-interceptor-refactor: :code-reorg: :usability:
