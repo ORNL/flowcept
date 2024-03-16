@@ -57,8 +57,12 @@ REDIS_INSTANCES = settings["main_redis"].get("instances", None)
 
 REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
 REDIS_PASSWORD = settings["main_redis"].get("password", None)
-REDIS_HOST = os.getenv("REDIS_HOST", settings["main_redis"].get("host", "localhost"))
-REDIS_PORT = int(os.getenv("REDIS_PORT", settings["main_redis"].get("port", "6379")))
+REDIS_HOST = os.getenv(
+    "REDIS_HOST", settings["main_redis"].get("host", "localhost")
+)
+REDIS_PORT = int(
+    os.getenv("REDIS_PORT", settings["main_redis"].get("port", "6379"))
+)
 
 REDIS_BUFFER_SIZE = int(settings["main_redis"].get("buffer_size", 50))
 REDIS_INSERTION_BUFFER_TIME = int(
@@ -121,18 +125,25 @@ TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
 # GPU TELEMETRY CAPTURE SETTINGS #
 #################################
 
-N_GPUS = dict() # TODO use a better var name. This is legacy
+# TODO use a better var name. This is legacy. We could move this to the static part of TelemetryCapture
+N_GPUS = dict()
 GPU_HANDLES = None
-if TELEMETRY_CAPTURE is not None and TELEMETRY_CAPTURE.get("GPU", None) is not None:
+if (
+    TELEMETRY_CAPTURE is not None
+    and TELEMETRY_CAPTURE.get("GPU", None) is not None
+):
     if eval(TELEMETRY_CAPTURE.get("gpu", "None")) is not None:
         try:
             visible_devices_var = os.environ.get("CUDA_VISIBLE_DEVICES", None)
             if visible_devices_var is not None:
-                visible_devices = [int(i) for i in visible_devices_var.split(",")]
+                visible_devices = [
+                    int(i) for i in visible_devices_var.split(",")
+                ]
                 N_GPUS["nvidia"] = visible_devices
-                GPU_HANDLES = [] # TODO
+                GPU_HANDLES = []  # TODO
             else:
                 from pynvml import nvmlDeviceGetCount
+
                 N_GPUS["nvidia"] = list(range(0, nvmlDeviceGetCount()))
                 GPU_HANDLES = []
         except:
@@ -140,13 +151,17 @@ if TELEMETRY_CAPTURE is not None and TELEMETRY_CAPTURE.get("GPU", None) is not N
         try:
             visible_devices_var = os.environ.get("ROCR_VISIBLE_DEVICES", None)
             if visible_devices_var is not None:
-                visible_devices = [int(i) for i in visible_devices_var.split(",")]
+                visible_devices = [
+                    int(i) for i in visible_devices_var.split(",")
+                ]
                 N_GPUS["amd"] = visible_devices
                 from amdsmi import amdsmi_init, amdsmi_get_processor_handles
+
                 amdsmi_init()
                 GPU_HANDLES = amdsmi_get_processor_handles()
             else:
                 from amdsmi import amdsmi_init, amdsmi_get_processor_handles
+
                 amdsmi_init()
                 GPU_HANDLES = amdsmi_get_processor_handles()
                 N_GPUS["amd"] = list(range(0, len(GPU_HANDLES)))

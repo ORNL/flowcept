@@ -95,7 +95,9 @@ class MQDao:
     def start_time_based_flushing(
         self, interceptor_instance_id: str, exec_bundle_id=None
     ):
-        self.logger.info(f"Starting MQ time-based flushing! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}")
+        self.logger.info(
+            f"Starting MQ time-based flushing! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}"
+        )
         self._buffer = list()
         self._time_thread: Thread = None
         self._previous_time = time()
@@ -112,16 +114,24 @@ class MQDao:
     def stop_time_based_flushing(
         self, interceptor_instance_id: str, exec_bundle_id: int = None
     ):
-        self.logger.info(f"MQ time-based received stop signal! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}")
+        self.logger.info(
+            f"MQ time-based received stop signal! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}"
+        )
         if self._time_based_flushing_started:
             self._stop_flag = True
             self._time_thread.join()
-            self.logger.info(f"Joined MQ time thread. bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}")
+            self.logger.info(
+                f"Joined MQ time thread. bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}"
+            )
             self._flush()
-            self.logger.info(f"Flushed MQ for the last time! Now going to send stop msg. bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}")
+            self.logger.info(
+                f"Flushed MQ for the last time! Now going to send stop msg. bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}"
+            )
             self._send_stop_message(interceptor_instance_id, exec_bundle_id)
             self._time_based_flushing_started = False
-            self.logger.info(f"MQ time-based sent stop message! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}")
+            self.logger.info(
+                f"MQ time-based sent stop message! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}"
+            )
         else:
             self.logger.error("MQ time-based flushing is not started")
 
@@ -131,12 +141,16 @@ class MQDao:
                 pipe = self._redis.pipeline()
                 for message in self._buffer:
                     try:
-                        self.logger.info(f"Going to flush {len(self._buffer)} to MQ...")
+                        self.logger.info(
+                            f"Going to flush {len(self._buffer)} to MQ..."
+                        )
                         pipe.publish(
                             REDIS_CHANNEL,
                             json.dumps(message, cls=MQDao.ENCODER),
                         )
-                        self.logger.info(f"Flushed {len(self._buffer)} to MQ.")
+                        self.logger.info(
+                            f"Flushed {len(self._buffer)} to MQ."
+                        )
                     except Exception as e:
                         self.logger.exception(e)
                         self.logger.error(
