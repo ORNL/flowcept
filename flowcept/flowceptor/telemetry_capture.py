@@ -39,10 +39,20 @@ class TelemetryCapture:
         if self.conf is not None:            
             self._visible_gpus = None
             self._gpu_type = None
-            self._gpu_conf = eval(self.conf.get("gpu", 'None'))
-            if self._gpu_conf is not None:
-                self._gpu_conf = set(self._gpu_conf)
-            if self._gpu_conf is not None and len(self._gpu_conf):
+            self._gpu_conf = self.conf.get("gpu", None)
+
+            if self._gpu_conf is None:
+                return
+
+            if isinstance(self._gpu_conf, str):
+                self._gpu_conf = eval(self.conf.get("gpu", 'None'))
+
+            if self._gpu_conf is None:
+                return
+
+            self._gpu_conf = set(self._gpu_conf)
+
+            if len(self._gpu_conf):
                 self.logger.debug(
                     f"These are the visible GPUs by Flowcept Capture: {N_GPUS}"
                 )
