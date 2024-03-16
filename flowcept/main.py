@@ -1,7 +1,5 @@
 import sys
 
-import yaml
-
 from flowcept import (
     FlowceptConsumerAPI,
     ZambezeInterceptor,
@@ -9,7 +7,7 @@ from flowcept import (
     TensorboardInterceptor,
 )
 from flowcept.commons.vocabulary import Vocabulary
-from flowcept.configs import SETTINGS_PATH
+from flowcept.configs import settings
 
 
 INTERCEPTORS = {
@@ -21,12 +19,9 @@ INTERCEPTORS = {
 
 
 def main():
-    with open(SETTINGS_PATH) as f:
-        yaml_data = yaml.load(f, Loader=yaml.FullLoader)
-
     interceptors = []
-    for plugin_key in yaml_data["plugins"]:
-        plugin_settings_obj = yaml_data["plugins"][plugin_key]
+    for plugin_key in settings["plugins"]:
+        plugin_settings_obj = settings["plugins"][plugin_key]
         if (
             "enabled" in plugin_settings_obj
             and not plugin_settings_obj["enabled"]

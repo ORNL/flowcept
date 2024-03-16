@@ -47,13 +47,12 @@ class BaseInterceptor(object):
         else:
             self.settings = None
         self._mq_dao = MQDao()
-        self._db_api = DBAPI()
+        # self._db_api = DBAPI()
         self._bundle_exec_id = None
         self._interceptor_instance_id = str(id(self))
         self.telemetry_capture = TelemetryCapture()
         self._saved_workflows = set()
         self._generated_workflow_id = False
-        # self._registered_workflow = False
 
     def _enrich_workflow_message(self, workflow_obj: WorkflowObject):
         workflow_obj.utc_timestamp = get_utc_now()
@@ -120,21 +119,20 @@ class BaseInterceptor(object):
         :return:
         """
         self._bundle_exec_id = bundle_exec_id
-        self._mq_dao.start_time_based_flushing(
+        self._mq_dao.start_time_based_flushing( 
             self._interceptor_instance_id, bundle_exec_id
-        )
-        self.telemetry_capture.init_gpu_telemetry()
+        )        
         return self
 
     def stop(self) -> bool:
         """
         Gracefully stops an interceptor
         :return:
-        """
+        """        
         self._mq_dao.stop_time_based_flushing(
             self._interceptor_instance_id, self._bundle_exec_id
-        )
-        self.telemetry_capture.shutdown_gpu_telemetry()
+        ) 
+        self.telemetry_capture.shutdown_gpu_telemetry() 
 
     def observe(self, *args, **kwargs):
         """
@@ -154,28 +152,8 @@ class BaseInterceptor(object):
         """
         raise NotImplementedError()
 
-    # def register_workflow(self, task_msg: TaskObject):
-    #     self._registered_workflow = True
-    #     if task_msg.workflow_id is None:
-    #         return
-    #
-    #     workflow_obj = WorkflowObject()
-    #     workflow_obj.workflow_id = task_msg.workflow_id
-    #     fill_with_basic_workflow_info(workflow_obj)
-    #     workflow_obj.interceptor_ids = [self._interceptor_instance_id]
-    #
-    #     machine_info = self.telemetry_capture.capture_machine_info()
-    #     if machine_info is not None:
-    #         if workflow_obj.machine_info is None:
-    #             workflow_obj.machine_info = {}
-    #         # TODO :refactor-base-interceptor: we might want to register machine info even when there's no observer
-    #         workflow_obj.machine_info[
-    #             self._interceptor_instance_id
-    #         ] = machine_info
 
-    #     self._db_api.insert_or_update_workflow(workflow_obj)
-
-    def send_workflow_message(self, workflow_obj: WorkflowObject):
+    def send_workflow_message(self, workflow_obj: WorkflowObject):        
         wf_id = workflow_obj.workflow_id
         if wf_id is None:
             self.logger.warning(
@@ -185,7 +163,7 @@ class BaseInterceptor(object):
         if wf_id in self._saved_workflows:
             return
         self._saved_workflows.add(wf_id)
-        if (
+        if ( # NO MQ
             self._mq_dao._buffer is None
         ):  # TODO :base-interceptor-refactor: :code-reorg: :usability:
             raise Exception(
@@ -211,6 +189,7 @@ class BaseInterceptor(object):
         self._mq_dao.publish(_msg)
 
     def intercept(self, task_msg: TaskObject):
+        return
         if (
             self._mq_dao._buffer is None
         ):  # TODO :base-interceptor-refactor: :code-reorg: :usability:
@@ -220,9 +199,6 @@ class BaseInterceptor(object):
 
         if ENRICH_MESSAGES:
             self._enrich_task_message(task_msg)
-
-        # if not self._registered_workflow:
-        #     self.register_workflow(task_msg)
 
         _msg = task_msg.to_dict()
         self.logger.debug(
