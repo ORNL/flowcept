@@ -12,10 +12,9 @@ class TestDocDBInserter(unittest.TestCase):
     def test_db(self):
         c0 = self.doc_dao.count()
         assert c0 >= 0
-        _id = self.doc_dao.insert_one({
-            "dummy": "test",
-            "task_id": str(uuid4())
-        })
+        _id = self.doc_dao.insert_one(
+            {"dummy": "test", "task_id": str(uuid4())}
+        )
         assert _id is not None
         _ids = self.doc_dao.insert_many(
             [
@@ -88,11 +87,28 @@ class TestDocDBInserter(unittest.TestCase):
         assert c0 >= 0
         uid = str(uuid4())
         docs = [
-            {"myid": uid, "debug": True, "status": "SUBMITTED", "task_id": str(uuid4()),},
-            {"myid": uid, "debug": True, "status": "RUNNING", "task_id": str(uuid4()),},
+            {
+                "myid": uid,
+                "debug": True,
+                "status": "SUBMITTED",
+                "task_id": str(uuid4()),
+            },
+            {
+                "myid": uid,
+                "debug": True,
+                "status": "RUNNING",
+                "task_id": str(uuid4()),
+            },
         ]
         self.doc_dao.insert_and_update_many("myid", docs)
-        docs = [{"myid": uid, "debug": True, "status": "FINISHED", "task_id": str(uuid4()),}]
+        docs = [
+            {
+                "myid": uid,
+                "debug": True,
+                "status": "FINISHED",
+                "task_id": str(uuid4()),
+            }
+        ]
         self.doc_dao.insert_and_update_many("myid", docs)
         self.doc_dao.delete_keys("myid", [uid])
         c1 = self.doc_dao.count()

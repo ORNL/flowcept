@@ -256,7 +256,8 @@ def model_train(
     # TODO :ml-refactor: save device type and random seed: https://pytorch.org/docs/stable/notes/randomness.html
     # TODO :base-interceptor-refactor: Can we do it better?
     with FlowceptConsumerAPI(
-        flowcept.instrumentation.decorators.instrumentation_interceptor
+        flowcept.instrumentation.decorators.instrumentation_interceptor,
+        start_doc_inserter=False,
     ):
         train_data = batchify(train_data, batch_size)
         val_data = batchify(val_data, eval_batch_size)

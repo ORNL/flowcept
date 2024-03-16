@@ -1,4 +1,3 @@
-import uuid
 from time import time
 
 import flowcept.commons
@@ -37,7 +36,7 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj = TaskObject()
             task_obj.started_at = time()
             task_obj.activity_id = func.__name__
-            task_obj.task_id = f"task_{task_obj.started_at}"            
+            task_obj.task_id = f"task_{task_obj.started_at}"
             task_obj.telemetry_at_start = (
                 instrumentation_interceptor.telemetry_capture.capture()
             )

@@ -22,7 +22,7 @@ from flowcept.configs import (
     MONGO_WORKFLOWS_COLLECTION,
     PERF_LOG,
     MONGO_URI,
-    MONGO_CREATE_INDEX
+    MONGO_CREATE_INDEX,
 )
 from flowcept.flowceptor.consumers.consumer_utils import (
     curate_dict_task_messages,
