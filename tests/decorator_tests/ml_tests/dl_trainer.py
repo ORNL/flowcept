@@ -151,9 +151,9 @@ class ModelTrainer(object):
             "accuracy": 100.0 * correct / len(test_loader.dataset),
         }
 
+    # @model_explainer()
     @staticmethod
     @model_profiler()
-    @model_explainer()
     def model_fit(
         conv_in_outs=[[1, 10], [10, 20]],
         conv_kernel_sizes=[5, 5],
