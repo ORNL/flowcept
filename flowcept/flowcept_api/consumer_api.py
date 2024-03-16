@@ -13,11 +13,17 @@ class FlowceptConsumerAPI(object):
     def __init__(
         self,
         interceptors: Union[BaseInterceptor, List[BaseInterceptor]] = None,
+        bundle_exec_id = None,
+        start_doc_inserter=True
     ):
         self.logger = FlowceptLogger()
-        # self._document_inserter: DocumentInserter = None
-        # self._mq_dao = MQDao()
+
         self._document_inserters: List[DocumentInserter] = []
+        self._start_doc_inserter = start_doc_inserter
+        if bundle_exec_id is None:
+            self._bundle_exec_id = id(self)
+        else:
+            self._bundle_exec_id = bundle_exec_id
         if interceptors is not None and type(interceptors) != list:
             interceptors = [interceptors]
         self._interceptors: List[BaseInterceptor] = interceptors
@@ -36,31 +42,34 @@ class FlowceptConsumerAPI(object):
                 else:
                     key = interceptor.settings.key
                 self.logger.debug(f"Flowceptor {key} starting...")
-                interceptor.start(bundle_exec_id=id(self))
+                interceptor.start(bundle_exec_id=self._bundle_exec_id)
                 self.logger.debug(f"...Flowceptor {key} started ok!")
 
-        self.logger.debug("Flowcept Consumer starting...")
+        if self._start_doc_inserter:
+                
 
-        if REDIS_INSTANCES is not None and len(REDIS_INSTANCES):
-            for mq_host_port in REDIS_INSTANCES:
-                split = mq_host_port.split(":")
-                mq_host = split[0]
-                mq_port = int(split[1])
-                self._document_inserters.append(
-                    DocumentInserter(
-                        check_safe_stops=True,
-                        mq_host=mq_host,
-                        mq_port=mq_port,
-                    ).start()
-                )
-        else:
-            self._document_inserters.append(
-                DocumentInserter(
-                    check_safe_stops=True,
-                ).start()
-            )
+          self.logger.debug("Flowcept Consumer starting...")
 
-        # sleep(1)
+          if REDIS_INSTANCES is not None and len(REDIS_INSTANCES):
+              for mq_host_port in REDIS_INSTANCES:
+                  split = mq_host_port.split(":")
+                  mq_host = split[0]
+                  mq_port = int(split[1])
+                  self._document_inserters.append(
+                      DocumentInserter(
+                          check_safe_stops=True,
+                          mq_host=mq_host,
+                          mq_port=mq_port,
+                          bundle_exec_id=self._bundle_exec_id
+                      ).start()
+                  )
+          else:
+              self._document_inserters.append(
+                  DocumentInserter(
+                      check_safe_stops=True,
+                      bundle_exec_id=self._bundle_exec_id
+                  ).start()
+              )
         self.logger.debug("Ok, we're consuming messages!")
         self.is_started = True
         return self
@@ -69,9 +78,8 @@ class FlowceptConsumerAPI(object):
         if not self.is_started:
             self.logger.warning("Consumer is already stopped!")
             return
-
         sleep_time = 1
-        self.logger.debug(
+        self.logger.info(
             f"Received the stop signal. We're going to wait {sleep_time} secs."
             f" before gracefully stopping..."
         )
@@ -83,17 +91,14 @@ class FlowceptConsumerAPI(object):
                     key = id(interceptor)
                 else:
                     key = interceptor.settings.key
-                self.logger.debug(f"Flowceptor {key} stopping...")
+                self.logger.info(f"Flowceptor {key} stopping...")
                 interceptor.stop()
-                self.logger.debug("... ok!")
-        self.logger.debug("Stopping Doc Inserters...")
-        for doc_inserter in self._document_inserters:
-            doc_inserter.stop(bundle_exec_id=id(self))
+        if self._start_doc_inserter:
+            self.logger.info("Stopping Doc Inserters...")
+            for doc_inserter in self._document_inserters:
+                doc_inserter.stop(bundle_exec_id=id(self))
         self.is_started = False
         self.logger.debug("All stopped!")
-
-    # def reset_time_based_threads_tracker(self): # TODO are we using this?
-    #     self._mq_dao.delete_all_time_based_threads_sets()
 
     def __enter__(self):
         self.start()
