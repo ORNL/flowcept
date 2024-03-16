@@ -6,7 +6,7 @@ project:
   register_workflow: true
   enrich_messages: true
   telemetry_capture:
-    gpu: false
+    gpu: ~
     cpu: true
     per_cpu: true
     process_info: true
