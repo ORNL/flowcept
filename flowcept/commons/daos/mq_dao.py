@@ -64,7 +64,7 @@ class MQDao:
         self, interceptor_instance_id: str, exec_bundle_id=None
     ):
         set_name = MQDao._get_set_name(exec_bundle_id)
-        self.logger.debug(
+        self.logger.info(
             f"Registering the beginning of the time_based MQ flush thread {set_name}.{interceptor_instance_id}"
         )
         self._keyvalue_dao.add_key_into_set(set_name, interceptor_instance_id)
@@ -73,11 +73,14 @@ class MQDao:
         self, interceptor_instance_id: str, exec_bundle_id=None
     ):
         set_name = MQDao._get_set_name(exec_bundle_id)
-        self.logger.debug(
+        self.logger.info(
             f"Registering the end of the time_based MQ flush thread {set_name}.{interceptor_instance_id}"
         )
         self._keyvalue_dao.remove_key_from_set(
             set_name, interceptor_instance_id
+        )
+        self.logger.info(
+            f"Done registering the end of the time_based MQ flush thread {set_name}.{interceptor_instance_id}"
         )
 
     def all_time_based_threads_ended(self, exec_bundle_id=None):
@@ -92,6 +95,7 @@ class MQDao:
     def start_time_based_flushing(
         self, interceptor_instance_id: str, exec_bundle_id=None
     ):
+        self.logger.info(f"Starting MQ time-based flushing! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}")
         self._buffer = list()
         self._time_thread: Thread = None
         self._previous_time = time()
@@ -108,16 +112,18 @@ class MQDao:
     def stop_time_based_flushing(
         self, interceptor_instance_id: str, exec_bundle_id: int = None
     ):
-        self.logger.info("MQ time-based received stop signal!")
+        self.logger.info(f"MQ time-based received stop signal! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}")
         if self._time_based_flushing_started:
             self._stop_flag = True
             self._time_thread.join()
+            self.logger.info(f"Joined MQ time thread. bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}")
             self._flush()
+            self.logger.info(f"Flushed MQ for the last time! Now going to send stop msg. bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}")
             self._send_stop_message(interceptor_instance_id, exec_bundle_id)
             self._time_based_flushing_started = False
-            self.logger.info("MQ time-based flushing stopped.")
+            self.logger.info(f"MQ time-based sent stop message! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}")
         else:
-            self.logger.warning("MQ time-based flushing is not started")
+            self.logger.error("MQ time-based flushing is not started")
 
     def _flush(self):
         with self._lock:
@@ -125,10 +131,12 @@ class MQDao:
                 pipe = self._redis.pipeline()
                 for message in self._buffer:
                     try:
+                        self.logger.info(f"Going to flush {len(self._buffer)} to MQ...")
                         pipe.publish(
                             REDIS_CHANNEL,
                             json.dumps(message, cls=MQDao.ENCODER),
                         )
+                        self.logger.info(f"Flushed {len(self._buffer)} to MQ.")
                     except Exception as e:
                         self.logger.exception(e)
                         self.logger.error(
@@ -168,10 +176,11 @@ class MQDao:
                     self.logger.debug("Time to flush to redis!")
                     self._previous_time = now
                     self._flush()
-            self.logger.debug(
+            self.logger.info(
                 f"Time-based Redis inserter going to wait for {REDIS_INSERTION_BUFFER_TIME} s."
             )
             sleep(REDIS_INSERTION_BUFFER_TIME)
+        self.logger.info("Broke the time_based_flushing in mq!")
 
     def _send_stop_message(
         self, interceptor_instance_id, exec_bundle_id=None
@@ -183,6 +192,7 @@ class MQDao:
             "interceptor_instance_id": interceptor_instance_id,
             "exec_bundle_id": exec_bundle_id,
         }
+        self.logger.info("Control msg sent: " + str(msg))
         self._redis.publish(REDIS_CHANNEL, json.dumps(msg))
 
     def stop_document_inserter(self):

@@ -2,7 +2,7 @@ import os
 import socket
 import getpass
 
-import yaml
+from omegaconf import OmegaConf
 import random
 
 ########################
@@ -26,8 +26,7 @@ if not os.path.exists(SETTINGS_PATH):
         "under the project's root path."
     )
 
-with open(SETTINGS_PATH) as f:
-    settings = yaml.safe_load(f)
+settings = OmegaConf.load(SETTINGS_PATH)
 
 ########################
 #   Log Settings       #
@@ -77,10 +76,10 @@ MONGO_URI = settings["mongodb"].get("uri", None)
 MONGO_HOST = settings["mongodb"].get("host", "localhost")
 MONGO_PORT = int(settings["mongodb"].get("port", "27017"))
 MONGO_DB = settings["mongodb"].get("db", PROJECT_NAME)
+MONGO_CREATE_INDEX = settings["mongodb"].get("create_collection_index", True)
 
 MONGO_TASK_COLLECTION = "tasks"
 MONGO_WORKFLOWS_COLLECTION = "workflows"
-
 
 # In seconds:
 MONGO_INSERTION_BUFFER_TIME = int(
@@ -122,17 +121,19 @@ TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
 # GPU TELEMETRY CAPTURE SETTINGS #
 #################################
 
-N_GPUS = dict()
-if TELEMETRY_CAPTURE.get("gpu", False):
+N_GPUS = dict() # TODO use a better var name. This is legacy
+GPU_HANDLES = None
+if TELEMETRY_CAPTURE is not None and eval(TELEMETRY_CAPTURE.get("gpu", "None")) is not None:
     try:
         visible_devices_var = os.environ.get("CUDA_VISIBLE_DEVICES", None)
         if visible_devices_var is not None:
             visible_devices = [int(i) for i in visible_devices_var.split(",")]
             N_GPUS["nvidia"] = visible_devices
+            GPU_HANDLES = [] # TODO
         else:
             from pynvml import nvmlDeviceGetCount
-
             N_GPUS["nvidia"] = list(range(0, nvmlDeviceGetCount()))
+            GPU_HANDLES = []
     except:
         pass
     try:
@@ -140,11 +141,14 @@ if TELEMETRY_CAPTURE.get("gpu", False):
         if visible_devices_var is not None:
             visible_devices = [int(i) for i in visible_devices_var.split(",")]
             N_GPUS["amd"] = visible_devices
+            from amdsmi import amdsmi_init, amdsmi_get_processor_handles
+            amdsmi_init()
+            GPU_HANDLES = amdsmi_get_processor_handles()
         else:
-            import pyamdgpuinfo
-
-            N_GPUS["amd"] = list(range(0, pyamdgpuinfo.detect_gpus()))
-
+            from amdsmi import amdsmi_init, amdsmi_get_processor_handles
+            amdsmi_init()
+            GPU_HANDLES = amdsmi_get_processor_handles()
+            N_GPUS["amd"] = list(range(0, len(GPU_HANDLES)))
     except:
         pass
 

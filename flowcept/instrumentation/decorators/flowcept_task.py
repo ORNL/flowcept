@@ -31,18 +31,16 @@ def flowcept_task(func=None, **decorator_kwargs):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            task_obj = TaskObject()
-            task_obj.activity_id = func.__name__
-            task_obj.task_id = str(uuid.uuid4())
-
             args_handler = decorator_kwargs.get(
                 "args_handler", default_args_handler
             )
-
+            task_obj = TaskObject()
+            task_obj.started_at = time()
+            task_obj.activity_id = func.__name__
+            task_obj.task_id = f"task_{task_obj.started_at}"            
             task_obj.telemetry_at_start = (
                 instrumentation_interceptor.telemetry_capture.capture()
             )
-            task_obj.started_at = time()
             task_obj.used = args_handler(task_obj, *args, **kwargs)
             try:
                 result = func(*args, **kwargs)
