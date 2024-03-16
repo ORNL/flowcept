@@ -1,4 +1,5 @@
 from typing import List, Dict
+import uuid
 
 import torch
 from torch import nn
@@ -32,24 +33,24 @@ def _inspect_torch_tensor(tensor: torch.Tensor):
         tensor_inspection["shape"] = list(tensor.shape)
     except Exception as e:
         logger.warning(f"For tensor {_id} could not get its shape. Exc: {e}")
-    try:
-        tensor_inspection["nbytes"] = tensor.nbytes
-    except Exception as e:
-        logger.warning(
-            f"For tensor {_id}, could not get its nbytes. Exc: {e}"
-        )
-    try:
-        tensor_inspection["numel"] = tensor.numel()
-    except Exception as e:
-        logger.warning(f"For tensor {_id}, could not get its numel. Exc: {e}")
-    try:
-        tensor_inspection["density"] = (
-            torch.nonzero(tensor).size(0) / tensor.numel()
-        )
-    except Exception as e:
-        logger.warning(
-            f"For tensor {_id}, could not get its density. Exc: {e}"
-        )
+    # try:
+    #     tensor_inspection["nbytes"] = tensor.nbytes
+    # except Exception as e:
+    #     logger.warning(
+    #         f"For tensor {_id}, could not get its nbytes. Exc: {e}"
+    #     )
+    # try: # no torch
+    #     tensor_inspection["numel"] = tensor.numel()
+    # except Exception as e:
+    #     logger.warning(f"For tensor {_id}, could not get its numel. Exc: {e}")
+    # try: # no torch
+    #     tensor_inspection["density"] = (
+    #         torch.nonzero(tensor).size(0) / tensor.numel()
+    #     )
+    # except Exception as e:
+    #     logger.warning(
+    #         f"For tensor {_id}, could not get its density. Exc: {e}"
+    #     )
     return tensor_inspection
 
 
@@ -77,7 +78,7 @@ def torch_args_handler(task_message, *args, **kwargs):
                         task_message.custom_metadata = custom_metadata
 
                 elif isinstance(arg, torch.Tensor):
-                    args_handled[f"tensor_{i}"] = _inspect_torch_tensor(arg)
+                    args_handled[f"tensor_{i}"] = 1 #_inspect_torch_tensor(arg) #NO TORCH
                 else:
                     args_handled[f"arg_{i}"] = arg
 
@@ -135,9 +136,10 @@ def register_modules(
 
 def register_module_as_workflow(module: nn.Module, parent_workflow_id=None):
     workflow_obj = WorkflowObject()
+    workflow_obj.workflow_id = str(uuid.uuid4())
     workflow_obj.parent_workflow_id = parent_workflow_id
     workflow_obj.name = module.__class__.__name__
-    DBAPI().insert_or_update_workflow(
+    flowcept.instrumentation.decorators.instrumentation_interceptor.send_workflow_message(
         workflow_obj
-    )  # TODO :refactor: we should be using workflow message intercept instead
+    )
     return workflow_obj.workflow_id
