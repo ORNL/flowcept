@@ -30,7 +30,9 @@ class KeyValueDAO:
         self._redis.sadd(set_name, key)
 
     def remove_key_from_set(self, set_name: str, key):
+        self.logger.info(f"Removing key {key} from set: {set_name}")
         self._redis.srem(set_name, key)
+        self.logger.info(f"Removed key {key} from set: {set_name}")
 
     def set_has_key(self, set_name: str, key) -> bool:
         return self._redis.sismember(set_name, key)
@@ -39,7 +41,9 @@ class KeyValueDAO:
         return self._redis.scard(set_name)
 
     def set_is_empty(self, set_name: str) -> bool:
-        return self.set_count(set_name) == 0
+        _count = self.set_count(set_name)
+        self.logger.info(f"Set {set_name} has {_count}")
+        return _count == 0
 
     def delete_all_matching_sets(self, key_pattern):
         matching_sets = self._redis.keys(key_pattern)
