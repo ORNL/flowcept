@@ -47,8 +47,6 @@ LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "debug").upper()
 FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 CAMPAIGN_ID = settings["experiment"].get("campaign_id", "super_campaign")
 
-REGISTER_WORKFLOW = settings["experiment"].get("register_workflow", True)
-
 ######################
 #   Redis Settings   #
 ######################
@@ -107,7 +105,7 @@ MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get(
 
 
 ######################
-# SYSTEM SETTINGS #
+# PROJECT SYSTEM SETTINGS #
 ######################
 
 MQ_TYPE = settings["project"].get("mq_type", "redis")
@@ -120,6 +118,10 @@ REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get(
 ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
 TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
 
+REGISTER_WORKFLOW = settings["project"].get("register_workflow", True)
+REGISTER_INSTRUMENTED_TASKS = settings["project"].get(
+    "register_instrumented_tasks", True
+)
 
 ##################################
 # GPU TELEMETRY CAPTURE SETTINGS #

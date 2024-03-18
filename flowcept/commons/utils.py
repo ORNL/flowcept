@@ -6,19 +6,12 @@ from typing import Callable
 import numpy as np
 
 import flowcept.commons
-from flowcept.commons.flowcept_dataclasses.workflow_object import (
-    WorkflowObject,
-)
 from flowcept.configs import (
     PERF_LOG,
     SETTINGS_PATH,
-    CAMPAIGN_ID,
-    FLOWCEPT_USER,
-    settings,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_object import Status
-from flowcept.version import __version__
 
 
 def get_utc_now() -> float:

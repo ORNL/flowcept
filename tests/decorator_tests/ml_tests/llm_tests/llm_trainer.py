@@ -257,6 +257,7 @@ def model_train(
     # TODO :base-interceptor-refactor: Can we do it better?
     with FlowceptConsumerAPI(
         flowcept.instrumentation.decorators.instrumentation_interceptor,
+        bundle_exec_id=workflow_id,
         start_doc_inserter=False,
     ):
         train_data = batchify(train_data, batch_size)

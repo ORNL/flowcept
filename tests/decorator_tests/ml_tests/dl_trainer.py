@@ -168,6 +168,7 @@ class ModelTrainer(object):
         #  every layer. Can we do it better?
         with FlowceptConsumerAPI(
             flowcept.instrumentation.decorators.instrumentation_interceptor,
+            bundle_exec_id=workflow_id,
             start_doc_inserter=False,
         ):
             train_loader, test_loader = ModelTrainer.build_train_test_loader()

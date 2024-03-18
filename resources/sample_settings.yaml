@@ -5,6 +5,7 @@ project:
   performance_logging: false
   register_workflow: true
   enrich_messages: true
+  register_instrumented_tasks: true
   telemetry_capture:
     gpu: ~
     cpu: true
