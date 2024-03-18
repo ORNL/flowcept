@@ -25,6 +25,7 @@ try:
         amdsmi_shut_down,
         amdsmi_get_gpu_memory_usage,
         AmdSmiMemoryType,
+        AmdSmiTemperatureType,
         amdsmi_get_gpu_activityamdsmi_get_gpu_activity,
         amdsmi_get_power_info,
         amdsmi_get_gpu_device_uuid,

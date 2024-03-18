@@ -132,7 +132,7 @@ N_GPUS = dict()
 GPU_HANDLES = None
 if (
     TELEMETRY_CAPTURE is not None
-    and TELEMETRY_CAPTURE.get("GPU", None) is not None
+    and TELEMETRY_CAPTURE.get("gpu", None) is not None
 ):
     if eval(TELEMETRY_CAPTURE.get("gpu", "None")) is not None:
         try:
@@ -148,7 +148,8 @@ if (
 
                 N_GPUS["nvidia"] = list(range(0, nvmlDeviceGetCount()))
                 GPU_HANDLES = []
-        except:
+        except Exception as e:
+            #print(e)
             pass
         try:
             visible_devices_var = os.environ.get("ROCR_VISIBLE_DEVICES", None)
@@ -167,7 +168,8 @@ if (
                 amdsmi_init()
                 GPU_HANDLES = amdsmi_get_processor_handles()
                 N_GPUS["amd"] = list(range(0, len(GPU_HANDLES)))
-        except:
+        except Exception as e:
+            #print(e)
             pass
 
 ######################
