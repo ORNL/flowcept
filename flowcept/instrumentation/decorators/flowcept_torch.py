@@ -12,7 +12,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 )
 from flowcept.commons import logger
 from flowcept.commons.utils import replace_non_serializable
-from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE
+from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE, REGISTER_WORKFLOW
 
 from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 
@@ -65,18 +65,22 @@ def torch_args_handler(task_message, *args, **kwargs):
                     task_message.activity_id = arg.__class__.__name__
                     custom_metadata = {}
                     module_dict = arg.__dict__
-                    for k in module_dict:
-                        if k == "workflow_id":
-                            task_message.workflow_id = module_dict[k]
-                        elif not k.startswith("_"):
-                            custom_metadata[k] = module_dict[k]
+                    if "workflow_id" in module_dict:
+                        task_message.workflow_id = module_dict["workflow_id"]
 
-                    if len(custom_metadata):
-                        if REPLACE_NON_JSON_SERIALIZABLE:
-                            custom_metadata = replace_non_serializable(
-                                custom_metadata
-                            )
-                        task_message.custom_metadata = custom_metadata
+                    # NO TORCH:
+                    # for k in module_dict:
+                    #     if k == "workflow_id":
+                    #         task_message.workflow_id = module_dict[k]
+                    #     elif not k.startswith("_"):
+                    #         custom_metadata[k] = module_dict[k]
+                    #
+                    # if len(custom_metadata):
+                    #     if REPLACE_NON_JSON_SERIALIZABLE:
+                    #         custom_metadata = replace_non_serializable(
+                    #             custom_metadata
+                    #         )
+                    #     task_message.custom_metadata = custom_metadata
 
                 elif isinstance(arg, torch.Tensor):
                     args_handled[
@@ -142,7 +146,8 @@ def register_module_as_workflow(module: nn.Module, parent_workflow_id=None):
     workflow_obj.workflow_id = str(uuid.uuid4())
     workflow_obj.parent_workflow_id = parent_workflow_id
     workflow_obj.name = module.__class__.__name__
-    flowcept.instrumentation.decorators.instrumentation_interceptor.send_workflow_message(
-        workflow_obj
-    )
+    if REGISTER_WORKFLOW:
+        flowcept.instrumentation.decorators.instrumentation_interceptor.send_workflow_message(
+            workflow_obj
+        )
     return workflow_obj.workflow_id

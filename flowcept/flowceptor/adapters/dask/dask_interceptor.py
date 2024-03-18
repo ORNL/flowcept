@@ -11,7 +11,11 @@ from flowcept.flowceptor.adapters.base_interceptor import (
     BaseInterceptor,
 )
 from flowcept.commons.utils import get_utc_now, replace_non_serializable
-from flowcept.configs import TELEMETRY_CAPTURE, REPLACE_NON_JSON_SERIALIZABLE
+from flowcept.configs import (
+    TELEMETRY_CAPTURE,
+    REPLACE_NON_JSON_SERIALIZABLE,
+    REGISTER_WORKFLOW,
+)
 
 
 def get_run_spec_data(task_msg: TaskObject, run_spec):
@@ -113,7 +117,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                         get_run_spec_data(task_msg, ts.run_spec)
 
                 wf_obj = WorkflowObject()
-                if task_msg.workflow_id:
+                if task_msg.workflow_id and REGISTER_WORKFLOW:
                     wf_obj.workflow_id = task_msg.workflow_id
                     wf_obj.custom_metadata = {
                         "scheduler": self._scheduler.address_safe,
