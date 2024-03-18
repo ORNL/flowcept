@@ -2,8 +2,9 @@ from typing import Dict, AnyStr, List
 import msgpack
 from omegaconf import OmegaConf
 
+import flowcept
 from flowcept import __version__
-from flowcept.commons.utils import get_utc_now
+
 from flowcept.configs import (
     settings,
     FLOWCEPT_USER,
@@ -53,7 +54,7 @@ class WorkflowObject:
         return result_dict
 
     def enrich(self, adapter_settings=None):
-        self.utc_timestamp = get_utc_now()
+        self.utc_timestamp = flowcept.commons.utils.get_utc_now()
         self.flowcept_settings = OmegaConf.to_container(settings)
 
         if adapter_settings is not None:

@@ -2,8 +2,6 @@ import uuid
 
 import unittest
 
-from flowcept import TaskQueryAPI
-
 from tests.decorator_tests.ml_tests.dl_trainer import (
     ModelTrainer,
 )
