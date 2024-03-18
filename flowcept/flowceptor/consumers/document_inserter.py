@@ -1,4 +1,4 @@
-import json
+import msgpack
 from time import time, sleep
 from threading import Thread, Event, Lock
 from typing import Dict
@@ -47,7 +47,7 @@ class DocumentInserter:
         mq_port=None,
         bundle_exec_id=None,
     ):
-        self._buffer = list()
+        self._task_dicts_buffer = list()
         self._mq_dao = MQDao(mq_host, mq_port)
         self._doc_dao = DocumentDBDao()
         self._previous_time = time()
@@ -64,9 +64,9 @@ class DocumentInserter:
         else:
             # Adaptive buffer size to increase/decrease depending on the flow
             # of messages (#messages/unit of time)
-            if len(self._buffer) >= MONGO_MAX_BUFFER_SIZE:
+            if len(self._task_dicts_buffer) >= MONGO_MAX_BUFFER_SIZE:
                 self._curr_max_buffer_size = MONGO_MAX_BUFFER_SIZE
-            elif len(self._buffer) < self._curr_max_buffer_size:
+            elif len(self._task_dicts_buffer) < self._curr_max_buffer_size:
                 # decrease buffer size by 10%, lower-bounded by 10
                 self._curr_max_buffer_size = max(
                     MONGO_MIN_BUFFER_SIZE,
@@ -86,24 +86,24 @@ class DocumentInserter:
     def _flush(self):
         self._set_buffer_size()
         with self._lock:
-            if len(self._buffer):
+            if len(self._task_dicts_buffer):
                 self.logger.info(
-                    f"Current Doc buffer size: {len(self._buffer)}, "
-                    f"Gonna flush {len(self._buffer)} msgs to DocDB!"
+                    f"Current Doc buffer size: {len(self._task_dicts_buffer)}, "
+                    f"Gonna flush {len(self._task_dicts_buffer)} msgs to DocDB!"
                 )
                 inserted = self._doc_dao.insert_and_update_many(
-                    TaskObject.task_id_field(), self._buffer
+                    TaskObject.task_id_field(), self._task_dicts_buffer
                 )
                 if not inserted:
                     self.logger.warning(
                         f"Could not insert the buffer correctly. "
-                        f"Buffer content={self._buffer}"
+                        f"Buffer content={self._task_dicts_buffer}"
                     )
                 else:
                     self.logger.info(
-                        f"Flushed {len(self._buffer)} msgs to DocDB!"
+                        f"Flushed {len(self._task_dicts_buffer)} msgs to DocDB!"
                     )
-                self._buffer = list()
+                self._task_dicts_buffer = list()
 
     def handle_task_message(self, message: Dict):
         if "utc_timestamp" in message:
@@ -121,22 +121,20 @@ class DocumentInserter:
         )
         if MONGO_REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
-        self._buffer.append(message)
+        self._task_dicts_buffer.append(message)
 
-        if len(self._buffer) >= self._curr_max_buffer_size:
+        if len(self._task_dicts_buffer) >= self._curr_max_buffer_size:
             self.logger.debug("Docs buffer exceeded, flushing...")
             self._flush()
 
     def handle_workflow_message(self, message: Dict):
         message.pop("type")
-
         self.logger.debug(
             f"Received following msg in DocInserter:"
             f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
         )
         if MONGO_REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
-
         wf_obj = WorkflowObject.from_dict(message)
         inserted = self._doc_dao.workflow_insert_or_update(wf_obj)
         return inserted
@@ -171,7 +169,7 @@ class DocumentInserter:
 
     def time_based_flushing(self, event: Event):
         while not event.is_set():
-            if len(self._buffer):
+            if len(self._task_dicts_buffer):
                 now = time()
                 timediff = now - self._previous_time
                 if timediff >= MONGO_INSERTION_BUFFER_TIME:
@@ -202,8 +200,8 @@ class DocumentInserter:
                     self.logger.debug("Doc inserter Received a message!")
                     if message["type"] in MQDao.MESSAGE_TYPES_IGNORE:
                         continue
-                    _dict_obj = json.loads(
-                        message["data"], cls=DocumentInserter.DECODER
+                    _dict_obj = msgpack.loads(
+                        message["data"]  # , cls=DocumentInserter.DECODER
                     )
                     msg_type = _dict_obj.get("type")
                     if msg_type == "flowcept_control":
@@ -249,7 +247,7 @@ class DocumentInserter:
 
                 if trial >= max_trials:
                     if (
-                        len(self._buffer) == 0
+                        len(self._task_dicts_buffer) == 0
                     ):  # and len(self._mq_dao._buffer) == 0:
                         self.logger.warning(
                             f"Doc Inserter {id(self)} gave up on waiting for the signal. It is probably safe to stop by now."

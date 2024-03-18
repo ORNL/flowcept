@@ -8,8 +8,10 @@ from flowcept.commons.flowcept_dataclasses.task_object import (
 
 from flowcept.instrumentation.decorators import instrumentation_interceptor
 from flowcept.commons.utils import replace_non_serializable
-from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE, \
-    REGISTER_INSTRUMENTED_TASKS
+from flowcept.configs import (
+    REPLACE_NON_JSON_SERIALIZABLE,
+    REGISTER_INSTRUMENTED_TASKS,
+)
 from functools import wraps
 
 

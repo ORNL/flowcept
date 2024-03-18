@@ -1,7 +1,15 @@
 from enum import Enum
 from typing import Dict, AnyStr, Any, Union, List
-
+import msgpack
 from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
+from flowcept.configs import (
+    HOSTNAME,
+    PRIVATE_IP,
+    PUBLIC_IP,
+    LOGIN_NAME,
+    NODE_NAME,
+    CAMPAIGN_ID,
+)
 
 
 class Status(str, Enum):  # inheriting from str here for JSON serialization
@@ -17,8 +25,6 @@ class Status(str, Enum):  # inheriting from str here for JSON serialization
         return [Status.FINISHED, Status.ERROR]
 
 
-# Not a dataclass because a dataclass stores keys even when there's no value,
-# adding unnecessary overhead.
 class TaskObject:
     type = "task"
     task_id: AnyStr = None  # Any way to identify a task
@@ -69,6 +75,29 @@ class TaskObject:
     def workflow_id_field():
         return "workflow_id"
 
+    def enrich(self, adapter_settings=None):
+        if adapter_settings is not None:
+            # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
+            self.adapter_id = adapter_settings.key
+
+        if self.campaign_id is None:
+            self.campaign_id = CAMPAIGN_ID
+
+        if self.node_name is None and NODE_NAME is not None:
+            self.node_name = NODE_NAME
+
+        if self.login_name is None and LOGIN_NAME is not None:
+            self.login_name = LOGIN_NAME
+
+        if self.public_ip is None and PUBLIC_IP is not None:
+            self.public_ip = PUBLIC_IP
+
+        if self.private_ip is None and PRIVATE_IP is not None:
+            self.private_ip = PRIVATE_IP
+
+        if self.hostname is None and HOSTNAME is not None:
+            self.hostname = HOSTNAME
+
     def to_dict(self):
         result_dict = {}
         for attr, value in self.__dict__.items():
@@ -77,7 +106,20 @@ class TaskObject:
                     result_dict[attr] = self.telemetry_at_start.to_dict()
                 elif attr == "telemetry_at_end":
                     result_dict[attr] = self.telemetry_at_end.to_dict()
+                elif attr == "status":
+                    result_dict[attr] = value.value
                 else:
                     result_dict[attr] = value
         result_dict["type"] = "task"
         return result_dict
+
+    def serialize(self):
+        return msgpack.dumps(self.to_dict())
+
+    # @staticmethod
+    # def deserialize(serialized_data) -> 'TaskObject':
+    #     dict_obj = msgpack.loads(serialized_data)
+    #     obj = TaskObject()
+    #     for k, v in dict_obj.items():
+    #         setattr(obj, k, v)
+    #     return obj

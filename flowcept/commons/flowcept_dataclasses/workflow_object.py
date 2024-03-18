@@ -1,4 +1,17 @@
 from typing import Dict, AnyStr, List
+import msgpack
+from omegaconf import OmegaConf
+
+from flowcept import __version__
+from flowcept.commons.utils import get_utc_now
+from flowcept.configs import (
+    settings,
+    FLOWCEPT_USER,
+    SYS_NAME,
+    CAMPAIGN_ID,
+    EXTRA_METADATA,
+    ENVIRONMENT_ID,
+)
 
 
 # Not a dataclass because a dataclass stores keys even when there's no value,
@@ -20,41 +33,6 @@ class WorkflowObject:
     sys_name: str = None
     extra_metadata: str = None
 
-    # def __init__(
-    #     self,
-    #     workflow_id: AnyStr = None,
-    #     parent_workflow_id: AnyStr = None,
-    #     machine_info: Dict = None,
-    #     flowcept_settings: Dict = None,
-    #     flowcept_version: AnyStr = None,
-    #     utc_timestamp: float = None,
-    #     user: AnyStr = None,
-    #     campaign_id: AnyStr = None,
-    #     adapter_id: AnyStr = None,
-    #     interceptor_ids: List[AnyStr] = None,
-    #     name: AnyStr = None,
-    #     custom_metadata: Dict = None,
-    #     environment_id: str = None,
-    #     sys_name: str = None,
-    #     extra_metadata: str = None,
-    # ):
-    # self.type = "workflow"
-    # self.workflow_id = workflow_id
-    # self.environment_id = environment_id
-    # self.parent_workflow_id = parent_workflow_id
-    # self.machine_info = machine_info
-    # self.flowcept_settings = flowcept_settings
-    # self.flowcept_version = flowcept_version
-    # self.utc_timestamp = utc_timestamp
-    # self.user = user
-    # self.campaign_id = campaign_id
-    # self.adapter_id = adapter_id
-    # self.interceptor_ids = interceptor_ids
-    # self.name = name
-    # self.custom_metadata = custom_metadata
-    # self.sys_name = sys_name
-    # self.extra_metadata = extra_metadata
-
     @staticmethod
     def workflow_id_field():
         return "workflow_id"
@@ -73,6 +51,43 @@ class WorkflowObject:
                 result_dict[attr] = value
         result_dict["type"] = "workflow"
         return result_dict
+
+    def enrich(self, adapter_settings=None):
+        self.utc_timestamp = get_utc_now()
+        self.flowcept_settings = OmegaConf.to_container(settings)
+
+        if adapter_settings is not None:
+            # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
+            self.adapter_id = adapter_settings.key
+
+        if self.user is None:
+            self.user = FLOWCEPT_USER
+
+        if self.campaign_id is None:
+            self.campaign_id = CAMPAIGN_ID
+
+        if self.environment_id is None and ENVIRONMENT_ID is not None:
+            self.environment_id = ENVIRONMENT_ID
+
+        if self.sys_name is None and SYS_NAME is not None:
+            self.sys_name = SYS_NAME
+
+        if self.extra_metadata is None and EXTRA_METADATA is not None:
+            self.extra_metadata = OmegaConf.to_container(EXTRA_METADATA)
+
+        if self.flowcept_version is None:
+            self.flowcept_version = __version__
+
+    def serialize(self):
+        return msgpack.dumps(self.to_dict())
+
+    @staticmethod
+    def deserialize(serialized_data) -> "WorkflowObject":
+        dict_obj = msgpack.loads(serialized_data)
+        obj = WorkflowObject()
+        for k, v in dict_obj.items():
+            setattr(obj, k, v)
+        return obj
 
     def __repr__(self):
         return (
