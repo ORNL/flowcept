@@ -165,9 +165,6 @@ class MQDao:
                         pipe.publish(  # no redis
                             REDIS_CHANNEL, message.serialize()
                         )
-                        self.logger.info(
-                            f"Flushed {len(self._buffer)} to MQ."
-                        )
                     except Exception as e:
                         self.logger.exception(e)
                         self.logger.error(
@@ -181,8 +178,8 @@ class MQDao:
                     t0 = time()
                 try:
                     pipe.execute()
-                    self.logger.debug(
-                        f"Flushed {len(self._buffer)} msgs to Redis!"
+                    self.logger.critical(
+                        f"Flushed {len(self._buffer)} msgs to MQ!"
                     )
                 except Exception as e:
                     self.logger.exception(e)
