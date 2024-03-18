@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import Dict, AnyStr, Any, Union, List
 import msgpack
+
+import flowcept
 from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
 from flowcept.configs import (
     HOSTNAME,
@@ -79,6 +81,9 @@ class TaskObject:
         if adapter_settings is not None:
             # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
             self.adapter_id = adapter_settings.key
+
+        if self.utc_timestamp is None:
+            self.utc_timestamp = flowcept.commons.utils.get_utc_now()
 
         if self.campaign_id is None:
             self.campaign_id = CAMPAIGN_ID

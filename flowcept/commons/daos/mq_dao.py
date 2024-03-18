@@ -179,11 +179,14 @@ class MQDao:
                 t0 = 0
                 if PERF_LOG:
                     t0 = time()
-                pipe.execute()
+                try:
+                    pipe.execute()
+                    self.logger.debug(
+                        f"Flushed {len(self._buffer)} msgs to Redis!"
+                    )
+                except Exception as e:
+                    self.logger.exception(e)
                 perf_log("mq_pipe_execute", t0)
-                self.logger.debug(
-                    f"Flushed {len(self._buffer)} msgs to Redis!"
-                )
                 self._buffer = list()
 
     def subscribe(self) -> PubSub:

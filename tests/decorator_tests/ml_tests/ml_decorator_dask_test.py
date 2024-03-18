@@ -8,7 +8,6 @@ from flowcept import FlowceptConsumerAPI, WorkflowObject, TaskQueryAPI
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
-from flowcept.flowcept_api.db_api import DBAPI
 from tests.adapters.dask_test_utils import (
     setup_local_dask_cluster,
     close_dask,

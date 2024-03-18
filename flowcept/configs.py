@@ -149,7 +149,7 @@ if (
                 N_GPUS["nvidia"] = list(range(0, nvmlDeviceGetCount()))
                 GPU_HANDLES = []
         except Exception as e:
-            #print(e)
+            # print(e)
             pass
         try:
             visible_devices_var = os.environ.get("ROCR_VISIBLE_DEVICES", None)
@@ -169,7 +169,7 @@ if (
                 GPU_HANDLES = amdsmi_get_processor_handles()
                 N_GPUS["amd"] = list(range(0, len(GPU_HANDLES)))
         except Exception as e:
-            #print(e)
+            # print(e)
             pass
 
 ######################
