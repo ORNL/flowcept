@@ -16,7 +16,8 @@ try:
         nvmlDeviceGetPowerUsage,
         NVML_TEMPERATURE_GPU,
     )
-except:
+except Exception as e:
+    print(f"Exception to import NVIDIA libs! {e}")
     pass
 try:
     from amdsmi import (
@@ -25,15 +26,17 @@ try:
         amdsmi_shut_down,
         amdsmi_get_gpu_memory_usage,
         AmdSmiMemoryType,
-        AmdSmiTemperatureType,
-        amdsmi_get_gpu_activityamdsmi_get_gpu_activity,
+        amdsmi_get_gpu_activity,
         amdsmi_get_power_info,
         amdsmi_get_gpu_device_uuid,
         amdsmi_get_temp_metric,
         AmdSmiTemperatureMetric,
         amdsmi_get_gpu_metrics_info,
+        amdsmi_get_processor_handles,
+        amdsmi_init,
     )
-except:
+except Exception as e:
+    print(f"Exception to import AMD libs! {e}")
     pass
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -72,7 +75,7 @@ class TelemetryCapture:
             self._gpu_conf = set(self._gpu_conf)
 
             if len(self._gpu_conf):
-                self.logger.debug(
+                self.logger.info(
                     f"These are the visible GPUs by Flowcept Capture: {N_GPUS}"
                 )
                 nvidia = N_GPUS.get("nvidia", [])
