@@ -22,14 +22,14 @@ def close_dask(client, cluster):
     assert client.status == "closed"
 
 
-def setup_local_dask_cluster(consumer=None, n_workers=1):
+def setup_local_dask_cluster(consumer=None, n_workers=1, exec_bundle=None):
     from flowcept import (
         FlowceptDaskSchedulerAdapter,
         FlowceptDaskWorkerAdapter,
     )
 
     if consumer is None or not consumer.is_started:
-        consumer = FlowceptConsumerAPI().start()
+        consumer = FlowceptConsumerAPI(bundle_exec_id=exec_bundle).start()
 
     cluster = LocalCluster(n_workers=n_workers)
     scheduler = cluster.scheduler

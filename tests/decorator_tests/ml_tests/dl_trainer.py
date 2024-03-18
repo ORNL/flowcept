@@ -181,6 +181,7 @@ class ModelTrainer(object):
                 softmax_dims=softmax_dims,
                 parent_workflow_id=workflow_id,
             )
+
             model = model.to(device)
             optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
             test_info = {}

@@ -46,7 +46,7 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.telemetry_at_start = (
                 instrumentation_interceptor.telemetry_capture.capture()
             )
-            # task_obj.used = args_handler(task_obj, *args, **kwargs)
+            task_obj.used = args_handler(task_obj, *args, **kwargs)
             try:
                 result = func(*args, **kwargs)
                 task_obj.status = Status.FINISHED
