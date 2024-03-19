@@ -26,6 +26,7 @@ try:
         amdsmi_shut_down,
         amdsmi_get_gpu_memory_usage,
         AmdSmiMemoryType,
+        AmdSmiTemperatureType,
         amdsmi_get_gpu_activity,
         amdsmi_get_power_info,
         amdsmi_get_gpu_device_uuid,
@@ -48,6 +49,9 @@ from flowcept.configs import (
     LOGIN_NAME,
 )
 from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
+
+
+# from amdsmi import amdsmi_init, amdsmi_get_processor_handles
 
 
 class TelemetryCapture:
@@ -283,9 +287,7 @@ class TelemetryCapture:
                 device, AmdSmiMemoryType.VRAM
             )
         if "usage" in self._gpu_conf:
-            flowcept_gpu_info[
-                "usage"
-            ] = amdsmi_get_gpu_activityamdsmi_get_gpu_activity(device)
+            flowcept_gpu_info["usage"] = amdsmi_get_gpu_activity(device)
         if "power" in self._gpu_conf:
             flowcept_gpu_info["power"] = amdsmi_get_power_info(device)
         if "id" in self._gpu_conf:
@@ -330,29 +332,6 @@ class TelemetryCapture:
         except Exception as e:
             self.logger.exception(e)
             return None
-
-    # def init_gpu_telemetry(self):
-    #     return
-    #     # if self.conf is None or not self.conf.get("gpu", False) or self._initialized_gpu:
-    #     #     self.logger.debug("Gpu capture is off or Gpu capture has been initialized already, so we won't init now.")
-    #     #     return None
-    #     # if self._gpu_type == "nvidia":
-    #     #     try:
-    #     #         nvmlInit()
-    #     #     except Exception as e:
-    #     #         self.logger.error("Error to init GPU capture")
-    #     #         self.logger.exception(e)
-    #     # elif self._gpu_type == "amd":
-    #     #     try:
-    #     #         amdsmi_init()
-    #     #         self._gpu_handles = amdsmi_get_processor_handles() # TODO: do this for nvidia
-    #     #     except Exception as e:
-    #     #         self.logger.error("Error to init GPU capture")
-    #     #         self.logger.exception(e)
-    #     # else:
-    #     #     self.logger.error("Could not init any GPU!")
-    #     # self.logger.debug("GPU capture init!")
-    #     # self._initialized_gpu = True
 
     def shutdown_gpu_telemetry(self):
         if (
