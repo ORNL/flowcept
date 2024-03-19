@@ -77,7 +77,7 @@ class BaseInterceptor(object):
         self._mq_dao.stop_time_based_flushing(
             self._interceptor_instance_id, self._bundle_exec_id
         )
-        self.telemetry_capture.shutdown_gpu_telemetry()
+        #self.telemetry_capture.shutdown_gpu_telemetry()
 
     def observe(self, *args, **kwargs):
         """
