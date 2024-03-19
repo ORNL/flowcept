@@ -6,7 +6,6 @@ import torch
 from torch import nn
 
 import flowcept.commons
-from flowcept import DBAPI
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
@@ -20,10 +19,10 @@ from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 def _inspect_torch_tensor(tensor: torch.Tensor):
     _id = id(tensor)
     tensor_inspection = {"id": _id}
-    try:
-        tensor_inspection["device"] = tensor.device.type
-    except Exception as e:
-        logger.warning(f"For tensor {_id} could not get its device. Exc: {e}")
+    # try:
+    #     tensor_inspection["device"] = tensor.device.type
+    # except Exception as e:
+    #     logger.warning(f"For tensor {_id} could not get its device. Exc: {e}")
     try:
         tensor_inspection["is_sparse"] = tensor.is_sparse
     except Exception as e:
@@ -31,7 +30,7 @@ def _inspect_torch_tensor(tensor: torch.Tensor):
             f"For tensor {_id} could not get its is_sparse. Exc: {e}"
         )
     try:
-        tensor_inspection["shape"] = list(tensor.shape)
+        tensor_inspection["shape"] = tensor.shape
     except Exception as e:
         logger.warning(f"For tensor {_id} could not get its shape. Exc: {e}")
     # try:
@@ -83,11 +82,12 @@ def torch_args_handler(task_message, *args, **kwargs):
                     #     task_message.custom_metadata = custom_metadata
 
                 elif isinstance(arg, torch.Tensor):
-                    args_handled[
-                        f"tensor_{i}"
-                    ] = 1  # _inspect_torch_tensor(arg) #NO TORCH
-                else:
-                    args_handled[f"arg_{i}"] = arg
+                    # NO TORCH:
+                    args_handled[f"tensor_{i}"] = _inspect_torch_tensor(arg)
+
+                # NO TORCH
+                # else:
+                #     args_handled[f"arg_{i}"] = arg
 
                 if task_message.workflow_id is None and hasattr(
                     arg, "workflow_id"
