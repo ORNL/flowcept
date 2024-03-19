@@ -2,7 +2,7 @@ import os
 import socket
 import getpass
 
-import yaml
+from omegaconf import OmegaConf
 import random
 
 ########################
@@ -26,8 +26,7 @@ if not os.path.exists(SETTINGS_PATH):
         "under the project's root path."
     )
 
-with open(SETTINGS_PATH) as f:
-    settings = yaml.safe_load(f)
+settings = OmegaConf.load(SETTINGS_PATH)
 
 ########################
 #   Log Settings       #
@@ -48,16 +47,20 @@ LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "debug").upper()
 FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 CAMPAIGN_ID = settings["experiment"].get("campaign_id", "super_campaign")
 
-REGISTER_WORKFLOW = settings["experiment"].get("register_workflow", True)
-
 ######################
 #   Redis Settings   #
 ######################
 REDIS_URI = settings["main_redis"].get("uri", None)
-REDIS_HOST = settings["main_redis"].get("host", "localhost")
-REDIS_PORT = int(settings["main_redis"].get("port", "6379"))
+REDIS_INSTANCES = settings["main_redis"].get("instances", None)
+
 REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
 REDIS_PASSWORD = settings["main_redis"].get("password", None)
+REDIS_HOST = os.getenv(
+    "REDIS_HOST", settings["main_redis"].get("host", "localhost")
+)
+REDIS_PORT = int(
+    os.getenv("REDIS_PORT", settings["main_redis"].get("port", "6379"))
+)
 
 REDIS_BUFFER_SIZE = int(settings["main_redis"].get("buffer_size", 50))
 REDIS_INSERTION_BUFFER_TIME = int(
@@ -75,10 +78,10 @@ MONGO_URI = settings["mongodb"].get("uri", None)
 MONGO_HOST = settings["mongodb"].get("host", "localhost")
 MONGO_PORT = int(settings["mongodb"].get("port", "27017"))
 MONGO_DB = settings["mongodb"].get("db", PROJECT_NAME)
+MONGO_CREATE_INDEX = settings["mongodb"].get("create_collection_index", True)
 
 MONGO_TASK_COLLECTION = "tasks"
 MONGO_WORKFLOWS_COLLECTION = "workflows"
-
 
 # In seconds:
 MONGO_INSERTION_BUFFER_TIME = int(
@@ -102,7 +105,7 @@ MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get(
 
 
 ######################
-# SYSTEM SETTINGS #
+# PROJECT SYSTEM SETTINGS #
 ######################
 
 MQ_TYPE = settings["project"].get("mq_type", "redis")
@@ -115,25 +118,59 @@ REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get(
 ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
 TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
 
+REGISTER_WORKFLOW = settings["project"].get("register_workflow", True)
+REGISTER_INSTRUMENTED_TASKS = settings["project"].get(
+    "register_instrumented_tasks", True
+)
 
 ##################################
 # GPU TELEMETRY CAPTURE SETTINGS #
 #################################
 
+# TODO use a better var name. This is legacy. We could move this to the static part of TelemetryCapture
 N_GPUS = dict()
-if TELEMETRY_CAPTURE.get("gpu", False):
-    try:
-        from pynvml import nvmlDeviceGetCount
+GPU_HANDLES = None
+if (
+    TELEMETRY_CAPTURE is not None
+    and TELEMETRY_CAPTURE.get("gpu", None) is not None
+):
+    if eval(TELEMETRY_CAPTURE.get("gpu", "None")) is not None:
+        try:
+            visible_devices_var = os.environ.get("CUDA_VISIBLE_DEVICES", None)
+            if visible_devices_var is not None:
+                visible_devices = [
+                    int(i) for i in visible_devices_var.split(",")
+                ]
+                N_GPUS["nvidia"] = visible_devices
+                GPU_HANDLES = []  # TODO
+            else:
+                from pynvml import nvmlDeviceGetCount
 
-        N_GPUS["nvidia"] = nvmlDeviceGetCount()
-    except:
-        pass
-    try:
-        import pyamdgpuinfo
+                N_GPUS["nvidia"] = list(range(0, nvmlDeviceGetCount()))
+                GPU_HANDLES = []
+        except Exception as e:
+            # print(e)
+            pass
+        try:
+            visible_devices_var = os.environ.get("ROCR_VISIBLE_DEVICES", None)
+            if visible_devices_var is not None:
+                visible_devices = [
+                    int(i) for i in visible_devices_var.split(",")
+                ]
+                N_GPUS["amd"] = visible_devices
+                from amdsmi import amdsmi_init, amdsmi_get_processor_handles
 
-        N_GPUS["amd"] = pyamdgpuinfo.detect_gpus()
-    except:
-        pass
+                amdsmi_init()
+                GPU_HANDLES = amdsmi_get_processor_handles()
+            else:
+                from amdsmi import amdsmi_init, amdsmi_get_processor_handles
+
+                amdsmi_init()
+                GPU_HANDLES = amdsmi_get_processor_handles()
+                N_GPUS["amd"] = list(range(0, len(GPU_HANDLES)))
+        except Exception as e:
+            # print(e)
+            pass
 
 ######################
 # SYS METADATA #
@@ -144,9 +181,11 @@ PUBLIC_IP = None
 PRIVATE_IP = None
 SYS_NAME = None
 NODE_NAME = None
+ENVIRONMENT_ID = None
 
 sys_metadata = settings.get("sys_metadata", None)
 if sys_metadata is not None:
+    ENVIRONMENT_ID = sys_metadata.get("environment_id", None)
     SYS_NAME = sys_metadata.get("sys_name", None)
     NODE_NAME = sys_metadata.get("node_name", None)
     LOGIN_NAME = sys_metadata.get("login_name", None)
@@ -179,7 +218,9 @@ except:
             HOSTNAME = "unknown_hostname"
 
 
-EXTRA_METADATA = settings.get("extra_metadata", None)
+EXTRA_METADATA = settings.get("extra_metadata", {})
+EXTRA_METADATA.update({"mq_host": REDIS_HOST})
+EXTRA_METADATA.update({"mq_port": REDIS_PORT})
 
 ######################
 #    Web Server      #

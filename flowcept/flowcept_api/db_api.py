@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict
+from typing import Dict, List
 
 from flowcept.commons import singleton
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
@@ -42,18 +42,26 @@ class DBAPI(object):
             return workflow_obj
 
     def get_workflow(self, workflow_id) -> WorkflowObject:
-        return self.workflow_query(
-            filter={TaskObject.workflow_id_field(): workflow_id}
+        wfobs = self.workflow_query(
+            filter={WorkflowObject.workflow_id_field(): workflow_id}
         )
+        if wfobs is None or len(wfobs) == 0:
+            self.logger.error("Could not retrieve workflow with that filter.")
+            return None
+        else:
+            return wfobs[0]
 
-    def workflow_query(self, filter) -> WorkflowObject:
+    def workflow_query(self, filter) -> List[WorkflowObject]:
         results = self._dao.workflow_query(filter=filter)
         if results is None:
             self.logger.error("Could not retrieve workflow with that filter.")
             return None
         if len(results):
             try:
-                return WorkflowObject(**results[0])
+                lst = []
+                for wf_dict in results:
+                    lst.append(WorkflowObject.from_dict(wf_dict))
+                return lst
             except Exception as e:
                 self.logger.exception(e)
                 return None

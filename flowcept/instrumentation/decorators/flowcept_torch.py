@@ -1,29 +1,56 @@
+import uuid
 from typing import List, Dict
+import uuid
 
 import torch
 from torch import nn
 
 import flowcept.commons
-from flowcept import DBAPI
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
+from flowcept.commons import logger
 from flowcept.commons.utils import replace_non_serializable
-from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE
+from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE, REGISTER_WORKFLOW
 
 from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 
 
 def _inspect_torch_tensor(tensor: torch.Tensor):
-    tensor_inspection = {
-        "id": id(tensor),
-        "device": tensor.device.type,
-        "is_sparse": tensor.is_sparse,
-        "shape": list(tensor.shape),
-        "nbytes": tensor.nbytes,
-        "numel": tensor.numel(),
-        "density": torch.nonzero(tensor).size(0) / tensor.numel(),
-    }
+    _id = id(tensor)
+    tensor_inspection = {"id": _id}
+    # try:
+    #     tensor_inspection["device"] = tensor.device.type
+    # except Exception as e:
+    #     logger.warning(f"For tensor {_id} could not get its device. Exc: {e}")
+    try:
+        tensor_inspection["is_sparse"] = tensor.is_sparse
+    except Exception as e:
+        logger.warning(
+            f"For tensor {_id} could not get its is_sparse. Exc: {e}"
+        )
+    try:
+        tensor_inspection["shape"] = tensor.shape
+    except Exception as e:
+        logger.warning(f"For tensor {_id} could not get its shape. Exc: {e}")
+    # try:
+    #     tensor_inspection["nbytes"] = tensor.nbytes
+    # except Exception as e:
+    #     logger.warning(
+    #         f"For tensor {_id}, could not get its nbytes. Exc: {e}"
+    #     )
+    # try: # no torch
+    #     tensor_inspection["numel"] = tensor.numel()
+    # except Exception as e:
+    #     logger.warning(f"For tensor {_id}, could not get its numel. Exc: {e}")
+    # try: # no torch
+    #     tensor_inspection["density"] = (
+    #         torch.nonzero(tensor).size(0) / tensor.numel()
+    #     )
+    # except Exception as e:
+    #     logger.warning(
+    #         f"For tensor {_id}, could not get its density. Exc: {e}"
+    #     )
     return tensor_inspection
 
 
@@ -37,23 +64,30 @@ def torch_args_handler(task_message, *args, **kwargs):
                     task_message.activity_id = arg.__class__.__name__
                     custom_metadata = {}
                     module_dict = arg.__dict__
-                    for k in module_dict:
-                        if k == "workflow_id":
-                            task_message.workflow_id = module_dict[k]
-                        elif not k.startswith("_"):
-                            custom_metadata[k] = module_dict[k]
+                    if "workflow_id" in module_dict:
+                        task_message.workflow_id = module_dict["workflow_id"]
 
-                    if len(custom_metadata):
-                        if REPLACE_NON_JSON_SERIALIZABLE:
-                            custom_metadata = replace_non_serializable(
-                                custom_metadata
-                            )
-                        task_message.custom_metadata = custom_metadata
+                    # NO TORCH:
+                    # for k in module_dict:
+                    #     if k == "workflow_id":
+                    #         task_message.workflow_id = module_dict[k]
+                    #     elif not k.startswith("_"):
+                    #         custom_metadata[k] = module_dict[k]
+                    #
+                    # if len(custom_metadata):
+                    #     if REPLACE_NON_JSON_SERIALIZABLE:
+                    #         custom_metadata = replace_non_serializable(
+                    #             custom_metadata
+                    #         )
+                    #     task_message.custom_metadata = custom_metadata
 
                 elif isinstance(arg, torch.Tensor):
+                    # NO TORCH:
                     args_handled[f"tensor_{i}"] = _inspect_torch_tensor(arg)
-                else:
-                    args_handled[f"arg_{i}"] = arg
+
+                # NO TORCH
+                # else:
+                #     args_handled[f"arg_{i}"] = arg
 
                 if task_message.workflow_id is None and hasattr(
                     arg, "workflow_id"
@@ -109,7 +143,11 @@ def register_modules(
 
 def register_module_as_workflow(module: nn.Module, parent_workflow_id=None):
     workflow_obj = WorkflowObject()
+    workflow_obj.workflow_id = str(uuid.uuid4())
     workflow_obj.parent_workflow_id = parent_workflow_id
     workflow_obj.name = module.__class__.__name__
-    DBAPI().insert_or_update_workflow(workflow_obj)
+    if REGISTER_WORKFLOW:
+        flowcept.instrumentation.decorators.instrumentation_interceptor.send_workflow_message(
+            workflow_obj
+        )
     return workflow_obj.workflow_id

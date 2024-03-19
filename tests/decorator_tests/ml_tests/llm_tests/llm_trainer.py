@@ -1,6 +1,8 @@
 # The code in this file is based on:
 # https://blog.paperspace.com/build-a-language-model-using-pytorch/
 import math
+from time import time
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -9,13 +11,14 @@ from torchtext.vocab import build_vocab_from_iterator
 from datasets import load_dataset
 
 import flowcept
-from flowcept import model_profiler, FlowceptConsumerAPI
+from flowcept import FlowceptConsumerAPI
 from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 from flowcept.instrumentation.decorators.flowcept_torch import (
     register_modules,
     register_module_as_workflow,
     torch_args_handler,
 )
+from flowcept.instrumentation.decorators.responsible_ai import model_profiler
 
 tokenizer = get_tokenizer("basic_english")
 
@@ -255,7 +258,9 @@ def model_train(
     # TODO :ml-refactor: save device type and random seed: https://pytorch.org/docs/stable/notes/randomness.html
     # TODO :base-interceptor-refactor: Can we do it better?
     with FlowceptConsumerAPI(
-        flowcept.instrumentation.decorators.instrumentation_interceptor
+        flowcept.instrumentation.decorators.instrumentation_interceptor,
+        bundle_exec_id=workflow_id,
+        start_doc_inserter=False,
     ):
         train_data = batchify(train_data, batch_size)
         val_data = batchify(val_data, eval_batch_size)
@@ -288,6 +293,7 @@ def model_train(
         )  # Initialize the best validation loss to infinity
         # best_m = None
         # Iterate through the epochs
+        t0 = time()
         for epoch in range(1, epochs + 1):
             print(f"Starting training for epoch {epoch}/{epochs}")
             # Train the model on the training data and calculate the training loss
@@ -312,6 +318,8 @@ def model_train(
                 torch.save(model.state_dict(), "transformer_wikitext2.pth")
 
         print("Finished training")
+        t1 = time()
+
         # Load the best model's state
         best_m = TransformerModel(
             ntokens, emsize, nhead, nhid, nlayers, dropout
@@ -326,10 +334,13 @@ def model_train(
             ntokens, best_m, test_data, criterion, eval_batch_size
         )
         print(f"Test loss: {test_loss:.2f}")
+        with open("time.txt", "w") as f:
+            f.write(str(t1 - t0))
 
         return {
             "test_loss": test_loss,
             "train_loss": train_loss,
             "val_loss": val_loss,
+            "training_time": t1 - t0,
             "model": model,
         }

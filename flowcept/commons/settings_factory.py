@@ -1,9 +1,5 @@
-import yaml
-
 from flowcept.commons.vocabulary import Vocabulary
-from flowcept.configs import (
-    SETTINGS_PATH,
-)
+from flowcept.configs import settings
 
 from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
     BaseSettings,
@@ -39,9 +35,7 @@ def _build_base_settings(kind: str, settings_dict: dict) -> BaseSettings:
 def get_settings(adapter_key: str) -> BaseSettings:
     if adapter_key is None:  # TODO: :base-interceptor-refactor:
         return None
-    with open(SETTINGS_PATH) as f:
-        data = yaml.load(f, Loader=yaml.FullLoader)
-    settings_dict = data[Vocabulary.Settings.ADAPTERS][adapter_key]
+    settings_dict = settings[Vocabulary.Settings.ADAPTERS][adapter_key]
     if not settings_dict:
         raise Exception(
             f"You must specify the adapter <<{adapter_key}>> in"

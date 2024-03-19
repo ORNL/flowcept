@@ -22,26 +22,16 @@ from tests.decorator_tests.ml_tests.llm_tests.llm_trainer import (
 
 
 class DecoratorDaskLLMTests(unittest.TestCase):
-    client: Client = None
-    cluster = None
-    consumer: FlowceptConsumerAPI = None
-
     def __init__(self, *args, **kwargs):
         super(DecoratorDaskLLMTests, self).__init__(*args, **kwargs)
         self.logger = FlowceptLogger()
 
-    @classmethod
-    def setUpClass(cls):
-        (
-            DecoratorDaskLLMTests.client,
-            DecoratorDaskLLMTests.cluster,
-            DecoratorDaskLLMTests.consumer,
-        ) = setup_local_dask_cluster(DecoratorDaskLLMTests.consumer)
-
     def test_llm(self):
-        ntokens, train_data, val_data, test_data = get_wiki_text()
-
         wf_id = str(uuid.uuid4())
+        client, cluster, consumer = setup_local_dask_cluster(
+            exec_bundle=wf_id
+        )
+        ntokens, train_data, val_data, test_data = get_wiki_text()
         print(f"Workflow_id={wf_id}")
         exp_param_settings = {
             "batch_size": [20],
@@ -67,22 +57,9 @@ class DecoratorDaskLLMTests(unittest.TestCase):
                     "workflow_id": wf_id,
                 }
             )
-            outputs.append(
-                DecoratorDaskLLMTests.client.submit(model_train, **conf)
-            )
+            outputs.append(client.submit(model_train, **conf))
         for o in outputs:
             o.result()
 
-    @classmethod
-    def tearDownClass(cls):
-        print("Ending tests!")
-        try:
-            close_dask(
-                DecoratorDaskLLMTests.client, DecoratorDaskLLMTests.cluster
-            )
-        except Exception as e:
-            print(e)
-            pass
-
-        if TestDask.consumer:
-            TestDask.consumer.stop()
+        close_dask(client, cluster)
+        consumer.stop()

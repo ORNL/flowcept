@@ -6,8 +6,6 @@ from torch.nn import functional as F
 import flowcept.commons
 import flowcept.instrumentation.decorators
 from flowcept import (
-    model_explainer,
-    model_profiler,
     FlowceptConsumerAPI,
 )
 from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
@@ -15,6 +13,9 @@ from flowcept.instrumentation.decorators.flowcept_torch import (
     torch_args_handler,
     register_modules,
     register_module_as_workflow,
+)
+from flowcept.instrumentation.decorators.responsible_ai import (
+    model_profiler,
 )
 
 
@@ -149,9 +150,9 @@ class ModelTrainer(object):
             "accuracy": 100.0 * correct / len(test_loader.dataset),
         }
 
+    # @model_explainer()
     @staticmethod
     @model_profiler()
-    @model_explainer()
     def model_fit(
         conv_in_outs=[[1, 10], [10, 20]],
         conv_kernel_sizes=[5, 5],
@@ -166,7 +167,9 @@ class ModelTrainer(object):
         #  because we are capturing at two levels: at the model.fit and at
         #  every layer. Can we do it better?
         with FlowceptConsumerAPI(
-            flowcept.instrumentation.decorators.instrumentation_interceptor
+            flowcept.instrumentation.decorators.instrumentation_interceptor,
+            bundle_exec_id=workflow_id,
+            start_doc_inserter=False,
         ):
             train_loader, test_loader = ModelTrainer.build_train_test_loader()
             device = torch.device("cpu")
@@ -178,6 +181,7 @@ class ModelTrainer(object):
                 softmax_dims=softmax_dims,
                 parent_workflow_id=workflow_id,
             )
+
             model = model.to(device)
             optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
             test_info = {}

@@ -5,9 +5,12 @@ import numpy as np
 
 from dask.distributed import Client, LocalCluster
 
-from flowcept import FlowceptConsumerAPI, TaskQueryAPI
+from flowcept import FlowceptConsumerAPI, TaskQueryAPI, DBAPI
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.utils import assert_by_querying_tasks_until
+from flowcept.commons.utils import (
+    assert_by_querying_tasks_until,
+    evaluate_until,
+)
 from tests.adapters.dask_test_utils import (
     setup_local_dask_cluster,
     close_dask,
@@ -45,6 +48,7 @@ class TestDask(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestDask, self).__init__(*args, **kwargs)
         self.query_api = TaskQueryAPI()
+        self.db_api = DBAPI()
         self.logger = FlowceptLogger()
 
     @classmethod
@@ -63,7 +67,7 @@ class TestDask(unittest.TestCase):
         self.logger.debug(o2.result())
         self.logger.debug(o2.key)
         sleep(3)
-        return o2.key
+        return wf_id, o2.key
 
     def test_dummyfunc(self):
         i1 = np.random.random()
@@ -130,14 +134,19 @@ class TestDask(unittest.TestCase):
         return o1.key
 
     def test_observer_and_consumption(self):
-        o2_task_id = self.atest_pure_workflow()
+        wf_id, o2_task_id = self.atest_pure_workflow()
         print("Task_id=" + o2_task_id)
+        print("wf_id=" + wf_id)
         print("Done workflow!")
         assert assert_by_querying_tasks_until(
             {"task_id": o2_task_id},
             condition_to_evaluate=lambda docs: "telemetry_at_end" in docs[0],
         )
-        print("Query condition met!")
+        assert evaluate_until(
+            lambda: self.db_api.get_workflow(workflow_id=wf_id) is not None,
+            msg="Checking if workflow object was saved in db",
+        )
+        print("All conditions met!")
 
     def test_observer_and_consumption_varying_args(self):
         o2_task_id = self.varying_args()

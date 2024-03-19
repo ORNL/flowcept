@@ -1,4 +1,3 @@
-import uuid
 from time import time
 
 import flowcept.commons
@@ -9,7 +8,10 @@ from flowcept.commons.flowcept_dataclasses.task_object import (
 
 from flowcept.instrumentation.decorators import instrumentation_interceptor
 from flowcept.commons.utils import replace_non_serializable
-from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE
+from flowcept.configs import (
+    REPLACE_NON_JSON_SERIALIZABLE,
+    REGISTER_INSTRUMENTED_TASKS,
+)
 from functools import wraps
 
 
@@ -31,18 +33,19 @@ def flowcept_task(func=None, **decorator_kwargs):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            task_obj = TaskObject()
-            task_obj.activity_id = func.__name__
-            task_obj.task_id = str(uuid.uuid4())
+            if not REGISTER_INSTRUMENTED_TASKS:
+                return func(*args, **kwargs)
 
             args_handler = decorator_kwargs.get(
                 "args_handler", default_args_handler
             )
-
+            task_obj = TaskObject()
+            task_obj.started_at = time()
+            task_obj.activity_id = func.__name__
+            task_obj.task_id = str(id(task_obj))
             task_obj.telemetry_at_start = (
                 instrumentation_interceptor.telemetry_capture.capture()
             )
-            task_obj.started_at = time()
             task_obj.used = args_handler(task_obj, *args, **kwargs)
             try:
                 result = func(*args, **kwargs)
