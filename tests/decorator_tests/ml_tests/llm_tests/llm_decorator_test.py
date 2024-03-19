@@ -2,11 +2,9 @@ import uuid
 
 import torch
 
-from flowcept import model_profiler
-
 import unittest
 
-
+from flowcept.instrumentation.decorators.responsible_ai import model_profiler
 from tests.decorator_tests.ml_tests.llm_tests.llm_trainer import (
     model_train,
     get_wiki_text,

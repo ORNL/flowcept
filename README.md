@@ -66,6 +66,10 @@ plugin:
 
 And other variables depending on the Plugin. For instance, in Dask, timestamp creation by workers add interception overhead.
 
+## Install AMD GPU Lib
+
+https://rocm.docs.amd.com/projects/amdsmi/en/latest/
+
 ## See also
 
 - [Zambeze Repository](https://github.com/ORNL/zambeze)

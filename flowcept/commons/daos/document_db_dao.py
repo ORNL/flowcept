@@ -22,6 +22,7 @@ from flowcept.configs import (
     MONGO_WORKFLOWS_COLLECTION,
     PERF_LOG,
     MONGO_URI,
+    MONGO_CREATE_INDEX,
 )
 from flowcept.flowceptor.consumers.consumer_utils import (
     curate_dict_task_messages,
@@ -31,7 +32,7 @@ from time import time
 
 @singleton
 class DocumentDBDao(object):
-    def __init__(self):
+    def __init__(self, create_index=MONGO_CREATE_INDEX):
         self.logger = FlowceptLogger()
 
         if MONGO_URI is not None:
@@ -43,7 +44,8 @@ class DocumentDBDao(object):
         self._tasks_collection = self._db[MONGO_TASK_COLLECTION]
         self._wfs_collection = self._db[MONGO_WORKFLOWS_COLLECTION]
 
-        self._create_indices()
+        if create_index:
+            self._create_indices()
 
     def _create_indices(self):
         # Creating task collection indices:
@@ -52,7 +54,9 @@ class DocumentDBDao(object):
             for x in self._tasks_collection.list_indexes()
         ]
         if not TaskObject.task_id_field() in existing_indices:
-            self._tasks_collection.create_index(TaskObject.task_id_field())
+            self._tasks_collection.create_index(
+                TaskObject.task_id_field(), unique=True
+            )
         if not TaskObject.workflow_id_field() in existing_indices:
             self._tasks_collection.create_index(
                 TaskObject.workflow_id_field()
@@ -63,8 +67,10 @@ class DocumentDBDao(object):
             list(x["key"].keys())[0]
             for x in self._wfs_collection.list_indexes()
         ]
-        if not TaskObject.workflow_id_field() in existing_indices:
-            self._wfs_collection.create_index(TaskObject.task_id_field())
+        if not WorkflowObject.workflow_id_field() in existing_indices:
+            self._wfs_collection.create_index(
+                WorkflowObject.workflow_id_field(), unique=True
+            )
 
     def task_query(
         self,

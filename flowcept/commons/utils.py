@@ -6,19 +6,12 @@ from typing import Callable
 import numpy as np
 
 import flowcept.commons
-from flowcept.commons.flowcept_dataclasses.workflow_object import (
-    WorkflowObject,
-)
 from flowcept.configs import (
     PERF_LOG,
     SETTINGS_PATH,
-    CAMPAIGN_ID,
-    FLOWCEPT_USER,
-    settings,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_object import Status
-from flowcept.version import __version__
 
 
 def get_utc_now() -> float:
@@ -59,14 +52,6 @@ def get_status_from_str(status_str: str) -> Status:
         return Status.SUBMITTED
     else:
         return Status.UNKNOWN
-
-
-def fill_with_basic_workflow_info(workflow_obj: WorkflowObject):
-    workflow_obj.campaign_id = CAMPAIGN_ID
-    workflow_obj.utc_timestamp = get_utc_now()
-    workflow_obj.user = FLOWCEPT_USER
-    workflow_obj.flowcept_settings = settings
-    workflow_obj.flowcept_version = __version__
 
 
 def get_adapter_exception_msg(adapter_kind):

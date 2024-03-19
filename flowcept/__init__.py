@@ -12,13 +12,14 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 
-try:
-    from flowcept.instrumentation.decorators.responsible_ai import (
-        model_explainer,
-        model_profiler,
-    )
-except:
-    pass
+# These resp_ai imports below are adding long wait in flowcept imports!
+# try:
+#     from flowcept.instrumentation.decorators.responsible_ai import (
+#         #model_explainer,
+#         #model_profiler,
+#     )
+# except:
+#     pass
 
 if Vocabulary.Settings.ZAMBEZE_KIND in flowcept.configs.ADAPTERS:
     try:

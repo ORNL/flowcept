@@ -5,8 +5,9 @@ project:
   performance_logging: false
   register_workflow: true
   enrich_messages: true
+  register_instrumented_tasks: true
   telemetry_capture:
-    gpu: false
+    gpu: ~
     cpu: true
     per_cpu: true
     process_info: true
@@ -22,10 +23,11 @@ log:
 
 experiment:
   user: root
-  experiment_id: flowcept_experiment
+  campaign_id: super_campaign
 
 main_redis:
   host: localhost
+  instances: ["localhost:6379"] # We can have multiple redis instances being accessed by the consumers but each interceptor will currently access one single redis.
   port: 6379
   channel: interception
   buffer_size: 50
@@ -47,13 +49,7 @@ web_server:
   port: 5000
 
 sys_metadata:
-  place_holder: ""
-#  sys_name: 0
-#  node_name: 0
-#  login_name: 0
-#  public_ip: 0
-#  private_ip: 0
-#
+  environment_id: "frontier"
 
 extra_metadata:
   place_holder: ""
