@@ -15,7 +15,11 @@ project:
     disk: true
     network: true
     machine_info: true
-  
+
+instrumentation:
+  torch:
+    inspect_tensor: true
+
 log:
   log_path: "default"
   log_file_level: error
