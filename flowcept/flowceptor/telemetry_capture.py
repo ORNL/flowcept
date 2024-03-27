@@ -327,7 +327,7 @@ class TelemetryCapture:
                 return
             gpu_telemetry = {}
             for gpu_ix in self._visible_gpus:
-                gpu_telemetry[gpu_ix] = self._gpu_capture_func(gpu_ix)
+                gpu_telemetry[f"gpu_{gpu_ix}"] = self._gpu_capture_func(gpu_ix)
             return gpu_telemetry
         except Exception as e:
             self.logger.exception(e)
