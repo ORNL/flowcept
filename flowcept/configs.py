@@ -235,6 +235,11 @@ WEBSERVER_PORT = int(settings["web_server"].get("port", "5000"))
 
 ANALYTICS = settings.get("analytics", None)
 
+
+####
+
+INSTRUMENTATION = settings.instrumentation
+
 ################# Enabled ADAPTERS
 
 ADAPTERS = set()

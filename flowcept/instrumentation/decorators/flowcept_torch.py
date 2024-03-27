@@ -11,7 +11,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 )
 from flowcept.commons import logger
 from flowcept.commons.utils import replace_non_serializable
-from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE, REGISTER_WORKFLOW
+from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE, REGISTER_WORKFLOW, INSTRUMENTATION
 
 from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 
@@ -81,7 +81,7 @@ def torch_args_handler(task_message, *args, **kwargs):
                     #         )
                     #     task_message.custom_metadata = custom_metadata
 
-                elif isinstance(arg, torch.Tensor):
+                elif isinstance(arg, torch.Tensor) and INSTRUMENTATION.torch.inspect_tensor:
                     # NO TORCH:
                     args_handled[f"tensor_{i}"] = _inspect_torch_tensor(arg)
 
