@@ -100,10 +100,11 @@ class TransformerModel(nn.Module):
         dropout=0.5,
         pos_encoding_max_len=5000,
         parent_workflow_id=None,
+        custom_metadata:dict=None
     ):
         super(TransformerModel, self).__init__()
         self.workflow_id = register_module_as_workflow(
-            self, parent_workflow_id
+            self, parent_workflow_id, custom_metadata
         )
         (
             TransformerEncoderLayer,
@@ -285,6 +286,7 @@ def model_train(
             dropout,
             pos_encoding_max_len,
             parent_workflow_id=workflow_id,
+            custom_metadata={"model_step": "train"}
         ).to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -322,7 +324,9 @@ def model_train(
 
         # Load the best model's state
         best_m = TransformerModel(
-            ntokens, emsize, nhead, nhid, nlayers, dropout
+            ntokens, emsize, nhead, nhid, nlayers, dropout,
+            parent_workflow_id=workflow_id,
+            custom_metadata={"model_step": "evaluation"}
         ).to(device)
         print("Loading model")
         torch_loaded = torch.load("transformer_wikitext2.pth")
