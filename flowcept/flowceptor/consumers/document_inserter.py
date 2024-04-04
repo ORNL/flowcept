@@ -232,7 +232,7 @@ class DocumentInserter:
 
     def stop(self, bundle_exec_id=None):
         if self.check_safe_stops:
-            max_trials = 100
+            max_trials = 60
             trial = 0
             while not self._mq_dao.all_time_based_threads_ended(
                 bundle_exec_id
@@ -249,7 +249,7 @@ class DocumentInserter:
                     if (
                         len(self._task_dicts_buffer) == 0
                     ):  # and len(self._mq_dao._buffer) == 0:
-                        self.logger.warning(
+                        self.logger.critical(
                             f"Doc Inserter {id(self)} gave up on waiting for the signal. It is probably safe to stop by now."
                         )
                         break
