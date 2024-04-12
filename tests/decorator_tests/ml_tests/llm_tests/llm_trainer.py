@@ -12,7 +12,6 @@ from datasets import load_dataset
 
 import flowcept
 from flowcept import FlowceptConsumerAPI
-from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 
 from flowcept.instrumentation.decorators.flowcept_torch import (
     register_modules,
@@ -101,7 +100,7 @@ class TransformerModel(nn.Module):
         dropout=0.5,
         pos_encoding_max_len=5000,
         parent_workflow_id=None,
-        custom_metadata:dict=None
+        custom_metadata: dict = None,
     ):
         super(TransformerModel, self).__init__()
         self.workflow_id = register_module_as_workflow(
@@ -148,7 +147,7 @@ class TransformerModel(nn.Module):
         )
         return mask
 
-    #@flowcept_task(args_handler=torch_args_handler)
+    # @flowcept_task(args_handler=torch_args_handler)
     @torch_task()
     def forward(self, src):
         if self.src_mask is None or self.src_mask.size(0) != len(src):
@@ -188,7 +187,7 @@ class PositionalEncoding(nn.Module):
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer("pe", pe)
 
-    #@flowcept_task(args_handler=torch_args_handler)
+    # @flowcept_task(args_handler=torch_args_handler)
     @torch_task()
     def forward(self, x):
         x = x + self.pe[: x.size(0), :]
@@ -289,7 +288,7 @@ def model_train(
             dropout,
             pos_encoding_max_len,
             parent_workflow_id=workflow_id,
-            custom_metadata={"model_step": "train"}
+            custom_metadata={"model_step": "train"},
         ).to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -327,9 +326,14 @@ def model_train(
 
         # Load the best model's state
         best_m = TransformerModel(
-            ntokens, emsize, nhead, nhid, nlayers, dropout,
+            ntokens,
+            emsize,
+            nhead,
+            nhid,
+            nlayers,
+            dropout,
             parent_workflow_id=workflow_id,
-            custom_metadata={"model_step": "evaluation"}
+            custom_metadata={"model_step": "evaluation"},
         ).to(device)
         print("Loading model")
         torch_loaded = torch.load("transformer_wikitext2.pth")

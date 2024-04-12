@@ -1,6 +1,6 @@
 import uuid
 from abc import ABCMeta, abstractmethod
-from typing import Union
+from typing import Union, Dict
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
@@ -77,7 +77,7 @@ class BaseInterceptor(object):
         self._mq_dao.stop_time_based_flushing(
             self._interceptor_instance_id, self._bundle_exec_id
         )
-        #self.telemetry_capture.shutdown_gpu_telemetry()
+        # self.telemetry_capture.shutdown_gpu_telemetry()
 
     def observe(self, *args, **kwargs):
         """
@@ -123,8 +123,8 @@ class BaseInterceptor(object):
                 self._interceptor_instance_id
             ] = machine_info
 
-        self._mq_dao.publish(workflow_obj.serialize())
+        self._mq_dao.publish(workflow_obj.to_dict())
 
-    def intercept(self, obj_msg: Union[TaskObject, WorkflowObject]):
+    def intercept(self, obj_msg: Dict):
         self._mq_dao.publish(obj_msg)
         return

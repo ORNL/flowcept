@@ -38,9 +38,9 @@ def telemetry_flowcept_task(func=None):
             task_obj["task_id"] = str(id(task_obj))
             task_obj["workflow_id"] = kwargs.pop("workflow_id")
             task_obj["used"] = kwargs
-            task_obj["telemetry_at_start"] = (
-                 instrumentation_interceptor.telemetry_capture.capture()
-            )
+            task_obj[
+                "telemetry_at_start"
+            ] = instrumentation_interceptor.telemetry_capture.capture()
             try:
                 result = func(*args, **kwargs)
                 task_obj["status"] = Status.FINISHED.value
@@ -49,9 +49,9 @@ def telemetry_flowcept_task(func=None):
                 result = None
                 task_obj["stderr"] = str(e)
             task_obj["ended_at"] = time()
-            task_obj["telemetry_at_end"] = (
-                instrumentation_interceptor.telemetry_capture.capture()
-            )
+            task_obj[
+                "telemetry_at_end"
+            ] = instrumentation_interceptor.telemetry_capture.capture()
             task_obj["generated"] = result
             instrumentation_interceptor.intercept(task_obj)
             return result
@@ -92,7 +92,6 @@ def lightweight_flowcept_task(func=None):
         return decorator
     else:
         return decorator(func)
-
 
 
 def flowcept_task(func=None, **decorator_kwargs):
