@@ -1,17 +1,17 @@
 import uuid
 from time import sleep
 import pandas as pd
-
+from time import time
 import flowcept.commons
 import flowcept.instrumentation.decorators
 from flowcept import FlowceptConsumerAPI
 
 import unittest
 
-from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
+from flowcept.instrumentation.decorators.flowcept_task import flowcept_task, lightweight_flowcept_task
 
 
-@flowcept_task
+@lightweight_flowcept_task
 def decorated_static_function(df: pd.DataFrame, workflow_id=None):
     return {"y": 2}
 
@@ -43,3 +43,24 @@ class DecoratorTests(unittest.TestCase):
             decorated_static_function2(workflow_id)
             decorated_static_function3(0.1, workflow_id=workflow_id)
         print(workflow_id)
+
+    def test_decorated_function_simple(self):
+        workflow_id = str(uuid.uuid4())
+        # TODO :refactor-base-interceptor:
+        consumer = FlowceptConsumerAPI(
+            interceptors=flowcept.instrumentation.decorators.instrumentation_interceptor
+        )
+        consumer.start()
+        t0 = time()
+        for i in range(10000):
+            decorated_static_function(pd.DataFrame(), workflow_id=workflow_id)
+        t1 = time()
+        consumer.stop()
+        return t1-t0
+
+    def test_decorated_function_timed(self):
+        times = []
+        import numpy as np
+        for i in range(10):
+            times.append(self.test_decorated_function_simple())
+        print(np.median(times))
