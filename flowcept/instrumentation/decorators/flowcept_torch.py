@@ -64,6 +64,7 @@ def base_torch_task(func=None):
         @wraps(func)
         def wrapper(*args, **kwargs):
             task_obj = {}
+            task_obj["type"] = "task"
             task_obj["started_at"] = time()
             task_obj["activity_id"] = args[0].__class__.__name__
             task_obj["task_id"] = str(id(task_obj))
@@ -100,6 +101,7 @@ def tensor_inspection_torch_task(func=None):
         @wraps(func)
         def wrapper(*args, **kwargs):
             task_obj = {}
+            task_obj["type"] = "task"
             task_obj["started_at"] = time()
             task_obj["activity_id"] = args[0].__class__.__name__
             task_obj["task_id"] = str(id(task_obj))
@@ -136,6 +138,7 @@ def full_torch_task(func=None):
         @wraps(func)
         def wrapper(*args, **kwargs):
             task_obj = {}
+            task_obj["type"] = "task"
             task_obj["started_at"] = time()
             task_obj["activity_id"] = args[0].__class__.__name__
             task_obj["task_id"] = str(id(task_obj))
@@ -175,6 +178,7 @@ def telemetry_torch_task(func=None):
         @wraps(func)
         def wrapper(*args, **kwargs):
             task_obj = {}
+            task_obj["type"] = "task"
             task_obj["started_at"] = time()
             task_obj["activity_id"] = func.__qualname__
             task_obj["task_id"] = str(id(task_obj))
