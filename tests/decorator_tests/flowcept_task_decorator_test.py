@@ -8,7 +8,10 @@ from flowcept import FlowceptConsumerAPI
 
 import unittest
 
-from flowcept.instrumentation.decorators.flowcept_task import flowcept_task, lightweight_flowcept_task
+from flowcept.instrumentation.decorators.flowcept_task import (
+    flowcept_task,
+    lightweight_flowcept_task,
+)
 
 
 @lightweight_flowcept_task
@@ -56,11 +59,12 @@ class DecoratorTests(unittest.TestCase):
             decorated_static_function(pd.DataFrame(), workflow_id=workflow_id)
         t1 = time()
         consumer.stop()
-        return t1-t0
+        return t1 - t0
 
     def test_decorated_function_timed(self):
         times = []
         import numpy as np
+
         for i in range(10):
             times.append(self.test_decorated_function_simple())
         print(np.median(times))

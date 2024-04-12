@@ -133,7 +133,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                     # there might be some clever way that I couldn't think of now.
                     pass
 
-                self.intercept(task_msg)
+                self.intercept(task_msg.to_dict())
 
         except Exception as e:
             self.logger.error("Error with dask scheduler!")
@@ -219,7 +219,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
                             task_msg.generated
                         )
 
-            self.intercept(task_msg)
+            self.intercept(task_msg.to_dict())
 
         except Exception as e:
             self.logger.error(
