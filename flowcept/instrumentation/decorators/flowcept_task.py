@@ -1,5 +1,5 @@
 from time import time
-
+from functools import wraps
 import flowcept.commons
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
@@ -12,7 +12,6 @@ from flowcept.configs import (
     REPLACE_NON_JSON_SERIALIZABLE,
     REGISTER_INSTRUMENTED_TASKS,
 )
-from functools import wraps
 
 
 # TODO: :code-reorg: consider moving it to utils and reusing it in dask interceptor
@@ -27,6 +26,7 @@ def default_args_handler(task_message, *args, **kwargs):
     if REPLACE_NON_JSON_SERIALIZABLE:
         args_handled = replace_non_serializable(args_handled)
     return args_handled
+
 
 def telemetry_flowcept_task(func=None):
     def decorator(func):

@@ -1,4 +1,11 @@
-import uuid
+from time import time
+from functools import wraps
+import flowcept.commons
+from flowcept.commons.flowcept_dataclasses.task_object import (
+    Status,
+)
+from flowcept.instrumentation.decorators import instrumentation_interceptor
+from flowcept.commons.utils import replace_non_serializable
 from typing import List, Dict
 import uuid
 
@@ -12,8 +19,6 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 from flowcept.commons import logger
 from flowcept.commons.utils import replace_non_serializable
 from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE, REGISTER_WORKFLOW, INSTRUMENTATION
-
-from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 
 
 def _inspect_torch_tensor(tensor: torch.Tensor):
@@ -54,59 +59,201 @@ def _inspect_torch_tensor(tensor: torch.Tensor):
     return tensor_inspection
 
 
-def torch_args_handler(task_message, *args, **kwargs):
-    try:
-        args_handled = {}
-        if args is not None and len(args):
-            for i in range(len(args)):
-                arg = args[i]
-                if isinstance(arg, nn.Module):
-                    task_message.activity_id = arg.__class__.__name__
-                    custom_metadata = {}
-                    module_dict = arg.__dict__
-                    if "workflow_id" in module_dict:
-                        task_message.workflow_id = module_dict["workflow_id"]
+def base_torch_task(func=None):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            task_obj = {}
+            task_obj["started_at"] = time()
+            task_obj["activity_id"] = args[0].__class__.__name__
+            task_obj["task_id"] = str(id(task_obj))
+            task_obj["workflow_id"] = args[0].workflow_id
+            # task_obj["used"] = {
+            #     "tensor": _inspect_torch_tensor(args[1]),
+            #     # add other module metadata
+            # }
+            try:
+                result = func(*args, **kwargs)
+                task_obj["status"] = Status.FINISHED.value
+            except Exception as e:
+                task_obj["status"] = Status.ERROR.value
+                result = None
+                task_obj["stderr"] = str(e)
+            task_obj["ended_at"] = time()
+            # task_obj["generated"] = {
+            #     "tensor": _inspect_torch_tensor(args[1]),
+            #     # add other module metadata
+            # }
+            instrumentation_interceptor.intercept(task_obj)
+            return result
 
-                    # NO TORCH:
-                    # for k in module_dict:
-                    #     if k == "workflow_id":
-                    #         task_message.workflow_id = module_dict[k]
-                    #     elif not k.startswith("_"):
-                    #         custom_metadata[k] = module_dict[k]
-                    #
-                    # if len(custom_metadata):
-                    #     if REPLACE_NON_JSON_SERIALIZABLE:
-                    #         custom_metadata = replace_non_serializable(
-                    #             custom_metadata
-                    #         )
-                    #     task_message.custom_metadata = custom_metadata
+        return wrapper
 
-                elif isinstance(arg, torch.Tensor) and INSTRUMENTATION.torch.inspect_tensor:
-                    # NO TORCH:
-                    args_handled[f"tensor_{i}"] = _inspect_torch_tensor(arg)
-
-                # NO TORCH
-                # else:
-                #     args_handled[f"arg_{i}"] = arg
-
-                if task_message.workflow_id is None and hasattr(
-                    arg, "workflow_id"
-                ):
-                    task_message.workflow_id = getattr(arg, "workflow_id")
-
-        if kwargs is not None and len(kwargs):
-            if task_message.workflow_id is None:
-                task_message.workflow_id = kwargs.pop("workflow_id", None)
-            args_handled.update(kwargs)
-        if REPLACE_NON_JSON_SERIALIZABLE:
-            args_handled = replace_non_serializable(args_handled)
-        return args_handled
-    except Exception as e:
-        flowcept.commons.logger.exception(e)
-        return None
+    if func is None:
+        return decorator
+    else:
+        return decorator(func)
 
 
-@flowcept_task(args_handler=torch_args_handler)
+def tensor_inspection_torch_task(func=None):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            task_obj = {}
+            task_obj["started_at"] = time()
+            task_obj["activity_id"] = args[0].__class__.__name__
+            task_obj["task_id"] = str(id(task_obj))
+            task_obj["workflow_id"] = args[0].workflow_id
+            task_obj["used"] = {
+                "tensor": _inspect_torch_tensor(args[1]),
+                **{k: v for k, v in vars(args[0]).items() if not k.startswith('_')}
+            }
+            try:
+                result = func(*args, **kwargs)
+                task_obj["status"] = Status.FINISHED.value
+            except Exception as e:
+                task_obj["status"] = Status.ERROR.value
+                result = None
+                task_obj["stderr"] = str(e)
+            task_obj["ended_at"] = time()
+            task_obj["generated"] = {
+                "tensor": _inspect_torch_tensor(args[1]),
+                # add other module metadata
+            }
+            instrumentation_interceptor.intercept(task_obj)
+            return result
+
+        return wrapper
+
+    if func is None:
+        return decorator
+    else:
+        return decorator(func)
+
+
+def full_torch_task(func=None):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            task_obj = {}
+            task_obj["started_at"] = time()
+            task_obj["activity_id"] = args[0].__class__.__name__
+            task_obj["task_id"] = str(id(task_obj))
+            task_obj["workflow_id"] = args[0].workflow_id
+            task_obj["used"] = {
+                "tensor": _inspect_torch_tensor(args[1]),
+                **{k: v for k, v in vars(args[0]).items() if not k.startswith('_')}
+            }
+            task_obj["telemetry_at_start"] = instrumentation_interceptor.telemetry_capture.capture().to_dict()
+            try:
+                result = func(*args, **kwargs)
+                task_obj["status"] = Status.FINISHED.value
+            except Exception as e:
+                task_obj["status"] = Status.ERROR.value
+                result = None
+                task_obj["stderr"] = str(e)
+            task_obj["ended_at"] = time()
+            task_obj[
+                "telemetry_at_end"] = instrumentation_interceptor.telemetry_capture.capture().to_dict()
+            task_obj["generated"] = {
+                "tensor": _inspect_torch_tensor(args[1]),
+                # add other module metadata
+            }
+            instrumentation_interceptor.intercept(task_obj)
+            return result
+
+        return wrapper
+
+    if func is None:
+        return decorator
+    else:
+        return decorator(func)
+
+
+def telemetry_torch_task(func=None):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            task_obj = {}
+            task_obj["started_at"] = time()
+            task_obj["activity_id"] = func.__qualname__
+            task_obj["task_id"] = str(id(task_obj))
+            task_obj["workflow_id"] = args[0].workflow_id
+            task_obj["telemetry_at_start"] = instrumentation_interceptor.telemetry_capture.capture().to_dict()
+            try:
+                result = func(*args, **kwargs)
+                task_obj["status"] = Status.FINISHED.value
+            except Exception as e:
+                task_obj["status"] = Status.ERROR.value
+                result = None
+                task_obj["stderr"] = str(e)
+            task_obj["ended_at"] = time()
+            task_obj[
+                "telemetry_at_end"] = instrumentation_interceptor.telemetry_capture.capture().to_dict()
+            instrumentation_interceptor.intercept(task_obj)
+            return result
+
+        return wrapper
+
+    if func is None:
+        return decorator
+    else:
+        return decorator(func)
+
+
+# def torch_args_handler(task_message, *args, **kwargs):
+#     try:
+#         args_handled = {}
+#         if args is not None and len(args):
+#             for i in range(len(args)):
+#                 arg = args[i]
+#                 if isinstance(arg, nn.Module):
+#                     task_message.activity_id = arg.__class__.__name__
+#                     custom_metadata = {}
+#                     module_dict = arg.__dict__
+#                     if "workflow_id" in module_dict:
+#                         task_message.workflow_id = module_dict["workflow_id"]
+#
+#                 elif isinstance(arg, torch.Tensor) and INSTRUMENTATION.torch.inspect_tensor:
+#                     # NO TORCH:
+#                     args_handled[f"tensor_{i}"] = _inspect_torch_tensor(arg)
+#
+#                 # NO TORCH
+#                 # else:
+#                 #     args_handled[f"arg_{i}"] = arg
+#
+#                 if task_message.workflow_id is None and hasattr(
+#                     arg, "workflow_id"
+#                 ):
+#                     task_message.workflow_id = getattr(arg, "workflow_id")
+#
+#         if kwargs is not None and len(kwargs):
+#             if task_message.workflow_id is None:
+#                 task_message.workflow_id = kwargs.pop("workflow_id", None)
+#             args_handled.update(kwargs)
+#         if REPLACE_NON_JSON_SERIALIZABLE:
+#             args_handled = replace_non_serializable(args_handled)
+#         return args_handled
+#     except Exception as e:
+#         flowcept.commons.logger.exception(e)
+#         return None
+
+
+def torch_task():
+    mode = INSTRUMENTATION["torch"]["mode"]
+    if mode == "base":
+        return base_torch_task
+    elif mode == "tensor_inspection":
+        return tensor_inspection_torch_task
+    elif mode == "with_telemetry":
+        return telemetry_torch_task
+    elif mode == "full":
+        return full_torch_task
+    else:
+        raise NotImplementedError(f"There is no torch instrumentation mode {mode}")
+
+
+@torch_task()
 def _our_forward(self, *args, **kwargs):
     return super(self.__class__, self).forward(*args, **kwargs)
 
@@ -132,7 +279,7 @@ def register_modules(
 
     for module in modules:
         new_module = _create_dynamic_class(
-            module, f"Flowcept{module.__name__}", {"workflow_id": workflow_id}
+            module, f"Flowcept{module.__name__}", extra_attributes={"workflow_id": workflow_id}
         )
         flowcept_torch_modules.append(new_module)
     if len(flowcept_torch_modules) == 1:
@@ -141,7 +288,7 @@ def register_modules(
         return flowcept_torch_modules
 
 
-def register_module_as_workflow(module: nn.Module, parent_workflow_id=None, custom_metadata:dict=None):
+def register_module_as_workflow(module: nn.Module, parent_workflow_id=None, custom_metadata:Dict = None):
     workflow_obj = WorkflowObject()
     workflow_obj.workflow_id = str(uuid.uuid4())
     workflow_obj.parent_workflow_id = parent_workflow_id

@@ -123,7 +123,7 @@ class BaseInterceptor(object):
                 self._interceptor_instance_id
             ] = machine_info
 
-        self._mq_dao.publish(workflow_obj)
+        self._mq_dao.publish(workflow_obj.serialize())
 
     def intercept(self, obj_msg: Union[TaskObject, WorkflowObject]):
         self._mq_dao.publish(obj_msg)

@@ -13,10 +13,11 @@ from datasets import load_dataset
 import flowcept
 from flowcept import FlowceptConsumerAPI
 from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
+
 from flowcept.instrumentation.decorators.flowcept_torch import (
     register_modules,
     register_module_as_workflow,
-    torch_args_handler,
+    torch_task,
 )
 from flowcept.instrumentation.decorators.responsible_ai import model_profiler
 
@@ -147,7 +148,8 @@ class TransformerModel(nn.Module):
         )
         return mask
 
-    @flowcept_task(args_handler=torch_args_handler)
+    #@flowcept_task(args_handler=torch_args_handler)
+    @torch_task()
     def forward(self, src):
         if self.src_mask is None or self.src_mask.size(0) != len(src):
             device = src.device
@@ -186,7 +188,8 @@ class PositionalEncoding(nn.Module):
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer("pe", pe)
 
-    @flowcept_task(args_handler=torch_args_handler)
+    #@flowcept_task(args_handler=torch_args_handler)
+    @torch_task()
     def forward(self, x):
         x = x + self.pe[: x.size(0), :]
         return self.dropout(x)

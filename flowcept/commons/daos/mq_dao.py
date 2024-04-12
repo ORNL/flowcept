@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import Union, List, Dict
 
 import msgpack
 from redis import Redis
@@ -152,10 +152,10 @@ class MQDao:
                 )
                 for message in self._buffer:
                     try:
-                        if ENRICH_MESSAGES:
-                            message.enrich(
-                                adapter_settings=self._adapter_settings
-                            )
+                        # if ENRICH_MESSAGES:
+                        #     message.enrich(
+                        #         adapter_settings=self._adapter_settings
+                        #     )
 
                         self.logger.debug(
                             f"Going to send Message:"
@@ -163,7 +163,7 @@ class MQDao:
                         )
 
                         pipe.publish(  # no redis
-                            REDIS_CHANNEL, message.serialize()
+                            REDIS_CHANNEL, msgpack.dumps(message)
                         )
                     except Exception as e:
                         self.logger.exception(e)
@@ -191,7 +191,7 @@ class MQDao:
         pubsub.psubscribe(REDIS_CHANNEL)
         return pubsub
 
-    def publish(self, message):
+    def publish(self, message: Dict):
         # TODO: refactor we should have a parent MessageObject class
         self._buffer.append(message)
         if len(self._buffer) >= REDIS_BUFFER_SIZE:
