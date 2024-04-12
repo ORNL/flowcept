@@ -28,6 +28,72 @@ def default_args_handler(task_message, *args, **kwargs):
         args_handled = replace_non_serializable(args_handled)
     return args_handled
 
+def telemetry_flowcept_task(func=None):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            task_obj = {}
+            task_obj["started_at"] = time()
+            task_obj["activity_id"] = func.__name__
+            task_obj["task_id"] = str(id(task_obj))
+            task_obj["workflow_id"] = kwargs.pop("workflow_id")
+            task_obj["used"] = kwargs
+            task_obj["telemetry_at_start"] = (
+                 instrumentation_interceptor.telemetry_capture.capture()
+            )
+            try:
+                result = func(*args, **kwargs)
+                task_obj["status"] = Status.FINISHED.value
+            except Exception as e:
+                task_obj["status"] = Status.ERROR.value
+                result = None
+                task_obj["stderr"] = str(e)
+            task_obj["ended_at"] = time()
+            task_obj["telemetry_at_end"] = (
+                instrumentation_interceptor.telemetry_capture.capture()
+            )
+            task_obj["generated"] = result
+            instrumentation_interceptor.intercept(task_obj)
+            return result
+
+        return wrapper
+
+    if func is None:
+        return decorator
+    else:
+        return decorator(func)
+
+
+def lightweight_flowcept_task(func=None):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            task_obj = {}
+            task_obj["started_at"] = time()
+            task_obj["activity_id"] = func.__name__
+            task_obj["task_id"] = str(id(task_obj))
+            task_obj["workflow_id"] = kwargs.pop("workflow_id")
+            task_obj["used"] = kwargs
+            try:
+                result = func(*args, **kwargs)
+                task_obj["status"] = Status.FINISHED.value
+            except Exception as e:
+                task_obj["status"] = Status.ERROR.value
+                result = None
+                task_obj["stderr"] = str(e)
+            task_obj["ended_at"] = time()
+            task_obj["generated"] = result
+            instrumentation_interceptor.intercept(task_obj)
+            return result
+
+        return wrapper
+
+    if func is None:
+        return decorator
+    else:
+        return decorator(func)
+
+
 
 def flowcept_task(func=None, **decorator_kwargs):
     def decorator(func):
