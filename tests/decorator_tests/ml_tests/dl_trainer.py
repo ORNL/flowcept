@@ -8,11 +8,10 @@ import flowcept.instrumentation.decorators
 from flowcept import (
     FlowceptConsumerAPI,
 )
-from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 from flowcept.instrumentation.decorators.flowcept_torch import (
-    torch_args_handler,
     register_modules,
     register_module_as_workflow,
+    torch_task,
 )
 from flowcept.instrumentation.decorators.responsible_ai import (
     model_profiler,
@@ -73,7 +72,7 @@ class TestNet(nn.Module):
                 self.fc_layers.append(Softmax(dim=softmax_dims[i]))
         self.view_size = fc_in_outs[0][0]
 
-    @flowcept_task(args_handler=torch_args_handler)
+    @torch_task()
     def forward(self, x):
         x = self.conv_layers(x)
         x = x.view(-1, self.view_size)
