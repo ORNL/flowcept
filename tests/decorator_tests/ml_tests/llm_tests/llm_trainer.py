@@ -106,23 +106,26 @@ class TransformerModel(nn.Module):
         self.workflow_id = register_module_as_workflow(
             self, parent_workflow_id, custom_metadata
         )
+
         (
             TransformerEncoderLayer,
             TransformerEncoder,
             Embedding,
             Linear,
+            PositionalEncoding_
         ) = register_modules(
             [
                 nn.TransformerEncoderLayer,
                 nn.TransformerEncoder,
                 nn.Embedding,
                 nn.Linear,
+                PositionalEncoding
             ],
             workflow_id=self.workflow_id,
         )
         self.model_type = "Transformer"
         self.src_mask = None
-        self.pos_encoder = PositionalEncoding(
+        self.pos_encoder = PositionalEncoding_(
             d_model,
             dropout,
             max_len=pos_encoding_max_len,

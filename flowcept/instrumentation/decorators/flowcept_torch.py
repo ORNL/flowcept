@@ -192,8 +192,8 @@ def telemetry_torch_task(func=None):
                 result = None
                 task_obj["stderr"] = str(e)
             task_obj["ended_at"] = time()
-            task_obj[
-                "telemetry_at_end"] = instrumentation_interceptor.telemetry_capture.capture().to_dict()
+            # task_obj[
+            #     "telemetry_at_end"] = instrumentation_interceptor.telemetry_capture.capture().to_dict()
             instrumentation_interceptor.intercept(task_obj)
             return result
 
@@ -245,7 +245,9 @@ def telemetry_torch_task(func=None):
 
 def torch_task():
     mode = INSTRUMENTATION["torch"]["mode"]
-    if mode == "base":
+    if mode is None:
+        return lambda _: _
+    elif mode == "base":
         return base_torch_task
     elif mode == "tensor_inspection":
         return tensor_inspection_torch_task

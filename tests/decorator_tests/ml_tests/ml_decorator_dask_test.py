@@ -2,7 +2,7 @@ import unittest
 
 from uuid import uuid4
 
-from dask.distributed import Client
+from time import sleep
 
 from flowcept import FlowceptConsumerAPI, WorkflowObject, TaskQueryAPI
 
@@ -55,9 +55,7 @@ class MLDecoratorDaskTests(unittest.TestCase):
         close_dask(client, cluster)
         consumer.stop()
 
-        from time import sleep
-
-        sleep(30)
+        sleep(120)
         # We are creating one "sub-workflow" for every Model.fit,
         # which requires forwarding on multiple layers
         task_query = TaskQueryAPI()
