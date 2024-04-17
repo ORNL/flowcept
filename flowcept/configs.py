@@ -109,7 +109,7 @@ MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get(
 ######################
 
 MQ_TYPE = settings["project"].get("mq_type", "redis")
-DEBUG_MODE = settings["project"].get("debug", False)
+#DEBUG_MODE = settings["project"].get("debug", False)
 PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get(

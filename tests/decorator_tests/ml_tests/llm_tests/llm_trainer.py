@@ -12,6 +12,7 @@ from datasets import load_dataset
 
 import flowcept
 from flowcept import FlowceptConsumerAPI
+from flowcept.configs import N_GPUS
 
 from flowcept.instrumentation.decorators.flowcept_torch import (
     register_modules,
@@ -291,7 +292,7 @@ def model_train(
             dropout,
             pos_encoding_max_len,
             parent_workflow_id=workflow_id,
-            custom_metadata={"model_step": "train"},
+            custom_metadata={"model_step": "train", "cuda_visible": N_GPUS},
         ).to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -336,7 +337,7 @@ def model_train(
             nlayers,
             dropout,
             parent_workflow_id=workflow_id,
-            custom_metadata={"model_step": "evaluation"},
+            custom_metadata={"model_step": "evaluation", "cuda_visible": N_GPUS},
         ).to(device)
         print("Loading model")
         torch_loaded = torch.load("transformer_wikitext2.pth")
