@@ -141,8 +141,9 @@ if (
                 visible_devices = [
                     int(i) for i in visible_devices_var.split(",")
                 ]
-                N_GPUS["nvidia"] = visible_devices
-                GPU_HANDLES = []  # TODO
+                if len(visible_devices):
+                    N_GPUS["nvidia"] = visible_devices
+                    GPU_HANDLES = []  # TODO
             else:
                 from pynvml import nvmlDeviceGetCount
 
@@ -157,11 +158,12 @@ if (
                 visible_devices = [
                     int(i) for i in visible_devices_var.split(",")
                 ]
-                N_GPUS["amd"] = visible_devices
-                from amdsmi import amdsmi_init, amdsmi_get_processor_handles
+                if len(visible_devices):
+                    N_GPUS["amd"] = visible_devices
+                    from amdsmi import amdsmi_init, amdsmi_get_processor_handles
 
-                amdsmi_init()
-                GPU_HANDLES = amdsmi_get_processor_handles()
+                    amdsmi_init()
+                    GPU_HANDLES = amdsmi_get_processor_handles()
             else:
                 from amdsmi import amdsmi_init, amdsmi_get_processor_handles
 
