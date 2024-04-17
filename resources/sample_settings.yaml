@@ -5,7 +5,7 @@ project:
   performance_logging: false
   register_workflow: true
   enrich_messages: true
-  register_instrumented_tasks: true
+
   telemetry_capture:
     gpu: ~
     cpu: true
@@ -18,7 +18,7 @@ project:
 
 instrumentation:
   torch:
-    inspect_tensor: true
+    mode: base   # base, tensor_inspection, with_telemetry, full, ~ #(none)
 
 log:
   log_path: "default"
