@@ -110,8 +110,8 @@ class DocumentInserter:
             dt = datetime.fromtimestamp(message["utc_timestamp"])
             message["timestamp"] = dt.utcnow()
 
-        if DEBUG_MODE:
-            message["debug"] = True
+        # if DEBUG_MODE:
+        #     message["debug"] = True
 
         message.pop("type")
 
