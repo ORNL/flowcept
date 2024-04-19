@@ -33,6 +33,7 @@ class WorkflowObject:
     environment_id: str = None
     sys_name: str = None
     extra_metadata: str = None
+    parent_task_id: str = None
 
     @staticmethod
     def workflow_id_field():

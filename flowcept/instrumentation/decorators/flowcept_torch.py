@@ -294,12 +294,13 @@ def register_modules(
         return flowcept_torch_modules
 
 
-def register_module_as_workflow(module: nn.Module, parent_workflow_id=None, custom_metadata:Dict = None):
+def register_module_as_workflow(module: nn.Module, parent_workflow_id=None, parent_task_id=None, custom_metadata:Dict = None):
     workflow_obj = WorkflowObject()
     workflow_obj.workflow_id = str(uuid.uuid4())
     workflow_obj.parent_workflow_id = parent_workflow_id
     workflow_obj.name = module.__class__.__name__
     workflow_obj.custom_metadata = custom_metadata
+    workflow_obj.parent_task_id = parent_task_id
     if REGISTER_WORKFLOW:
         flowcept.instrumentation.decorators.instrumentation_interceptor.send_workflow_message(
             workflow_obj
