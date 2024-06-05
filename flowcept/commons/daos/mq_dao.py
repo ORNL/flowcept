@@ -11,7 +11,8 @@ from redis.client import PubSub
 from time import time
 
 import flowcept.commons
-from flowcept.commons.daos.single_autoflush_buffer import AutoflushBuffer
+from flowcept.commons.daos.autoflush_buffer import AutoflushBuffer
+
 from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
 from flowcept.commons.utils import perf_log, chunked
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -104,15 +105,9 @@ class MQDao:
             )
         self._adapter_settings = adapter_settings
         self._keyvalue_dao = KeyValueDAO(connection=self._redis)
-        # self.buffer = list()
 
         self._time_based_flushing_started = False
         self.buffer: Union[AutoflushBuffer, List] = None
-        # self._time_thread: Thread = None
-        # self._previous_time = -1
-        # self._stop_flag = False
-        # self._time_based_flushing_started = False
-        # self._lock = Lock()
 
     def register_time_based_thread_init(
         self, interceptor_instance_id: str, exec_bundle_id=None

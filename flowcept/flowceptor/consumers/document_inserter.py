@@ -2,11 +2,10 @@ import msgpack
 from time import time, sleep
 from threading import Thread, Event, Lock
 from typing import Dict
-from datetime import datetime
 from uuid import uuid4
 
 import flowcept.commons
-from flowcept.commons.daos.single_autoflush_buffer import AutoflushBuffer
+from flowcept.commons.daos.autoflush_buffer import AutoflushBuffer
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
