@@ -16,3 +16,4 @@ notebooks/scheduler_file.json
 test.py
 **/*dump*
 time.txt
+tmp/

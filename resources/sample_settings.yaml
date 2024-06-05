@@ -5,9 +5,10 @@ project:
   performance_logging: false
   register_workflow: true
   enrich_messages: true
+  db_flush_mode: online   # or offline
 
   telemetry_capture:
-    gpu: ~
+    gpu: ~ #
     cpu: true
     per_cpu: true
     process_info: true
@@ -18,7 +19,9 @@ project:
 
 instrumentation:
   torch:
-    mode: base   # base, tensor_inspection, with_telemetry, full, ~ #(none)
+    mode: telemetry_and_tensor_inspection_counted   # tensor_inspection, telemetry, telemetry_and_tensor_inspection, telemetry_and_tensor_inspection_counted, full, ~
+    max_frequency: 10
+
 
 log:
   log_path: "default"
@@ -36,6 +39,7 @@ main_redis:
   channel: interception
   buffer_size: 50
   insertion_buffer_time_secs: 5
+  chunk_size: 10  # use can use 0 or -1 to disable this. Or simply omit this from the config file.
 
 mongodb:
   host: localhost

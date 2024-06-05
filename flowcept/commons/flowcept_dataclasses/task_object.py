@@ -39,6 +39,7 @@ class TaskObject:
     submitted_at: float = None
     started_at: float = None
     ended_at: float = None
+    registered_at: float = None
     telemetry_at_start: Telemetry = None
     telemetry_at_end: Telemetry = None
     workflow_name: AnyStr = None
@@ -60,6 +61,16 @@ class TaskObject:
     dependents: List = None
 
     @staticmethod
+    def get_time_field_names():
+        return [
+            "started_at",
+            "ended_at",
+            "submitted_at",
+            "registered_at",
+            "utc_timestamp",
+        ]
+
+    @staticmethod
     def get_dict_field_names():
         return [
             "used",
@@ -77,10 +88,10 @@ class TaskObject:
     def workflow_id_field():
         return "workflow_id"
 
-    def enrich(self, adapter_settings=None):
-        if adapter_settings is not None:
+    def enrich(self, adapter_key=None):
+        if adapter_key is not None:
             # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
-            self.adapter_id = adapter_settings.key
+            self.adapter_id = adapter_key
 
         if self.utc_timestamp is None:
             self.utc_timestamp = flowcept.commons.utils.get_utc_now()

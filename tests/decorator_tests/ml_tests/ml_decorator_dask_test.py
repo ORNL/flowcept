@@ -7,6 +7,8 @@ from time import sleep
 from flowcept import FlowceptConsumerAPI, WorkflowObject, TaskQueryAPI
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.commons.utils import evaluate_until
+from flowcept.flowceptor.adapters.dask.dask_plugins import set_dask_workflow
 
 from tests.adapters.dask_test_utils import (
     setup_local_dask_cluster,
@@ -25,7 +27,6 @@ class MLDecoratorDaskTests(unittest.TestCase):
         client, cluster, consumer = setup_local_dask_cluster(
             exec_bundle=wf_id
         )
-
         hp_conf = {
             "n_conv_layers": [2, 3, 4],
             "conv_incrs": [10, 20, 30],
@@ -35,15 +36,11 @@ class MLDecoratorDaskTests(unittest.TestCase):
             "max_epochs": [1],
         }
         confs = ModelTrainer.generate_hp_confs(hp_conf)
-
-        confs = [{**d, "workflow_id": wf_id} for d in confs]
+        hp_conf.update({"n_confs": len(confs)})
+        custom_metadata = {"hyperparameter_conf": hp_conf}
+        set_dask_workflow(client, custom_metadata=custom_metadata)
         print("Workflow id", wf_id)
         outputs = []
-        wf_obj = WorkflowObject()
-        wf_obj.workflow_id = wf_id
-        wf_obj.custom_metadata = {
-            "hyperparameter_conf": hp_conf.update({"n_confs": len(confs)})
-        }
         for conf in confs[:1]:
             conf["workflow_id"] = wf_id
             outputs.append(client.submit(ModelTrainer.model_fit, **conf))
@@ -55,13 +52,13 @@ class MLDecoratorDaskTests(unittest.TestCase):
         close_dask(client, cluster)
         consumer.stop()
 
-        sleep(120)
         # We are creating one "sub-workflow" for every Model.fit,
         # which requires forwarding on multiple layers
-        task_query = TaskQueryAPI()
-        module_docs = (
-            task_query.get_subworkflows_tasks_from_a_parent_workflow(
-                parent_workflow_id=wf_id
+        assert evaluate_until(
+            lambda: len(
+                TaskQueryAPI().get_subworkflows_tasks_from_a_parent_workflow(
+                    wf_id
+                )
             )
+            > 0
         )
-        assert len(module_docs) > 0

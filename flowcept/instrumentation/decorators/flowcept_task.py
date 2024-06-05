@@ -33,14 +33,15 @@ def telemetry_flowcept_task(func=None):
         @wraps(func)
         def wrapper(*args, **kwargs):
             task_obj = {}
+            task_obj["type"] = "task"
             task_obj["started_at"] = time()
-            task_obj["activity_id"] = func.__name__
+            task_obj["activity_id"] = func.__qualname__
             task_obj["task_id"] = str(id(task_obj))
             task_obj["workflow_id"] = kwargs.pop("workflow_id")
             task_obj["used"] = kwargs
-            task_obj[
-                "telemetry_at_start"
-            ] = instrumentation_interceptor.telemetry_capture.capture()
+            tel = instrumentation_interceptor.telemetry_capture.capture()
+            if tel is not None:
+                task_obj["telemetry_at_start"] = tel.to_dict()
             try:
                 result = func(*args, **kwargs)
                 task_obj["status"] = Status.FINISHED.value
@@ -48,10 +49,10 @@ def telemetry_flowcept_task(func=None):
                 task_obj["status"] = Status.ERROR.value
                 result = None
                 task_obj["stderr"] = str(e)
-            task_obj["ended_at"] = time()
-            task_obj[
-                "telemetry_at_end"
-            ] = instrumentation_interceptor.telemetry_capture.capture()
+            # task_obj["ended_at"] = time()
+            tel = instrumentation_interceptor.telemetry_capture.capture()
+            if tel is not None:
+                task_obj["telemetry_at_end"] = tel.to_dict()
             task_obj["generated"] = result
             instrumentation_interceptor.intercept(task_obj)
             return result
@@ -68,22 +69,37 @@ def lightweight_flowcept_task(func=None):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            task_obj = {}
-            task_obj["started_at"] = time()
-            task_obj["activity_id"] = func.__name__
-            task_obj["task_id"] = str(id(task_obj))
-            task_obj["workflow_id"] = kwargs.pop("workflow_id")
-            task_obj["used"] = kwargs
-            try:
-                result = func(*args, **kwargs)
-                task_obj["status"] = Status.FINISHED.value
-            except Exception as e:
-                task_obj["status"] = Status.ERROR.value
-                result = None
-                task_obj["stderr"] = str(e)
-            task_obj["ended_at"] = time()
-            task_obj["generated"] = result
-            instrumentation_interceptor.intercept(task_obj)
+            # t0 = time()
+            # task_obj["started_at"] = time()
+            # task_obj["type"] = "task"
+
+            # task_obj["task_id"] = t0
+
+            # task_obj["used"] = kwargs
+            result = func(*args, **kwargs)
+            # try:
+            #     task_obj["status"] = Status.FINISHED.value
+            # except Exception as e:
+            #     task_obj["status"] = Status.ERROR.value
+            #     result = None
+            #     task_obj["stderr"] = str(e)
+            # task_obj["ended_at"] = time()
+            # generatedKV = task_obj_pb2.GeneratedKV(key="y", val=result["y"])
+            # task_obj = task_obj_pb2.TaskObject(type="task",
+            #                                    workflow_id=kwargs.pop(
+            #                                        "workflow_id"),
+            #                                    activity_id=func.__name__,
+            #                                    y=result["y"]
+            #                                    )
+
+            task_dict = dict(
+                type="task",
+                workflow_id=kwargs.pop("workflow_id"),
+                activity_id=func.__name__,
+                used=kwargs,
+                generated=result,
+            )
+            instrumentation_interceptor.intercept(task_dict)
             return result
 
         return wrapper

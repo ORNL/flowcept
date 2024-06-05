@@ -15,6 +15,7 @@ from flowcept.configs import (
     TELEMETRY_CAPTURE,
     REPLACE_NON_JSON_SERIALIZABLE,
     REGISTER_WORKFLOW,
+    ENRICH_MESSAGES,
 )
 
 
@@ -116,22 +117,13 @@ class DaskSchedulerInterceptor(BaseInterceptor):
                     if hasattr(ts, "run_spec"):
                         get_run_spec_data(task_msg, ts.run_spec)
 
-                wf_obj = WorkflowObject()
-                if task_msg.workflow_id and REGISTER_WORKFLOW:
-                    wf_obj.workflow_id = task_msg.workflow_id
-                    wf_obj.custom_metadata = {
-                        "scheduler": self._scheduler.address_safe,
-                        "scheduler_id": self._scheduler.id,
-                        "scheduler_pid": self._scheduler.proc.pid,
-                        "clients": len(self._scheduler.clients),
-                        "n_workers": len(self._scheduler.workers),
-                    }
-                    self.send_workflow_message(wf_obj)
-                else:
-                    # TODO: we can't do much if the user doesn't specify a workflow_id
-                    # The reason why I'm marking this as TODO is because
-                    # there might be some clever way that I couldn't think of now.
-                    pass
+                if REGISTER_WORKFLOW:
+                    if hasattr(self._scheduler, "current_workflow"):
+                        wf_obj = self._scheduler.current_workflow
+                        self.send_workflow_message(wf_obj)
+                    else:
+                        # TODO: we can't do much if the user didn't register the wf
+                        pass
 
                 self.intercept(task_msg.to_dict())
 
@@ -218,6 +210,8 @@ class DaskWorkerInterceptor(BaseInterceptor):
                         task_msg.generated = replace_non_serializable(
                             task_msg.generated
                         )
+            if ENRICH_MESSAGES:
+                task_msg.enrich(self._plugin_key)
 
             self.intercept(task_msg.to_dict())
 

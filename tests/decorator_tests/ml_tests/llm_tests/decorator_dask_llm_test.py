@@ -9,6 +9,7 @@ from cluster_experiment_utils.utils import generate_configs
 from flowcept import FlowceptConsumerAPI
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.flowceptor.adapters.dask.dask_plugins import set_dask_workflow
 from tests.adapters.dask_test_utils import (
     setup_local_dask_cluster,
     close_dask,
@@ -31,6 +32,7 @@ class DecoratorDaskLLMTests(unittest.TestCase):
         client, cluster, consumer = setup_local_dask_cluster(
             exec_bundle=wf_id
         )
+        set_dask_workflow(client, workflow_id=wf_id)
         ntokens, train_data, val_data, test_data = get_wiki_text()
         print(f"Workflow_id={wf_id}")
         exp_param_settings = {

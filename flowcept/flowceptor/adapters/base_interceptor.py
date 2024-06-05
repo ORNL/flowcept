@@ -1,12 +1,14 @@
 import uuid
 from abc import ABCMeta, abstractmethod
-from typing import Union, Dict
+from typing import Union, Dict, Callable
+import msgpack
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.commons.utils import get_utc_now
+import flowcept
 from flowcept.configs import (
     settings,
     FLOWCEPT_USER,
@@ -20,6 +22,9 @@ from flowcept.configs import (
     EXTRA_METADATA,
     ENRICH_MESSAGES,
     ENVIRONMENT_ID,
+    REDIS_BUFFER_SIZE,
+    REDIS_CHANNEL,
+    DB_FLUSH_MODE,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao import MQDao
@@ -54,6 +59,11 @@ class BaseInterceptor(object):
         self.telemetry_capture = TelemetryCapture()
         self._saved_workflows = set()
         self._generated_workflow_id = False
+        self.intercept: Callable = None
+        if flowcept.configs.DB_FLUSH_MODE == "online":
+            self.intercept = self.intercept_appends_with_checks
+        else:
+            self.intercept = self.intercept_appends_only
 
     def prepare_task_msg(self, *args, **kwargs) -> TaskObject:
         raise NotImplementedError()
@@ -64,7 +74,7 @@ class BaseInterceptor(object):
         :return:
         """
         self._bundle_exec_id = bundle_exec_id
-        self._mq_dao.start_time_based_flushing(
+        self._mq_dao.init_buffer(
             self._interceptor_instance_id, bundle_exec_id
         )
         return self
@@ -74,10 +84,7 @@ class BaseInterceptor(object):
         Gracefully stops an interceptor
         :return:
         """
-        self._mq_dao.stop_time_based_flushing(
-            self._interceptor_instance_id, self._bundle_exec_id
-        )
-        # self.telemetry_capture.shutdown_gpu_telemetry()
+        self._mq_dao.stop(self._interceptor_instance_id, self._bundle_exec_id)
 
     def observe(self, *args, **kwargs):
         """
@@ -107,9 +114,8 @@ class BaseInterceptor(object):
         if wf_id in self._saved_workflows:
             return
         self._saved_workflows.add(wf_id)
-        if (  # NO MQ
-            self._mq_dao._buffer is None
-        ):  # TODO :base-interceptor-refactor: :code-reorg: :usability:
+        if self._mq_dao.buffer is None:
+            # TODO :base-interceptor-refactor: :code-reorg: :usability:
             raise Exception(
                 f"This interceptor {id(self)} has never been started!"
             )
@@ -122,9 +128,23 @@ class BaseInterceptor(object):
             workflow_obj.machine_info[
                 self._interceptor_instance_id
             ] = machine_info
+        if ENRICH_MESSAGES:
+            workflow_obj.enrich(self.settings.key if self.settings else None)
+        self.intercept(workflow_obj.to_dict())
 
-        self._mq_dao.publish(workflow_obj.to_dict())
+    def intercept_appends_only(self, obj_msg):
+        self._mq_dao.buffer.append(obj_msg)
 
-    def intercept(self, obj_msg: Dict):
-        self._mq_dao.publish(obj_msg)
-        return
+    def intercept_appends_with_checks(self, obj_msg):
+        # self._mq_dao._lock.acquire()
+        # self._mq_dao.buffer.append(obj_msg)
+        self._mq_dao.buffer.add(obj_msg)
+        # if len(self._mq_dao.buffer) >= REDIS_BUFFER_SIZE:
+        #     self.logger.critical("Redis buffer exceeded, flushing...")
+        #     self._mq_dao.flush()
+        # self._mq_dao._lock.release()
+
+    # def intercept(self, obj_msg: Dict):
+    #     pass
+    #     #self._mq_dao._buffer.append(obj_msg)
+    #     #self._mq_dao.publish(obj_msg)

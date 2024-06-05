@@ -11,28 +11,29 @@ from flowcept.commons.utils import (
     assert_by_querying_tasks_until,
     evaluate_until,
 )
+from flowcept.flowceptor.adapters.dask.dask_plugins import set_dask_workflow
 from tests.adapters.dask_test_utils import (
     setup_local_dask_cluster,
     close_dask,
 )
 
 
-def dummy_func1(x, workflow_id=None):
+def dummy_func1(x):
     cool_var = "cool value"  # test if we can intercept this var
     print(cool_var)
     y = cool_var
     return x * 2
 
 
-def dummy_func2(y, workflow_id=None):
+def dummy_func2(y):
     return y + y
 
 
-def dummy_func3(z, w, workflow_id=None):
+def dummy_func3(z, w):
     return {"r": z + w}
 
 
-def dummy_func4(x_obj, workflow_id=None):
+def dummy_func4(x_obj):
     return {"z": x_obj["x"] * 2}
 
 
@@ -60,31 +61,28 @@ class TestDask(unittest.TestCase):
         ) = setup_local_dask_cluster(TestDask.consumer, 2)
 
     def atest_pure_workflow(self):
+        wf_id = set_dask_workflow(self.client)
         i1 = np.random.random()
-        wf_id = f"wf_{uuid4()}"
-        o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
-        o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
+        o1 = self.client.submit(dummy_func1, i1)
+        o2 = TestDask.client.submit(dummy_func2, o1)
         self.logger.debug(o2.result())
         self.logger.debug(o2.key)
-        sleep(3)
         return wf_id, o2.key
 
     def test_dummyfunc(self):
+        set_dask_workflow(self.client)
         i1 = np.random.random()
-        wf_id = f"wf_{uuid4()}"
-        o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
+        o1 = self.client.submit(dummy_func1, i1)
         # self.logger.debug(o1.result())
-        sleep(3)
         return o1.key
 
     def test_long_workflow(self):
         i1 = np.random.random()
-        wf_id = f"wf_{uuid4()}"
-        o1 = TestDask.client.submit(dummy_func1, i1, workflow_id=wf_id)
-        o2 = TestDask.client.submit(dummy_func2, o1, workflow_id=wf_id)
-        o3 = TestDask.client.submit(dummy_func3, o1, o2, workflow_id=wf_id)
+        set_dask_workflow(self.client)
+        o1 = TestDask.client.submit(dummy_func1, i1)
+        o2 = TestDask.client.submit(dummy_func2, o1)
+        o3 = TestDask.client.submit(dummy_func3, o1, o2)
         self.logger.debug(o3.result())
-        sleep(3)
         return o3.key
 
     def varying_args(self):
@@ -94,13 +92,12 @@ class TestDask(unittest.TestCase):
         assert result["r"] > 0
         self.logger.debug(result)
         self.logger.debug(o1.key)
-        sleep(3)
         return o1.key
 
     def test_map_workflow(self):
         i1 = np.random.random(3)
-        wf_id = f"wf_{uuid4()}"
-        o1 = TestDask.client.map(dummy_func1, i1, workflow_id=wf_id)
+        set_dask_workflow(self.client)
+        o1 = TestDask.client.map(dummy_func1, i1)
         for o in o1:
             result = o.result()
             assert result > 0
@@ -115,13 +112,12 @@ class TestDask(unittest.TestCase):
             {"x": 4, "batch_norm": False},
             {"x": 6, "batch_norm": True, "empty_string": ""},
         ]
-        wf_id = f"wf_{uuid4()}"
-        o1 = TestDask.client.map(dummy_func4, i1, workflow_id=wf_id)
+        set_dask_workflow(self.client)
+        o1 = TestDask.client.map(dummy_func4, i1)
         for o in o1:
             result = o.result()
             assert result["z"] > 0
             self.logger.debug(o.key, result)
-        sleep(3)
         return o1
 
     def error_task_submission(self):
