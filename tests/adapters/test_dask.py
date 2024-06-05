@@ -1,6 +1,5 @@
 import unittest
 from time import sleep
-from uuid import uuid4
 import numpy as np
 
 from dask.distributed import Client, LocalCluster
@@ -165,6 +164,5 @@ class TestDask(unittest.TestCase):
         except Exception as e:
             print(e)
             pass
-
         if TestDask.consumer:
             TestDask.consumer.stop()

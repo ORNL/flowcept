@@ -1,8 +1,5 @@
 import pickle
 
-from flowcept.commons.flowcept_dataclasses.workflow_object import (
-    WorkflowObject,
-)
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
     Status,

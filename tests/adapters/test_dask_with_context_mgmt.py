@@ -1,10 +1,9 @@
 import unittest
-from uuid import uuid4
 import numpy as np
 
 from dask.distributed import Client
 
-from flowcept import FlowceptConsumerAPI, TaskQueryAPI
+from flowcept import FlowceptConsumerAPI
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.flowceptor.adapters.dask.dask_plugins import set_dask_workflow
