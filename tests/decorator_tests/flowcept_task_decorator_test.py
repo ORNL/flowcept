@@ -1,7 +1,5 @@
-import flowcept
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
-flowcept.configs.DB_FLUSH_MODE = "offline"
 import uuid
 from time import sleep
 import pandas as pd
@@ -129,10 +127,12 @@ class DecoratorTests(unittest.TestCase):
         return decorated, not_decorated
 
     def test_online_offline(self):
-        assert flowcept.configs.DB_FLUSH_MODE == "offline"
+        flowcept.configs.DB_FLUSH_MODE = "offline"
+        flowcept.instrumentation.decorators.instrumentation_interceptor = (
+            BaseInterceptor(plugin_key=None)
+        )
         self.test_decorated_function_timed()
         flowcept.configs.DB_FLUSH_MODE = "online"
-        assert flowcept.configs.DB_FLUSH_MODE == "online"
         flowcept.instrumentation.decorators.instrumentation_interceptor = (
             BaseInterceptor(plugin_key=None)
         )
