@@ -171,7 +171,10 @@ class ModelTrainer(object):
             start_doc_inserter=False,
         ):
             train_loader, test_loader = ModelTrainer.build_train_test_loader()
-            device = torch.device("cpu")
+            if torch.backends.mps.is_available():
+                device = torch.device("mps")
+            else:
+                device = torch.device("cpu")
             model = TestNet(
                 conv_in_outs=conv_in_outs,
                 conv_kernel_sizes=conv_kernel_sizes,
@@ -180,7 +183,6 @@ class ModelTrainer(object):
                 softmax_dims=softmax_dims,
                 parent_workflow_id=workflow_id,
             )
-
             model = model.to(device)
             optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
             test_info = {}

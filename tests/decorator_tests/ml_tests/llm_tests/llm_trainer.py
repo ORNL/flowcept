@@ -100,12 +100,13 @@ class TransformerModel(nn.Module):
         nlayers,
         dropout=0.5,
         pos_encoding_max_len=5000,
+        parent_task_id=None,
         parent_workflow_id=None,
         custom_metadata: dict = None,
     ):
         super(TransformerModel, self).__init__()
         self.workflow_id = register_module_as_workflow(
-            self, parent_workflow_id, custom_metadata
+            self, parent_workflow_id, parent_task_id, custom_metadata
         )
 
         (
@@ -113,14 +114,14 @@ class TransformerModel(nn.Module):
             TransformerEncoder,
             Embedding,
             Linear,
-            PositionalEncoding_
+            PositionalEncoding_,
         ) = register_modules(
             [
                 nn.TransformerEncoderLayer,
                 nn.TransformerEncoder,
                 nn.Embedding,
                 nn.Linear,
-                PositionalEncoding
+                PositionalEncoding,
             ],
             workflow_id=self.workflow_id,
         )
@@ -262,6 +263,10 @@ def model_train(
     pos_encoding_max_len,
     workflow_id=None,
 ):
+    from distributed.worker import thread_state
+
+    dask_task_id = thread_state.key
+
     # TODO :ml-refactor: save device type and random seed: https://pytorch.org/docs/stable/notes/randomness.html
     # TODO :base-interceptor-refactor: Can we do it better?
     with FlowceptConsumerAPI(
@@ -291,6 +296,7 @@ def model_train(
             nlayers,
             dropout,
             pos_encoding_max_len,
+            parent_task_id=dask_task_id,
             parent_workflow_id=workflow_id,
             custom_metadata={"model_step": "train", "cuda_visible": N_GPUS},
         ).to(device)
@@ -337,7 +343,10 @@ def model_train(
             nlayers,
             dropout,
             parent_workflow_id=workflow_id,
-            custom_metadata={"model_step": "evaluation", "cuda_visible": N_GPUS},
+            custom_metadata={
+                "model_step": "evaluation",
+                "cuda_visible": N_GPUS,
+            },
         ).to(device)
         print("Loading model")
         torch_loaded = torch.load("transformer_wikitext2.pth")

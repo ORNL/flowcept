@@ -54,13 +54,13 @@ class WorkflowObject:
         result_dict["type"] = "workflow"
         return result_dict
 
-    def enrich(self, adapter_settings=None):
+    def enrich(self, adapter_key=None):
         self.utc_timestamp = flowcept.commons.utils.get_utc_now()
         self.flowcept_settings = OmegaConf.to_container(settings)
 
-        if adapter_settings is not None:
+        if adapter_key is not None:
             # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
-            self.adapter_id = adapter_settings.key
+            self.adapter_id = adapter_key
 
         if self.user is None:
             self.user = FLOWCEPT_USER

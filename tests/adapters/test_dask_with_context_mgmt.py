@@ -7,13 +7,14 @@ from dask.distributed import Client
 from flowcept import FlowceptConsumerAPI, TaskQueryAPI
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
+from flowcept.flowceptor.adapters.dask.dask_plugins import set_dask_workflow
 from tests.adapters.dask_test_utils import (
     setup_local_dask_cluster,
     close_dask,
 )
 
 
-def dummy_func1(x, workflow_id=None):
+def dummy_func1(x):
     cool_var = "cool value"  # test if we can intercept this var
     print(cool_var)
     y = cool_var
@@ -39,9 +40,9 @@ class TestDaskContextMgmt(unittest.TestCase):
 
     def test_workflow(self):
         i1 = np.random.random()
-        wf_id = f"wf_{uuid4()}"
+        set_dask_workflow(self.client)
         with FlowceptConsumerAPI():
-            o1 = self.client.submit(dummy_func1, i1, workflow_id=wf_id)
+            o1 = self.client.submit(dummy_func1, i1)
             self.logger.debug(o1.result())
             self.logger.debug(o1.key)
 
