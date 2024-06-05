@@ -15,7 +15,6 @@ from flowcept import FlowceptConsumerAPI
 import unittest
 
 from flowcept.commons.utils import assert_by_querying_tasks_until
-from flowcept.configs import DB_FLUSH_MODE
 from flowcept.instrumentation.decorators.flowcept_task import (
     flowcept_task,
     lightweight_flowcept_task,
