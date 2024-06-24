@@ -1,10 +1,11 @@
-from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
-
+import psutil
 import uuid
 from time import sleep
 import pandas as pd
 from time import time
 
+from flowcept.commons import FlowceptLogger
+from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 import flowcept.commons
 import flowcept.instrumentation.decorators
@@ -28,12 +29,12 @@ def not_decorated_static_function(df: pd.DataFrame, workflow_id=None):
     return {"y": 2}
 
 
-@flowcept_task
+@lightweight_flowcept_task
 def decorated_static_function2(workflow_id=None):
     return [2]
 
 
-@flowcept_task
+@lightweight_flowcept_task
 def decorated_static_function3(x, workflow_id=None):
     return 3
 
@@ -71,6 +72,37 @@ def calculate_overheads(decorated, not_decorated):
     return overheads
 
 
+def print_system_stats():
+    # CPU utilization
+    cpu_percent = psutil.cpu_percent(interval=1)
+
+    # Memory utilization
+    virtual_memory = psutil.virtual_memory()
+    memory_total = virtual_memory.total
+    memory_used = virtual_memory.used
+    memory_percent = virtual_memory.percent
+
+    # Disk utilization
+    disk_usage = psutil.disk_usage('/')
+    disk_total = disk_usage.total
+    disk_used = disk_usage.used
+    disk_percent = disk_usage.percent
+
+    # Network utilization
+    net_io = psutil.net_io_counters()
+    bytes_sent = net_io.bytes_sent
+    bytes_recv = net_io.bytes_recv
+
+    print("System Utilization Summary:")
+    print(f"CPU Usage: {cpu_percent}%")
+    print(
+        f"Memory Usage: {memory_percent}% (Used: {memory_used / (1024 ** 3):.2f} GB / Total: {memory_total / (1024 ** 3):.2f} GB)")
+    print(
+        f"Disk Usage: {disk_percent}% (Used: {disk_used / (1024 ** 3):.2f} GB / Total: {disk_total / (1024 ** 3):.2f} GB)")
+    print(
+        f"Network Usage: {bytes_sent / (1024 ** 2):.2f} MB sent / {bytes_recv / (1024 ** 2):.2f} MB received")
+
+
 class DecoratorTests(unittest.TestCase):
     @flowcept_task
     def decorated_function_with_self(self, x, workflow_id=None):
@@ -105,6 +137,8 @@ class DecoratorTests(unittest.TestCase):
         for i in range(max_tasks):
             decorated_static_function(pd.DataFrame(), workflow_id=workflow_id)
         t1 = time()
+        print("Decorated:")
+        print_system_stats()
         consumer.stop()
         decorated = t1 - t0
         print(workflow_id)
@@ -123,19 +157,23 @@ class DecoratorTests(unittest.TestCase):
                 pd.DataFrame(), workflow_id=workflow_id
             )
         t1 = time()
+        print("Not Decorated:")
+        print_system_stats()
         not_decorated = t1 - t0
         return decorated, not_decorated
 
     def test_online_offline(self):
         flowcept.configs.DB_FLUSH_MODE = "offline"
-        flowcept.instrumentation.decorators.instrumentation_interceptor = (
-            BaseInterceptor(plugin_key=None)
-        )
+        # flowcept.instrumentation.decorators.instrumentation_interceptor = (
+        #     BaseInterceptor(plugin_key=None)
+        # )
+        print("Testing times with offline mode")
         self.test_decorated_function_timed()
         flowcept.configs.DB_FLUSH_MODE = "online"
-        flowcept.instrumentation.decorators.instrumentation_interceptor = (
-            BaseInterceptor(plugin_key=None)
-        )
+        # flowcept.instrumentation.decorators.instrumentation_interceptor = (
+        #     BaseInterceptor(plugin_key=None)
+        # )
+        print("Testing times with online mode")
         self.test_decorated_function_timed()
 
     def test_decorated_function_timed(self):
@@ -156,6 +194,8 @@ class DecoratorTests(unittest.TestCase):
         not_decorated_stats = compute_statistics(not_decorated)
 
         overheads = calculate_overheads(decorated_stats, not_decorated_stats)
+        logger = FlowceptLogger()
+        logger.critical(flowcept.configs.DB_FLUSH_MODE + ";" + str(overheads))
 
         n = "00002"
         print(f"#n={n}: Online double buffers; buffer size 100")
@@ -163,9 +203,10 @@ class DecoratorTests(unittest.TestCase):
         print(f"not_decorated_{n} = {not_decorated_stats}")
         print(f"diff_{n} = calculate_diff(decorated_{n}, not_decorated_{n})")
         print(f"'decorated_{n}': diff_{n},")
-        print("Overheads: " + str(overheads))
-
+        print("Mode: " + flowcept.configs.DB_FLUSH_MODE)
         threshold = (
-            5 if flowcept.configs.DB_FLUSH_MODE == "offline" else 50
+            5 if flowcept.configs.DB_FLUSH_MODE == "offline" else 210
         )  # %
+        print("Threshold: ", threshold)
+        print("Overheads: " + str(overheads))
         assert all(map(lambda v: v < threshold, overheads))

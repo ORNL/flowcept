@@ -155,7 +155,7 @@ class DocumentInserter:
         if MONGO_REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
 
-        self.buffer.add(message)
+        self.buffer.append(message)
         # with self._lock:
         #     self._task_dicts_buffer.append(message)
         #     if len(self._task_dicts_buffer) >= self._curr_max_buffer_size:
