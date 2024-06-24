@@ -53,7 +53,7 @@ class AutoflushBuffer:
         self._flush_function_args = flush_function_args
         self._flush_function_kwargs = flush_function_kwargs
 
-    def add(self, item):
+    def append(self, item):
         # if self.stop_event.is_set():
         #     return
         buffer = self._buffers[self._current_buffer_index]

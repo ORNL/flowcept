@@ -44,7 +44,7 @@ from flowcept.version import __version__
 #  in the code. https://github.com/ORNL/flowcept/issues/109
 # class BaseInterceptor(object, metaclass=ABCMeta):
 class BaseInterceptor(object):
-    def __init__(self, plugin_key):
+    def __init__(self, plugin_key=None):
         self.logger = FlowceptLogger()
         if (
             plugin_key is not None
@@ -59,11 +59,11 @@ class BaseInterceptor(object):
         self.telemetry_capture = TelemetryCapture()
         self._saved_workflows = set()
         self._generated_workflow_id = False
-        self.intercept: Callable = None
-        if flowcept.configs.DB_FLUSH_MODE == "online":
-            self.intercept = self.intercept_appends_with_checks
-        else:
-            self.intercept = self.intercept_appends_only
+        # self.intercept: Callable = None
+        # if flowcept.configs.DB_FLUSH_MODE == "online":
+        #     self.intercept = self.intercept_appends_with_checks
+        # else:
+        #     self.intercept = self.intercept_appends_only
 
     def prepare_task_msg(self, *args, **kwargs) -> TaskObject:
         raise NotImplementedError()
@@ -132,17 +132,20 @@ class BaseInterceptor(object):
             workflow_obj.enrich(self.settings.key if self.settings else None)
         self.intercept(workflow_obj.to_dict())
 
-    def intercept_appends_only(self, obj_msg):
+    def intercept(self, obj_msg):
         self._mq_dao.buffer.append(obj_msg)
 
-    def intercept_appends_with_checks(self, obj_msg):
-        # self._mq_dao._lock.acquire()
-        # self._mq_dao.buffer.append(obj_msg)
-        self._mq_dao.buffer.add(obj_msg)
-        # if len(self._mq_dao.buffer) >= REDIS_BUFFER_SIZE:
-        #     self.logger.critical("Redis buffer exceeded, flushing...")
-        #     self._mq_dao.flush()
-        # self._mq_dao._lock.release()
+    # def intercept_appends_only(self, obj_msg):
+    #     self._mq_dao.buffer.append(obj_msg)
+    #
+    # def intercept_appends_with_checks(self, obj_msg):
+    #     # self._mq_dao._lock.acquire()
+    #     # self._mq_dao.buffer.append(obj_msg)
+    #     self._mq_dao.buffer.append(obj_msg)
+    #     # if len(self._mq_dao.buffer) >= REDIS_BUFFER_SIZE:
+    #     #     self.logger.critical("Redis buffer exceeded, flushing...")
+    #     #     self._mq_dao.flush()
+    #     # self._mq_dao._lock.release()
 
     # def intercept(self, obj_msg: Dict):
     #     pass
