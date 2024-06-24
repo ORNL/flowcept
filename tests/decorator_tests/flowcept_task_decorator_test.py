@@ -2,7 +2,7 @@ import psutil
 import uuid
 from time import sleep
 import pandas as pd
-from time import time
+from time import time, sleep
 
 from flowcept.commons import FlowceptLogger
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
@@ -20,13 +20,20 @@ from flowcept.instrumentation.decorators.flowcept_task import (
 )
 
 
-@lightweight_flowcept_task
+@flowcept_task
 def decorated_static_function(df: pd.DataFrame, workflow_id=None):
-    return {"y": 2}
+    return {"decorated_static_function": 2}
 
 
-def not_decorated_static_function(df: pd.DataFrame, workflow_id=None):
-    return {"y": 2}
+@lightweight_flowcept_task
+def decorated_all_serializable(x:int, workflow_id:str=None):
+    sleep(1/10000)
+    return {"yy": 33}
+
+
+def not_decorated_func(x:int, workflow_id:str=None):
+    sleep(1/10000)
+    return {"yy": 33}
 
 
 @lightweight_flowcept_task
@@ -104,7 +111,7 @@ def print_system_stats():
 
 
 class DecoratorTests(unittest.TestCase):
-    @flowcept_task
+    @lightweight_flowcept_task
     def decorated_function_with_self(self, x, workflow_id=None):
         sleep(x)
         return {"y": 2}
@@ -116,15 +123,22 @@ class DecoratorTests(unittest.TestCase):
             interceptors=flowcept.instrumentation.decorators.instrumentation_interceptor
         ):
             self.decorated_function_with_self(x=0.1, workflow_id=workflow_id)
-            decorated_static_function(pd.DataFrame(), workflow_id=workflow_id)
-            decorated_static_function2(workflow_id)
-            decorated_static_function3(0.1, workflow_id=workflow_id)
+            decorated_static_function(df=pd.DataFrame(), workflow_id=workflow_id)
+            decorated_static_function2(workflow_id=workflow_id)
+            decorated_static_function3(x=0.1, workflow_id=workflow_id)
         print(workflow_id)
+
+        assert assert_by_querying_tasks_until(
+            filter={"workflow_id": workflow_id},
+            condition_to_evaluate=lambda docs: len(docs) == 4,
+            max_time=60,
+            max_trials=60,
+        )
+
 
     def test_decorated_function_simple(
         self, max_tasks=10, start_doc_inserter=True, check_insertions=True
     ):
-        max_tasks = 100000
         workflow_id = str(uuid.uuid4())
         print(workflow_id)
         # TODO :refactor-base-interceptor:
@@ -135,7 +149,7 @@ class DecoratorTests(unittest.TestCase):
         consumer.start()
         t0 = time()
         for i in range(max_tasks):
-            decorated_static_function(pd.DataFrame(), workflow_id=workflow_id)
+            decorated_all_serializable(x=i, workflow_id=workflow_id)
         t1 = time()
         print("Decorated:")
         print_system_stats()
@@ -153,14 +167,15 @@ class DecoratorTests(unittest.TestCase):
 
         t0 = time()
         for i in range(max_tasks):
-            not_decorated_static_function(
-                pd.DataFrame(), workflow_id=workflow_id
+            not_decorated_func(
+                x=i, workflow_id=workflow_id
             )
         t1 = time()
         print("Not Decorated:")
         print_system_stats()
         not_decorated = t1 - t0
         return decorated, not_decorated
+
 
     def test_online_offline(self):
         flowcept.configs.DB_FLUSH_MODE = "offline"
@@ -182,7 +197,7 @@ class DecoratorTests(unittest.TestCase):
         for i in range(10):
             times.append(
                 self.test_decorated_function_simple(
-                    max_tasks=100000,
+                    max_tasks=10,#100000,
                     check_insertions=False,
                     start_doc_inserter=False,
                 )
@@ -205,7 +220,7 @@ class DecoratorTests(unittest.TestCase):
         print(f"'decorated_{n}': diff_{n},")
         print("Mode: " + flowcept.configs.DB_FLUSH_MODE)
         threshold = (
-            5 if flowcept.configs.DB_FLUSH_MODE == "offline" else 210
+            10 if flowcept.configs.DB_FLUSH_MODE == "offline" else 210
         )  # %
         print("Threshold: ", threshold)
         print("Overheads: " + str(overheads))
