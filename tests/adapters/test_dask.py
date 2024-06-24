@@ -1,4 +1,5 @@
 import unittest
+import uuid
 from time import sleep
 import numpy as np
 
@@ -15,6 +16,11 @@ from tests.adapters.dask_test_utils import (
     setup_local_dask_cluster,
     close_dask,
 )
+
+
+def problem_evaluate(phenome, uuid):
+    print(phenome, uuid)
+    return 1.0
 
 
 def dummy_func1(x):
@@ -103,6 +109,25 @@ class TestDask(unittest.TestCase):
             self.logger.debug(f"{o.key}, {result}")
         sleep(3)
         return o1
+
+    def test_evaluate_submit(self):
+        set_dask_workflow(self.client)
+        phenome = {'optimizer': 'Adam',
+                   'lr': 0.0001,
+                   'betas': [0.8, 0.999],
+                   'eps': 1e-08,
+                   'weight_decay': 0.05,
+                   'ams_grad': 0.5,
+                   'batch_normalization': True,
+                   'dropout': True,
+                   'upsampling': 'bilinear',
+                   'dilation': True,
+                   'num_filters': 1}
+
+        o1 = TestDask.client.submit(problem_evaluate, **{"phenome": phenome, "uuid": uuid.uuid4()})
+        print(o1.result())
+        return o1
+
 
     def test_map_workflow_kwargs(self):
         i1 = [

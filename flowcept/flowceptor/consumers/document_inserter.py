@@ -140,6 +140,12 @@ class DocumentInserter:
         if "task_id" not in message:
             message["task_id"] = str(uuid4())
 
+        if "workflow_id" not in message and len(message.get("used", {})):
+            wf_id = message.get("used").get("workflow_id", None)
+            if wf_id:
+                message["workflow_id"] = wf_id
+
+
         if not any(
             time_field in message
             for time_field in TaskObject.get_time_field_names()
