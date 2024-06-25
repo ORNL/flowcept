@@ -36,6 +36,6 @@ def setup_local_dask_cluster(consumer=None, n_workers=1, exec_bundle=None):
     client = Client(scheduler.address)
 
     scheduler.add_plugin(FlowceptDaskSchedulerAdapter(scheduler))
-    client.register_worker_plugin(FlowceptDaskWorkerAdapter())
+    client.register_plugin(FlowceptDaskWorkerAdapter())
 
     return client, cluster, consumer
