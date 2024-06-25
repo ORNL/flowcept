@@ -21,7 +21,9 @@ def default_args_handler(task_message: TaskObject, *args, **kwargs):
         for i in range(len(args)):
             args_handled[f"arg_{i}"] = args[i]
     if kwargs is not None and len(kwargs):
-        task_message.workflow_id = task_message.workflow_id or kwargs.pop("workflow_id", None)
+        task_message.workflow_id = task_message.workflow_id or kwargs.pop(
+            "workflow_id", None
+        )
         args_handled.update(kwargs)
     if REPLACE_NON_JSON_SERIALIZABLE:
         args_handled = replace_non_serializable(args_handled)
@@ -94,7 +96,7 @@ def lightweight_flowcept_task(func=None):
 
             task_dict = dict(
                 type="task",
-                #workflow_id=kwargs.pop("workflow_id", None),
+                # workflow_id=kwargs.pop("workflow_id", None),
                 activity_id=func.__name__,
                 used=kwargs,
                 generated=result,
@@ -123,7 +125,7 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj = TaskObject()
             task_obj.started_at = time()
             task_obj.activity_id = func.__name__
-            #task_obj.task_id = str(task_obj.started_at)
+            # task_obj.task_id = str(task_obj.started_at)
             task_obj.telemetry_at_start = (
                 instrumentation_interceptor.telemetry_capture.capture()
             )
