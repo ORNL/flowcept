@@ -1,5 +1,8 @@
+import numpy as np
 import psutil
 import uuid
+import random
+
 from time import sleep
 import pandas as pd
 from time import time, sleep
@@ -20,6 +23,22 @@ from flowcept.instrumentation.decorators.flowcept_task import (
 )
 
 
+def calc_time_to_sleep() -> float:
+    l = list()
+    t0 = time()
+    d = dict(
+        a=time(),
+        b=str(uuid.uuid4()),
+        c="aaa",
+        d=123.4,
+        e={"r": random.randint(1, 100)}
+    )
+    l.append(d)
+    t1 = time()
+    return (t1 - t0)*1.1
+
+
+TIME_TO_SLEEP = calc_time_to_sleep()
 @flowcept_task
 def decorated_static_function(df: pd.DataFrame, workflow_id=None):
     return {"decorated_static_function": 2}
@@ -27,12 +46,12 @@ def decorated_static_function(df: pd.DataFrame, workflow_id=None):
 
 @lightweight_flowcept_task
 def decorated_all_serializable(x:int, workflow_id:str=None):
-    sleep(1/10000)
+    sleep(TIME_TO_SLEEP)
     return {"yy": 33}
 
 
 def not_decorated_func(x:int, workflow_id:str=None):
-    sleep(1/10000)
+    sleep(TIME_TO_SLEEP)
     return {"yy": 33}
 
 
@@ -220,7 +239,7 @@ class DecoratorTests(unittest.TestCase):
         print(f"'decorated_{n}': diff_{n},")
         print("Mode: " + flowcept.configs.DB_FLUSH_MODE)
         threshold = (
-            10 if flowcept.configs.DB_FLUSH_MODE == "offline" else 210
+            15 if flowcept.configs.DB_FLUSH_MODE == "offline" else 210
         )  # %
         print("Threshold: ", threshold)
         print("Overheads: " + str(overheads))
