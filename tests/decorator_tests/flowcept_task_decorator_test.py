@@ -36,13 +36,15 @@ def calc_time_to_sleep() -> float:
         c="aaa",
         d=123.4,
         e={"r": random.randint(1, 100)},
-        shape=list(result_matrix.shape)
+        shape=list(result_matrix.shape),
     )
     l.append(d)
     t1 = time()
-    return (t1 - t0)*1.1
+    return (t1 - t0) * 1.1
+
 
 TIME_TO_SLEEP = calc_time_to_sleep()
+
 
 @flowcept_task
 def decorated_static_function(df: pd.DataFrame, workflow_id=None):
@@ -50,12 +52,12 @@ def decorated_static_function(df: pd.DataFrame, workflow_id=None):
 
 
 @lightweight_flowcept_task
-def decorated_all_serializable(x:int, workflow_id:str=None):
+def decorated_all_serializable(x: int, workflow_id: str = None):
     sleep(TIME_TO_SLEEP)
     return {"yy": 33}
 
 
-def not_decorated_func(x:int, workflow_id:str=None):
+def not_decorated_func(x: int, workflow_id: str = None):
     sleep(TIME_TO_SLEEP)
     return {"yy": 33}
 
@@ -114,7 +116,7 @@ def print_system_stats():
     memory_percent = virtual_memory.percent
 
     # Disk utilization
-    disk_usage = psutil.disk_usage('/')
+    disk_usage = psutil.disk_usage("/")
     disk_total = disk_usage.total
     disk_used = disk_usage.used
     disk_percent = disk_usage.percent
@@ -127,11 +129,14 @@ def print_system_stats():
     print("System Utilization Summary:")
     print(f"CPU Usage: {cpu_percent}%")
     print(
-        f"Memory Usage: {memory_percent}% (Used: {memory_used / (1024 ** 3):.2f} GB / Total: {memory_total / (1024 ** 3):.2f} GB)")
+        f"Memory Usage: {memory_percent}% (Used: {memory_used / (1024 ** 3):.2f} GB / Total: {memory_total / (1024 ** 3):.2f} GB)"
+    )
     print(
-        f"Disk Usage: {disk_percent}% (Used: {disk_used / (1024 ** 3):.2f} GB / Total: {disk_total / (1024 ** 3):.2f} GB)")
+        f"Disk Usage: {disk_percent}% (Used: {disk_used / (1024 ** 3):.2f} GB / Total: {disk_total / (1024 ** 3):.2f} GB)"
+    )
     print(
-        f"Network Usage: {bytes_sent / (1024 ** 2):.2f} MB sent / {bytes_recv / (1024 ** 2):.2f} MB received")
+        f"Network Usage: {bytes_sent / (1024 ** 2):.2f} MB sent / {bytes_recv / (1024 ** 2):.2f} MB received"
+    )
 
 
 class DecoratorTests(unittest.TestCase):
@@ -147,7 +152,9 @@ class DecoratorTests(unittest.TestCase):
             interceptors=flowcept.instrumentation.decorators.instrumentation_interceptor
         ):
             self.decorated_function_with_self(x=0.1, workflow_id=workflow_id)
-            decorated_static_function(df=pd.DataFrame(), workflow_id=workflow_id)
+            decorated_static_function(
+                df=pd.DataFrame(), workflow_id=workflow_id
+            )
             decorated_static_function2(workflow_id=workflow_id)
             decorated_static_function3(x=0.1, workflow_id=workflow_id)
         print(workflow_id)
@@ -158,7 +165,6 @@ class DecoratorTests(unittest.TestCase):
             max_time=60,
             max_trials=60,
         )
-
 
     def test_decorated_function_simple(
         self, max_tasks=10, start_doc_inserter=True, check_insertions=True
@@ -191,15 +197,12 @@ class DecoratorTests(unittest.TestCase):
 
         t0 = time()
         for i in range(max_tasks):
-            not_decorated_func(
-                x=i, workflow_id=workflow_id
-            )
+            not_decorated_func(x=i, workflow_id=workflow_id)
         t1 = time()
         print("Not Decorated:")
         print_system_stats()
         not_decorated = t1 - t0
         return decorated, not_decorated
-
 
     def test_online_offline(self):
         flowcept.configs.DB_FLUSH_MODE = "offline"
@@ -221,7 +224,7 @@ class DecoratorTests(unittest.TestCase):
         for i in range(10):
             times.append(
                 self.test_decorated_function_simple(
-                    max_tasks=10,#100000,
+                    max_tasks=10,  # 100000,
                     check_insertions=False,
                     start_doc_inserter=False,
                 )
