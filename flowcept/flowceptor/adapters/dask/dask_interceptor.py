@@ -1,5 +1,6 @@
-import pickle
+import inspect
 
+from flowcept import WorkflowObject
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
     Status,
@@ -17,56 +18,72 @@ from flowcept.configs import (
 
 
 def get_run_spec_data(task_msg: TaskObject, run_spec):
-    def _get_arg(arg_name):
-        if type(run_spec) == dict:
-            return run_spec.get(arg_name, None)
-        elif hasattr(run_spec, arg_name):
-            return getattr(run_spec, arg_name)
-        return None
+    # def _get_arg(arg_name):
+    #     if type(run_spec) == dict:
+    #         return run_spec.get(arg_name, None)
+    #     elif hasattr(run_spec, arg_name):
+    #         return getattr(run_spec, arg_name)
+    #     return None
+    #
+    # def _parse_dask_tuple(_tuple: tuple):
+    #     forth_elem = None
+    #     if len(_tuple) == 3:
+    #         _, _, value_tuple = _tuple
+    #     elif len(_tuple) == 4:
+    #         _, _, value_tuple, forth_elem = _tuple
+    #
+    #     _, value = value_tuple
+    #     if len(value) == 1:  # Value is always an array here
+    #         value = value[0]
+    #     ret_obj = {"value": value}
+    #
+    #     if forth_elem is not None and type(forth_elem) == dict:
+    #         ret_obj.update(forth_elem)
+    #     else:
+    #         pass  # We don't know yet what to do if this happens. So just pass.
+    #
+    #     return ret_obj
 
-    def _parse_dask_tuple(_tuple: tuple):
-        forth_elem = None
-        if len(_tuple) == 3:
-            _, _, value_tuple = _tuple
-        elif len(_tuple) == 4:
-            _, _, value_tuple, forth_elem = _tuple
-
-        _, value = value_tuple
-        if len(value) == 1:  # Value is always an array here
-            value = value[0]
-        ret_obj = {"value": value}
-
-        if forth_elem is not None and type(forth_elem) == dict:
-            ret_obj.update(forth_elem)
-        else:
-            pass  # We don't know yet what to do if this happens. So just pass.
-
-        return ret_obj
+    func = run_spec[0]
+    args = run_spec[1]
+    kwargs = run_spec[2]
 
     task_msg.used = {}
-    arg_val = _get_arg("args")
-    if arg_val is not None:
-        picked_args = pickle.loads(arg_val)
-        # pickled_args is always a tuple
-        i = 0
-        for arg in picked_args:
-            task_msg.used[f"arg{i}"] = arg
-            i += 1
+    if args:
+        params = list(inspect.signature(func).parameters)
+        for k, v in zip(params, args):
+            task_msg.used[k] = v
 
-    arg_val = _get_arg("kwargs")
-    if arg_val is not None:
-        picked_kwargs = pickle.loads(arg_val)
-        if "workflow_id" in picked_kwargs:
-            task_msg.workflow_id = picked_kwargs.pop("workflow_id")
-        if len(picked_kwargs):
-            task_msg.used.update(picked_kwargs)
+    if kwargs:
+        if "workflow_id" in kwargs and not task_msg.workflow_id:
+            task_msg.workflow_id = kwargs.pop("workflow_id")
+        if kwargs:
+            task_msg.used.update(kwargs)
 
-    arg_val = _get_arg("task")  # This happens in case of client.map
-    if arg_val is not None and type(arg_val) == tuple:
-        task_obj = _parse_dask_tuple(arg_val)
-        if "workflow_id" in task_obj:
-            task_msg.workflow_id = task_obj.pop("workflow_id")
-        task_msg.used = task_obj["value"]
+    #
+    # arg_val = _get_arg("args")
+    # if arg_val is not None:
+    #     picked_args = pickle.loads(arg_val)
+    #     # pickled_args is always a tuple
+    #     i = 0
+    #     for arg in picked_args:
+    #         task_msg.used[f"arg{i}"] = arg
+    #         i += 1
+    #
+    # arg_val = _get_arg("kwargs")
+    # if arg_val is not None:
+    #     picked_kwargs = pickle.loads(arg_val)
+    #     if "workflow_id" in picked_kwargs:
+    #         task_msg.workflow_id = picked_kwargs.pop("workflow_id")
+    #     if len(picked_kwargs):
+    #         task_msg.used.update(picked_kwargs)
+
+    # arg_val = _get_arg("task")  # This happens in case of client.map
+    # if arg_val is not None and type(arg_val) == tuple:
+    #     task_obj = _parse_dask_tuple(arg_val)
+    #     if "workflow_id" in task_obj:
+    #         task_msg.workflow_id = task_obj.pop("workflow_id")
+    #     task_msg.used = task_obj["value"]
 
     if REPLACE_NON_JSON_SERIALIZABLE:
         task_msg.used = replace_non_serializable(task_msg.used)
@@ -116,7 +133,10 @@ class DaskSchedulerInterceptor(BaseInterceptor):
 
                 if REGISTER_WORKFLOW:
                     if hasattr(self._scheduler, "current_workflow"):
-                        wf_obj = self._scheduler.current_workflow
+                        wf_obj: WorkflowObject = (
+                            self._scheduler.current_workflow
+                        )
+                        task_msg.workflow_id = wf_obj.workflow_id
                         self.send_workflow_message(wf_obj)
                     else:
                         # TODO: we can't do much if the user didn't register the wf
