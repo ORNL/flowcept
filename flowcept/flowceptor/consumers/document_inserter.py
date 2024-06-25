@@ -145,7 +145,6 @@ class DocumentInserter:
             if wf_id:
                 message["workflow_id"] = wf_id
 
-
         if not any(
             time_field in message
             for time_field in TaskObject.get_time_field_names()
