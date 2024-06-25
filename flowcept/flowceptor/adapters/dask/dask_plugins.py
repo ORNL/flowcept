@@ -30,7 +30,7 @@ def _set_workflow_on_scheduler(
     setattr(dask_scheduler, "current_workflow", wf_obj)
 
 
-def set_dask_workflow(
+def register_dask_workflow(
     dask_client: Client, workflow_id=None, custom_metadata: dict = None
 ):
     workflow_id = workflow_id or str(uuid4())
