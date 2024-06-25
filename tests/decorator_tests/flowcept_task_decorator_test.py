@@ -25,20 +25,25 @@ from flowcept.instrumentation.decorators.flowcept_task import (
 
 def calc_time_to_sleep() -> float:
     l = list()
+    matrix_size = 100
     t0 = time()
+    matrix_a = np.random.rand(matrix_size, matrix_size)
+    matrix_b = np.random.rand(matrix_size, matrix_size)
+    result_matrix = np.dot(matrix_a, matrix_b)
     d = dict(
         a=time(),
         b=str(uuid.uuid4()),
         c="aaa",
         d=123.4,
-        e={"r": random.randint(1, 100)}
+        e={"r": random.randint(1, 100)},
+        shape=list(result_matrix.shape)
     )
     l.append(d)
     t1 = time()
     return (t1 - t0)*1.1
 
-
 TIME_TO_SLEEP = calc_time_to_sleep()
+
 @flowcept_task
 def decorated_static_function(df: pd.DataFrame, workflow_id=None):
     return {"decorated_static_function": 2}
@@ -239,7 +244,7 @@ class DecoratorTests(unittest.TestCase):
         print(f"'decorated_{n}': diff_{n},")
         print("Mode: " + flowcept.configs.DB_FLUSH_MODE)
         threshold = (
-            15 if flowcept.configs.DB_FLUSH_MODE == "offline" else 210
+            10 if flowcept.configs.DB_FLUSH_MODE == "offline" else 50
         )  # %
         print("Threshold: ", threshold)
         print("Overheads: " + str(overheads))
