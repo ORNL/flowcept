@@ -28,6 +28,7 @@ jobs:
         pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
     - name: Test notebooks
       run: |
+        pip install -e .
         python flowcept/flowcept_webserver/app.py &
         sleep 3
         export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
