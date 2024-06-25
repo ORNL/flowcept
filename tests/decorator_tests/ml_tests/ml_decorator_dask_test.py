@@ -8,7 +8,9 @@ from flowcept import FlowceptConsumerAPI, WorkflowObject, TaskQueryAPI
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import evaluate_until
-from flowcept.flowceptor.adapters.dask.dask_plugins import set_dask_workflow
+from flowcept.flowceptor.adapters.dask.dask_plugins import (
+    register_dask_workflow,
+)
 
 from tests.adapters.dask_test_utils import (
     setup_local_dask_cluster,
@@ -38,7 +40,7 @@ class MLDecoratorDaskTests(unittest.TestCase):
         confs = ModelTrainer.generate_hp_confs(hp_conf)
         hp_conf.update({"n_confs": len(confs)})
         custom_metadata = {"hyperparameter_conf": hp_conf}
-        set_dask_workflow(client, custom_metadata=custom_metadata)
+        register_dask_workflow(client, custom_metadata=custom_metadata)
         print("Workflow id", wf_id)
         outputs = []
         for conf in confs[:1]:
