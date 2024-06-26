@@ -56,9 +56,9 @@ def get_run_spec_data(task_msg: TaskObject, run_spec):
 
     if kwargs:
         if "workflow_id" in kwargs and not task_msg.workflow_id:
-            task_msg.workflow_id = kwargs.pop("workflow_id")
-        if kwargs:
+            task_msg.workflow_id = kwargs.get("workflow_id")
             task_msg.used.update(kwargs)
+            task_msg.used.pop("workflow_id", None)
 
     #
     # arg_val = _get_arg("args")

@@ -29,9 +29,9 @@ class TestNet(nn.Module):
         parent_workflow_id=None,
     ):
         super(TestNet, self).__init__()
-
+        print("parent workflow id", parent_workflow_id)
         self.workflow_id = register_module_as_workflow(
-            self, parent_workflow_id
+            self, parent_workflow_id=parent_workflow_id
         )
         Conv2d, Dropout, MaxPool2d, ReLU, Softmax, Linear = register_modules(
             [
@@ -159,8 +159,9 @@ class ModelTrainer(object):
         fc_in_outs=[[320, 50], [50, 10]],
         softmax_dims=[-9999, 1],
         max_epochs=2,
-        workflow_id=None,
+        workflow_id=None
     ):
+        print("Workflow id in model_fit", workflow_id)
         # TODO :base-interceptor-refactor:
         #  We are calling the consumer api here (sometimes for the second time)
         #  because we are capturing at two levels: at the model.fit and at
