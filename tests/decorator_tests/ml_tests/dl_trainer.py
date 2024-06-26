@@ -159,10 +159,11 @@ class ModelTrainer(object):
         fc_in_outs=[[320, 50], [50, 10]],
         softmax_dims=[-9999, 1],
         max_epochs=2,
-        workflow_id=None
+        workflow_id=None,
     ):
-        print("Workflow id in model_fit", workflow_id)
-        # TODO :base-interceptor-refactor:
+        print(
+            "Workflow id in model_fit", workflow_id
+        )  # TODO :base-interceptor-refactor:
         #  We are calling the consumer api here (sometimes for the second time)
         #  because we are capturing at two levels: at the model.fit and at
         #  every layer. Can we do it better?
