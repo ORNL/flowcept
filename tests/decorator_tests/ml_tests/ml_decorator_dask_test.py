@@ -2,9 +2,7 @@ import unittest
 
 from uuid import uuid4
 
-from time import sleep
-
-from flowcept import FlowceptConsumerAPI, WorkflowObject, TaskQueryAPI
+from flowcept import TaskQueryAPI
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import evaluate_until
@@ -25,9 +23,9 @@ class MLDecoratorDaskTests(unittest.TestCase):
         self.logger = FlowceptLogger()
 
     def test_model_trains_with_dask(self):
-        wf_id = f"{uuid4()}"
+        #wf_id = f"{uuid4()}"
         client, cluster, consumer = setup_local_dask_cluster(
-            exec_bundle=wf_id
+            #exec_bundle=wf_id
         )
         hp_conf = {
             "n_conv_layers": [2, 3, 4],
@@ -40,11 +38,13 @@ class MLDecoratorDaskTests(unittest.TestCase):
         confs = ModelTrainer.generate_hp_confs(hp_conf)
         hp_conf.update({"n_confs": len(confs)})
         custom_metadata = {"hyperparameter_conf": hp_conf}
-        register_dask_workflow(client, custom_metadata=custom_metadata)
+        wf_id = register_dask_workflow(client, custom_metadata=custom_metadata)
         print("Workflow id", wf_id)
+        for conf in confs:
+            conf["workflow_id"] = wf_id
+
         outputs = []
         for conf in confs[:1]:
-            conf["workflow_id"] = wf_id
             outputs.append(client.submit(ModelTrainer.model_fit, **conf))
         for o in outputs:
             r = o.result()

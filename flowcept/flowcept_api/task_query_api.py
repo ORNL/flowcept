@@ -156,6 +156,8 @@ class TaskQueryAPI(object):
         sub_wfs = db_api.workflow_query(
             {"parent_workflow_id": parent_workflow_id}
         )
+        if not sub_wfs:
+            return None
         tasks = []
         for sub_wf in sub_wfs:
             sub_wf_tasks = self.query({"workflow_id": sub_wf.workflow_id})
