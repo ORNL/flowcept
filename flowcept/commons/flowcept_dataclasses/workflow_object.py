@@ -34,6 +34,8 @@ class WorkflowObject:
     sys_name: str = None
     extra_metadata: str = None
     parent_task_id: str = None
+    used: Dict = None
+    generated: Dict = None
 
     @staticmethod
     def workflow_id_field():
@@ -105,6 +107,7 @@ class WorkflowObject:
             f"adapter_id={repr(self.adapter_id)}, "
             f"interceptor_ids={repr(self.interceptor_ids)}, "
             f"name={repr(self.name)}, "
+            f"used={repr(self.used)}, "
             f"custom_metadata={repr(self.custom_metadata)})"
         )
 
