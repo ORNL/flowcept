@@ -11,7 +11,7 @@ from flowcept.flowceptor.adapters.dask.dask_interceptor import (
 
 
 def _set_workflow_on_scheduler(
-    dask_scheduler=None, workflow_id=None, custom_metadata: dict = None
+    dask_scheduler=None, workflow_id=None, custom_metadata: dict = None, used: dict = None
 ):
     custom_metadata = custom_metadata or {}
     wf_obj = WorkflowObject()
@@ -27,16 +27,17 @@ def _set_workflow_on_scheduler(
         }
     )
     wf_obj.custom_metadata = custom_metadata
+    wf_obj.used = used
     setattr(dask_scheduler, "current_workflow", wf_obj)
 
 
 def register_dask_workflow(
-    dask_client: Client, workflow_id=None, custom_metadata: dict = None
+    dask_client: Client, workflow_id=None, custom_metadata: dict = None, used: dict = None
 ):
     workflow_id = workflow_id or str(uuid4())
     dask_client.run_on_scheduler(
         _set_workflow_on_scheduler,
-        **{"workflow_id": workflow_id, "custom_metadata": custom_metadata},
+        **{"workflow_id": workflow_id, "custom_metadata": custom_metadata, "used": used},
     )
     return workflow_id
 

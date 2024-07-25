@@ -6,7 +6,7 @@ from dask.distributed import Client
 
 from cluster_experiment_utils.utils import generate_configs
 
-from flowcept import FlowceptConsumerAPI
+from flowcept import FlowceptConsumerAPI, WorkflowObject, DBAPI
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.adapters.dask.dask_plugins import (
@@ -30,13 +30,32 @@ class DecoratorDaskLLMTests(unittest.TestCase):
         self.logger = FlowceptLogger()
 
     def test_llm(self):
-        wf_id = str(uuid.uuid4())
+        # Manually registering the DataPrep workflow (manual instrumentation)
+        tokenizer = "toktok" #  basic_english, moses, toktok
+        db_api = DBAPI()
+        dataset_prep_wf = WorkflowObject()
+        dataset_prep_wf.workflow_id = f"prep_wikitext_tokenizer_{tokenizer}"
+        dataset_prep_wf.used = {"tokenizer": tokenizer}
+        ntokens, train_data, val_data, test_data = get_wiki_text(tokenizer)
+        dataset_ref = f"{dataset_prep_wf.workflow_id}_{id(train_data)}_{id(val_data)}_{id(test_data)}"
+        dataset_prep_wf.generated = {
+            "ntokens": ntokens,
+            "dataset_ref": dataset_ref,
+            "train_data": id(train_data),
+            "val_data":  id(val_data),
+            "test_data":  id(test_data),
+        }
+        print(dataset_prep_wf)
+        db_api.insert_or_update_workflow(dataset_prep_wf)
+
+        # Automatically registering the Dask workflow
+        train_wf_id = str(uuid.uuid4())
         client, cluster, consumer = setup_local_dask_cluster(
-            exec_bundle=wf_id
+            exec_bundle=train_wf_id
         )
-        register_dask_workflow(client, workflow_id=wf_id)
-        ntokens, train_data, val_data, test_data = get_wiki_text()
-        print(f"Workflow_id={wf_id}")
+        register_dask_workflow(client, workflow_id=train_wf_id, used={"dataset_ref": dataset_ref})
+
+        print(f"Workflow_id={train_wf_id}")
         exp_param_settings = {
             "batch_size": [20],
             "eval_batch_size": [10],
@@ -58,7 +77,7 @@ class DecoratorDaskLLMTests(unittest.TestCase):
                     "train_data": train_data,
                     "val_data": val_data,
                     "test_data": test_data,
-                    "workflow_id": wf_id,
+                    "workflow_id": train_wf_id,
                 }
             )
             outputs.append(client.submit(model_train, **conf))

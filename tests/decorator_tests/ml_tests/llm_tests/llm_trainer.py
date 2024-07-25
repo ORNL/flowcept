@@ -21,9 +21,6 @@ from flowcept.instrumentation.decorators.flowcept_torch import (
 )
 from flowcept.instrumentation.decorators.responsible_ai import model_profiler
 
-tokenizer = get_tokenizer("basic_english")
-
-
 # Define a function to batchify the data
 def batchify(data, bsz):
     nbatch = data.size(0) // bsz
@@ -33,14 +30,14 @@ def batchify(data, bsz):
 
 
 # Define a function to yield tokens from the dataset
-def yield_tokens(data_iter):
+def yield_tokens(tokenizer, data_iter):
     for item in data_iter:
         if len(item["text"]):
             yield tokenizer(item["text"])
 
 
 # Define a function to process the raw text and convert it to tensors
-def data_process(vocab, raw_text_iter):
+def data_process(tokenizer, vocab, raw_text_iter):
     data = [
         torch.tensor(
             [vocab[token] for token in tokenizer(item["text"])],
@@ -58,7 +55,7 @@ def get_batch(source, i, bptt=35):
     return data, target
 
 
-def get_wiki_text():
+def get_wiki_text(tokenizer_type="basic_english"): # spacy, moses, toktok, revtok, subword
     # Load the WikiText2 dataset
     dataset = load_dataset("wikitext", "wikitext-2-v1")
     test_dataset = dataset["test"]
@@ -66,14 +63,15 @@ def get_wiki_text():
     validation_dataset = dataset["validation"]
 
     # Build the vocabulary from the training dataset
-    vocab = build_vocab_from_iterator(yield_tokens(train_dataset))
+    tokenizer = get_tokenizer(tokenizer_type)
+    vocab = build_vocab_from_iterator(yield_tokens(tokenizer, train_dataset))
     vocab.set_default_index(vocab["<unk>"])
     ntokens = len(vocab)
 
     # Process the train, validation, and test datasets
-    train_data = data_process(vocab, train_dataset)
-    val_data = data_process(vocab, validation_dataset)
-    test_data = data_process(vocab, test_dataset)
+    train_data = data_process(tokenizer, vocab, train_dataset)
+    val_data = data_process(tokenizer, vocab, validation_dataset)
+    test_data = data_process(tokenizer, vocab, test_dataset)
 
     try:
         if torch.backends.mps.is_available():
