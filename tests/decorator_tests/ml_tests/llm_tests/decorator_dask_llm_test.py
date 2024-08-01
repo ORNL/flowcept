@@ -31,7 +31,7 @@ class DecoratorDaskLLMTests(unittest.TestCase):
 
     def test_llm(self):
         # Manually registering the DataPrep workflow (manual instrumentation)
-        tokenizer = "toktok" #  basic_english, moses, toktok
+        tokenizer = "toktok"  #  basic_english, moses, toktok
         db_api = DBAPI()
         dataset_prep_wf = WorkflowObject()
         dataset_prep_wf.workflow_id = f"prep_wikitext_tokenizer_{tokenizer}"
@@ -42,8 +42,8 @@ class DecoratorDaskLLMTests(unittest.TestCase):
             "ntokens": ntokens,
             "dataset_ref": dataset_ref,
             "train_data": id(train_data),
-            "val_data":  id(val_data),
-            "test_data":  id(test_data),
+            "val_data": id(val_data),
+            "test_data": id(test_data),
         }
         print(dataset_prep_wf)
         db_api.insert_or_update_workflow(dataset_prep_wf)
@@ -53,9 +53,11 @@ class DecoratorDaskLLMTests(unittest.TestCase):
         client, cluster, consumer = setup_local_dask_cluster(
             exec_bundle=train_wf_id
         )
-        register_dask_workflow(client, workflow_id=train_wf_id, used={"dataset_ref": dataset_ref})
+        register_dask_workflow(client,
+                               workflow_id=train_wf_id,
+                               used={"dataset_ref": dataset_ref})
 
-        print(f"Workflow_id={train_wf_id}")
+        print(f"Model_Train_Wf_id={train_wf_id}")
         exp_param_settings = {
             "batch_size": [20],
             "eval_batch_size": [10],

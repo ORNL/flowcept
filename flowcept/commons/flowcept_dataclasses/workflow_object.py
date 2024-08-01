@@ -33,9 +33,15 @@ class WorkflowObject:
     environment_id: str = None
     sys_name: str = None
     extra_metadata: str = None
-    parent_task_id: str = None
+    #parent_task_id: str = None
     used: Dict = None
     generated: Dict = None
+
+
+    def __init__(self, name=None, used=None, generated=None):
+        self.name = name
+        self.used = used
+        self.generated = generated
 
     @staticmethod
     def workflow_id_field():
@@ -108,6 +114,7 @@ class WorkflowObject:
             f"interceptor_ids={repr(self.interceptor_ids)}, "
             f"name={repr(self.name)}, "
             f"used={repr(self.used)}, "
+            f"generated={repr(self.generated)}, "
             f"custom_metadata={repr(self.custom_metadata)})"
         )
 

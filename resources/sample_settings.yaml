@@ -8,7 +8,7 @@ project:
   db_flush_mode: online   # or offline
 
   telemetry_capture:
-    gpu: ~ #
+    gpu: ~ # ~ means None. This is a list that should specify which metrics of the GPU that should be monitored
     cpu: true
     per_cpu: true
     process_info: true
@@ -19,9 +19,7 @@ project:
 
 instrumentation:
   torch:
-    mode: telemetry_and_tensor_inspection_counted   # tensor_inspection, telemetry, telemetry_and_tensor_inspection, telemetry_and_tensor_inspection_counted, full, ~
-    max_frequency: 10
-
+    mode: telemetry_and_tensor_inspection   # tensor_inspection, telemetry, telemetry_and_tensor_inspection, full, ~
 
 log:
   log_path: "default"

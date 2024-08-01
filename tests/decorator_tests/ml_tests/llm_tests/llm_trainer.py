@@ -104,17 +104,16 @@ class TransformerModel(nn.Module):
     ):
         super(TransformerModel, self).__init__()
         self.workflow_id = register_module_as_workflow(
-            self, parent_workflow_id, parent_task_id, custom_metadata
+            self, parent_workflow_id, custom_metadata
         )
-
+        self.parent_task_id = parent_task_id
         (
             TransformerEncoderLayer,
             TransformerEncoder,
             Embedding,
             Linear,
             PositionalEncoding_,
-        ) = register_modules(
-            [
+        ) = register_modules(modules=[
                 nn.TransformerEncoderLayer,
                 nn.TransformerEncoder,
                 nn.Embedding,
@@ -122,6 +121,7 @@ class TransformerModel(nn.Module):
                 PositionalEncoding,
             ],
             workflow_id=self.workflow_id,
+            parent_task_id=self.parent_task_id
         )
         self.model_type = "Transformer"
         self.src_mask = None
@@ -130,6 +130,7 @@ class TransformerModel(nn.Module):
             dropout,
             max_len=pos_encoding_max_len,
             workflow_id=self.workflow_id,
+            parent_task_id=parent_task_id
         )
         encoder_layers = TransformerEncoderLayer(
             d_model, nhead, d_hid, dropout
@@ -167,7 +168,7 @@ class TransformerModel(nn.Module):
 
 # Define the PositionalEncoding class
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, dropout=0.1, max_len=5000, workflow_id=None):
+    def __init__(self, d_model, dropout=0.1, max_len=5000, workflow_id=None, parent_task_id=None):
         super(PositionalEncoding, self).__init__()
         self.workflow_id = workflow_id
         Dropout = register_modules(
@@ -175,6 +176,7 @@ class PositionalEncoding(nn.Module):
                 nn.Dropout,
             ],
             workflow_id=self.workflow_id,
+            parent_task_id=parent_task_id
         )
 
         self.dropout = Dropout(p=dropout)
@@ -341,8 +343,9 @@ def model_train(
             nlayers,
             dropout,
             parent_workflow_id=workflow_id,
+            parent_task_id=dask_task_id,
             custom_metadata={
-                "model_step": "evaluation",
+                "model_step": "test",
                 "cuda_visible": N_GPUS,
             },
         ).to(device)
