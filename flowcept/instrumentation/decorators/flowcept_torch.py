@@ -22,9 +22,9 @@ from flowcept.configs import (
 )
 
 
-class FrequencyCount:
-    counter = 0
-    MAX = INSTRUMENTATION["torch"]["max_frequency"]
+# class FrequencyCount:
+#     counter = 0
+#     MAX = INSTRUMENTATION["torch"]["max_frequency"]
 
 
 def _inspect_torch_tensor(tensor: torch.Tensor):
@@ -63,8 +63,11 @@ def full_torch_task(func=None):
             task_obj = {}
             task_obj["type"] = "task"
             task_obj["started_at"] = time()
-            task_obj["activity_id"] = args[0].__class__.__name__
+
+            task_obj["activity_id"] = func.__qualname__,
             task_obj["task_id"] = str(id(task_obj))
+            if hasattr(args[0], "parent_task_id"):
+                task_obj["parent_task_id"] = args[0].parent_task_id
             task_obj["workflow_id"] = args[0].workflow_id
             task_obj["used"] = {
                 "tensor": _inspect_torch_tensor(args[1]),
@@ -136,7 +139,8 @@ def lightweight_tensor_inspection_torch_task(func=None):
             task_dict = dict(
                 type="task",
                 workflow_id=args[0].workflow_id,
-                activity_id=args[0].__class__.__name__,
+                parent_task_id=args[0].parent_task_id,
+                activity_id=func.__qualname__,
                 used=used,
                 generated={"tensor": _inspect_torch_tensor(result)},
             )
@@ -168,6 +172,7 @@ def lightweight_telemetry_tensor_inspection_torch_task(func=None):
             task_dict = dict(
                 type="task",
                 workflow_id=args[0].workflow_id,
+                parent_task_id=args[0].parent_task_id,
                 activity_id=args[0].__class__.__name__,
                 used=used,
                 generated={"tensor": _inspect_torch_tensor(result)},
@@ -184,41 +189,42 @@ def lightweight_telemetry_tensor_inspection_torch_task(func=None):
         return decorator(func)
 
 
-def lightweight_telemetry_tensor_inspection_counted_torch_task(func=None):
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            FrequencyCount.counter += 1
-            result = func(*args, **kwargs)
-            if FrequencyCount.counter < FrequencyCount.MAX:
-                return result
-            FrequencyCount.counter = 0
-            used = {"tensor": _inspect_torch_tensor(args[1])}
-            for k, v in vars(args[0]).items():
-                if not k.startswith("_"):
-                    if isinstance(v, torch.Tensor):
-                        used[k] = _inspect_torch_tensor(v)
-                    elif callable(v):
-                        used[k] = v.__qualname__
-                    else:
-                        used[k] = v
-            task_dict = dict(
-                type="task",
-                workflow_id=args[0].workflow_id,
-                activity_id=args[0].__class__.__name__,
-                used=used,
-                generated={"tensor": _inspect_torch_tensor(result)},
-                telemetry_at_start=instrumentation_interceptor.telemetry_capture.capture().to_dict(),
-            )
-            instrumentation_interceptor.intercept(task_dict)
-            return result
-
-        return wrapper
-
-    if func is None:
-        return decorator
-    else:
-        return decorator(func)
+# def lightweight_telemetry_tensor_inspection_counted_torch_task(func=None):
+#     def decorator(func):
+#         @wraps(func)
+#         def wrapper(*args, **kwargs):
+#             FrequencyCount.counter += 1
+#             result = func(*args, **kwargs)
+#             if FrequencyCount.counter < FrequencyCount.MAX:
+#                 return result
+#             FrequencyCount.counter = 0
+#             used = {"tensor": _inspect_torch_tensor(args[1])}
+#             for k, v in vars(args[0]).items():
+#                 if not k.startswith("_"):
+#                     if isinstance(v, torch.Tensor):
+#                         used[k] = _inspect_torch_tensor(v)
+#                     elif callable(v):
+#                         used[k] = v.__qualname__
+#                     else:
+#                         used[k] = v
+#             task_dict = dict(
+#                 type="task",
+#                 workflow_id=args[0].workflow_id,
+#                 parent_task_id=args[0].parent_task_id,
+#                 activity_id=args[0].__class__.__name__,
+#                 used=used,
+#                 generated={"tensor": _inspect_torch_tensor(result)},
+#                 telemetry_at_start=instrumentation_interceptor.telemetry_capture.capture().to_dict(),
+#             )
+#             instrumentation_interceptor.intercept(task_dict)
+#             return result
+#
+#         return wrapper
+#
+#     if func is None:
+#         return decorator
+#     else:
+#         return decorator(func)
 
 
 def lightweight_telemetry_torch_task(func=None):
@@ -262,8 +268,6 @@ def torch_task():
         return lightweight_telemetry_torch_task
     elif mode == "telemetry_and_tensor_inspection":
         return lightweight_telemetry_tensor_inspection_torch_task
-    elif mode == "telemetry_and_tensor_inspection_counted":
-        return lightweight_telemetry_tensor_inspection_counted_torch_task
     elif mode == "full":
         return full_torch_task
     else:
@@ -292,7 +296,7 @@ def _create_dynamic_class(base_class, class_name, extra_attributes):
 
 
 def register_modules(
-    modules: List[nn.Module], workflow_id: str = None
+    modules: List[nn.Module], workflow_id: str = None, parent_task_id: str = None
 ) -> Dict[nn.Module, nn.Module]:
     flowcept_torch_modules: List[nn.Module] = []
 
@@ -300,7 +304,8 @@ def register_modules(
         new_module = _create_dynamic_class(
             module,
             f"Flowcept{module.__name__}",
-            extra_attributes={"workflow_id": workflow_id},
+            extra_attributes={"workflow_id": workflow_id,
+                              "parent_task_id": parent_task_id},
         )
         flowcept_torch_modules.append(new_module)
     if len(flowcept_torch_modules) == 1:
@@ -312,7 +317,7 @@ def register_modules(
 def register_module_as_workflow(
     module: nn.Module,
     parent_workflow_id=None,
-    parent_task_id=None,
+    #parent_task_id=None,
     custom_metadata: Dict = None,
 ):
     workflow_obj = WorkflowObject()
@@ -322,7 +327,7 @@ def register_module_as_workflow(
     _custom_metadata = custom_metadata or {}
     _custom_metadata["workflow_type"] = "TorchModule"
     workflow_obj.custom_metadata = custom_metadata
-    workflow_obj.parent_task_id = parent_task_id
+    #workflow_obj.parent_task_id = parent_task_id
 
     if REGISTER_WORKFLOW:
         flowcept.instrumentation.decorators.instrumentation_interceptor.send_workflow_message(

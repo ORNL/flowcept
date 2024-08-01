@@ -17,6 +17,8 @@ from flowcept.instrumentation.decorators.responsible_ai import (
     model_profiler,
 )
 
+import threading
+thread_state = threading.local()
 
 class TestNet(nn.Module):
     def __init__(
@@ -27,12 +29,14 @@ class TestNet(nn.Module):
         fc_in_outs=[[320, 50], [50, 10]],
         softmax_dims=[-9999, 1],  # first value will be ignored
         parent_workflow_id=None,
+        parent_task_id=None
     ):
         super(TestNet, self).__init__()
         print("parent workflow id", parent_workflow_id)
         self.workflow_id = register_module_as_workflow(
             self, parent_workflow_id=parent_workflow_id
         )
+        self.parent_task_id = parent_task_id
         Conv2d, Dropout, MaxPool2d, ReLU, Softmax, Linear = register_modules(
             [
                 nn.Conv2d,
@@ -43,6 +47,7 @@ class TestNet(nn.Module):
                 nn.Linear,
             ],
             workflow_id=self.workflow_id,
+            parent_task_id=self.parent_task_Id
         )
 
         self.model_type = "CNN"
@@ -161,6 +166,7 @@ class ModelTrainer(object):
         max_epochs=2,
         workflow_id=None,
     ):
+        dask_task_id = thread_state.key
         print(
             "Workflow id in model_fit", workflow_id
         )  # TODO :base-interceptor-refactor:
