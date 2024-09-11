@@ -1,7 +1,5 @@
 import unittest
 
-from uuid import uuid4
-
 from flowcept import TaskQueryAPI
 
 from flowcept.commons.flowcept_logger import FlowceptLogger

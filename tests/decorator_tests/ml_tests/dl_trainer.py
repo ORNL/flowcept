@@ -47,7 +47,7 @@ class TestNet(nn.Module):
                 nn.Linear,
             ],
             workflow_id=self.workflow_id,
-            parent_task_id=self.parent_task_Id
+            parent_task_id=self.parent_task_id
         )
 
         self.model_type = "CNN"
@@ -166,7 +166,6 @@ class ModelTrainer(object):
         max_epochs=2,
         workflow_id=None,
     ):
-        dask_task_id = thread_state.key
         print(
             "Workflow id in model_fit", workflow_id
         )  # TODO :base-interceptor-refactor:
