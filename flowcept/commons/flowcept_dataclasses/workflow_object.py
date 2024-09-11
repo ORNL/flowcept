@@ -33,6 +33,15 @@ class WorkflowObject:
     environment_id: str = None
     sys_name: str = None
     extra_metadata: str = None
+    #parent_task_id: str = None
+    used: Dict = None
+    generated: Dict = None
+
+
+    def __init__(self, name=None, used=None, generated=None):
+        self.name = name
+        self.used = used
+        self.generated = generated
 
     @staticmethod
     def workflow_id_field():
@@ -53,13 +62,13 @@ class WorkflowObject:
         result_dict["type"] = "workflow"
         return result_dict
 
-    def enrich(self, adapter_settings=None):
+    def enrich(self, adapter_key=None):
         self.utc_timestamp = flowcept.commons.utils.get_utc_now()
         self.flowcept_settings = OmegaConf.to_container(settings)
 
-        if adapter_settings is not None:
+        if adapter_key is not None:
             # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
-            self.adapter_id = adapter_settings.key
+            self.adapter_id = adapter_key
 
         if self.user is None:
             self.user = FLOWCEPT_USER
@@ -104,6 +113,8 @@ class WorkflowObject:
             f"adapter_id={repr(self.adapter_id)}, "
             f"interceptor_ids={repr(self.interceptor_ids)}, "
             f"name={repr(self.name)}, "
+            f"used={repr(self.used)}, "
+            f"generated={repr(self.generated)}, "
             f"custom_metadata={repr(self.custom_metadata)})"
         )
 

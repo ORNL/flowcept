@@ -94,7 +94,7 @@ class ZambezeInterceptor(BaseInterceptor):
             f"\n\t{json.dumps(body_obj)}"
         )
         task_msg = self.prepare_task_msg(body_obj)
-        self.intercept(task_msg)
+        self.intercept(task_msg.to_dict())
 
     def callback(self, ch, method, properties, body):
         body_obj = json.loads(body)

@@ -10,10 +10,10 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v3
       with:
-        python-version: "3.8"
+        python-version: "3.9"
     - name: Check python version
       run: python --version
     - name: Install our dependencies
@@ -28,6 +28,8 @@ jobs:
         pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
     - name: Test notebooks
       run: |
+        pip install -e .
         python flowcept/flowcept_webserver/app.py &
         sleep 3
+        export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
         pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb

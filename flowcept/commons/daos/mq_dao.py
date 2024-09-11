@@ -1,13 +1,20 @@
-from typing import Union, List
+import concurrent
+import concurrent.futures
+from functools import partial
+from multiprocessing import Pool, cpu_count
+from queue import Queue
+from typing import Union, List, Dict, Callable
 
 import msgpack
 from redis import Redis
 from redis.client import PubSub
-from threading import Thread, Lock
-from time import time, sleep
+from time import time
+
+import flowcept.commons
+from flowcept.commons.daos.autoflush_buffer import AutoflushBuffer
 
 from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
-from flowcept.commons.utils import perf_log
+from flowcept.commons.utils import perf_log, chunked
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
     REDIS_HOST,
@@ -17,9 +24,11 @@ from flowcept.configs import (
     JSON_SERIALIZER,
     REDIS_BUFFER_SIZE,
     REDIS_INSERTION_BUFFER_TIME,
+    REDIS_CHUNK_SIZE,
     PERF_LOG,
     REDIS_URI,
     ENRICH_MESSAGES,
+    DB_FLUSH_MODE,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -28,7 +37,6 @@ from flowcept.commons.utils import GenericJSONEncoder
 class MQDao:
     MESSAGE_TYPES_IGNORE = {"psubscribe"}
     ENCODER = GenericJSONEncoder if JSON_SERIALIZER == "complex" else None
-
     # TODO we don't have a unit test to cover complex dict!
 
     @staticmethod
@@ -41,6 +49,45 @@ class MQDao:
         if exec_bundle_id is not None:
             set_id += "_" + str(exec_bundle_id)
         return set_id
+
+    @staticmethod
+    def pipe_publish(
+        buffer, redis_connection, logger=flowcept.commons.logger
+    ):
+        pipe = redis_connection.pipeline()
+        logger.info(f"Going to flush {len(buffer)} to MQ...")
+        for message in buffer:
+            try:
+                logger.debug(
+                    f"Going to send Message:"
+                    f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
+                )
+                pipe.publish(REDIS_CHANNEL, msgpack.dumps(message))
+            except Exception as e:
+                logger.exception(e)
+                logger.error(
+                    "Some messages couldn't be flushed! Check the messages' contents!"
+                )
+                logger.error(f"Message that caused error: {message}")
+        t0 = 0
+        if PERF_LOG:
+            t0 = time()
+        try:
+            pipe.execute()
+            logger.info(f"Flushed {len(buffer)} msgs to MQ!")
+        except Exception as e:
+            logger.exception(e)
+        perf_log("mq_pipe_execute", t0)
+
+    @staticmethod
+    def bulk_publish(
+        buffer, redis_connection, logger=flowcept.commons.logger
+    ):
+        if REDIS_CHUNK_SIZE > 1:
+            for chunk in chunked(buffer, REDIS_CHUNK_SIZE):
+                MQDao.pipe_publish(chunk, redis_connection, logger)
+        else:
+            MQDao.pipe_publish(buffer, redis_connection, logger)
 
     def __init__(self, mq_host=None, mq_port=None, adapter_settings=None):
         self.logger = FlowceptLogger()
@@ -58,12 +105,9 @@ class MQDao:
             )
         self._adapter_settings = adapter_settings
         self._keyvalue_dao = KeyValueDAO(connection=self._redis)
-        self._buffer = None
-        self._time_thread: Thread = None
-        self._previous_time = -1
-        self._stop_flag = False
+
         self._time_based_flushing_started = False
-        self._lock = None
+        self.buffer: Union[AutoflushBuffer, List] = None
 
     def register_time_based_thread_init(
         self, interceptor_instance_id: str, exec_bundle_id=None
@@ -92,130 +136,62 @@ class MQDao:
         set_name = MQDao._get_set_name(exec_bundle_id)
         return self._keyvalue_dao.set_is_empty(set_name)
 
-    def delete_all_time_based_threads_sets(self):
-        return self._keyvalue_dao.delete_all_matching_sets(
-            MQDao._get_set_name() + "*"
-        )
+    # def delete_all_time_based_threads_sets(self):
+    #     return self._keyvalue_dao.delete_all_matching_sets(
+    #         MQFlusher._get_set_name() + "*"
+    #     )
 
-    def start_time_based_flushing(
-        self, interceptor_instance_id: str, exec_bundle_id=None
-    ):
-        self.logger.info(
-            f"Starting MQ time-based flushing! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}"
-        )
-        self._buffer = list()  # Buffer(REDIS_BUFFER_SIZE+1)
-        self._time_thread: Thread = None
-        self._previous_time = time()
-        self._stop_flag = False
-        self._time_based_flushing_started = False
-        self._lock = Lock()
-        self._time_thread = Thread(target=self.time_based_flushing)
-        self.register_time_based_thread_init(
-            interceptor_instance_id, exec_bundle_id
-        )
-        self._time_based_flushing_started = True
-        self._time_thread.start()
-
-    def stop_time_based_flushing(
-        self, interceptor_instance_id: str, exec_bundle_id: int = None
-    ):
-        self.logger.info(
-            f"MQ time-based received stop signal! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}"
-        )
-        if self._time_based_flushing_started:
-            self._stop_flag = True
-            self._time_thread.join()
+    def init_buffer(self, interceptor_instance_id: str, exec_bundle_id=None):
+        if flowcept.configs.DB_FLUSH_MODE == "online":
             self.logger.info(
-                f"Joined MQ time thread. bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}"
+                f"Starting MQ time-based flushing! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}"
             )
-            self._flush()
-            self.logger.info(
-                f"Flushed MQ for the last time! Now going to send stop msg. bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}"
+            self.buffer = AutoflushBuffer(
+                max_size=REDIS_BUFFER_SIZE,
+                flush_interval=REDIS_INSERTION_BUFFER_TIME,
+                flush_function=MQDao.bulk_publish,
+                redis_connection=self._redis,
             )
-            self._send_stop_message(interceptor_instance_id, exec_bundle_id)
-            self._time_based_flushing_started = False
-            self.logger.info(
-                f"MQ time-based sent stop message! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}"
+            #
+            self.register_time_based_thread_init(
+                interceptor_instance_id, exec_bundle_id
             )
+            self._time_based_flushing_started = True
         else:
-            self.logger.error("MQ time-based flushing is not started")
+            self.buffer = list()
 
-    def _flush(self):
-        if self._buffer is None:
-            self.logger.error("This MQ has never been started!")
-            return
-        with self._lock:
-            if len(self._buffer):
-                pipe = self._redis.pipeline()
-                self.logger.critical(
-                    f"Going to flush {len(self._buffer)} to MQ..."
-                )
-                for message in self._buffer:
-                    try:
-                        if ENRICH_MESSAGES:
-                            message.enrich(
-                                adapter_settings=self._adapter_settings
-                            )
-
-                        self.logger.debug(
-                            f"Going to send Message:"
-                            f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
-                        )
-
-                        pipe.publish(  # no redis
-                            REDIS_CHANNEL, message.serialize()
-                        )
-                    except Exception as e:
-                        self.logger.exception(e)
-                        self.logger.error(
-                            "Some messages couldn't be flushed! Check the messages' contents!"
-                        )
-                        self.logger.error(
-                            f"Message that caused error: {message}"
-                        )
-                t0 = 0
-                if PERF_LOG:
-                    t0 = time()
-                try:
-                    pipe.execute()
-                    self.logger.critical(
-                        f"Flushed {len(self._buffer)} msgs to MQ!"
-                    )
-                except Exception as e:
-                    self.logger.exception(e)
-                perf_log("mq_pipe_execute", t0)
-                self._buffer = list()
+    def _close_buffer(self):
+        if flowcept.configs.DB_FLUSH_MODE == "online":
+            if self._time_based_flushing_started:
+                self.buffer.stop()
+                self._time_based_flushing_started = False
+            else:
+                self.logger.error("MQ time-based flushing is not started")
+        else:
+            MQDao.bulk_publish(self.buffer, self._redis)
+            self.buffer = list()
 
     def subscribe(self) -> PubSub:
         pubsub = self._redis.pubsub()
         pubsub.psubscribe(REDIS_CHANNEL)
         return pubsub
 
-    def publish(self, message):
-        # TODO: refactor we should have a parent MessageObject class
-        self._buffer.append(message)
-        if len(self._buffer) >= REDIS_BUFFER_SIZE:
-            self.logger.critical("Redis buffer exceeded, flushing...")
-            self._flush()
+    def stop(self, interceptor_instance_id: str, bundle_exec_id: int = None):
+        self.logger.info(
+            f"MQ publisher received stop signal! bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}"
+        )
+        self._close_buffer()
+        self.logger.info(
+            f"Flushed MQ for the last time! Now going to send stop msg. bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}"
+        )
+        self.send_mq_dao_time_thread_stop(
+            interceptor_instance_id, bundle_exec_id
+        )
 
-    def time_based_flushing(self):
-        while not self._stop_flag:
-            if len(self._buffer):
-                now = time()
-                timediff = now - self._previous_time
-                if timediff >= REDIS_INSERTION_BUFFER_TIME:
-                    self.logger.debug("Time to flush to redis!")
-                    self._previous_time = now
-                    self._flush()
-            self.logger.info(
-                f"Time-based Redis inserter going to wait for {REDIS_INSERTION_BUFFER_TIME} s."
-            )
-            sleep(REDIS_INSERTION_BUFFER_TIME)
-        self.logger.info("Broke the time_based_flushing in mq!")
-
-    def _send_stop_message(
+    def send_mq_dao_time_thread_stop(
         self, interceptor_instance_id, exec_bundle_id=None
     ):
+        # These control_messages are handled by the document inserter
         # TODO: these should be constants
         msg = {
             "type": "flowcept_control",
@@ -226,6 +202,7 @@ class MQDao:
         self.logger.info("Control msg sent: " + str(msg))
         self._redis.publish(REDIS_CHANNEL, msgpack.dumps(msg))
 
-    def stop_document_inserter(self):
+    def send_document_inserter_stop(self):
+        # These control_messages are handled by the document inserter
         msg = {"type": "flowcept_control", "info": "stop_document_inserter"}
         self._redis.publish(REDIS_CHANNEL, msgpack.dumps(msg))

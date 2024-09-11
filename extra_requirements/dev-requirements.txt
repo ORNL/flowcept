@@ -11,3 +11,5 @@ torch
 torchvision
 datasets
 torchtext
+sacremoses
+nltk

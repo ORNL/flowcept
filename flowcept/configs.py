@@ -70,6 +70,7 @@ REDIS_INSERTION_BUFFER_TIME = random.randint(
     int(REDIS_INSERTION_BUFFER_TIME * 0.9),
     int(REDIS_INSERTION_BUFFER_TIME * 1.4),
 )
+REDIS_CHUNK_SIZE = int(settings["main_redis"].get("chunk_size", -1))
 
 ######################
 #  MongoDB Settings  #
@@ -108,8 +109,9 @@ MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get(
 # PROJECT SYSTEM SETTINGS #
 ######################
 
+DB_FLUSH_MODE = settings["project"].get("db_flush_mode", "online")
 MQ_TYPE = settings["project"].get("mq_type", "redis")
-DEBUG_MODE = settings["project"].get("debug", False)
+# DEBUG_MODE = settings["project"].get("debug", False)
 PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get(
@@ -141,8 +143,9 @@ if (
                 visible_devices = [
                     int(i) for i in visible_devices_var.split(",")
                 ]
-                N_GPUS["nvidia"] = visible_devices
-                GPU_HANDLES = []  # TODO
+                if len(visible_devices):
+                    N_GPUS["nvidia"] = visible_devices
+                    GPU_HANDLES = []  # TODO
             else:
                 from pynvml import nvmlDeviceGetCount
 
@@ -157,11 +160,15 @@ if (
                 visible_devices = [
                     int(i) for i in visible_devices_var.split(",")
                 ]
-                N_GPUS["amd"] = visible_devices
-                from amdsmi import amdsmi_init, amdsmi_get_processor_handles
+                if len(visible_devices):
+                    N_GPUS["amd"] = visible_devices
+                    from amdsmi import (
+                        amdsmi_init,
+                        amdsmi_get_processor_handles,
+                    )
 
-                amdsmi_init()
-                GPU_HANDLES = amdsmi_get_processor_handles()
+                    amdsmi_init()
+                    GPU_HANDLES = amdsmi_get_processor_handles()
             else:
                 from amdsmi import amdsmi_init, amdsmi_get_processor_handles
 
@@ -171,6 +178,13 @@ if (
         except Exception as e:
             # print(e)
             pass
+
+if len(N_GPUS.get("amd", [])):
+    GPU_TYPE = "amd"
+elif len(N_GPUS.get("nvidia", [])):
+    GPU_TYPE = "nvidia"
+else:
+    GPU_TYPE = None
 
 ######################
 # SYS METADATA #
@@ -234,6 +248,11 @@ WEBSERVER_PORT = int(settings["web_server"].get("port", "5000"))
 ######################
 
 ANALYTICS = settings.get("analytics", None)
+
+
+####
+
+INSTRUMENTATION = settings.get("instrumentation", None)
 
 ################# Enabled ADAPTERS
 

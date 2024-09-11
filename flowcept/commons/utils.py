@@ -106,6 +106,11 @@ def assert_by_querying_tasks_until(
     return False
 
 
+def chunked(iterable, size):
+    for i in range(0, len(iterable), size):
+        yield iterable[i : i + size]
+
+
 # TODO: consider reusing this function in the function assert_by_querying_task_collections_until
 def evaluate_until(
     evaluation_condition: Callable, max_trials=30, max_time=60, msg=""
