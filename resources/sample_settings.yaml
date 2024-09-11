@@ -5,9 +5,10 @@ project:
   performance_logging: false
   register_workflow: true
   enrich_messages: true
-  register_instrumented_tasks: true
+  db_flush_mode: online   # or offline
+
   telemetry_capture:
-    gpu: ~
+    gpu: ~ # ~ means None. This is a list that should specify which metrics of the GPU that should be monitored
     cpu: true
     per_cpu: true
     process_info: true
@@ -15,7 +16,11 @@ project:
     disk: true
     network: true
     machine_info: true
-  
+
+instrumentation:
+  torch:
+    mode: telemetry_and_tensor_inspection   # tensor_inspection, telemetry, telemetry_and_tensor_inspection, full, ~
+
 log:
   log_path: "default"
   log_file_level: error
@@ -32,6 +37,7 @@ main_redis:
   channel: interception
   buffer_size: 50
   insertion_buffer_time_secs: 5
+  chunk_size: 10  # use can use 0 or -1 to disable this. Or simply omit this from the config file.
 
 mongodb:
   host: localhost

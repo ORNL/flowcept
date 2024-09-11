@@ -2,7 +2,7 @@ from typing import List, Union
 from time import sleep
 
 from flowcept.commons.daos.mq_dao import MQDao
-from flowcept.configs import REDIS_INSTANCES
+from flowcept.configs import REDIS_INSTANCES, DB_FLUSH_MODE
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor

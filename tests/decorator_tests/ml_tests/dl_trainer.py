@@ -8,16 +8,17 @@ import flowcept.instrumentation.decorators
 from flowcept import (
     FlowceptConsumerAPI,
 )
-from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 from flowcept.instrumentation.decorators.flowcept_torch import (
-    torch_args_handler,
     register_modules,
     register_module_as_workflow,
+    torch_task,
 )
 from flowcept.instrumentation.decorators.responsible_ai import (
     model_profiler,
 )
 
+import threading
+thread_state = threading.local()
 
 class TestNet(nn.Module):
     def __init__(
@@ -28,12 +29,14 @@ class TestNet(nn.Module):
         fc_in_outs=[[320, 50], [50, 10]],
         softmax_dims=[-9999, 1],  # first value will be ignored
         parent_workflow_id=None,
+        parent_task_id=None
     ):
         super(TestNet, self).__init__()
-
+        print("parent workflow id", parent_workflow_id)
         self.workflow_id = register_module_as_workflow(
-            self, parent_workflow_id
+            self, parent_workflow_id=parent_workflow_id
         )
+        self.parent_task_id = parent_task_id
         Conv2d, Dropout, MaxPool2d, ReLU, Softmax, Linear = register_modules(
             [
                 nn.Conv2d,
@@ -44,6 +47,7 @@ class TestNet(nn.Module):
                 nn.Linear,
             ],
             workflow_id=self.workflow_id,
+            parent_task_id=self.parent_task_id
         )
 
         self.model_type = "CNN"
@@ -73,7 +77,7 @@ class TestNet(nn.Module):
                 self.fc_layers.append(Softmax(dim=softmax_dims[i]))
         self.view_size = fc_in_outs[0][0]
 
-    @flowcept_task(args_handler=torch_args_handler)
+    @torch_task()
     def forward(self, x):
         x = self.conv_layers(x)
         x = x.view(-1, self.view_size)
@@ -162,7 +166,9 @@ class ModelTrainer(object):
         max_epochs=2,
         workflow_id=None,
     ):
-        # TODO :base-interceptor-refactor:
+        print(
+            "Workflow id in model_fit", workflow_id
+        )  # TODO :base-interceptor-refactor:
         #  We are calling the consumer api here (sometimes for the second time)
         #  because we are capturing at two levels: at the model.fit and at
         #  every layer. Can we do it better?
@@ -172,7 +178,10 @@ class ModelTrainer(object):
             start_doc_inserter=False,
         ):
             train_loader, test_loader = ModelTrainer.build_train_test_loader()
-            device = torch.device("cpu")
+            if torch.backends.mps.is_available():
+                device = torch.device("mps")
+            else:
+                device = torch.device("cpu")
             model = TestNet(
                 conv_in_outs=conv_in_outs,
                 conv_kernel_sizes=conv_kernel_sizes,
@@ -181,7 +190,6 @@ class ModelTrainer(object):
                 softmax_dims=softmax_dims,
                 parent_workflow_id=workflow_id,
             )
-
             model = model.to(device)
             optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
             test_info = {}

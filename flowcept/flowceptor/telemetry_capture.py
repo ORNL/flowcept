@@ -3,53 +3,56 @@ import platform
 import cpuinfo
 import os
 
-try:
-    import pynvml
-    from pynvml import (
-        nvmlDeviceGetCount,
-        nvmlDeviceGetHandleByIndex,
-        nvmlDeviceGetMemoryInfo,
-        nvmlDeviceGetName,
-        nvmlInit,
-        nvmlShutdown,
-        nvmlDeviceGetTemperature,
-        nvmlDeviceGetPowerUsage,
-        NVML_TEMPERATURE_GPU,
-    )
-except Exception as e:
-    print(f"Exception to import NVIDIA libs! {e}")
-    pass
-try:
-    from amdsmi import (
-        amdsmi_get_gpu_memory_usage,
-        amdsmi_get_processor_handles,
-        amdsmi_shut_down,
-        amdsmi_get_gpu_memory_usage,
-        AmdSmiMemoryType,
-        AmdSmiTemperatureType,
-        amdsmi_get_gpu_activity,
-        amdsmi_get_power_info,
-        amdsmi_get_gpu_device_uuid,
-        amdsmi_get_temp_metric,
-        AmdSmiTemperatureMetric,
-        amdsmi_get_gpu_metrics_info,
-        amdsmi_get_processor_handles,
-        amdsmi_init,
-    )
-except Exception as e:
-    print(f"Exception to import AMD libs! {e}")
-    pass
-
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
     TELEMETRY_CAPTURE,
     N_GPUS,
     GPU_HANDLES,
+    GPU_TYPE,
     HOSTNAME,
     LOGIN_NAME,
 )
 from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
 
+if GPU_TYPE == "nvidia":
+    try:
+        import pynvml
+        from pynvml import (
+            nvmlDeviceGetCount,
+            nvmlDeviceGetHandleByIndex,
+            nvmlDeviceGetMemoryInfo,
+            nvmlDeviceGetName,
+            nvmlInit,
+            nvmlShutdown,
+            nvmlDeviceGetTemperature,
+            nvmlDeviceGetPowerUsage,
+            NVML_TEMPERATURE_GPU,
+        )
+    except Exception as e:
+        print(f"We could not import NVIDIA libs: {e}")
+    pass
+
+if GPU_TYPE == "amd":
+    try:
+        from amdsmi import (
+            amdsmi_get_gpu_memory_usage,
+            amdsmi_get_processor_handles,
+            amdsmi_shut_down,
+            amdsmi_get_gpu_memory_usage,
+            AmdSmiMemoryType,
+            AmdSmiTemperatureType,
+            amdsmi_get_gpu_activity,
+            amdsmi_get_power_info,
+            amdsmi_get_gpu_device_uuid,
+            amdsmi_get_temp_metric,
+            AmdSmiTemperatureMetric,
+            amdsmi_get_gpu_metrics_info,
+            amdsmi_get_processor_handles,
+            amdsmi_init,
+        )
+    except Exception as e:
+        print(f"Exception to import AMD libs! {e}")
+        pass
 
 # from amdsmi import amdsmi_init, amdsmi_get_processor_handles
 
@@ -64,7 +67,7 @@ class TelemetryCapture:
         self.conf = conf
         if self.conf is not None:
             self._visible_gpus = None
-            self._gpu_type = None
+            self._gpu_type = GPU_TYPE
             self._gpu_conf = self.conf.get("gpu", None)
 
             if self._gpu_conf is None:
@@ -82,14 +85,13 @@ class TelemetryCapture:
                 self.logger.info(
                     f"These are the visible GPUs by Flowcept Capture: {N_GPUS}"
                 )
+                # TODO: refactor! This below is bad coding
                 nvidia = N_GPUS.get("nvidia", [])
                 amd = N_GPUS.get("amd", [])
                 if len(nvidia):
-                    self._gpu_type = "nvidia"
                     self._visible_gpus = nvidia
                     self._gpu_capture_func = self.__get_gpu_info_nvidia
                 elif len(amd):
-                    self._gpu_type = "amd"
                     self._visible_gpus = amd
                     self._gpu_capture_func = self.__get_gpu_info_amd
                 else:
@@ -327,7 +329,9 @@ class TelemetryCapture:
                 return
             gpu_telemetry = {}
             for gpu_ix in self._visible_gpus:
-                gpu_telemetry[gpu_ix] = self._gpu_capture_func(gpu_ix)
+                gpu_telemetry[f"gpu_{gpu_ix}"] = self._gpu_capture_func(
+                    gpu_ix
+                )
             return gpu_telemetry
         except Exception as e:
             self.logger.exception(e)

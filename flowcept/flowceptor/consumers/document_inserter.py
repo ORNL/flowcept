@@ -2,8 +2,10 @@ import msgpack
 from time import time, sleep
 from threading import Thread, Event, Lock
 from typing import Dict
-from datetime import datetime
+from uuid import uuid4
 
+import flowcept.commons
+from flowcept.commons.daos.autoflush_buffer import AutoflushBuffer
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
@@ -14,7 +16,6 @@ from flowcept.configs import (
     MONGO_MAX_BUFFER_SIZE,
     MONGO_MIN_BUFFER_SIZE,
     MONGO_ADAPTIVE_BUFFER_SIZE,
-    DEBUG_MODE,
     JSON_SERIALIZER,
     MONGO_REMOVE_EMPTY_FIELDS,
 )
@@ -57,6 +58,12 @@ class DocumentInserter:
         self._lock = Lock()
         self._bundle_exec_id = bundle_exec_id
         self.check_safe_stops = check_safe_stops
+        self.buffer: AutoflushBuffer = AutoflushBuffer(
+            max_size=self._curr_max_buffer_size,
+            flush_interval=MONGO_INSERTION_BUFFER_TIME,
+            flush_function=DocumentInserter.flush_function,
+            doc_dao=self._doc_dao,
+        )
 
     def _set_buffer_size(self):
         if not MONGO_ADAPTIVE_BUFFER_SIZE:
@@ -83,35 +90,66 @@ class DocumentInserter:
                     ),
                 )
 
-    def _flush(self):
-        self._set_buffer_size()
-        with self._lock:
-            if len(self._task_dicts_buffer):
-                self.logger.info(
-                    f"Current Doc buffer size: {len(self._task_dicts_buffer)}, "
-                    f"Gonna flush {len(self._task_dicts_buffer)} msgs to DocDB!"
-                )
-                inserted = self._doc_dao.insert_and_update_many(
-                    TaskObject.task_id_field(), self._task_dicts_buffer
-                )
-                if not inserted:
-                    self.logger.warning(
-                        f"Could not insert the buffer correctly. "
-                        f"Buffer content={self._task_dicts_buffer}"
-                    )
-                else:
-                    self.logger.info(
-                        f"Flushed {len(self._task_dicts_buffer)} msgs to DocDB!"
-                    )
-                self._task_dicts_buffer = list()
+    @staticmethod
+    def flush_function(buffer, doc_dao, logger=flowcept.commons.logger):
+        logger.info(
+            f"Current Doc buffer size: {len(buffer)}, "
+            f"Gonna flush {len(buffer)} msgs to DocDB!"
+        )
+        inserted = doc_dao.insert_and_update_many(
+            TaskObject.task_id_field(), buffer
+        )
+        if not inserted:
+            logger.warning(
+                f"Could not insert the buffer correctly. "
+                f"Buffer content={buffer}"
+            )
+        else:
+            logger.info(f"Flushed {len(buffer)} msgs to DocDB!")
+
+    #
+    # def _flush(self):
+    #     self._set_buffer_size()
+    #     with self._lock:
+    #         if len(self._task_dicts_buffer):
+    #             self.logger.info(
+    #                 f"Current Doc buffer size: {len(self._task_dicts_buffer)}, "
+    #                 f"Gonna flush {len(self._task_dicts_buffer)} msgs to DocDB!"
+    #             )
+    #             inserted = self._doc_dao.insert_and_update_many(
+    #                 TaskObject.task_id_field(), self._task_dicts_buffer
+    #             )
+    #             if not inserted:
+    #                 self.logger.warning(
+    #                     f"Could not insert the buffer correctly. "
+    #                     f"Buffer content={self._task_dicts_buffer}"
+    #                 )
+    #             else:
+    #                 self.logger.info(
+    #                     f"Flushed {len(self._task_dicts_buffer)} msgs to DocDB!"
+    #                 )
+    #             self._task_dicts_buffer = list()
 
     def handle_task_message(self, message: Dict):
-        if "utc_timestamp" in message:
-            dt = datetime.fromtimestamp(message["utc_timestamp"])
-            message["timestamp"] = dt.utcnow()
+        # if "utc_timestamp" in message:
+        #     dt = datetime.fromtimestamp(message["utc_timestamp"])
+        #     message["timestamp"] = dt.utcnow()
 
-        if DEBUG_MODE:
-            message["debug"] = True
+        # if DEBUG_MODE:
+        #     message["debug"] = True
+        if "task_id" not in message:
+            message["task_id"] = str(uuid4())
+
+        if "workflow_id" not in message and len(message.get("used", {})):
+            wf_id = message.get("used").get("workflow_id", None)
+            if wf_id:
+                message["workflow_id"] = wf_id
+
+        if not any(
+            time_field in message
+            for time_field in TaskObject.get_time_field_names()
+        ):
+            message["registered_at"] = time()
 
         message.pop("type")
 
@@ -121,11 +159,13 @@ class DocumentInserter:
         )
         if MONGO_REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
-        self._task_dicts_buffer.append(message)
 
-        if len(self._task_dicts_buffer) >= self._curr_max_buffer_size:
-            self.logger.debug("Docs buffer exceeded, flushing...")
-            self._flush()
+        self.buffer.append(message)
+        # with self._lock:
+        #     self._task_dicts_buffer.append(message)
+        #     if len(self._task_dicts_buffer) >= self._curr_max_buffer_size:
+        #         self.logger.debug("Docs buffer exceeded, flushing...")
+        #         self._flush()
 
     def handle_workflow_message(self, message: Dict):
         message.pop("type")
@@ -147,7 +187,7 @@ class DocumentInserter:
             exec_bundle_id = message.get("exec_bundle_id", None)
             interceptor_instance_id = message.get("interceptor_instance_id")
             self.logger.info(
-                f"I'm doc inserter id {id(self)}. I received mq_dao_thread_stopped message "
+                f"I'm doc inserter id {id(self)}. I ack that I received mq_dao_thread_stopped message "
                 f"in DocInserter from the interceptor "
                 f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
             )
@@ -167,19 +207,21 @@ class DocumentInserter:
             self.logger.info("Document Inserter is stopping...")
             return "stop"
 
-    def time_based_flushing(self, event: Event):
-        while not event.is_set():
-            if len(self._task_dicts_buffer):
-                now = time()
-                timediff = now - self._previous_time
-                if timediff >= MONGO_INSERTION_BUFFER_TIME:
-                    self.logger.debug("Time to flush to doc db!")
-                    self._previous_time = now
-                    self._flush()
-            self.logger.debug(
-                f"Time-based DocDB inserter going to wait for {MONGO_INSERTION_BUFFER_TIME} s."
-            )
-            sleep(MONGO_INSERTION_BUFFER_TIME)
+    # def time_based_flushing(self, event: Event):
+    #     while not event.is_set():
+    #         with self._lock:
+    #             if len(self._task_dicts_buffer):
+    #                 now = time()
+    #                 timediff = now - self._previous_time
+    #                 if timediff >= MONGO_INSERTION_BUFFER_TIME:
+    #                     self.logger.debug("Time to flush to doc db!")
+    #                     self._previous_time = now
+    #                     self._flush()
+    #             self.logger.debug(
+    #                 f"Time-based DocDB inserter going to wait for {MONGO_INSERTION_BUFFER_TIME} s."
+    #             )
+    #             event.wait(MONGO_INSERTION_BUFFER_TIME)
+    #     self.logger.debug("Broke the time_based_flushing in Doc Inserter!")
 
     def start(self) -> "DocumentInserter":
         self._main_thread = Thread(target=self._start)
@@ -188,10 +230,10 @@ class DocumentInserter:
 
     def _start(self):
         stop_event = Event()
-        time_thread = Thread(
-            target=self.time_based_flushing, args=(stop_event,)
-        )
-        time_thread.start()
+        # time_thread = Thread(
+        #     target=self.time_based_flushing, args=(stop_event,)
+        # )
+        # time_thread.start()
         pubsub = self._mq_dao.subscribe()
         should_continue = True
         while should_continue:
@@ -208,13 +250,15 @@ class DocumentInserter:
                         r = self.handle_control_message(_dict_obj)
                         if r == "stop":
                             stop_event.set()
-                            self._flush()
+                            self.buffer.stop()
                             should_continue = False
                             break
                     elif msg_type == "task":
                         self.handle_task_message(_dict_obj)
                     elif msg_type == "workflow":
                         self.handle_workflow_message(_dict_obj)
+                    elif msg_type is None:
+                        raise Exception("Please inform the message type.")
                     else:
                         self.logger.error("Unexpected message type")
                     self.logger.debug(
@@ -227,12 +271,12 @@ class DocumentInserter:
                 sleep(2)
             self.logger.debug("Still in the doc insert. message listen loop")
         self.logger.info("Ok, we broke the doc inserter message listen loop!")
-        time_thread.join()
-        self.logger.info("Joined time thread in doc inserter.")
+        # time_thread.join()
+        # self.logger.info("Joined time thread in doc inserter.")
 
     def stop(self, bundle_exec_id=None):
         if self.check_safe_stops:
-            max_trials = 100
+            max_trials = 60
             trial = 0
             while not self._mq_dao.all_time_based_threads_ended(
                 bundle_exec_id
@@ -244,17 +288,16 @@ class DocumentInserter:
                     f"Checking again in {sleep_time} secs. Trial={trial}."
                 )
                 sleep(sleep_time)
-
                 if trial >= max_trials:
                     if (
                         len(self._task_dicts_buffer) == 0
                     ):  # and len(self._mq_dao._buffer) == 0:
-                        self.logger.warning(
+                        self.logger.critical(
                             f"Doc Inserter {id(self)} gave up on waiting for the signal. It is probably safe to stop by now."
                         )
                         break
         self.logger.info("Sending message to stop document inserter.")
-        self._mq_dao.stop_document_inserter()
+        self._mq_dao.send_document_inserter_stop()
         self.logger.info(
             f"Doc Inserter {id(self)} Sent message to stop itself."
         )

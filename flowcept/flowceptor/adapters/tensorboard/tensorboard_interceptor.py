@@ -85,7 +85,7 @@ class TensorboardInterceptor(BaseInterceptor):
                 if task_msg.task_id is None:
                     self.logger.error("This is an error")  # TODO: logger
 
-                self.intercept(task_msg)
+                self.intercept(task_msg.to_dict())
                 self.state_manager.add_element_id(child_event.log_path)
 
     def start(self, bundle_exec_id) -> "TensorboardInterceptor":
