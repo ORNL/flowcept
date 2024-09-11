@@ -33,10 +33,9 @@ class WorkflowObject:
     environment_id: str = None
     sys_name: str = None
     extra_metadata: str = None
-    #parent_task_id: str = None
+    # parent_task_id: str = None
     used: Dict = None
     generated: Dict = None
-
 
     def __init__(self, name=None, used=None, generated=None):
         self.name = name
