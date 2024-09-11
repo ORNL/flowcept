@@ -21,6 +21,7 @@ from flowcept.instrumentation.decorators.flowcept_torch import (
 )
 from flowcept.instrumentation.decorators.responsible_ai import model_profiler
 
+
 # Define a function to batchify the data
 def batchify(data, bsz):
     nbatch = data.size(0) // bsz
@@ -55,7 +56,9 @@ def get_batch(source, i, bptt=35):
     return data, target
 
 
-def get_wiki_text(tokenizer_type="basic_english"): # spacy, moses, toktok, revtok, subword
+def get_wiki_text(
+    tokenizer_type="basic_english",
+):  # spacy, moses, toktok, revtok, subword
     # Load the WikiText2 dataset
     dataset = load_dataset("wikitext", "wikitext-2-v1")
     test_dataset = dataset["test"]
@@ -113,7 +116,8 @@ class TransformerModel(nn.Module):
             Embedding,
             Linear,
             PositionalEncoding_,
-        ) = register_modules(modules=[
+        ) = register_modules(
+            modules=[
                 nn.TransformerEncoderLayer,
                 nn.TransformerEncoder,
                 nn.Embedding,
@@ -121,7 +125,7 @@ class TransformerModel(nn.Module):
                 PositionalEncoding,
             ],
             workflow_id=self.workflow_id,
-            parent_task_id=self.parent_task_id
+            parent_task_id=self.parent_task_id,
         )
         self.model_type = "Transformer"
         self.src_mask = None
@@ -130,7 +134,7 @@ class TransformerModel(nn.Module):
             dropout,
             max_len=pos_encoding_max_len,
             workflow_id=self.workflow_id,
-            parent_task_id=parent_task_id
+            parent_task_id=parent_task_id,
         )
         encoder_layers = TransformerEncoderLayer(
             d_model, nhead, d_hid, dropout
@@ -168,7 +172,14 @@ class TransformerModel(nn.Module):
 
 # Define the PositionalEncoding class
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, dropout=0.1, max_len=5000, workflow_id=None, parent_task_id=None):
+    def __init__(
+        self,
+        d_model,
+        dropout=0.1,
+        max_len=5000,
+        workflow_id=None,
+        parent_task_id=None,
+    ):
         super(PositionalEncoding, self).__init__()
         self.workflow_id = workflow_id
         Dropout = register_modules(
@@ -176,7 +187,7 @@ class PositionalEncoding(nn.Module):
                 nn.Dropout,
             ],
             workflow_id=self.workflow_id,
-            parent_task_id=parent_task_id
+            parent_task_id=parent_task_id,
         )
 
         self.dropout = Dropout(p=dropout)
@@ -264,6 +275,7 @@ def model_train(
     workflow_id=None,
 ):
     from distributed.worker import thread_state
+
     dask_task_id = thread_state.key
 
     # TODO :ml-refactor: save device type and random seed: https://pytorch.org/docs/stable/notes/randomness.html

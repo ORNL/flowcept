@@ -53,9 +53,9 @@ class DecoratorDaskLLMTests(unittest.TestCase):
         client, cluster, consumer = setup_local_dask_cluster(
             exec_bundle=train_wf_id
         )
-        register_dask_workflow(client,
-                               workflow_id=train_wf_id,
-                               used={"dataset_ref": dataset_ref})
+        register_dask_workflow(
+            client, workflow_id=train_wf_id, used={"dataset_ref": dataset_ref}
+        )
 
         print(f"Model_Train_Wf_id={train_wf_id}")
         exp_param_settings = {

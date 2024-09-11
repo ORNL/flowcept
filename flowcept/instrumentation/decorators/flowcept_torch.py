@@ -64,7 +64,7 @@ def full_torch_task(func=None):
             task_obj["type"] = "task"
             task_obj["started_at"] = time()
 
-            task_obj["activity_id"] = func.__qualname__,
+            task_obj["activity_id"] = (func.__qualname__,)
             task_obj["task_id"] = str(id(task_obj))
             if hasattr(args[0], "parent_task_id"):
                 task_obj["parent_task_id"] = args[0].parent_task_id
@@ -296,7 +296,9 @@ def _create_dynamic_class(base_class, class_name, extra_attributes):
 
 
 def register_modules(
-    modules: List[nn.Module], workflow_id: str = None, parent_task_id: str = None
+    modules: List[nn.Module],
+    workflow_id: str = None,
+    parent_task_id: str = None,
 ) -> Dict[nn.Module, nn.Module]:
     flowcept_torch_modules: List[nn.Module] = []
 
@@ -304,8 +306,10 @@ def register_modules(
         new_module = _create_dynamic_class(
             module,
             f"Flowcept{module.__name__}",
-            extra_attributes={"workflow_id": workflow_id,
-                              "parent_task_id": parent_task_id},
+            extra_attributes={
+                "workflow_id": workflow_id,
+                "parent_task_id": parent_task_id,
+            },
         )
         flowcept_torch_modules.append(new_module)
     if len(flowcept_torch_modules) == 1:
@@ -317,7 +321,7 @@ def register_modules(
 def register_module_as_workflow(
     module: nn.Module,
     parent_workflow_id=None,
-    #parent_task_id=None,
+    # parent_task_id=None,
     custom_metadata: Dict = None,
 ):
     workflow_obj = WorkflowObject()
@@ -327,7 +331,7 @@ def register_module_as_workflow(
     _custom_metadata = custom_metadata or {}
     _custom_metadata["workflow_type"] = "TorchModule"
     workflow_obj.custom_metadata = custom_metadata
-    #workflow_obj.parent_task_id = parent_task_id
+    # workflow_obj.parent_task_id = parent_task_id
 
     if REGISTER_WORKFLOW:
         flowcept.instrumentation.decorators.instrumentation_interceptor.send_workflow_message(

@@ -18,7 +18,9 @@ from flowcept.instrumentation.decorators.responsible_ai import (
 )
 
 import threading
+
 thread_state = threading.local()
+
 
 class TestNet(nn.Module):
     def __init__(
@@ -29,7 +31,7 @@ class TestNet(nn.Module):
         fc_in_outs=[[320, 50], [50, 10]],
         softmax_dims=[-9999, 1],  # first value will be ignored
         parent_workflow_id=None,
-        parent_task_id=None
+        parent_task_id=None,
     ):
         super(TestNet, self).__init__()
         print("parent workflow id", parent_workflow_id)
@@ -47,7 +49,7 @@ class TestNet(nn.Module):
                 nn.Linear,
             ],
             workflow_id=self.workflow_id,
-            parent_task_id=self.parent_task_id
+            parent_task_id=self.parent_task_id,
         )
 
         self.model_type = "CNN"
