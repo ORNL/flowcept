@@ -55,7 +55,7 @@ class MQDao:
         buffer, redis_connection, logger=flowcept.commons.logger
     ):
         pipe = redis_connection.pipeline()
-        logger.critical(f"Going to flush {len(buffer)} to MQ...")
+        logger.info(f"Going to flush {len(buffer)} to MQ...")
         for message in buffer:
             try:
                 logger.debug(
@@ -74,7 +74,7 @@ class MQDao:
             t0 = time()
         try:
             pipe.execute()
-            logger.critical(f"Flushed {len(buffer)} msgs to MQ!")
+            logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             logger.exception(e)
         perf_log("mq_pipe_execute", t0)
@@ -171,81 +171,11 @@ class MQDao:
             MQDao.bulk_publish(self.buffer, self._redis)
             self.buffer = list()
 
-    # def flush(self):
-    #     #with self._lock:
-    #         # if self.buffer is None:
-    #         #     self.logger.error("This MQ has never been started!")
-    #         #     return
-    #     # print()
-    #     # try:
-    #     #     print(len(self.buffer)) #accessing self.buffer here makes the flush function return for no reason?!
-    #     # except Exception as e:
-    #     #     print(e)
-    #     # if len(self.buffer) == 0:
-    #     #     return
-    #     with self._lock:
-    #         pipe = self._redis.pipeline()
-    #         self.logger.critical(
-    #             f"Going to flush {len(self.buffer)} to MQ..."
-    #         )
-    #         for message in self.buffer:
-    #             try:
-    #                 self.logger.debug(
-    #                     f"Going to send Message:"
-    #                     f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
-    #                 )
-    #                 # TODO remove
-    #                 pipe.publish(
-    #                     REDIS_CHANNEL, msgpack.dumps(message)
-    #                 )
-    #             except Exception as e:
-    #                 self.logger.exception(e)
-    #                 self.logger.error(
-    #                     "Some messages couldn't be flushed! Check the messages' contents!"
-    #                 )
-    #                 self.logger.error(
-    #                     f"Message that caused error: {message}"
-    #                 )
-    #         t0 = 0
-    #         if PERF_LOG:
-    #             t0 = time()
-    #         try:
-    #             pipe.execute()
-    #             self.logger.critical(
-    #                 f"Flushed {len(self.buffer)} msgs to MQ!"
-    #             )
-    #         except Exception as e:
-    #             self.logger.exception(e)
-    #         perf_log("mq_pipe_execute", t0)
-    #         self.buffer = list()
-
     def subscribe(self) -> PubSub:
         pubsub = self._redis.pubsub()
         pubsub.psubscribe(REDIS_CHANNEL)
         return pubsub
 
-    # def publish(self, message: Dict):
-    #     return
-    #     # TODO: refactor we should have a parent MessageObject class
-    #     self._buffer.append(message)
-    #     if len(self._buffer) >= REDIS_BUFFER_SIZE:
-    #         self.logger.critical("Redis buffer exceeded, flushing...")
-    #         self._flush()
-
-    # def time_based_flushing(self):
-    #     while not self._stop_flag:
-    #         if len(self.buffer):
-    #             now = time()
-    #             timediff = now - self._previous_time
-    #             if timediff >= REDIS_INSERTION_BUFFER_TIME:
-    #                 self.logger.debug("Time to flush to redis!")
-    #                 self._previous_time = now
-    #                 self.flush()
-    #         self.logger.info(
-    #             f"Time-based Redis inserter going to wait for {REDIS_INSERTION_BUFFER_TIME} s."
-    #         )
-    #         sleep(REDIS_INSERTION_BUFFER_TIME)
-    #     self.logger.info("Broke the time_based_flushing in mq!")
     def stop(self, interceptor_instance_id: str, bundle_exec_id: int = None):
         self.logger.info(
             f"MQ publisher received stop signal! bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}"
