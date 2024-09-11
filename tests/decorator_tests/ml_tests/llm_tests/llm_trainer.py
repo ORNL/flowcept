@@ -264,7 +264,6 @@ def model_train(
     workflow_id=None,
 ):
     from distributed.worker import thread_state
-
     dask_task_id = thread_state.key
 
     # TODO :ml-refactor: save device type and random seed: https://pytorch.org/docs/stable/notes/randomness.html

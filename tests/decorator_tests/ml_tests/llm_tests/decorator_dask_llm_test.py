@@ -72,6 +72,7 @@ class DecoratorDaskLLMTests(unittest.TestCase):
         }
         configs = generate_configs(exp_param_settings)
         outputs = []
+
         for conf in configs[:1]:
             conf.update(
                 {
@@ -83,6 +84,7 @@ class DecoratorDaskLLMTests(unittest.TestCase):
                 }
             )
             outputs.append(client.submit(model_train, **conf))
+
         for o in outputs:
             o.result()
 
