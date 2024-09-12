@@ -1,4 +1,4 @@
-name: Unit, integration, and notebook tests
+name: Unit, integration, and notebook tests (Py39)
 on: [push]
 # branches: [ "disabled" ]
 
