@@ -2,6 +2,9 @@ from typing import List, Union
 from time import sleep
 
 import flowcept.instrumentation.decorators
+from flowcept.commons import logger
+from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept.commons.daos.mq_dao import MQDao
 from flowcept.configs import REDIS_INSTANCES
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -106,3 +109,14 @@ class FlowceptConsumerAPI(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop()
+
+    @staticmethod
+    def services_alive() -> bool:
+        if not MQDao().liveness_test():
+            logger.error("MQ Not Ready!")
+            return False
+        if not DocumentDBDao().liveness_test():
+            logger.error("DocDB Not Ready!")
+            return False
+        logger.info("MQ and DocDB are alive!")
+        return True

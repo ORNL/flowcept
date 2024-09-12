@@ -1,4 +1,5 @@
 import unittest
+from time import sleep
 from uuid import uuid4
 
 from flowcept import FlowceptConsumerAPI
@@ -12,6 +13,7 @@ from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 
 @flowcept_task
 def sum_one(n, workflow_id=None):
+    sleep(0.1)
     return n + 1
 
 
@@ -22,12 +24,13 @@ def mult_two(n, workflow_id=None):
 
 class FlowceptAPITest(unittest.TestCase):
     def test_simple_workflow(self):
+        db = DBAPI()
+        assert FlowceptConsumerAPI.services_alive()
+
         wf_id = str(uuid4())
         with FlowceptConsumerAPI():
             # The next line is optional
-            DBAPI().insert_or_update_workflow(
-                WorkflowObject(workflow_id=wf_id)
-            )
+            db.insert_or_update_workflow(WorkflowObject(workflow_id=wf_id))
             n = 3
             o1 = sum_one(n, workflow_id=wf_id)
             o2 = mult_two(o1, workflow_id=wf_id)
@@ -37,4 +40,10 @@ class FlowceptAPITest(unittest.TestCase):
             {"workflow_id": wf_id},
             condition_to_evaluate=lambda docs: len(docs) == 2,
         )
+
         print("workflow_id", wf_id)
+
+        assert len(db.query(filter={"workflow_id": wf_id})) == 2
+        assert (
+            len(db.query(type="workflow", filter={"workflow_id": wf_id})) == 1
+        )

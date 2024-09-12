@@ -3,6 +3,7 @@ import io
 import json
 import zipfile
 
+import pymongo
 from bson import ObjectId
 from bson.json_util import dumps
 from pymongo import MongoClient, UpdateOne
@@ -419,3 +420,14 @@ class DocumentDBDao(object):
         except Exception as e:
             self.logger.exception(e)
             return
+
+    def liveness_test(self) -> bool:
+        try:
+            self._db.list_collection_names()
+            return True
+        except ConnectionError as e:
+            self.logger.exception(e)
+            return False
+        except Exception as e:
+            self.logger.exception(e)
+            return False

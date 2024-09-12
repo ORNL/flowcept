@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict, List
+from typing import List
 
 from flowcept.commons import singleton
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
@@ -91,3 +91,32 @@ class DBAPI(object):
         except Exception as e:
             self.logger.exception(e)
             return False
+
+    def query(
+        self,
+        type="task",
+        filter=None,
+        projection=None,
+        limit=0,
+        sort=None,
+        aggregation=None,
+        remove_json_unserializables=True,
+    ):
+        if type == "task":
+            return self._dao.task_query(
+                filter,
+                projection,
+                limit,
+                sort,
+                aggregation,
+                remove_json_unserializables,
+            )
+        elif type == "workflow":
+            return self._dao.workflow_query(
+                filter, projection, limit, sort, remove_json_unserializables
+            )
+        else:
+            raise Exception(
+                f"You used type={type}, but we only have "
+                f"collections for task and workflow."
+            )
