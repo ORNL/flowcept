@@ -8,7 +8,6 @@ import pandas as pd
 from time import time, sleep
 
 from flowcept.commons import FlowceptLogger
-from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 import flowcept.commons
 import flowcept.instrumentation.decorators
