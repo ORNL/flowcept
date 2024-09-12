@@ -100,7 +100,7 @@ class DBAPI(object):
         sort=None,
         aggregation=None,
         remove_json_unserializables=True,
-        type="task"
+        type="task",
     ):
         if type == "task":
             return self._dao.task_query(
