@@ -134,5 +134,5 @@ setup(
         "Topic :: System :: Monitoring",
         "Topic :: Database",
     ],
-    python_requires=">=3.8",
+    python_requires=">=3.9",
 )
