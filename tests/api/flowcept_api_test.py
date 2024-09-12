@@ -10,13 +10,11 @@ from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 
 
-@staticmethod
 @flowcept_task
 def sum_one(n, workflow_id=None):
     return n + 1
 
 
-@staticmethod
 @flowcept_task
 def mult_two(n, workflow_id=None):
     return n * 2
