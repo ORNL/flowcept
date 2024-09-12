@@ -26,8 +26,8 @@ jobs:
     - name: Install docker
       run: |
         brew install docker docker-compose
-        brew install colima
-        colima start
+        #brew install colima
+        #colima start
         mkdir -p ~/.docker/cli-plugins
         echo $HOMEBREW_PREFIX
         ln -sfn $HOMEBREW_PREFIX/opt/docker-compose/bin/docker-compose ~/.docker/cli-plugins/docker-compose

@@ -94,13 +94,13 @@ class DBAPI(object):
 
     def query(
         self,
-        type="task",
         filter=None,
         projection=None,
         limit=0,
         sort=None,
         aggregation=None,
         remove_json_unserializables=True,
+        type="task"
     ):
         if type == "task":
             return self._dao.task_query(
