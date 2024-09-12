@@ -2,6 +2,7 @@ name: Test Python 3.10
 on:
   pull_request:
     branches: [ "dev", "main" ]
+    types: [opened, synchronize, reopened]
     # branches: [ "disabled" ]
 
 jobs:
