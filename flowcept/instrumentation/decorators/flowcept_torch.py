@@ -36,7 +36,7 @@ def _inspect_torch_tensor(tensor: torch.Tensor):
     #     logger.warning(f"For tensor {_id} could not get its device. Exc: {e}")
     tensor_inspection["is_sparse"] = tensor.is_sparse
     tensor_inspection["shape"] = list(tensor.shape)
-    #tensor_inspection["nbytes"] = tensor.nbytes
+    # tensor_inspection["nbytes"] = tensor.nbytes
     # except Exception as e:
     #     logger.warning(
     #         f"For tensor {_id}, could not get its nbytes. Exc: {e}"
