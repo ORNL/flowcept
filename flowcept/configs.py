@@ -129,7 +129,9 @@ REGISTER_INSTRUMENTED_TASKS = settings["project"].get(
 # GPU TELEMETRY CAPTURE SETTINGS #
 #################################
 
-# TODO use a better var name. This is legacy. We could move this to the static part of TelemetryCapture
+#  TODO: This is legacy. We should improve the way to set these
+#   initial variables and initialize GPU libs.
+#   We could move this to the static part of TelemetryCapture
 N_GPUS = dict()
 GPU_HANDLES = None
 if (

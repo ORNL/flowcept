@@ -37,7 +37,8 @@ class WorkflowObject:
     used: Dict = None
     generated: Dict = None
 
-    def __init__(self, name=None, used=None, generated=None):
+    def __init__(self, workflow_id=None, name=None, used=None, generated=None):
+        self.workflow_id = workflow_id
         self.name = name
         self.used = used
         self.generated = generated

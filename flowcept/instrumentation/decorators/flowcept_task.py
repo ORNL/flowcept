@@ -123,13 +123,14 @@ def flowcept_task(func=None, **decorator_kwargs):
                 "args_handler", default_args_handler
             )
             task_obj = TaskObject()
-            task_obj.started_at = time()
+
             task_obj.activity_id = func.__name__
-            # task_obj.task_id = str(task_obj.started_at)
+            task_obj.used = args_handler(task_obj, *args, **kwargs)
+            task_obj.started_at = time()
+            task_obj.task_id = str(task_obj.started_at)
             task_obj.telemetry_at_start = (
                 instrumentation_interceptor.telemetry_capture.capture()
             )
-            task_obj.used = args_handler(task_obj, *args, **kwargs)
             try:
                 result = func(*args, **kwargs)
                 task_obj.status = Status.FINISHED

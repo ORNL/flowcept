@@ -39,11 +39,6 @@ class BaseInterceptor(object):
         self.telemetry_capture = TelemetryCapture()
         self._saved_workflows = set()
         self._generated_workflow_id = False
-        # self.intercept: Callable = None
-        # if flowcept.configs.DB_FLUSH_MODE == "online":
-        #     self.intercept = self.intercept_appends_with_checks
-        # else:
-        #     self.intercept = self.intercept_appends_only
 
     def prepare_task_msg(self, *args, **kwargs) -> TaskObject:
         raise NotImplementedError()
