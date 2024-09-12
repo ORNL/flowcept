@@ -12,7 +12,9 @@ from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 class FlowceptConsumerAPI(object):
     def __init__(
         self,
-        interceptors: Union[BaseInterceptor, List[BaseInterceptor]] = flowcept.instrumentation.decorators.instrumentation_interceptor,
+        interceptors: Union[
+            BaseInterceptor, List[BaseInterceptor]
+        ] = flowcept.instrumentation.decorators.instrumentation_interceptor,
         bundle_exec_id=None,
         start_doc_inserter=True,
     ):
