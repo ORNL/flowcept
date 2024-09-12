@@ -206,3 +206,17 @@ class MQDao:
         # These control_messages are handled by the document inserter
         msg = {"type": "flowcept_control", "info": "stop_document_inserter"}
         self._redis.publish(REDIS_CHANNEL, msgpack.dumps(msg))
+
+    def liveness_test(self):
+        try:
+            response = self._redis.ping()
+            if response:
+                return True
+            else:
+                return False
+        except ConnectionError as e:
+            self.logger.exception(e)
+            return False
+        except Exception as e:
+            self.logger.exception(e)
+            return False
