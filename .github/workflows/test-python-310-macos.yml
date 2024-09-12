@@ -25,7 +25,8 @@ jobs:
         pip install -r extra_requirements/dev-requirements.txt
     - name: Install docker
       run: |
-        brew install docker docker-compose 
+        brew install docker docker-compose
+        brew install colima
         colima start
         mkdir -p ~/.docker/cli-plugins
         echo $HOMEBREW_PREFIX
