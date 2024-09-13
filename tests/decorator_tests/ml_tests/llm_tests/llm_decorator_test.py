@@ -2,11 +2,9 @@ import uuid
 
 import torch
 
-from flowcept import model_profiler
-
 import unittest
 
-
+from flowcept.instrumentation.decorators.responsible_ai import model_profiler
 from tests.decorator_tests.ml_tests.llm_tests.llm_trainer import (
     model_train,
     get_wiki_text,
@@ -78,5 +76,6 @@ class LLMDecoratorTests(unittest.TestCase):
             "train_loss": 0.01,
             "val_loss": 0.01,
             "model": best_m,
+            "task_id": str(uuid.uuid4()),
             "test_data": test_data,
         }

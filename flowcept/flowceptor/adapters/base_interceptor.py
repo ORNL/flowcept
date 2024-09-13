@@ -1,21 +1,9 @@
-import uuid
 from abc import ABCMeta, abstractmethod
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
-from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.commons.utils import get_utc_now, fill_with_basic_workflow_info
 from flowcept.configs import (
-    FLOWCEPT_USER,
-    SYS_NAME,
-    NODE_NAME,
-    LOGIN_NAME,
-    PUBLIC_IP,
-    PRIVATE_IP,
-    CAMPAIGN_ID,
-    HOSTNAME,
-    EXTRA_METADATA,
     ENRICH_MESSAGES,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -36,7 +24,7 @@ from flowcept.version import __version__
 #  in the code. https://github.com/ORNL/flowcept/issues/109
 # class BaseInterceptor(object, metaclass=ABCMeta):
 class BaseInterceptor(object):
-    def __init__(self, plugin_key):
+    def __init__(self, plugin_key=None):
         self.logger = FlowceptLogger()
         if (
             plugin_key is not None
@@ -44,54 +32,13 @@ class BaseInterceptor(object):
             self.settings = get_settings(plugin_key)
         else:
             self.settings = None
-        self._mq_dao = MQDao()
-        self._db_api = DBAPI()
+        self._mq_dao = MQDao(adapter_settings=self.settings)
+        # self._db_api = DBAPI()
         self._bundle_exec_id = None
         self._interceptor_instance_id = str(id(self))
         self.telemetry_capture = TelemetryCapture()
+        self._saved_workflows = set()
         self._generated_workflow_id = False
-        self._registered_workflow = False
-
-    def _enrich_task_message(self, settings_key, task_msg: TaskObject):
-        if task_msg.utc_timestamp is None:
-            task_msg.utc_timestamp = get_utc_now()
-
-        if task_msg.adapter_id is None:
-            task_msg.adapter_id = settings_key
-
-        if task_msg.user is None:
-            task_msg.user = FLOWCEPT_USER
-
-        if task_msg.campaign_id is None:
-            task_msg.campaign_id = CAMPAIGN_ID
-
-        if task_msg.sys_name is None:
-            task_msg.sys_name = SYS_NAME
-
-        if task_msg.node_name is None:
-            task_msg.node_name = NODE_NAME
-
-        if task_msg.login_name is None:
-            task_msg.login_name = LOGIN_NAME
-
-        if task_msg.public_ip is None and PUBLIC_IP is not None:
-            task_msg.public_ip = PUBLIC_IP
-
-        if task_msg.private_ip is None and PRIVATE_IP is not None:
-            task_msg.private_ip = PRIVATE_IP
-
-        if task_msg.hostname is None and HOSTNAME is not None:
-            task_msg.hostname = HOSTNAME
-
-        if task_msg.extra_metadata is None and EXTRA_METADATA is not None:
-            task_msg.extra_metadata = EXTRA_METADATA
-
-        if task_msg.flowcept_version is None:
-            task_msg.flowcept_version = __version__
-
-        if task_msg.workflow_id is None and not self._generated_workflow_id:
-            task_msg.workflow_id = str(uuid.uuid4())
-            self._generated_workflow_id = True
 
     def prepare_task_msg(self, *args, **kwargs) -> TaskObject:
         raise NotImplementedError()
@@ -102,10 +49,9 @@ class BaseInterceptor(object):
         :return:
         """
         self._bundle_exec_id = bundle_exec_id
-        self._mq_dao.start_time_based_flushing(
+        self._mq_dao.init_buffer(
             self._interceptor_instance_id, bundle_exec_id
         )
-        self.telemetry_capture.init_gpu_telemetry()
         return self
 
     def stop(self) -> bool:
@@ -113,10 +59,7 @@ class BaseInterceptor(object):
         Gracefully stops an interceptor
         :return:
         """
-        self._mq_dao.stop_time_based_flushing(
-            self._interceptor_instance_id, self._bundle_exec_id
-        )
-        self.telemetry_capture.shutdown_gpu_telemetry()
+        self._mq_dao.stop(self._interceptor_instance_id, self._bundle_exec_id)
 
     def observe(self, *args, **kwargs):
         """
@@ -136,50 +79,50 @@ class BaseInterceptor(object):
         """
         raise NotImplementedError()
 
-    def register_workflow(self, task_msg: TaskObject):
-        self._registered_workflow = True
-        if task_msg.workflow_id is None:
+    def send_workflow_message(self, workflow_obj: WorkflowObject):
+        wf_id = workflow_obj.workflow_id
+        if wf_id is None:
+            self.logger.warning(
+                f"Workflow_id is empty, we can't save this workflow_obj: {workflow_obj}"
+            )
             return
-
-        workflow_obj = WorkflowObject()
-        workflow_obj.workflow_id = task_msg.workflow_id
-        fill_with_basic_workflow_info(workflow_obj)
+        if wf_id in self._saved_workflows:
+            return
+        self._saved_workflows.add(wf_id)
+        if self._mq_dao.buffer is None:
+            # TODO :base-interceptor-refactor: :code-reorg: :usability:
+            raise Exception(
+                f"This interceptor {id(self)} has never been started!"
+            )
         workflow_obj.interceptor_ids = [self._interceptor_instance_id]
-
         machine_info = self.telemetry_capture.capture_machine_info()
         if machine_info is not None:
             if workflow_obj.machine_info is None:
-                workflow_obj.machine_info = {}
+                workflow_obj.machine_info = dict()
             # TODO :refactor-base-interceptor: we might want to register machine info even when there's no observer
             workflow_obj.machine_info[
                 self._interceptor_instance_id
             ] = machine_info
-
-        self._db_api.insert_or_update_workflow(workflow_obj)
-
-    def intercept(self, task_msg: TaskObject):
-        if (
-            self._mq_dao._buffer is None
-        ):  # TODO :base-interceptor-refactor: :code-reorg: :usability:
-            raise Exception(
-                f"This interceptor {id(self)} has never been started!"
-            )
-
         if ENRICH_MESSAGES:
-            if (
-                self.settings is not None
-            ):  # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
-                key = self.settings.key
-            else:
-                key = None
-            self._enrich_task_message(key, task_msg)
+            workflow_obj.enrich(self.settings.key if self.settings else None)
+        self.intercept(workflow_obj.to_dict())
 
-        if not self._registered_workflow:
-            self.register_workflow(task_msg)
+    def intercept(self, obj_msg):
+        self._mq_dao.buffer.append(obj_msg)
 
-        _msg = task_msg.to_dict()
-        self.logger.debug(
-            f"Going to send to Redis an intercepted message:"
-            f"\n\t[BEGIN_MSG]{_msg}\n[END_MSG]\t"
-        )
-        self._mq_dao.publish(_msg)
+    # def intercept_appends_only(self, obj_msg):
+    #     self._mq_dao.buffer.append(obj_msg)
+    #
+    # def intercept_appends_with_checks(self, obj_msg):
+    #     # self._mq_dao._lock.acquire()
+    #     # self._mq_dao.buffer.append(obj_msg)
+    #     self._mq_dao.buffer.append(obj_msg)
+    #     # if len(self._mq_dao.buffer) >= REDIS_BUFFER_SIZE:
+    #     #     self.logger.critical("Redis buffer exceeded, flushing...")
+    #     #     self._mq_dao.flush()
+    #     # self._mq_dao._lock.release()
+
+    # def intercept(self, obj_msg: Dict):
+    #     pass
+    #     #self._mq_dao._buffer.append(obj_msg)
+    #     #self._mq_dao.publish(obj_msg)

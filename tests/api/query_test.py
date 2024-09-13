@@ -61,7 +61,7 @@ def gen_mock_multi_workflow_data(size=1):
         t1.started_at = int(_start.timestamp())
         t1.ended_at = int(_end.timestamp())
         t1.campaign_id = "mock_campaign"
-        t1.status = Status.FINISHED.name
+        t1.status = Status.FINISHED
         t1.user = "user_test"
         new_docs.append(t1.to_dict())
         new_task_ids.append(t1.task_id)
@@ -83,7 +83,7 @@ def gen_mock_multi_workflow_data(size=1):
 
         t2.started_at = int(_start.timestamp())
         t2.ended_at = int(_end.timestamp())
-        t2.status = Status.FINISHED.name
+        t2.status = Status.FINISHED
         t2.campaign_id = t1.campaign_id
         t2.user = t1.campaign_id
         new_docs.append(t2.to_dict())
@@ -363,7 +363,7 @@ class QueryTest(unittest.TestCase):
         sort = [
             ("telemetry_diff.process.cpu_times.user", TaskQueryAPI.ASC),
             ("generated.loss", TaskQueryAPI.ASC),
-            ("generated.responsible_ai_metrics.flops", TaskQueryAPI.ASC),
+            ("generated.responsible_ai_metadata.flops", TaskQueryAPI.ASC),
         ]
         df = self.api.df_get_tasks_quantiles(
             clauses=clauses,

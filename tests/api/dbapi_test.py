@@ -2,12 +2,20 @@ import unittest
 from uuid import uuid4
 
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
-from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.flowceptor.telemetry_capture import TelemetryCapture
+
+
+class OurObject:
+    def __init__(self):
+        self.a = 1
+        self.b = 2
+
+    def __str__(self):
+        return f"It worked! {self.a} {self.b}"
 
 
 class WorkflowDBTest(unittest.TestCase):
@@ -29,7 +37,8 @@ class WorkflowDBTest(unittest.TestCase):
         wf2_id = str(uuid4())
         print(wf2_id)
 
-        wf2 = WorkflowObject(workflow_id=wf2_id)
+        wf2 = WorkflowObject()
+        wf2.workflow_id = wf2_id
 
         tel = TelemetryCapture()
         assert dbapi.insert_or_update_workflow(wf2)
@@ -47,6 +56,19 @@ class WorkflowDBTest(unittest.TestCase):
         assert dbapi.insert_or_update_workflow(wf2)
         wf_obj = dbapi.get_workflow(wf2_id)
         assert len(wf_obj.machine_info) == 2
+
+    def test_save_blob(self):
+        dbapi = DBAPI()
+        import pickle
+
+        obj = pickle.dumps(OurObject())
+
+        obj_id = dbapi.save_object(object=obj)
+        print(obj_id)
+
+        obj_docs = dbapi.query(filter={"object_id": obj_id}, type="object")
+        loaded_obj = pickle.loads(obj_docs[0]["data"])
+        assert type(loaded_obj) == OurObject
 
     def test_dump(self):
         dbapi = DBAPI()

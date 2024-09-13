@@ -1,21 +1,26 @@
+from uuid import uuid4
+
 import torch
 from torchvision import datasets, transforms
 from torch import nn, optim
 from torch.nn import functional as F
 
-import flowcept.commons
-import flowcept.instrumentation.decorators
+
 from flowcept import (
-    model_explainer,
-    model_profiler,
     FlowceptConsumerAPI,
 )
-from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 from flowcept.instrumentation.decorators.flowcept_torch import (
-    torch_args_handler,
     register_modules,
     register_module_as_workflow,
+    torch_task,
 )
+from flowcept.instrumentation.decorators.responsible_ai import (
+    model_profiler,
+)
+
+import threading
+
+thread_state = threading.local()
 
 
 class TestNet(nn.Module):
@@ -27,12 +32,14 @@ class TestNet(nn.Module):
         fc_in_outs=[[320, 50], [50, 10]],
         softmax_dims=[-9999, 1],  # first value will be ignored
         parent_workflow_id=None,
+        parent_task_id=None,
     ):
         super(TestNet, self).__init__()
-
+        print("parent workflow id", parent_workflow_id)
         self.workflow_id = register_module_as_workflow(
-            self, parent_workflow_id
+            self, parent_workflow_id=parent_workflow_id
         )
+        self.parent_task_id = parent_task_id
         Conv2d, Dropout, MaxPool2d, ReLU, Softmax, Linear = register_modules(
             [
                 nn.Conv2d,
@@ -43,6 +50,7 @@ class TestNet(nn.Module):
                 nn.Linear,
             ],
             workflow_id=self.workflow_id,
+            parent_task_id=self.parent_task_id,
         )
 
         self.model_type = "CNN"
@@ -72,7 +80,7 @@ class TestNet(nn.Module):
                 self.fc_layers.append(Softmax(dim=softmax_dims[i]))
         self.view_size = fc_in_outs[0][0]
 
-    @flowcept_task(args_handler=torch_args_handler)
+    @torch_task()
     def forward(self, x):
         x = self.conv_layers(x)
         x = x.view(-1, self.view_size)
@@ -82,7 +90,8 @@ class TestNet(nn.Module):
 
 class ModelTrainer(object):
     @staticmethod
-    def build_train_test_loader(batch_size=128):
+    def build_train_test_loader(batch_size=128, random_seed=0):
+        torch.manual_seed(random_seed)
         train_loader = torch.utils.data.DataLoader(
             datasets.MNIST(
                 "mnist_data",
@@ -149,9 +158,9 @@ class ModelTrainer(object):
             "accuracy": 100.0 * correct / len(test_loader.dataset),
         }
 
+    # @model_explainer()
     @staticmethod
     @model_profiler()
-    @model_explainer()
     def model_fit(
         conv_in_outs=[[1, 10], [10, 20]],
         conv_kernel_sizes=[5, 5],
@@ -160,16 +169,33 @@ class ModelTrainer(object):
         softmax_dims=[-9999, 1],
         max_epochs=2,
         workflow_id=None,
+        random_seed=0,
     ):
-        # TODO :base-interceptor-refactor:
+        try:
+            from distributed.worker import thread_state
+
+            task_id = thread_state.key
+        except:
+            task_id = str(uuid4())
+
+        torch.manual_seed(random_seed)
+
+        print(
+            "Workflow id in model_fit", workflow_id
+        )  # TODO :base-interceptor-refactor:
         #  We are calling the consumer api here (sometimes for the second time)
         #  because we are capturing at two levels: at the model.fit and at
         #  every layer. Can we do it better?
         with FlowceptConsumerAPI(
-            flowcept.instrumentation.decorators.instrumentation_interceptor
+            FlowceptConsumerAPI.INSTRUMENTATION,
+            bundle_exec_id=workflow_id,
+            start_doc_inserter=False,
         ):
             train_loader, test_loader = ModelTrainer.build_train_test_loader()
-            device = torch.device("cpu")
+            if torch.backends.mps.is_available():
+                device = torch.device("mps")
+            else:
+                device = torch.device("cpu")
             model = TestNet(
                 conv_in_outs=conv_in_outs,
                 conv_kernel_sizes=conv_kernel_sizes,
@@ -191,7 +217,14 @@ class ModelTrainer(object):
             batch = next(iter(test_loader))
             test_data, _ = batch
             result = test_info.copy()
-            result.update({"model": model, "test_data": test_data})
+            result.update(
+                {
+                    "model": model,
+                    "test_data": test_data,
+                    "task_id": task_id,
+                    "random_seed": random_seed,
+                }
+            )
             return result
 
     @staticmethod

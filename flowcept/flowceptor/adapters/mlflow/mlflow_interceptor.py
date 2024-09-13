@@ -56,7 +56,7 @@ class MLFlowInterceptor(BaseInterceptor):
                 self.state_manager.add_element_id(run_uuid)
                 if not run_data:
                     continue
-                task_msg = self.prepare_task_msg(run_data)
+                task_msg = self.prepare_task_msg(run_data).to_dict()
                 self.intercept(task_msg)
 
     def start(self, bundle_exec_id) -> "MLFlowInterceptor":

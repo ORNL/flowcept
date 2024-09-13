@@ -29,7 +29,7 @@ def to_datetime(logger, df, column_name, _shift_hours=0):
                 df[column_name], unit="s"
             ) + timedelta(hours=_shift_hours)
         except Exception as _e:
-            logger.exception(_e)
+            logger.info(_e)
 
 
 def _calc_telemetry_diff_for_row(start, end):
