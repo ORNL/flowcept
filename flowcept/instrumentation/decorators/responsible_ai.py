@@ -31,9 +31,9 @@ from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE, INSTRUMENTATION
 #             e = shap.DeepExplainer(model, background)
 #             shap_values = e.shap_values(test_images)
 #             # result["shap_values"] = shap_values
-#             if "extra_metadata" not in result:
-#                 result["extra_metadata"] = {}
-#             result["extra_metadata"]["shap_sum"] = float(
+#             if "responsible_ai_metadata" not in result:
+#                 result["responsible_ai_metadata"] = {}
+#             result["responsible_ai_metadata"]["shap_sum"] = float(
 #                 np.sum(np.concatenate(shap_values))
 #             )
 #             return result
@@ -103,15 +103,15 @@ def model_profiler():
                 ret["result"] = result
             else:
                 ret = result
-            if "extra_metadata" not in ret:
-                ret["extra_metadata"] = {}
-            ret["extra_metadata"].update(this_result)
+            if "responsible_ai_metadata" not in ret:
+                ret["responsible_ai_metadata"] = {}
+            ret["responsible_ai_metadata"].update(this_result)
 
             if INSTRUMENTATION.get("torch", False) and INSTRUMENTATION[
                 "torch"
             ].get("save_models", False):
                 obj_id = DBAPI().save_torch_model(
-                    model, ret["extra_metadata"]
+                    model, ret["responsible_ai_metadata"]
                 )
                 ret["object_id"] = obj_id
             return ret
