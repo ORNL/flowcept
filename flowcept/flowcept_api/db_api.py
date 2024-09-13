@@ -143,9 +143,7 @@ class DBAPI(object):
                 f"collections for task and workflow."
             )
 
-    def save_torch_model(
-        self, model: "nn.Module", custom_metadata: dict = None
-    ) -> str:
+    def save_torch_model(self, model, custom_metadata: dict = None) -> str:
         """
         Save the PyTorch model's state_dict to a MongoDB collection as binary data.
 
@@ -176,7 +174,7 @@ class DBAPI(object):
 
         return obj_id
 
-    def load_torch_model(self, torch_model: "nn.Torch", object_id: str):
+    def load_torch_model(self, torch_model, object_id: str):
         import torch
         import io
 
