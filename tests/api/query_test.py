@@ -363,7 +363,7 @@ class QueryTest(unittest.TestCase):
         sort = [
             ("telemetry_diff.process.cpu_times.user", TaskQueryAPI.ASC),
             ("generated.loss", TaskQueryAPI.ASC),
-            ("generated.responsible_ai_metrics.flops", TaskQueryAPI.ASC),
+            ("generated.responsible_ai_metadata.flops", TaskQueryAPI.ASC),
         ]
         df = self.api.df_get_tasks_quantiles(
             clauses=clauses,
