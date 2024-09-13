@@ -1,8 +1,9 @@
-# import shap
+import io
 from functools import wraps
 import numpy as np
 from torch import nn
-
+import torch
+from flowcept import DBAPI
 from flowcept.commons.utils import replace_non_serializable
 from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE
 
@@ -72,6 +73,10 @@ def model_profiler():
                     "We expect that you give us the model so we can profile it. Return a dict with a 'model' key in it with the pytorch model to be profiled."
                 )
 
+            random_seed = (
+                result["random_seed"] if "random_seed" in result else None
+            )
+
             model = result.pop("model", None)
             nparams = 0
             max_width = -1
@@ -93,6 +98,8 @@ def model_profiler():
                 "modules": modules,
                 "model_repr": repr(model),
             }
+            if random_seed:
+                this_result["random_seed"] = random_seed
             ret = {}
             if not isinstance(result, dict):
                 ret["result"] = result
@@ -102,6 +109,10 @@ def model_profiler():
                 ret["responsible_ai_metrics"] = {}
             ret["responsible_ai_metrics"].update(this_result)
 
+            obj_id = DBAPI().save_torch_model(
+                model, ret["responsible_ai_metrics"]
+            )
+            ret["object_id"] = obj_id
             return ret
 
         return wrapper

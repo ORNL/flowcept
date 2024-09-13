@@ -147,9 +147,7 @@ class DecoratorTests(unittest.TestCase):
     def test_decorated_function(self):
         workflow_id = str(uuid.uuid4())
         # TODO :refactor-base-interceptor:
-        with FlowceptConsumerAPI(
-            interceptors=flowcept.instrumentation.decorators.instrumentation_interceptor
-        ):
+        with FlowceptConsumerAPI(FlowceptConsumerAPI.INSTRUMENTATION):
             self.decorated_function_with_self(x=0.1, workflow_id=workflow_id)
             decorated_static_function(
                 df=pd.DataFrame(), workflow_id=workflow_id
@@ -172,7 +170,7 @@ class DecoratorTests(unittest.TestCase):
         print(workflow_id)
         # TODO :refactor-base-interceptor:
         consumer = FlowceptConsumerAPI(
-            interceptors=flowcept.instrumentation.decorators.instrumentation_interceptor,
+            interceptors=FlowceptConsumerAPI.INSTRUMENTATION,
             start_doc_inserter=start_doc_inserter,
         )
         consumer.start()

@@ -28,7 +28,7 @@ class FlowceptAPITest(unittest.TestCase):
         assert FlowceptConsumerAPI.services_alive()
 
         wf_id = str(uuid4())
-        with FlowceptConsumerAPI():
+        with FlowceptConsumerAPI(FlowceptConsumerAPI.INSTRUMENTATION):
             # The next line is optional
             db.insert_or_update_workflow(WorkflowObject(workflow_id=wf_id))
             n = 3
