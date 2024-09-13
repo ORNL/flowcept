@@ -1,11 +1,9 @@
-import io
 from functools import wraps
 import numpy as np
 from torch import nn
-import torch
 from flowcept import DBAPI
 from flowcept.commons.utils import replace_non_serializable
-from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE
+from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE, INSTRUMENTATION
 
 
 # def model_explainer(background_size=100, test_data_size=3):
@@ -33,9 +31,9 @@ from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE
 #             e = shap.DeepExplainer(model, background)
 #             shap_values = e.shap_values(test_images)
 #             # result["shap_values"] = shap_values
-#             if "responsible_ai_metrics" not in result:
-#                 result["responsible_ai_metrics"] = {}
-#             result["responsible_ai_metrics"]["shap_sum"] = float(
+#             if "extra_metadata" not in result:
+#                 result["extra_metadata"] = {}
+#             result["extra_metadata"]["shap_sum"] = float(
 #                 np.sum(np.concatenate(shap_values))
 #             )
 #             return result
@@ -105,14 +103,17 @@ def model_profiler():
                 ret["result"] = result
             else:
                 ret = result
-            if "responsible_ai_metrics" not in ret:
-                ret["responsible_ai_metrics"] = {}
-            ret["responsible_ai_metrics"].update(this_result)
+            if "extra_metadata" not in ret:
+                ret["extra_metadata"] = {}
+            ret["extra_metadata"].update(this_result)
 
-            obj_id = DBAPI().save_torch_model(
-                model, ret["responsible_ai_metrics"]
-            )
-            ret["object_id"] = obj_id
+            if INSTRUMENTATION.get("torch", False) and INSTRUMENTATION[
+                "torch"
+            ].get("save_models", False):
+                obj_id = DBAPI().save_torch_model(
+                    model, ret["extra_metadata"]
+                )
+                ret["object_id"] = obj_id
             return ret
 
         return wrapper

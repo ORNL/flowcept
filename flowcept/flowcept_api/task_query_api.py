@@ -467,9 +467,9 @@ class TaskQueryAPI(object):
 
     def find_interesting_tasks_based_on_xyz(
         self,
-        pattern_x="^generated[.](?!responsible_ai_metrics[.]).*",  # loss, acc
+        pattern_x="^generated[.](?!extra_metadata[.]).*",  # loss, acc
         pattern_y="^telemetry_diff[.].*",  # telemetry
-        pattern_z="^generated[.]responsible_ai_metrics[.].*$",  # params
+        pattern_z="^generated[.]extra_metadata[.].*$",  # params
         filter=None,
         correlation_threshold=0.5,
         top_k=50,

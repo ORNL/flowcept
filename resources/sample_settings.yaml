@@ -20,6 +20,7 @@ project:
 instrumentation:
   torch:
     mode: telemetry_and_tensor_inspection   # tensor_inspection, telemetry, telemetry_and_tensor_inspection, full, ~
+    save_models: True
 
 log:
   log_path: "default"

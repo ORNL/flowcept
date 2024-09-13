@@ -25,7 +25,6 @@ class MLDecoratorTests(unittest.TestCase):
         for conf in confs[:1]:
             conf["workflow_id"] = wf_id
             result = trainer.model_fit(**conf)
-            print(result)
             assert len(result)
 
             c = conf.copy()
