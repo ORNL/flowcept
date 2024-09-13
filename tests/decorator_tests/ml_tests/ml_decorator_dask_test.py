@@ -49,7 +49,7 @@ class MLDecoratorDaskTests(unittest.TestCase):
         for o in outputs:
             r = o.result()
             print(r)
-            assert "responsible_ai_metrics" in r
+            assert "responsible_ai_metadata" in r
 
         close_dask(client, cluster)
         consumer.stop()
