@@ -139,7 +139,7 @@ class TaskQueryAPI(object):
             else:
                 self.logger.error("Error when executing query.")
 
-    def get_subworkflow_tasks_from_a_parent_workflow(
+    def get_subworkflows_tasks_from_a_parent_workflow(
         self, parent_workflow_id: str
     ) -> List[Dict]:
         """
@@ -153,11 +153,16 @@ class TaskQueryAPI(object):
 
         """
         db_api = DBAPI()
-        sub_wf = db_api.workflow_query(
+        sub_wfs = db_api.workflow_query(
             {"parent_workflow_id": parent_workflow_id}
         )
-        sub_wf_docs = self.query({"workflow_id": sub_wf.workflow_id})
-        return sub_wf_docs
+        if not sub_wfs:
+            return None
+        tasks = []
+        for sub_wf in sub_wfs:
+            sub_wf_tasks = self.query({"workflow_id": sub_wf.workflow_id})
+            tasks.extend(sub_wf_tasks)
+        return tasks
 
     def df_query(
         self,
@@ -255,7 +260,7 @@ class TaskQueryAPI(object):
                     + timedelta(hours=shift_hours)
                 )
             except Exception as e:
-                self.logger.exception(e)
+                self.logger.info(e)
 
         try:
             df["elapsed_time"] = df["ended_at"] - df["started_at"]
@@ -265,7 +270,7 @@ class TaskQueryAPI(object):
                 else -1
             )
         except Exception as e:
-            self.logger.exception(e)
+            self.logger.info(e)
 
         return df
 
@@ -462,9 +467,9 @@ class TaskQueryAPI(object):
 
     def find_interesting_tasks_based_on_xyz(
         self,
-        pattern_x="^generated[.](?!responsible_ai_metrics[.]).*",  # loss, acc
+        pattern_x="^generated[.](?!responsible_ai_metadata[.]).*",  # loss, acc
         pattern_y="^telemetry_diff[.].*",  # telemetry
-        pattern_z="^generated[.]responsible_ai_metrics[.].*$",  # params
+        pattern_z="^generated[.]responsible_ai_metadata[.].*$",  # params
         filter=None,
         correlation_threshold=0.5,
         top_k=50,

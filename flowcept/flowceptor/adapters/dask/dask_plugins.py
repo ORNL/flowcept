@@ -1,10 +1,55 @@
+from uuid import uuid4
+
 from dask.distributed import WorkerPlugin, SchedulerPlugin
+from distributed import Client
 
-
+from flowcept import WorkflowObject
 from flowcept.flowceptor.adapters.dask.dask_interceptor import (
     DaskSchedulerInterceptor,
     DaskWorkerInterceptor,
 )
+
+
+def _set_workflow_on_scheduler(
+    dask_scheduler=None,
+    workflow_id=None,
+    custom_metadata: dict = None,
+    used: dict = None,
+):
+    custom_metadata = custom_metadata or {}
+    wf_obj = WorkflowObject()
+    wf_obj.workflow_id = workflow_id
+    custom_metadata.update(
+        {
+            "workflow_type": "DaskWorkflow",
+            "scheduler": dask_scheduler.address_safe,
+            "scheduler_id": dask_scheduler.id,
+            "scheduler_pid": dask_scheduler.proc.pid,
+            "clients": len(dask_scheduler.clients),
+            "n_workers": len(dask_scheduler.workers),
+        }
+    )
+    wf_obj.custom_metadata = custom_metadata
+    wf_obj.used = used
+    setattr(dask_scheduler, "current_workflow", wf_obj)
+
+
+def register_dask_workflow(
+    dask_client: Client,
+    workflow_id=None,
+    custom_metadata: dict = None,
+    used: dict = None,
+):
+    workflow_id = workflow_id or str(uuid4())
+    dask_client.run_on_scheduler(
+        _set_workflow_on_scheduler,
+        **{
+            "workflow_id": workflow_id,
+            "custom_metadata": custom_metadata,
+            "used": used,
+        },
+    )
+    return workflow_id
 
 
 class FlowceptDaskSchedulerAdapter(SchedulerPlugin):

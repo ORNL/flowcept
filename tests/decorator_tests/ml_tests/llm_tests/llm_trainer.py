@@ -1,6 +1,8 @@
 # The code in this file is based on:
 # https://blog.paperspace.com/build-a-language-model-using-pytorch/
 import math
+from time import time
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -9,15 +11,15 @@ from torchtext.vocab import build_vocab_from_iterator
 from datasets import load_dataset
 
 import flowcept
-from flowcept import model_profiler, FlowceptConsumerAPI
-from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
+from flowcept import FlowceptConsumerAPI
+from flowcept.configs import N_GPUS
+
 from flowcept.instrumentation.decorators.flowcept_torch import (
     register_modules,
     register_module_as_workflow,
-    torch_args_handler,
+    torch_task,
 )
-
-tokenizer = get_tokenizer("basic_english")
+from flowcept.instrumentation.decorators.responsible_ai import model_profiler
 
 
 # Define a function to batchify the data
@@ -29,14 +31,14 @@ def batchify(data, bsz):
 
 
 # Define a function to yield tokens from the dataset
-def yield_tokens(data_iter):
+def yield_tokens(tokenizer, data_iter):
     for item in data_iter:
         if len(item["text"]):
             yield tokenizer(item["text"])
 
 
 # Define a function to process the raw text and convert it to tensors
-def data_process(vocab, raw_text_iter):
+def data_process(tokenizer, vocab, raw_text_iter):
     data = [
         torch.tensor(
             [vocab[token] for token in tokenizer(item["text"])],
@@ -54,7 +56,9 @@ def get_batch(source, i, bptt=35):
     return data, target
 
 
-def get_wiki_text():
+def get_wiki_text(
+    tokenizer_type="basic_english",
+):  # spacy, moses, toktok, revtok, subword
     # Load the WikiText2 dataset
     dataset = load_dataset("wikitext", "wikitext-2-v1")
     test_dataset = dataset["test"]
@@ -62,14 +66,15 @@ def get_wiki_text():
     validation_dataset = dataset["validation"]
 
     # Build the vocabulary from the training dataset
-    vocab = build_vocab_from_iterator(yield_tokens(train_dataset))
+    tokenizer = get_tokenizer(tokenizer_type)
+    vocab = build_vocab_from_iterator(yield_tokens(tokenizer, train_dataset))
     vocab.set_default_index(vocab["<unk>"])
     ntokens = len(vocab)
 
     # Process the train, validation, and test datasets
-    train_data = data_process(vocab, train_dataset)
-    val_data = data_process(vocab, validation_dataset)
-    test_data = data_process(vocab, test_dataset)
+    train_data = data_process(tokenizer, vocab, train_dataset)
+    val_data = data_process(tokenizer, vocab, validation_dataset)
+    test_data = data_process(tokenizer, vocab, test_dataset)
 
     try:
         if torch.backends.mps.is_available():
@@ -96,33 +101,40 @@ class TransformerModel(nn.Module):
         nlayers,
         dropout=0.5,
         pos_encoding_max_len=5000,
+        parent_task_id=None,
         parent_workflow_id=None,
+        custom_metadata: dict = None,
     ):
         super(TransformerModel, self).__init__()
         self.workflow_id = register_module_as_workflow(
-            self, parent_workflow_id
+            self, parent_workflow_id, custom_metadata
         )
+        self.parent_task_id = parent_task_id
         (
             TransformerEncoderLayer,
             TransformerEncoder,
             Embedding,
             Linear,
+            PositionalEncoding_,
         ) = register_modules(
-            [
+            modules=[
                 nn.TransformerEncoderLayer,
                 nn.TransformerEncoder,
                 nn.Embedding,
                 nn.Linear,
+                PositionalEncoding,
             ],
             workflow_id=self.workflow_id,
+            parent_task_id=self.parent_task_id,
         )
         self.model_type = "Transformer"
         self.src_mask = None
-        self.pos_encoder = PositionalEncoding(
+        self.pos_encoder = PositionalEncoding_(
             d_model,
             dropout,
             max_len=pos_encoding_max_len,
             workflow_id=self.workflow_id,
+            parent_task_id=parent_task_id,
         )
         encoder_layers = TransformerEncoderLayer(
             d_model, nhead, d_hid, dropout
@@ -143,7 +155,8 @@ class TransformerModel(nn.Module):
         )
         return mask
 
-    @flowcept_task(args_handler=torch_args_handler)
+    # @flowcept_task(args_handler=torch_args_handler)
+    @torch_task()
     def forward(self, src):
         if self.src_mask is None or self.src_mask.size(0) != len(src):
             device = src.device
@@ -159,7 +172,14 @@ class TransformerModel(nn.Module):
 
 # Define the PositionalEncoding class
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, dropout=0.1, max_len=5000, workflow_id=None):
+    def __init__(
+        self,
+        d_model,
+        dropout=0.1,
+        max_len=5000,
+        workflow_id=None,
+        parent_task_id=None,
+    ):
         super(PositionalEncoding, self).__init__()
         self.workflow_id = workflow_id
         Dropout = register_modules(
@@ -167,6 +187,7 @@ class PositionalEncoding(nn.Module):
                 nn.Dropout,
             ],
             workflow_id=self.workflow_id,
+            parent_task_id=parent_task_id,
         )
 
         self.dropout = Dropout(p=dropout)
@@ -182,7 +203,8 @@ class PositionalEncoding(nn.Module):
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer("pe", pe)
 
-    @flowcept_task(args_handler=torch_args_handler)
+    # @flowcept_task(args_handler=torch_args_handler)
+    @torch_task()
     def forward(self, x):
         x = x + self.pe[: x.size(0), :]
         return self.dropout(x)
@@ -252,10 +274,16 @@ def model_train(
     pos_encoding_max_len,
     workflow_id=None,
 ):
+    from distributed.worker import thread_state
+
+    dask_task_id = thread_state.key
+
     # TODO :ml-refactor: save device type and random seed: https://pytorch.org/docs/stable/notes/randomness.html
     # TODO :base-interceptor-refactor: Can we do it better?
     with FlowceptConsumerAPI(
-        flowcept.instrumentation.decorators.instrumentation_interceptor
+        FlowceptConsumerAPI.INSTRUMENTATION,
+        bundle_exec_id=workflow_id,
+        start_doc_inserter=False,
     ):
         train_data = batchify(train_data, batch_size)
         val_data = batchify(val_data, eval_batch_size)
@@ -279,7 +307,9 @@ def model_train(
             nlayers,
             dropout,
             pos_encoding_max_len,
+            parent_task_id=dask_task_id,
             parent_workflow_id=workflow_id,
+            custom_metadata={"model_step": "train", "cuda_visible": N_GPUS},
         ).to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -288,6 +318,7 @@ def model_train(
         )  # Initialize the best validation loss to infinity
         # best_m = None
         # Iterate through the epochs
+        t0 = time()
         for epoch in range(1, epochs + 1):
             print(f"Starting training for epoch {epoch}/{epochs}")
             # Train the model on the training data and calculate the training loss
@@ -312,9 +343,22 @@ def model_train(
                 torch.save(model.state_dict(), "transformer_wikitext2.pth")
 
         print("Finished training")
+        t1 = time()
+
         # Load the best model's state
         best_m = TransformerModel(
-            ntokens, emsize, nhead, nhid, nlayers, dropout
+            ntokens,
+            emsize,
+            nhead,
+            nhid,
+            nlayers,
+            dropout,
+            parent_workflow_id=workflow_id,
+            parent_task_id=dask_task_id,
+            custom_metadata={
+                "model_step": "test",
+                "cuda_visible": N_GPUS,
+            },
         ).to(device)
         print("Loading model")
         torch_loaded = torch.load("transformer_wikitext2.pth")
@@ -326,10 +370,14 @@ def model_train(
             ntokens, best_m, test_data, criterion, eval_batch_size
         )
         print(f"Test loss: {test_loss:.2f}")
+        with open("time.txt", "w") as f:
+            f.write(str(t1 - t0))
 
         return {
             "test_loss": test_loss,
             "train_loss": train_loss,
             "val_loss": val_loss,
+            "training_time": t1 - t0,
             "model": model,
+            "task_id": dask_task_id,
         }

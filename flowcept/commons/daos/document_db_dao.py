@@ -1,8 +1,12 @@
 from typing import List, Dict, Tuple, Any
 import io
 import json
+from uuid import uuid4
+
+import pickle
 import zipfile
 
+import pymongo
 from bson import ObjectId
 from bson.json_util import dumps
 from pymongo import MongoClient, UpdateOne
@@ -22,6 +26,7 @@ from flowcept.configs import (
     MONGO_WORKFLOWS_COLLECTION,
     PERF_LOG,
     MONGO_URI,
+    MONGO_CREATE_INDEX,
 )
 from flowcept.flowceptor.consumers.consumer_utils import (
     curate_dict_task_messages,
@@ -31,7 +36,7 @@ from time import time
 
 @singleton
 class DocumentDBDao(object):
-    def __init__(self):
+    def __init__(self, create_index=MONGO_CREATE_INDEX):
         self.logger = FlowceptLogger()
 
         if MONGO_URI is not None:
@@ -42,8 +47,10 @@ class DocumentDBDao(object):
 
         self._tasks_collection = self._db[MONGO_TASK_COLLECTION]
         self._wfs_collection = self._db[MONGO_WORKFLOWS_COLLECTION]
+        self._obj_collection = self._db["objects"]
 
-        self._create_indices()
+        if create_index:
+            self._create_indices()
 
     def _create_indices(self):
         # Creating task collection indices:
@@ -52,7 +59,9 @@ class DocumentDBDao(object):
             for x in self._tasks_collection.list_indexes()
         ]
         if not TaskObject.task_id_field() in existing_indices:
-            self._tasks_collection.create_index(TaskObject.task_id_field())
+            self._tasks_collection.create_index(
+                TaskObject.task_id_field(), unique=True
+            )
         if not TaskObject.workflow_id_field() in existing_indices:
             self._tasks_collection.create_index(
                 TaskObject.workflow_id_field()
@@ -63,8 +72,28 @@ class DocumentDBDao(object):
             list(x["key"].keys())[0]
             for x in self._wfs_collection.list_indexes()
         ]
-        if not TaskObject.workflow_id_field() in existing_indices:
-            self._wfs_collection.create_index(TaskObject.task_id_field())
+        if not WorkflowObject.workflow_id_field() in existing_indices:
+            self._wfs_collection.create_index(
+                WorkflowObject.workflow_id_field(), unique=True
+            )
+
+        # Creating objects collection indices:
+        existing_indices = [
+            list(x["key"].keys())[0]
+            for x in self._obj_collection.list_indexes()
+        ]
+
+        if not "object_id" in existing_indices:
+            self._obj_collection.create_index("object_id", unique=True)
+
+        if not WorkflowObject.workflow_id_field() in existing_indices:
+            self._obj_collection.create_index(
+                WorkflowObject.workflow_id_field(), unique=False
+            )
+        if not TaskObject.task_id_field() in existing_indices:
+            self._obj_collection.create_index(
+                TaskObject.task_id_field(), unique=False
+            )
 
     def task_query(
         self,
@@ -413,3 +442,49 @@ class DocumentDBDao(object):
         except Exception as e:
             self.logger.exception(e)
             return
+
+    def liveness_test(self) -> bool:
+        try:
+            self._db.list_collection_names()
+            return True
+        except ConnectionError as e:
+            self.logger.exception(e)
+            return False
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
+    def save_object(
+        self,
+        object,
+        object_id=None,
+        task_id=None,
+        workflow_id=None,
+        type=None,
+        custom_metadata=None,
+        pickle_=False,
+    ):
+        if object_id is None:
+            object_id = str(uuid4())
+        obj_doc = {"object_id": object_id}
+        blob = object
+        if pickle_:
+            blob = pickle.dumps(object)
+            obj_doc["pickle"] = True
+        obj_doc["data"] = blob
+        if task_id is not None:
+            obj_doc["task_id"] = task_id
+        if workflow_id is not None:
+            obj_doc["workflow_id"] = workflow_id
+        if type is not None:
+            obj_doc["type"] = type
+        if custom_metadata is not None:
+            obj_doc["custom_metadata"] = custom_metadata
+
+        self._obj_collection.insert_one(obj_doc)
+
+        return object_id
+
+    def get_objects(self, filter):
+        documents = self._obj_collection.find(filter)
+        return list(documents)

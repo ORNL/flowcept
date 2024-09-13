@@ -2,11 +2,8 @@ import uuid
 
 import unittest
 
-from flowcept import TaskQueryAPI
-
-from tests.decorator_tests.ml_tests.dl_trainer import (
-    ModelTrainer,
-)
+from flowcept import DBAPI
+from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer, TestNet
 
 
 class MLDecoratorTests(unittest.TestCase):
@@ -28,10 +25,14 @@ class MLDecoratorTests(unittest.TestCase):
         for conf in confs[:1]:
             conf["workflow_id"] = wf_id
             result = trainer.model_fit(**conf)
-            print(result)
+            assert len(result)
 
-        task_query = TaskQueryAPI()
-        module_docs = task_query.get_subworkflow_tasks_from_a_parent_workflow(
-            parent_workflow_id=wf_id
-        )
-        assert len(module_docs) > 0
+            c = conf.copy()
+            c.pop("max_epochs")
+            c.pop("workflow_id")
+            loaded_model = TestNet(**c)
+
+            loaded_model = DBAPI().load_torch_model(
+                loaded_model, result["object_id"]
+            )
+            assert len(loaded_model(result["test_data"]))

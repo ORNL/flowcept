@@ -1,5 +1,5 @@
 import uuid
-from typing import Dict
+from typing import List
 
 from flowcept.commons import singleton
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
@@ -42,18 +42,26 @@ class DBAPI(object):
             return workflow_obj
 
     def get_workflow(self, workflow_id) -> WorkflowObject:
-        return self.workflow_query(
-            filter={TaskObject.workflow_id_field(): workflow_id}
+        wfobs = self.workflow_query(
+            filter={WorkflowObject.workflow_id_field(): workflow_id}
         )
+        if wfobs is None or len(wfobs) == 0:
+            self.logger.error("Could not retrieve workflow with that filter.")
+            return None
+        else:
+            return wfobs[0]
 
-    def workflow_query(self, filter) -> WorkflowObject:
+    def workflow_query(self, filter) -> List[WorkflowObject]:
         results = self._dao.workflow_query(filter=filter)
         if results is None:
             self.logger.error("Could not retrieve workflow with that filter.")
             return None
         if len(results):
             try:
-                return WorkflowObject(**results[0])
+                lst = []
+                for wf_dict in results:
+                    lst.append(WorkflowObject.from_dict(wf_dict))
+                return lst
             except Exception as e:
                 self.logger.exception(e)
                 return None
@@ -83,3 +91,98 @@ class DBAPI(object):
         except Exception as e:
             self.logger.exception(e)
             return False
+
+    def save_object(
+        self,
+        object,
+        object_id=None,
+        task_id=None,
+        workflow_id=None,
+        type=None,
+        custom_metadata=None,
+        pickle=False,
+    ):
+        return self._dao.save_object(
+            object,
+            object_id,
+            task_id,
+            workflow_id,
+            type,
+            custom_metadata,
+            pickle_=pickle,
+        )
+
+    def query(
+        self,
+        filter=None,
+        projection=None,
+        limit=0,
+        sort=None,
+        aggregation=None,
+        remove_json_unserializables=True,
+        type="task",
+    ):
+        if type == "task":
+            return self._dao.task_query(
+                filter,
+                projection,
+                limit,
+                sort,
+                aggregation,
+                remove_json_unserializables,
+            )
+        elif type == "workflow":
+            return self._dao.workflow_query(
+                filter, projection, limit, sort, remove_json_unserializables
+            )
+        elif type == "object":
+            return self._dao.get_objects(filter)
+        else:
+            raise Exception(
+                f"You used type={type}, but we only have "
+                f"collections for task and workflow."
+            )
+
+    def save_torch_model(self, model, custom_metadata: dict = None) -> str:
+        """
+        Save the PyTorch model's state_dict to a MongoDB collection as binary data.
+
+        Args:
+            model (torch.nn.Module): The PyTorch model to be saved.
+            custom_metadata (Dict[str, str]): Custom metadata to be stored with the model.
+
+        Returns:
+            str: The object ID of the saved model in the database.
+        """
+        import torch
+        import io
+
+        state_dict = model.state_dict()
+        buffer = io.BytesIO()
+        torch.save(state_dict, buffer)
+        buffer.seek(0)
+        binary_data = buffer.read()
+        cm = {
+            **custom_metadata,
+            "class": model.__class__.__name__,
+        }
+        obj_id = self.save_object(
+            object=binary_data,
+            type="ml_model",
+            custom_metadata=cm,
+        )
+
+        return obj_id
+
+    def load_torch_model(self, torch_model, object_id: str):
+        import torch
+        import io
+
+        doc = self.query({"object_id": object_id}, type="object")[0]
+        binary_data = doc["data"]
+
+        buffer = io.BytesIO(binary_data)
+        state_dict = torch.load(buffer, weights_only=True)
+        torch_model.load_state_dict(state_dict)
+
+        return torch_model

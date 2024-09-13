@@ -1,7 +1,10 @@
+import logging
 import unittest
+from asyncio import sleep
 
 import flowcept.commons
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.configs import PROJECT_NAME
 
 
 class TestLog(unittest.TestCase):
@@ -11,6 +14,7 @@ class TestLog(unittest.TestCase):
             _logger.debug("debug")
             _logger.info("info")
             _logger.error("info")
+            _logger.critical("aaaaa")
             raise Exception("I want to test an exception raise!")
         except Exception as e:
             _logger.exception(e)
@@ -19,4 +23,9 @@ class TestLog(unittest.TestCase):
         _logger2 = flowcept.commons.logger
 
         # Testing singleton
-        assert id(_logger) == id(_logger2) == id(FlowceptLogger())
+        assert (
+            id(_logger)
+            == id(_logger2)
+            == id(FlowceptLogger())
+            == id(logging.getLogger(PROJECT_NAME))
+        )
