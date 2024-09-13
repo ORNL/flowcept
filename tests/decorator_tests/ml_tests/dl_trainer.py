@@ -1,10 +1,11 @@
+from uuid import uuid4
+
 import torch
 from torchvision import datasets, transforms
 from torch import nn, optim
 from torch.nn import functional as F
 
-import flowcept.commons
-import flowcept.instrumentation.decorators
+
 from flowcept import (
     FlowceptConsumerAPI,
 )
@@ -89,7 +90,8 @@ class TestNet(nn.Module):
 
 class ModelTrainer(object):
     @staticmethod
-    def build_train_test_loader(batch_size=128):
+    def build_train_test_loader(batch_size=128, random_seed=0):
+        torch.manual_seed(random_seed)
         train_loader = torch.utils.data.DataLoader(
             datasets.MNIST(
                 "mnist_data",
@@ -167,7 +169,17 @@ class ModelTrainer(object):
         softmax_dims=[-9999, 1],
         max_epochs=2,
         workflow_id=None,
+        random_seed=0,
     ):
+        try:
+            from distributed.worker import thread_state
+
+            task_id = thread_state.key
+        except:
+            task_id = str(uuid4())
+
+        torch.manual_seed(random_seed)
+
         print(
             "Workflow id in model_fit", workflow_id
         )  # TODO :base-interceptor-refactor:
@@ -175,7 +187,7 @@ class ModelTrainer(object):
         #  because we are capturing at two levels: at the model.fit and at
         #  every layer. Can we do it better?
         with FlowceptConsumerAPI(
-            flowcept.instrumentation.decorators.instrumentation_interceptor,
+            FlowceptConsumerAPI.INSTRUMENTATION,
             bundle_exec_id=workflow_id,
             start_doc_inserter=False,
         ):
@@ -205,7 +217,14 @@ class ModelTrainer(object):
             batch = next(iter(test_loader))
             test_data, _ = batch
             result = test_info.copy()
-            result.update({"model": model, "test_data": test_data})
+            result.update(
+                {
+                    "model": model,
+                    "test_data": test_data,
+                    "task_id": task_id,
+                    "random_seed": random_seed,
+                }
+            )
             return result
 
     @staticmethod

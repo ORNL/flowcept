@@ -281,7 +281,7 @@ def model_train(
     # TODO :ml-refactor: save device type and random seed: https://pytorch.org/docs/stable/notes/randomness.html
     # TODO :base-interceptor-refactor: Can we do it better?
     with FlowceptConsumerAPI(
-        flowcept.instrumentation.decorators.instrumentation_interceptor,
+        FlowceptConsumerAPI.INSTRUMENTATION,
         bundle_exec_id=workflow_id,
         start_doc_inserter=False,
     ):
@@ -379,4 +379,5 @@ def model_train(
             "val_loss": val_loss,
             "training_time": t1 - t0,
             "model": model,
+            "task_id": dask_task_id,
         }

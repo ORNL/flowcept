@@ -76,5 +76,6 @@ class LLMDecoratorTests(unittest.TestCase):
             "train_loss": 0.01,
             "val_loss": 0.01,
             "model": best_m,
+            "task_id": str(uuid.uuid4()),
             "test_data": test_data,
         }

@@ -13,11 +13,13 @@ from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 # TODO: :code-reorg: This may not be considered an API anymore as it's doing critical things for the good functioning of the system.
 class FlowceptConsumerAPI(object):
+    INSTRUMENTATION = "instrumentation"
+
     def __init__(
         self,
         interceptors: Union[
-            BaseInterceptor, List[BaseInterceptor]
-        ] = flowcept.instrumentation.decorators.instrumentation_interceptor,
+            BaseInterceptor, List[BaseInterceptor], str
+        ] = None,
         bundle_exec_id=None,
         start_doc_inserter=True,
     ):
@@ -29,6 +31,10 @@ class FlowceptConsumerAPI(object):
             self._bundle_exec_id = id(self)
         else:
             self._bundle_exec_id = bundle_exec_id
+        if interceptors == FlowceptConsumerAPI.INSTRUMENTATION:
+            interceptors = (
+                flowcept.instrumentation.decorators.instrumentation_interceptor
+            )
         if interceptors is not None and type(interceptors) != list:
             interceptors = [interceptors]
         self._interceptors: List[BaseInterceptor] = interceptors
@@ -109,6 +115,12 @@ class FlowceptConsumerAPI(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop()
+
+    @staticmethod
+    def start_instrumentation_interceptor():
+        flowcept.instrumentation.decorators.instrumentation_interceptor.start(
+            None
+        )
 
     @staticmethod
     def services_alive() -> bool:
