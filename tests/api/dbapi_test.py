@@ -59,12 +59,16 @@ class WorkflowDBTest(unittest.TestCase):
 
     def test_save_blob(self):
         dbapi = DBAPI()
-        obj_id = dbapi.save_object(object=OurObject())
+        import pickle
+
+        obj = pickle.dumps(OurObject())
+
+        obj_id = dbapi.save_object(object=obj)
         print(obj_id)
 
         obj_docs = dbapi.query(filter={"object_id": obj_id}, type="object")
-        print(obj_docs[0])
-        print(obj_docs[0]["data"])
+        loaded_obj = pickle.loads(obj_docs[0]["data"])
+        assert type(loaded_obj) == OurObject
 
     def test_dump(self):
         dbapi = DBAPI()
