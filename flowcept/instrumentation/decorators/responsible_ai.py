@@ -98,7 +98,7 @@ def model_profiler():
                 "modules": modules,
                 "model_repr": repr(model),
             }
-            if random_seed:
+            if random_seed is not None:
                 this_result["random_seed"] = random_seed
             ret = {}
             if not isinstance(result, dict):
