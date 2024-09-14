@@ -13,10 +13,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Set up Python 3.8
+      - name: Set up Python 3.9
         uses: actions/setup-python@v3
         with:
-          python-version: "3.8"
+          python-version: "3.9"
       - name: Get branch names
         id: branch-name
         uses: tj-actions/branch-names@v6
@@ -102,13 +102,16 @@ jobs:
       - name: Install dev dependencies
         run: |
           pip install -r extra_requirements/dev-requirements.txt
-      - name: Run Docker Compose
-        run: docker compose -f deployment/compose.yml up -d
       - name: Test with pytest
         run: |
-          pytest --ignore=tests/decorator_tests/ml_tests/llm_tests/
+          mkdir -p ~/.flowcept
+          cp resources/sample_settings.yaml ~/.flowcept/settings.yaml
+          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
+          cat $FLOWCEPT_SETTINGS_PATH
+          pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
       - name: Test notebooks
         run: |
+          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
           python flowcept/flowcept_webserver/app.py &
           sleep 3
           pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
