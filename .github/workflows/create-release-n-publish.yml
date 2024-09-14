@@ -104,16 +104,19 @@ jobs:
           pip install -r extra_requirements/dev-requirements.txt
       - name: Run Docker Compose
         run: docker compose -f deployment/compose.yml up -d
-      - name: Test with pytest
+      - name: Copy settings
         run: |
           mkdir -p ~/.flowcept
           cp resources/sample_settings.yaml ~/.flowcept/settings.yaml
           export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
+      - name: Test with pytest
+        run: |
           cat $FLOWCEPT_SETTINGS_PATH
           pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
       - name: Test notebooks
         run: |
-          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
+          pip list | grep flowcept
+          cat $FLOWCEPT_SETTINGS_PATH
           python flowcept/flowcept_webserver/app.py &
           sleep 3
           pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
