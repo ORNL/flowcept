@@ -111,11 +111,13 @@ jobs:
           export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
       - name: Test with pytest
         run: |
+          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
           cat $FLOWCEPT_SETTINGS_PATH
           pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
       - name: Test notebooks
         run: |
           pip list | grep flowcept
+          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
           cat $FLOWCEPT_SETTINGS_PATH
           python flowcept/flowcept_webserver/app.py &
           sleep 3
