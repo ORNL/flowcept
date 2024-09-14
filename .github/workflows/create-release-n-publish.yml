@@ -102,6 +102,8 @@ jobs:
       - name: Install dev dependencies
         run: |
           pip install -r extra_requirements/dev-requirements.txt
+      - name: Run Docker Compose
+        run: docker compose -f deployment/compose.yml up -d
       - name: Test with pytest
         run: |
           mkdir -p ~/.flowcept
