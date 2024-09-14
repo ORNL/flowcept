@@ -16,7 +16,7 @@ different parallel computing systems (e.g., Dask, Spark, Workflow Management Sys
 capability to seamless and automatically integrate data from various workflows using data observability.
 It builds an integrated data view at runtime enabling end-to-end exploratory data analysis and monitoring.
 It follows [W3C PROV](https://www.w3.org/TR/prov-overview/) recommendations for its data schema.
-It does not require changes in user codes or systems (i.e., instrumentation). 
+It does not require changes in user codes or systems (i.e., instrumentation), but we provide instrumentation options for convenience. For example, by adding a `@flowcept_task` decorator on functions, FlowCept will observe their executions when they run. Also, we provide special features for PyTorch modules. Adding `@torch_task` to them will enable extra model inspection to be captured and integrated in the database at runtime.    
 All users need to do is to create adapters for their systems or tools, if one is not available yet. 
 
 Currently, FlowCept provides adapters for: [Dask](https://www.dask.org/), [MLFlow](https://mlflow.org/), [TensorBoard](https://www.tensorflow.org/tensorboard), and [Zambeze](https://github.com/ORNL/zambeze). 
@@ -40,16 +40,16 @@ See [extra_requirements](extra_requirements) if you want to install the dependen
  
 2. Start MongoDB and Redis:
 
-To enable the full advantages of FlowCept, the user needs to run Redis, as FlowCept's message queue system, and MongoDB, as FlowCept's main database system.
-The easiest way to start Redis and MongoDB is by using the [docker-compose file](deployment/compose.yml) for its dependent services: 
-MongoDB and Redis. You only need RabbitMQ if you want to observe Zambeze messages as well.
+To enable the full advantages of FlowCept, one needs to start a Redis and MongoDB instances.
+FlowCept uses Redis as its message queue system and Mongo for its persistent database.
+For convenience, we set up a [docker-compose file](deployment/compose.yml) deployment file for this. Run `docker-compose -f deployment/compose.yml up`. RabbitMQ is only needed if Zambeze messages are observed, otherwise, feel free to comment out RabbitMQ service in the compose file.
 
 3. Define the settings (e.g., routes and ports) accordingly in the [settings.yaml](resources/settings.yaml) file.
+You may need to set the environment variable `FLOWCEPT_SETTINGS_PATH` with the absolute path to the settings file. 
 
 4. Start the observation using the Controller API, as shown in the [Jupyter Notebooks](notebooks).
 
 5. To use FlowCept's Query API, see utilization examples in the notebooks.
-
 
 ## Performance Tuning for Performance Evaluation
 
@@ -65,10 +65,15 @@ plugin:
 ```
 
 And other variables depending on the Plugin. For instance, in Dask, timestamp creation by workers add interception overhead.
+As we evolve the software, other variables that impact overhead appear and we might not stated them in this README file yet.
+If you are doing extensive performance evaluation experiments using this software, please reach out to us (e.g., create an issue in the repository) for hints on how to reduce the overhead of our software.
 
 ## Install AMD GPU Lib
 
-https://rocm.docs.amd.com/projects/amdsmi/en/latest/
+On the machines that have AMD GPUs, we use the official AMD ROCM library to capture GPU runtime data.
+Unfortunately, this library is not available as a pypi/conda package, so you must manually install it. See instructions 
+in the link: https://rocm.docs.amd.com/projects/amdsmi/en/latest/
+
 
 ## See also
 
