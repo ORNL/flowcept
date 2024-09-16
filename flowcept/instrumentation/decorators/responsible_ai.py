@@ -111,7 +111,7 @@ def model_profiler():
                 "torch"
             ].get("save_models", False):
                 obj_id = DBAPI().save_torch_model(
-                    model, ret["responsible_ai_metadata"]
+                    model, custom_metadata=ret["responsible_ai_metadata"]
                 )
                 ret["object_id"] = obj_id
             return ret
