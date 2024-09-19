@@ -1,0 +1,32 @@
+version: '3.8'
+name: flowcept
+services:
+  flowcept_redis:
+    container_name: flowcept_redis
+    image: redis
+    ports:
+      - 6379:6379
+
+  flowcept_mongo:
+    container_name: flowcept_mongo
+    image: mongo:latest
+    # volumes:
+    #   - /Users/rsr/Downloads/mongo_data/db:/data/db
+    ports:
+      - 27017:27017
+
+
+#   # This is just for the cases where one does not want to use the same Redis instance for caching and messaging, but
+#   # it's not required to have separate instances.
+# #  local_interceptor_cache:
+# #    container_name: local_interceptor_cache
+# #    image: redis
+# #    ports:
+# #      - 60379:6379
+
+  zambeze_rabbitmq:
+     container_name: zambeze_rabbitmq
+     image: rabbitmq:3.11-management
+     ports:
+       - 5672:5672
+       - 15672:15672

@@ -2,7 +2,7 @@ import unittest
 from time import sleep
 from uuid import uuid4
 
-from flowcept import FlowceptConsumerAPI
+from flowcept import FlowceptConsumerAPI, INSTRUMENTATION
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
@@ -28,7 +28,7 @@ class FlowceptAPITest(unittest.TestCase):
         assert FlowceptConsumerAPI.services_alive()
 
         wf_id = str(uuid4())
-        with FlowceptConsumerAPI(FlowceptConsumerAPI.INSTRUMENTATION):
+        with FlowceptConsumerAPI(INSTRUMENTATION):
             # The next line is optional
             db.insert_or_update_workflow(WorkflowObject(workflow_id=wf_id))
             n = 3

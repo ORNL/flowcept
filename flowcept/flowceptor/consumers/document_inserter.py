@@ -107,30 +107,7 @@ class DocumentInserter:
         else:
             logger.info(f"Flushed {len(buffer)} msgs to DocDB!")
 
-    #
-    # def _flush(self):
-    #     self._set_buffer_size()
-    #     with self._lock:
-    #         if len(self._task_dicts_buffer):
-    #             self.logger.info(
-    #                 f"Current Doc buffer size: {len(self._task_dicts_buffer)}, "
-    #                 f"Gonna flush {len(self._task_dicts_buffer)} msgs to DocDB!"
-    #             )
-    #             inserted = self._doc_dao.insert_and_update_many(
-    #                 TaskObject.task_id_field(), self._task_dicts_buffer
-    #             )
-    #             if not inserted:
-    #                 self.logger.warning(
-    #                     f"Could not insert the buffer correctly. "
-    #                     f"Buffer content={self._task_dicts_buffer}"
-    #                 )
-    #             else:
-    #                 self.logger.info(
-    #                     f"Flushed {len(self._task_dicts_buffer)} msgs to DocDB!"
-    #                 )
-    #             self._task_dicts_buffer = list()
-
-    def handle_task_message(self, message: Dict):
+    def _handle_task_message(self, message: Dict):
         # if "utc_timestamp" in message:
         #     dt = datetime.fromtimestamp(message["utc_timestamp"])
         #     message["timestamp"] = dt.utcnow()
@@ -167,7 +144,7 @@ class DocumentInserter:
         #         self.logger.debug("Docs buffer exceeded, flushing...")
         #         self._flush()
 
-    def handle_workflow_message(self, message: Dict):
+    def _handle_workflow_message(self, message: Dict):
         message.pop("type")
         self.logger.debug(
             f"Received following msg in DocInserter:"
@@ -179,7 +156,7 @@ class DocumentInserter:
         inserted = self._doc_dao.workflow_insert_or_update(wf_obj)
         return inserted
 
-    def handle_control_message(self, message):
+    def _handle_control_message(self, message):
         self.logger.info(
             f"I'm doc inserter {id(self)}. I received this control msg received: {message}"
         )
@@ -207,22 +184,6 @@ class DocumentInserter:
             self.logger.info("Document Inserter is stopping...")
             return "stop"
 
-    # def time_based_flushing(self, event: Event):
-    #     while not event.is_set():
-    #         with self._lock:
-    #             if len(self._task_dicts_buffer):
-    #                 now = time()
-    #                 timediff = now - self._previous_time
-    #                 if timediff >= MONGO_INSERTION_BUFFER_TIME:
-    #                     self.logger.debug("Time to flush to doc db!")
-    #                     self._previous_time = now
-    #                     self._flush()
-    #             self.logger.debug(
-    #                 f"Time-based DocDB inserter going to wait for {MONGO_INSERTION_BUFFER_TIME} s."
-    #             )
-    #             event.wait(MONGO_INSERTION_BUFFER_TIME)
-    #     self.logger.debug("Broke the time_based_flushing in Doc Inserter!")
-
     def start(self) -> "DocumentInserter":
         self._main_thread = Thread(target=self._start)
         self._main_thread.start()
@@ -230,49 +191,48 @@ class DocumentInserter:
 
     def _start(self):
         stop_event = Event()
-        # time_thread = Thread(
-        #     target=self.time_based_flushing, args=(stop_event,)
-        # )
-        # time_thread.start()
         pubsub = self._mq_dao.subscribe()
-        should_continue = True
-        while should_continue:
+        while True:
             try:
-                for message in pubsub.listen():
-                    self.logger.debug("Doc inserter Received a message!")
-                    if message["type"] in MQDao.MESSAGE_TYPES_IGNORE:
-                        continue
-                    _dict_obj = msgpack.loads(
-                        message["data"]  # , cls=DocumentInserter.DECODER
-                    )
-                    msg_type = _dict_obj.get("type")
-                    if msg_type == "flowcept_control":
-                        r = self.handle_control_message(_dict_obj)
-                        if r == "stop":
-                            stop_event.set()
-                            self.buffer.stop()
-                            should_continue = False
-                            break
-                    elif msg_type == "task":
-                        self.handle_task_message(_dict_obj)
-                    elif msg_type == "workflow":
-                        self.handle_workflow_message(_dict_obj)
-                    elif msg_type is None:
-                        raise Exception("Please inform the message type.")
-                    else:
-                        self.logger.error("Unexpected message type")
-                    self.logger.debug(
-                        "Processed all MQ msgs in doc_inserter we got so far. "
-                        "Now waiting (hopefully not forever!) on the "
-                        "pubsub.listen() loop for new messages."
-                    )
+                self._message_listener(pubsub)
+                stop_event.set()
+                self.buffer.stop()
+                break
             except Exception as e:
                 self.logger.exception(e)
                 sleep(2)
             self.logger.debug("Still in the doc insert. message listen loop")
         self.logger.info("Ok, we broke the doc inserter message listen loop!")
-        # time_thread.join()
-        # self.logger.info("Joined time thread in doc inserter.")
+
+    def _message_handler(self, msg_obj):
+        msg_type = msg_obj.get("type")
+        if msg_type == "flowcept_control":
+            r = self._handle_control_message(msg_obj)
+            if r == "stop":
+                return False
+            return True
+        elif msg_type == "task":
+            self._handle_task_message(msg_obj)
+            return True
+        elif msg_type == "workflow":
+            self._handle_workflow_message(msg_obj)
+            return True
+        elif msg_type is None:
+            raise Exception("Please inform the message type.")
+        else:
+            self.logger.error("Unexpected message type")
+            return True
+
+    def _message_listener(self, pubsub):
+        for message in pubsub.listen():
+            self.logger.debug("Doc inserter Received a message!")
+            if message["type"] in MQDao.MESSAGE_TYPES_IGNORE:
+                continue
+            msg_obj = msgpack.loads(
+                message["data"]  # , cls=DocumentInserter.DECODER
+            )
+            if not self._message_handler(msg_obj):
+                break
 
     def stop(self, bundle_exec_id=None):
         if self.check_safe_stops:

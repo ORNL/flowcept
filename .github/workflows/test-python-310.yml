@@ -25,7 +25,7 @@ jobs:
         pip install -e .[full]
         pip install -r extra_requirements/dev-requirements.txt
     - name: Run Docker Compose
-      run: docker compose -f deployment/compose.yml up -d
+      run: docker compose -f deployment/compose-full.yml up -d
     - name: Test with pytest
       run: |
         pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
