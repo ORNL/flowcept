@@ -3,9 +3,9 @@ from redis import Redis
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons import singleton
 from flowcept.configs import (
-    REDIS_HOST,
-    REDIS_PORT,
-    REDIS_PASSWORD,
+    MQ_HOST,
+    MQ_PORT,
+    MQ_PASSWORD,
 )
 
 
@@ -15,10 +15,10 @@ class KeyValueDAO:
         self.logger = FlowceptLogger()
         if connection is None:
             self._redis = Redis(
-                host=REDIS_HOST,
-                port=REDIS_PORT,
+                host=MQ_HOST,
+                port=MQ_PORT,
                 db=0,
-                password=REDIS_PASSWORD,
+                password=MQ_PASSWORD,
             )
         else:
             self._redis = connection
