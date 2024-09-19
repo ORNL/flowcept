@@ -220,3 +220,15 @@ class MQDao:
         except Exception as e:
             self.logger.exception(e)
             return False
+
+    def message_listener(self, message_handler: Callable):
+        pubsub = self.subscribe()
+        for message in pubsub.listen():
+            self.logger.debug("Received a message!")
+            if message["type"] in MQDao.MESSAGE_TYPES_IGNORE:
+                continue
+            msg_obj = msgpack.loads(
+                message["data"]  # , cls=DocumentInserter.DECODER
+            )
+            if not message_handler(msg_obj):
+                break

@@ -23,7 +23,6 @@ def mult_two(n, workflow_id=None):
 
 
 class FlowceptAPITest(unittest.TestCase):
-
     def test_simple_workflow(self):
         db = DBAPI()
         assert FlowceptConsumerAPI.services_alive()
