@@ -143,7 +143,13 @@ class DBAPI(object):
                 f"collections for task and workflow."
             )
 
-    def save_torch_model(self, model, custom_metadata: dict = None) -> str:
+    def save_torch_model(
+        self,
+        model,
+        task_id=None,
+        workflow_id=None,
+        custom_metadata: dict = None,
+    ) -> str:
         """
         Save the PyTorch model's state_dict to a MongoDB collection as binary data.
 
@@ -153,6 +159,7 @@ class DBAPI(object):
 
         Returns:
             str: The object ID of the saved model in the database.
+
         """
         import torch
         import io
@@ -169,6 +176,8 @@ class DBAPI(object):
         obj_id = self.save_object(
             object=binary_data,
             type="ml_model",
+            task_id=task_id,
+            workflow_id=workflow_id,
             custom_metadata=cm,
         )
 
