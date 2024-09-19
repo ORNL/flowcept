@@ -51,6 +51,47 @@ You may need to set the environment variable `FLOWCEPT_SETTINGS_PATH` with the a
 
 5. To use FlowCept's Query API, see utilization examples in the notebooks.
 
+### Simple Example with Decorators Instrumentation (No Adapter)
+
+In addition to existing adapters to Dask, MLFlow, and others (it's extensible for any system that generates data), FlowCept also offers instrumentation via @decorators. 
+
+```python 
+from uuid import uuid4
+
+from flowcept import (
+    FlowceptConsumerAPI,
+    WorkflowObject,
+    DBAPI,
+    flowcept_task,
+    INSTRUMENTATION    
+)
+
+
+@flowcept_task
+def sum_one(n, workflow_id=None):
+    return n + 1
+
+
+@flowcept_task
+def mult_two(n, workflow_id=None):
+    return n * 2
+
+
+db = DBAPI()
+wf_id = str(uuid4())
+with FlowceptConsumerAPI(INSTRUMENTATION):
+    # The next line is optional
+    db.insert_or_update_workflow(WorkflowObject(workflow_id=wf_id))
+    n = 3
+    o1 = sum_one(n, workflow_id=wf_id)
+    o2 = mult_two(o1, workflow_id=wf_id)
+
+print(db.query(filter={"workflow_id": wf_id}))
+
+```
+
+
+
 ## Performance Tuning for Performance Evaluation
 
 In the settings.yaml file, the following variables might impact interception performance:
