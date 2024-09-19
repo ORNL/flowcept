@@ -4,7 +4,7 @@ from time import sleep
 import flowcept.instrumentation.decorators
 from flowcept.commons import logger
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
-from flowcept.commons.daos.mq_dao import MQDao
+from flowcept.commons.daos.mq_dao.mq_dao_base import MQDaoBase
 from flowcept.configs import REDIS_INSTANCES
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -124,7 +124,7 @@ class FlowceptConsumerAPI(object):
 
     @staticmethod
     def services_alive() -> bool:
-        if not MQDao().liveness_test():
+        if not MQDaoBase.build().liveness_test():
             logger.error("MQ Not Ready!")
             return False
         if not DocumentDBDao().liveness_test():
