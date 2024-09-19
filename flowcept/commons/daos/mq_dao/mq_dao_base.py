@@ -1,36 +1,23 @@
-import concurrent
-import concurrent.futures
 from abc import ABC, abstractmethod
-from functools import partial
-from multiprocessing import Pool, cpu_count
-from queue import Queue
-from typing import Union, List, Dict, Callable
+from typing import Union, List, Callable
 
 import msgpack
 from redis import Redis
-from redis.client import PubSub
-from time import time
 
 import flowcept.commons
 from flowcept.commons.daos.autoflush_buffer import AutoflushBuffer
 
 from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
 
-from flowcept.commons.utils import perf_log, chunked
+from flowcept.commons.utils import chunked
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
-    MQ_HOST,
-    MQ_PORT,
     MQ_CHANNEL,
-    MQ_PASSWORD,
     JSON_SERIALIZER,
     MQ_BUFFER_SIZE,
     MQ_INSERTION_BUFFER_TIME,
     MQ_CHUNK_SIZE,
-    PERF_LOG,
     MQ_URI,
-    ENRICH_MESSAGES,
-    DB_FLUSH_MODE,
     MQ_TYPE,
     KVDB_HOST,
     KVDB_PORT,
@@ -50,6 +37,10 @@ class MQDao(ABC):
             from flowcept.commons.daos.mq_dao.mq_dao_redis import MQDaoRedis
 
             return MQDaoRedis(*args, **kwargs)
+        elif MQ_TYPE == "kafka":
+            from flowcept.commons.daos.mq_dao.mq_dao_kafka import MQDaoKafka
+
+            return MQDaoKafka(*args, **kwargs)
         else:
             raise NotImplementedError
 

@@ -53,7 +53,7 @@ CAMPAIGN_ID = settings["experiment"].get("campaign_id", "super_campaign")
 MQ_URI = settings["mq"].get("uri", None)
 MQ_INSTANCES = settings["mq"].get("instances", None)
 
-MQ_TYPE = settings["mq"].get("type", "redis")
+MQ_TYPE = os.getenv("MQ_TYPE", settings["mq"].get("type", "redis"))
 MQ_CHANNEL = settings["mq"].get("channel", "interception")
 MQ_PASSWORD = settings["mq"].get("password", None)
 MQ_HOST = os.getenv("MQ_HOST", settings["mq"].get("host", "localhost"))

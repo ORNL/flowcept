@@ -2,13 +2,14 @@ import unittest
 from time import sleep
 from uuid import uuid4
 
-from flowcept import FlowceptConsumerAPI, INSTRUMENTATION
-from flowcept.commons.flowcept_dataclasses.workflow_object import (
+from flowcept import (
+    FlowceptConsumerAPI,
     WorkflowObject,
+    DBAPI,
+    INSTRUMENTATION,
+    flowcept_task,
 )
 from flowcept.commons.utils import assert_by_querying_tasks_until
-from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 
 
 @flowcept_task
