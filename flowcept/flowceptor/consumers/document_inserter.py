@@ -19,7 +19,7 @@ from flowcept.configs import (
     MONGO_REMOVE_EMPTY_FIELDS,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.daos.mq_dao.mq_dao_base import MQDaoBase
+from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.flowceptor.consumers.consumer_utils import (
     remove_empty_fields_from_dict,
@@ -48,7 +48,7 @@ class DocumentInserter:
         bundle_exec_id=None,
     ):
         self._task_dicts_buffer = list()
-        self._mq_dao = MQDaoBase.build(mq_host, mq_port)
+        self._mq_dao = MQDao.build(mq_host, mq_port)
         self._doc_dao = DocumentDBDao()
         self._previous_time = time()
         self.logger = FlowceptLogger()

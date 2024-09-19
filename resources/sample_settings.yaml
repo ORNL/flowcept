@@ -41,6 +41,10 @@ mq:
   insertion_buffer_time_secs: 5
   chunk_size: 10  # use can use 0 or -1 to disable this. Or simply omit this from the config file.
 
+kv_db:
+  host: localhost
+  port: 6379
+
 mongodb:
   host: localhost
   port: 27017
