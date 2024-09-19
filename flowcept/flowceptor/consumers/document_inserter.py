@@ -191,10 +191,9 @@ class DocumentInserter:
 
     def _start(self):
         stop_event = Event()
-        pubsub = self._mq_dao.subscribe()
         while True:
             try:
-                self._message_listener(pubsub)
+                self._mq_dao.message_listener(self._message_handler)
                 stop_event.set()
                 self.buffer.stop()
                 break
@@ -204,7 +203,7 @@ class DocumentInserter:
             self.logger.debug("Still in the doc insert. message listen loop")
         self.logger.info("Ok, we broke the doc inserter message listen loop!")
 
-    def _message_handler(self, msg_obj):
+    def _message_handler(self, msg_obj: dict):
         msg_type = msg_obj.get("type")
         if msg_type == "flowcept_control":
             r = self._handle_control_message(msg_obj)
@@ -222,17 +221,6 @@ class DocumentInserter:
         else:
             self.logger.error("Unexpected message type")
             return True
-
-    def _message_listener(self, pubsub):
-        for message in pubsub.listen():
-            self.logger.debug("Doc inserter Received a message!")
-            if message["type"] in MQDao.MESSAGE_TYPES_IGNORE:
-                continue
-            msg_obj = msgpack.loads(
-                message["data"]  # , cls=DocumentInserter.DECODER
-            )
-            if not self._message_handler(msg_obj):
-                break
 
     def stop(self, bundle_exec_id=None):
         if self.check_safe_stops:

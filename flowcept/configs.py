@@ -56,12 +56,8 @@ REDIS_INSTANCES = settings["mq"].get("instances", None)
 MQ_TYPE = settings["mq"].get("type", "redis")
 MQ_CHANNEL = settings["mq"].get("channel", "interception")
 MQ_PASSWORD = settings["mq"].get("password", None)
-MQ_HOST = os.getenv(
-    "MQ_HOST", settings["mq"].get("host", "localhost")
-)
-MQ_PORT = int(
-    os.getenv("MQ_PORT", settings["mq"].get("port", "6379"))
-)
+MQ_HOST = os.getenv("MQ_HOST", settings["mq"].get("host", "localhost"))
+MQ_PORT = int(os.getenv("MQ_PORT", settings["mq"].get("port", "6379")))
 
 MQ_BUFFER_SIZE = int(settings["mq"].get("buffer_size", 50))
 MQ_INSERTION_BUFFER_TIME = int(
@@ -111,7 +107,6 @@ MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get(
 ######################
 
 DB_FLUSH_MODE = settings["project"].get("db_flush_mode", "online")
-MQ_TYPE = settings["project"].get("mq_type", "redis")
 # DEBUG_MODE = settings["project"].get("debug", False)
 PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")

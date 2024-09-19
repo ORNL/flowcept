@@ -43,8 +43,9 @@ class TestZambeze(unittest.TestCase):
 
     def test_send_message(self):
         if not self._connected:
-            self.logger.warn("RabbitMQ was not found. Skipping this "
-                             "Zambeze test.")
+            self.logger.warn(
+                "RabbitMQ was not found. Skipping this " "Zambeze test."
+            )
             return
         another_act_id = str(uuid4())
         act_id = str(uuid4())
