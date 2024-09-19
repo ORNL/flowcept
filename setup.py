@@ -57,6 +57,7 @@ extras_requirement_keys = [
     "amd",
     "analytics",
     "responsible_ai",
+    "kafka",
     "data_augmentation",
 ]
 
