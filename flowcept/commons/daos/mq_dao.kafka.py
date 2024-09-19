@@ -6,6 +6,7 @@ from queue import Queue
 from typing import Union, List, Dict, Callable
 
 import msgpack
+from confluent_kafka import Producer, Consumer
 from redis import Redis
 from redis.client import PubSub
 from time import time
@@ -51,10 +52,9 @@ class MQDao:
         return set_id
 
     @staticmethod
-    def pipe_publish(
-        buffer, redis_connection, logger=flowcept.commons.logger
+    def _bulk_publish(
+        buffer, producer, logger=flowcept.commons.logger
     ):
-        pipe = redis_connection.pipeline()
         logger.info(f"Going to flush {len(buffer)} to MQ...")
         for message in buffer:
             try:
@@ -62,7 +62,7 @@ class MQDao:
                     f"Going to send Message:"
                     f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
                 )
-                pipe.publish(MQ_CHANNEL, msgpack.dumps(message))
+                producer.produce(MQ_CHANNEL, key=MQ_CHANNEL, value=msgpack.dumps(message))
             except Exception as e:
                 logger.exception(e)
                 logger.error(
@@ -73,7 +73,7 @@ class MQDao:
         if PERF_LOG:
             t0 = time()
         try:
-            pipe.execute()
+            producer.flush()
             logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             logger.exception(e)
@@ -81,16 +81,25 @@ class MQDao:
 
     @staticmethod
     def bulk_publish(
-        buffer, redis_connection, logger=flowcept.commons.logger
+        buffer, producer, logger=flowcept.commons.logger
     ):
         if MQ_CHUNK_SIZE > 1:
             for chunk in chunked(buffer, MQ_CHUNK_SIZE):
-                MQDao.pipe_publish(chunk, redis_connection, logger)
+                MQDao._bulk_publish(chunk, producer, logger)
         else:
-            MQDao.pipe_publish(buffer, redis_connection, logger)
+            MQDao._bulk_publish(buffer, producer, logger)
 
     def __init__(self, mq_host=None, mq_port=None, adapter_settings=None):
         self.logger = FlowceptLogger()
+
+        conf = {
+            'bootstrap.servers': 'localhost:9092',  # Adjust if needed
+            'group.id': 'my_group',
+            'auto.offset.reset': 'earliest'
+        }
+
+        self._producer = Producer(conf)
+        self._consumer = Consumer(conf)
 
         if REDIS_URI is not None:
             # If a URI is provided, use it for connection
@@ -150,7 +159,7 @@ class MQDao:
                 max_size=MQ_BUFFER_SIZE,
                 flush_interval=MQ_INSERTION_BUFFER_TIME,
                 flush_function=MQDao.bulk_publish,
-                redis_connection=self._redis,
+                producer=self._producer,
             )
             #
             self.register_time_based_thread_init(
@@ -168,13 +177,12 @@ class MQDao:
             else:
                 self.logger.error("MQ time-based flushing is not started")
         else:
-            MQDao.bulk_publish(self.buffer, self._redis)
+            MQDao.bulk_publish(self.buffer, self._producer)
             self.buffer = list()
 
-    def subscribe(self) -> PubSub:
-        pubsub = self._redis.pubsub()
-        pubsub.psubscribe(MQ_CHANNEL)
-        return pubsub
+    def subscribe(self):
+        self._consumer.subscribe(MQ_CHANNEL)
+        return self._consumer
 
     def stop(self, interceptor_instance_id: str, bundle_exec_id: int = None):
         self.logger.info(

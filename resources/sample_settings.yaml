@@ -31,7 +31,8 @@ experiment:
   user: root
   campaign_id: super_campaign
 
-main_redis:
+mq:
+  type: redis
   host: localhost
   instances: ["localhost:6379"] # We can have multiple redis instances being accessed by the consumers but each interceptor will currently access one single redis.
   port: 6379
