@@ -1,4 +1,4 @@
-name: Unit, integration, and notebook tests (Py39)
+name: Running all tests on Kafka MQ
 on: [push]
 # branches: [ "disabled" ]
 
@@ -31,6 +31,8 @@ jobs:
     - name: Test notebooks
       run: |
         pip install -e .
+        export MQ_TYPE=kafka
+        python -c 'from flowcept.configs import MQ_TYPE; print(f"MQ_TYPE={MQ_TYPE}")'
         python flowcept/flowcept_webserver/app.py &
         sleep 3
         export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
