@@ -1,29 +1,7 @@
-from queue import Queue
-from typing import Union, List, Dict, Callable
+from typing import Callable
 
-import msgpack
-from redis import Redis
-from redis.client import PubSub
-from threading import Thread, Lock, Event
-from time import time, sleep
-
-import flowcept.commons
-from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
-from flowcept.commons.utils import perf_log
+from threading import Thread, Event
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.configs import (
-    REDIS_HOST,
-    REDIS_PORT,
-    REDIS_CHANNEL,
-    REDIS_PASSWORD,
-    JSON_SERIALIZER,
-    REDIS_BUFFER_SIZE,
-    REDIS_INSERTION_BUFFER_TIME,
-    PERF_LOG,
-    REDIS_URI,
-)
-
-from flowcept.commons.utils import GenericJSONEncoder
 
 
 class AutoflushBuffer:
