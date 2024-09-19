@@ -48,10 +48,10 @@ FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 CAMPAIGN_ID = settings["experiment"].get("campaign_id", "super_campaign")
 
 ######################
-#   Redis Settings   #
+#   MQ Settings   #
 ######################
-REDIS_URI = settings["mq"].get("uri", None)
-REDIS_INSTANCES = settings["mq"].get("instances", None)
+MQ_URI = settings["mq"].get("uri", None)
+MQ_INSTANCES = settings["mq"].get("instances", None)
 
 MQ_TYPE = settings["mq"].get("type", "redis")
 MQ_CHANNEL = settings["mq"].get("channel", "interception")
@@ -68,6 +68,15 @@ MQ_INSERTION_BUFFER_TIME = random.randint(
     int(MQ_INSERTION_BUFFER_TIME * 1.4),
 )
 MQ_CHUNK_SIZE = int(settings["mq"].get("chunk_size", -1))
+
+#####################
+# KV SETTINGS       #
+#####################
+
+KVDB_PASSWORD = settings["kv_db"].get("password", None)
+KVDB_HOST = os.getenv("KVDB_HOST", settings["kv_db"].get("host", "localhost"))
+KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
+
 
 ######################
 #  MongoDB Settings  #
