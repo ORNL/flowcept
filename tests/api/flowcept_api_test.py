@@ -14,7 +14,6 @@ from flowcept.commons.utils import assert_by_querying_tasks_until
 
 @flowcept_task
 def sum_one(n, workflow_id=None):
-    sleep(0.1)
     return n + 1
 
 
