@@ -204,6 +204,7 @@ class DocumentInserter:
 
     def _message_handler(self, msg_obj: dict):
         msg_type = msg_obj.get("type")
+        print(msg_obj)
         if msg_type == "flowcept_control":
             r = self._handle_control_message(msg_obj)
             if r == "stop":
@@ -216,7 +217,8 @@ class DocumentInserter:
             self._handle_workflow_message(msg_obj)
             return True
         elif msg_type is None:
-            raise Exception("Please inform the message type.")
+            return True
+            # raise Exception("Please inform the message type.")
         else:
             self.logger.error("Unexpected message type")
             return True

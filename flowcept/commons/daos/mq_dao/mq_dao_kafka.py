@@ -4,12 +4,15 @@ import msgpack
 from time import time
 
 from confluent_kafka import Producer, Consumer, KafkaError
+from confluent_kafka.admin import AdminClient
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.utils import perf_log
 from flowcept.configs import (
     MQ_CHANNEL,
-    PERF_LOG, MQ_HOST, MQ_PORT,
+    PERF_LOG,
+    MQ_HOST,
+    MQ_PORT,
 )
 
 
@@ -24,7 +27,11 @@ class MQDaoKafka(MQDao):
 
     def message_listener(self, message_handler: Callable):
         self._kafka_conf.update(
-            {"group.id": "my_group", "auto.offset.reset": "earliest"}
+            {
+                "group.id": "my_group",
+                "auto.offset.reset": "earliest",
+                "enable.auto.commit": True,
+            }
         )
         consumer = Consumer(self._kafka_conf)
         consumer.subscribe([MQ_CHANNEL])
@@ -83,11 +90,13 @@ class MQDaoKafka(MQDao):
             self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)
-        perf_log("mq_pipe_execute", t0)
+        perf_log("mq_pipe_flush", t0)
 
     def liveness_test(self):
         try:
             super().liveness_test()
+            admin_client = AdminClient(self._kafka_conf)
+            admin_client.list_topics(timeout=5)
             return True
         except Exception as e:
             self.logger.exception(e)

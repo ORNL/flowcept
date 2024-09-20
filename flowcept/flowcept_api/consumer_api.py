@@ -105,7 +105,7 @@ class FlowceptConsumerAPI(object):
         if self._start_doc_inserter:
             self.logger.info("Stopping Doc Inserters...")
             for doc_inserter in self._document_inserters:
-                doc_inserter.stop(bundle_exec_id=id(self))
+                doc_inserter.stop(bundle_exec_id=self._bundle_exec_id)
         self.is_started = False
         self.logger.debug("All stopped!")
 

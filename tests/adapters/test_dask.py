@@ -171,7 +171,7 @@ class TestDask(unittest.TestCase):
         print("Done workflow!")
         assert assert_by_querying_tasks_until(
             {"task_id": o2_task_id},
-            condition_to_evaluate=lambda docs: "telemetry_at_end" in docs[0]
+            condition_to_evaluate=lambda docs: "ended_at" in docs[0]
             and "y" in docs[0]["used"]
             and len(docs[0]["generated"]) > 0,
         )

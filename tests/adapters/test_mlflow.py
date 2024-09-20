@@ -86,7 +86,7 @@ class TestMLFlow(unittest.TestCase):
     def test_observer_and_consumption(self):
         with FlowceptConsumerAPI(self.interceptor):
             run_uuid = self.test_pure_run_mlflow()
-            sleep(5)
+            sleep(3)
 
         assert evaluate_until(
             lambda: self.interceptor.state_manager.has_element_id(run_uuid)
