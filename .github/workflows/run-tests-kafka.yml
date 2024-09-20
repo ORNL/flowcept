@@ -25,19 +25,24 @@ jobs:
       run: docker compose -f deployment/compose-kafka.yml up -d
     - name: Wait 1 min
       run: sleep 60
-    - name: Test with pytest
+    - name: Check liveness
       run: |
         export MQ_TYPE=kafka
         export MQ_PORT=9092
         python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_TYPE={MQ_PORT}")'
         python -c 'from flowcept import FlowceptConsumerAPI; assert FlowceptConsumerAPI.services_alive()'
+    - name: Run Tests with Kafka
+      run: |
+        export MQ_TYPE=kafka
+        export MQ_PORT=9092
         pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
     - name: Test notebooks
       run: |
         pip install -e .[full]
         export MQ_TYPE=kafka
         export MQ_PORT=9092
-        python -c 'from flowcept.configs import MQ_TYPE; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_TYPE={MQ_PORT}")'
+        python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_TYPE={MQ_PORT}")'
+        python -c 'from flowcept import FlowceptConsumerAPI; assert FlowceptConsumerAPI.services_alive()'
         
         python flowcept/flowcept_webserver/app.py &
         sleep 3

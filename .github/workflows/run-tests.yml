@@ -21,12 +21,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .[full]
         pip install -r extra_requirements/dev-requirements.txt
-    - name: Run Docker Compose
+    - name: Start Docker Compose  with Redis
       run: docker compose -f deployment/compose-full.yml up -d
-    - name: Test with pytest
+    - name: Test with pytest with Redis
       run: |
         pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
-    - name: Test notebooks
+    - name: Test notebooks with Redis
       run: |
         pip install -e .
         python flowcept/flowcept_webserver/app.py &
@@ -39,10 +39,15 @@ jobs:
       run: docker compose -f deployment/compose-kafka.yml up -d
     - name: Wait 1 min
       run: sleep 60
-    - name: Test with pytest on Kafka
+    - name: Check liveness
       run: |
         export MQ_TYPE=kafka
         export MQ_PORT=9092
         python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_TYPE={MQ_PORT}")'
         python -c 'from flowcept import FlowceptConsumerAPI; assert FlowceptConsumerAPI.services_alive()'
-        pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
+    - name: Run Tests with Kafka
+      run: |
+        export MQ_TYPE=kafka
+        export MQ_PORT=9092
+        # Ignoring heavy tests. They are executed with Kafka in another GH Action. 
+        pytest --ignore=tests/decorator_tests/ml_tests --ignore=tests/adapters/test_tensorboard.py
