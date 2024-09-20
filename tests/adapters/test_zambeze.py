@@ -43,7 +43,7 @@ class TestZambeze(unittest.TestCase):
 
     def test_send_message(self):
         if not self._connected:
-            self.logger.warn(
+            self.logger.warning(
                 "RabbitMQ was not found. Skipping this " "Zambeze test."
             )
             return
