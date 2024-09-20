@@ -2,6 +2,9 @@ from datetime import datetime, timedelta
 import json
 from time import time, sleep
 from typing import Callable
+import os
+import platform
+import subprocess
 
 import numpy as np
 
@@ -178,6 +181,54 @@ def replace_non_serializable(obj):
     else:
         # Replace non-serializable values with id()
         return f"{obj.__class__.__name__}_instance_id_{id(obj)}"
+
+
+def get_gpu_vendor():
+    system = platform.system()
+
+    # Linux
+    if system == "Linux":
+        # Check for NVIDIA GPU
+        if os.path.exists("/proc/driver/nvidia/version"):
+            return "NVIDIA"
+
+        # Check for AMD GPU using lspci
+        try:
+            lspci_output = subprocess.check_output(
+                "lspci", shell=True
+            ).decode()
+            if "AMD" in lspci_output:
+                return "AMD"
+        except subprocess.CalledProcessError:
+            pass
+
+    # Windows
+    elif system == "Windows":
+        try:
+            wmic_output = subprocess.check_output(
+                "wmic path win32_videocontroller get name", shell=True
+            ).decode()
+            if "NVIDIA" in wmic_output:
+                return "NVIDIA"
+            elif "AMD" in wmic_output:
+                return "AMD"
+        except subprocess.CalledProcessError:
+            pass
+
+    # macOS
+    elif system == "Darwin":  # macOS is "Darwin" in platform.system()
+        try:
+            sp_output = subprocess.check_output(
+                "system_profiler SPDisplaysDataType", shell=True
+            ).decode()
+            if "NVIDIA" in sp_output:
+                return "NVIDIA"
+            elif "AMD" in sp_output:
+                return "AMD"
+        except subprocess.CalledProcessError:
+            pass
+
+    return "No GPU or Unsupported Vendor"
 
 
 class GenericJSONDecoder(json.JSONDecoder):
