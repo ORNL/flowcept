@@ -19,8 +19,7 @@ jobs:
     - name: Install our dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[full]
-        pip install -r extra_requirements/dev-requirements.txt
+        pip install -e .[fulldev]
     - name: Run Docker Compose
       run: docker compose -f deployment/compose-kafka.yml up -d
     - name: Wait 1 min

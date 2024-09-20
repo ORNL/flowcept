@@ -73,7 +73,7 @@ for req in extras_requirement_keys:
 
 extras_require["full"] = full_requirements
 
-fulldev = full_requirements
+fulldev = full_requirements.copy()
 fulldev.append("dev")
 
 extras_require["fulldev"] = fulldev
