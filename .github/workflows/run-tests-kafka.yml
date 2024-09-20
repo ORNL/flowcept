@@ -23,6 +23,8 @@ jobs:
         pip install -r extra_requirements/dev-requirements.txt
     - name: Run Docker Compose
       run: docker compose -f deployment/compose-kafka.yml up -d
+    - name: Wait 1 min
+      run: sleep 60
     - name: Test with pytest
       run: |
         export MQ_TYPE=kafka

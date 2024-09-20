@@ -37,6 +37,8 @@ jobs:
       run: docker compose -f deployment/compose-full.yml down
     - name: Start Docker Compose with Kafka
       run: docker compose -f deployment/compose-kafka.yml up -d
+    - name: Wait 1 min
+      run: sleep 60
     - name: Test with pytest on Kafka
       run: |
         export MQ_TYPE=kafka
