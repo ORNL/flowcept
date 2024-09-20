@@ -228,7 +228,7 @@ def get_gpu_vendor():
         except subprocess.CalledProcessError:
             pass
 
-    return "No GPU or Unsupported Vendor"
+    return None
 
 
 class GenericJSONDecoder(json.JSONDecoder):
