@@ -96,8 +96,8 @@ class MQDaoKafka(MQDao):
         try:
             super().liveness_test()
             admin_client = AdminClient(self._kafka_conf)
-            admin_client.list_topics(timeout=5)
-            return True
+            kafka_metadata = admin_client.list_topics(timeout=5)
+            return MQ_CHANNEL in kafka_metadata.topics
         except Exception as e:
             self.logger.exception(e)
             return False
