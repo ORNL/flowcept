@@ -70,6 +70,8 @@ class Flowcept(object):
             )
             Flowcept.db.insert_or_update_workflow(wf_obj)
             Flowcept.current_workflow_id = wf_obj.workflow_id
+        else:
+            Flowcept.current_workflow_id = None
 
         self.is_started = False
 

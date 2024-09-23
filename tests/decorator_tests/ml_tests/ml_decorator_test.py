@@ -2,7 +2,7 @@ import uuid
 
 import unittest
 
-from flowcept import DBAPI
+from flowcept import Flowcept
 from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer, TestNet
 
 
@@ -32,7 +32,7 @@ class MLDecoratorTests(unittest.TestCase):
             c.pop("workflow_id")
             loaded_model = TestNet(**c)
 
-            loaded_model = DBAPI().load_torch_model(
+            loaded_model = Flowcept.db.load_torch_model(
                 loaded_model, result["object_id"]
             )
             assert len(loaded_model(result["test_data"]))
