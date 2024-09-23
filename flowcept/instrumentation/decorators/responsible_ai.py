@@ -1,7 +1,7 @@
 from functools import wraps
 import numpy as np
 from torch import nn
-from flowcept import DBAPI
+from flowcept import Flowcept
 from flowcept.commons.utils import replace_non_serializable
 from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE, INSTRUMENTATION
 
@@ -110,7 +110,7 @@ def model_profiler():
             if INSTRUMENTATION.get("torch", False) and INSTRUMENTATION[
                 "torch"
             ].get("save_models", False):
-                obj_id = DBAPI().save_torch_model(
+                obj_id = Flowcept.db.save_torch_model(
                     model, custom_metadata=ret["responsible_ai_metadata"]
                 )
                 ret["object_id"] = obj_id

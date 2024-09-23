@@ -1,6 +1,7 @@
 from time import time
 from functools import wraps
 import flowcept.commons
+from flowcept import Flowcept
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
     Status,
@@ -25,6 +26,9 @@ def default_args_handler(task_message: TaskObject, *args, **kwargs):
             "workflow_id", None
         )
         args_handled.update(kwargs)
+    task_message.workflow_id = (
+        task_message.workflow_id or Flowcept.current_workflow_id
+    )
     if REPLACE_NON_JSON_SERIALIZABLE:
         args_handled = replace_non_serializable(args_handled)
     return args_handled
