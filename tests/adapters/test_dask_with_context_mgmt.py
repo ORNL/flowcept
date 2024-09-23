@@ -4,7 +4,7 @@ import numpy as np
 from dask.distributed import Client
 from distributed import LocalCluster
 
-from flowcept import FlowceptConsumerAPI
+from flowcept import Flowcept
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.flowceptor.adapters.dask.dask_plugins import (
@@ -38,7 +38,7 @@ class TestDaskContextMgmt(unittest.TestCase):
         client.register_plugin(FlowceptDaskWorkerAdapter())
         register_dask_workflow(client)
 
-        with FlowceptConsumerAPI():
+        with Flowcept("dask"):
             i1 = np.random.random()
             o1 = client.submit(dummy_func1, i1)
             self.logger.debug(o1.result())
