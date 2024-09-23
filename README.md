@@ -56,38 +56,25 @@ You may need to set the environment variable `FLOWCEPT_SETTINGS_PATH` with the a
 In addition to existing adapters to Dask, MLFlow, and others (it's extensible for any system that generates data), FlowCept also offers instrumentation via @decorators. 
 
 ```python 
-from uuid import uuid4
-
-from flowcept import (
-    FlowceptConsumerAPI,
-    WorkflowObject,
-    DBAPI,
-    flowcept_task,
-    INSTRUMENTATION    
-)
-
+from flowcept import Flowcept, flowcept_task
 
 @flowcept_task
-def sum_one(n, workflow_id=None):
+def sum_one(n):
     return n + 1
 
 
 @flowcept_task
-def mult_two(n, workflow_id=None):
+def mult_two(n):
     return n * 2
 
 
-db = DBAPI()
-wf_id = str(uuid4())
-with FlowceptConsumerAPI(INSTRUMENTATION):
-    # The next line is optional
-    db.insert_or_update_workflow(WorkflowObject(workflow_id=wf_id))
+with Flowcept(workflow_name='test_workflow'):
     n = 3
-    o1 = sum_one(n, workflow_id=wf_id)
-    o2 = mult_two(o1, workflow_id=wf_id)
+    o1 = sum_one(n)
+    o2 = mult_two(o1)
+    print(o2)
 
-print(db.query(filter={"workflow_id": wf_id}))
-
+print(Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id}))
 ```
 
 

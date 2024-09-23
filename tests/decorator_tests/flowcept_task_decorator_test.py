@@ -11,7 +11,7 @@ from flowcept.commons import FlowceptLogger
 
 import flowcept.commons
 import flowcept.instrumentation.decorators
-from flowcept import FlowceptConsumerAPI
+from flowcept import Flowcept
 
 import unittest
 
@@ -147,7 +147,7 @@ class DecoratorTests(unittest.TestCase):
     def test_decorated_function(self):
         workflow_id = str(uuid.uuid4())
         # TODO :refactor-base-interceptor:
-        with FlowceptConsumerAPI(FlowceptConsumerAPI.INSTRUMENTATION):
+        with Flowcept():
             self.decorated_function_with_self(x=0.1, workflow_id=workflow_id)
             decorated_static_function(
                 df=pd.DataFrame(), workflow_id=workflow_id
@@ -169,10 +169,7 @@ class DecoratorTests(unittest.TestCase):
         workflow_id = str(uuid.uuid4())
         print(workflow_id)
         # TODO :refactor-base-interceptor:
-        consumer = FlowceptConsumerAPI(
-            interceptors=FlowceptConsumerAPI.INSTRUMENTATION,
-            start_doc_inserter=start_doc_inserter,
-        )
+        consumer = Flowcept(start_doc_inserter=start_doc_inserter)
         consumer.start()
         t0 = time()
         for i in range(max_tasks):
