@@ -19,17 +19,36 @@ jobs:
     - name: Install our dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[full]
-        pip install -r extra_requirements/dev-requirements.txt
-    - name: Run Docker Compose
-      run: docker compose -f deployment/compose.yml up -d
-    - name: Test with pytest
+        pip install -e .[fulldev]  # This will install all dependencies, for all adapters and dev deps.
+    - name: Pip list
+      run: pip list
+    - name: Start Docker Compose  with Redis
+      run: docker compose -f deployment/compose-full.yml up -d
+    - name: Test with pytest with Redis
       run: |
         pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
-    - name: Test notebooks
+    - name: Test notebooks with Redis
       run: |
         pip install -e .
         python flowcept/flowcept_webserver/app.py &
         sleep 3
         export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
         pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
+    - name: Shut down compose
+      run: docker compose -f deployment/compose-full.yml down
+    - name: Start Docker Compose with Kafka
+      run: docker compose -f deployment/compose-kafka.yml up -d
+    - name: Wait 1 min
+      run: sleep 60
+    - name: Check liveness
+      run: |
+        export MQ_TYPE=kafka
+        export MQ_PORT=9092
+        python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_TYPE={MQ_PORT}")'
+        python -c 'from flowcept import FlowceptConsumerAPI; assert FlowceptConsumerAPI.services_alive()'
+    - name: Run Tests with Kafka
+      run: |
+        export MQ_TYPE=kafka
+        export MQ_PORT=9092
+        # Ignoring heavy tests. They are executed with Kafka in another GH Action. 
+        pytest --ignore=tests/decorator_tests/ml_tests --ignore=tests/adapters/test_tensorboard.py
