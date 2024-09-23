@@ -1,5 +1,6 @@
 from typing import List
 from sqlalchemy.engine import Row, create_engine
+from sqlalchemy import text
 from textwrap import dedent
 
 from flowcept.commons import singleton
@@ -31,8 +32,9 @@ class MLFlowDAO:
             raise Exception(f"Could not create DB engine with uri: {db_uri}")
 
     def get_finished_run_uuids(self) -> List[Row]:
-        sql = dedent(
-            f"""
+        sql = text(
+            dedent(
+                f"""
             SELECT run_uuid
             FROM
                 runs
@@ -41,6 +43,7 @@ class MLFlowDAO:
             ORDER BY end_time DESC
             LIMIT {MLFlowDAO._LIMIT}
             """
+            )
         )
         try:
             conn = self._engine.connect()
@@ -55,8 +58,9 @@ class MLFlowDAO:
     def get_run_data(self, run_uuid: str) -> RunData:
         # TODO: consider outer joins to get the run data even if there's
         #  no metric or param or if the task hasn't finished yet
-        sql = dedent(
-            f"""
+        sql = text(
+            dedent(
+                f"""
             SELECT r.run_uuid, r.start_time, r.end_time, r.status,
                m.key as 'metric_key', m.value as 'metric_value',
                p.key as 'parameter_key', p.value as 'parameter_value'
@@ -75,12 +79,13 @@ class MLFlowDAO:
                 parameter_key, parameter_value
             LIMIT 30
 """
+            )
         )
         try:
             conn = self._engine.connect()
             result_set = conn.execute(sql).fetchall()
         except Exception as e:
-            self.logger.warning(e)
+            self.logger.exception(e)
             return None
         finally:
             conn.close()

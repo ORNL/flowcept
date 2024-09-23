@@ -1,7 +1,7 @@
-from watchdog.events import LoggingEventHandler
+from watchdog.events import LoggingEventHandler, FileSystemEventHandler
 
 
-class InterceptionEventHandler(LoggingEventHandler):
+class InterceptionEventHandler(FileSystemEventHandler):
     def __init__(self, interceptor_instance, callback_function):
         super().__init__()
         self.callback_function = callback_function
