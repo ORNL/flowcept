@@ -1,19 +1,25 @@
 from typing import List, Union
 from time import sleep
 
+from flowcept.commons.flowcept_dataclasses.workflow_object import (
+    WorkflowObject,
+)
+
 import flowcept.instrumentation.decorators
 from flowcept.commons import logger
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.configs import MQ_INSTANCES
+from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 
-# TODO: :code-reorg: This may not be considered an API anymore as it's doing critical things for the good functioning of the system.
-class FlowceptConsumerAPI(object):
-    INSTRUMENTATION = "instrumentation"
+class Flowcept(object):
+    db = DBAPI()
+
+    current_workflow_id = None
 
     def __init__(
         self,
@@ -22,7 +28,23 @@ class FlowceptConsumerAPI(object):
         ] = None,
         bundle_exec_id=None,
         start_doc_inserter=True,
+        workflow_id: str = None,
+        workflow_name: str = None,
+        workflow_args: str = None,
     ):
+        """
+        Flowcept controller.
+
+        This class controls the interceptors, including instrumentation.
+        If using for instrumentation, we assume one instance of this class
+        per workflow is being utilized.
+
+        Parameters
+        ----------
+        interceptors - list of Flowcept interceptors. If none, instrumentation will be used. If a string is passed, no interceptor will be started.  # TODO: improve clarity for the documentation.
+        bundle_exec_id - A way to group interceptors.
+        start_doc_inserter - Whether you want to start consuming MQ messages to inject in the DB.
+        """
         self.logger = FlowceptLogger()
 
         self._document_inserters: List[DocumentInserter] = []
@@ -31,13 +53,24 @@ class FlowceptConsumerAPI(object):
             self._bundle_exec_id = id(self)
         else:
             self._bundle_exec_id = bundle_exec_id
-        if interceptors == FlowceptConsumerAPI.INSTRUMENTATION:
-            interceptors = (
-                flowcept.instrumentation.decorators.instrumentation_interceptor
+        if isinstance(interceptors, str):
+            self._interceptors = None
+        else:
+            if interceptors is None:
+                interceptors = [
+                    flowcept.instrumentation.decorators.instrumentation_interceptor
+                ]
+            elif not isinstance(interceptors, list):
+                interceptors = [interceptors]
+            self._interceptors: List[BaseInterceptor] = interceptors
+
+        if workflow_id or workflow_args or workflow_name:
+            wf_obj = WorkflowObject(
+                workflow_id, workflow_name, used=workflow_args
             )
-        if interceptors is not None and type(interceptors) != list:
-            interceptors = [interceptors]
-        self._interceptors: List[BaseInterceptor] = interceptors
+            Flowcept.db.insert_or_update_workflow(wf_obj)
+            Flowcept.current_workflow_id = wf_obj.workflow_id
+
         self.is_started = False
 
     def start(self):
