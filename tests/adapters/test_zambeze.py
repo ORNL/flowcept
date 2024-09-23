@@ -27,7 +27,7 @@ class TestZambeze(unittest.TestCase):
                     interceptor.settings.port,
                 )
             )
-            self._connected = True
+            self._connected = self._connection.is_open
         except AMQPConnectionError:
             print("Failed to connect to RabbitMQ. Is it running?")
             return
@@ -46,6 +46,7 @@ class TestZambeze(unittest.TestCase):
             self.logger.warning(
                 "RabbitMQ was not found. Skipping this " "Zambeze test."
             )
+            assert True
             return
         another_act_id = str(uuid4())
         act_id = str(uuid4())

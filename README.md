@@ -51,7 +51,7 @@ You may need to set the environment variable `FLOWCEPT_SETTINGS_PATH` with the a
 
 5. To use FlowCept's Query API, see utilization examples in the notebooks.
 
-### Simple Example with Decorators Instrumentation (No Adapter)
+### Simple Example with Decorators Instrumentation
 
 In addition to existing adapters to Dask, MLFlow, and others (it's extensible for any system that generates data), FlowCept also offers instrumentation via @decorators. 
 
