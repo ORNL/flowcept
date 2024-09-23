@@ -1,8 +1,8 @@
 import unittest
-
+import itertools
 import uuid
 
-from flowcept import WorkflowObject, DBAPI
+from flowcept import WorkflowObject, Flowcept
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.adapters.dask.dask_plugins import (
@@ -80,7 +80,6 @@ class DecoratorDaskLLMTests(unittest.TestCase):
     def test_llm(self):
         # Manually registering the DataPrep workflow (manual instrumentation)
         tokenizer = "toktok"  #  basic_english, moses, toktok
-        db_api = DBAPI()
         dataset_prep_wf = WorkflowObject()
         dataset_prep_wf.workflow_id = f"prep_wikitext_tokenizer_{tokenizer}"
         dataset_prep_wf.used = {"tokenizer": tokenizer}
@@ -94,7 +93,7 @@ class DecoratorDaskLLMTests(unittest.TestCase):
             "test_data": id(test_data),
         }
         print(dataset_prep_wf)
-        db_api.insert_or_update_workflow(dataset_prep_wf)
+        Flowcept.db.insert_or_update_workflow(dataset_prep_wf)
 
         # Automatically registering the Dask workflow
         train_wf_id = str(uuid.uuid4())
