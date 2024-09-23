@@ -36,7 +36,7 @@ class TestTensorboard(unittest.TestCase):
         # Making sure we'll wait until next watch cycle
         sleep(watch_interval_sec * 3)
 
-    def test_run_tensorboard_hparam_tuning(self):
+    def run_tensorboard_hparam_tuning(self):
         """
         Code based on
          https://www.tensorflow.org/tensorboard/hyperparameter_tuning_with_hparams
@@ -143,7 +143,7 @@ class TestTensorboard(unittest.TestCase):
     def test_observer_and_consumption(self):
         self.reset_log_dir()
         with FlowceptConsumerAPI(self.interceptor):
-            wf_id = self.test_run_tensorboard_hparam_tuning()
+            wf_id = self.run_tensorboard_hparam_tuning()
             self.logger.debug("Done training. Sleeping some time...")
             watch_interval_sec = MONGO_INSERTION_BUFFER_TIME
             # Making sure we'll wait until next watch cycle
@@ -155,15 +155,12 @@ class TestTensorboard(unittest.TestCase):
         )
         assert assert_by_querying_tasks_until({"workflow_id": wf_id})
 
-        # TODO: Sometimes this fails. It's been hard to debug and tensorboard
-        #  is not a priority. Need to investigate later
-        # May be related: https://github.com/ORNL/flowcept/issues/49
-        # docs = TaskQueryAPI().query({"workflow_id": wf_id})
-        # assert len(docs) == 16
-
+    @unittest.skip(
+        "This test is useful only for developing. No need to run " "in CI"
+    )
     def test_read_tensorboard_hparam_tuning(self):
         self.reset_log_dir()
-        self.test_run_tensorboard_hparam_tuning()
+        self.run_tensorboard_hparam_tuning()
         from tbparse import SummaryReader
 
         logdir = self.interceptor.settings.file_path

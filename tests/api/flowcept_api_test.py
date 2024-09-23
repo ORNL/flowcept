@@ -2,18 +2,18 @@ import unittest
 from time import sleep
 from uuid import uuid4
 
-from flowcept import FlowceptConsumerAPI
-from flowcept.commons.flowcept_dataclasses.workflow_object import (
+from flowcept import (
+    FlowceptConsumerAPI,
     WorkflowObject,
+    DBAPI,
+    INSTRUMENTATION,
+    flowcept_task,
 )
 from flowcept.commons.utils import assert_by_querying_tasks_until
-from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
 
 
 @flowcept_task
 def sum_one(n, workflow_id=None):
-    sleep(0.1)
     return n + 1
 
 
@@ -28,7 +28,7 @@ class FlowceptAPITest(unittest.TestCase):
         assert FlowceptConsumerAPI.services_alive()
 
         wf_id = str(uuid4())
-        with FlowceptConsumerAPI(FlowceptConsumerAPI.INSTRUMENTATION):
+        with FlowceptConsumerAPI(INSTRUMENTATION):
             # The next line is optional
             db.insert_or_update_workflow(WorkflowObject(workflow_id=wf_id))
             n = 3

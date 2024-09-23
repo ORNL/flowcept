@@ -7,7 +7,7 @@ from flowcept.configs import (
     ENRICH_MESSAGES,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.daos.mq_dao import MQDao
+from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.settings_factory import get_settings
 
@@ -32,8 +32,7 @@ class BaseInterceptor(object):
             self.settings = get_settings(plugin_key)
         else:
             self.settings = None
-        self._mq_dao = MQDao(adapter_settings=self.settings)
-        # self._db_api = DBAPI()
+        self._mq_dao = MQDao.build(adapter_settings=self.settings)
         self._bundle_exec_id = None
         self._interceptor_instance_id = str(id(self))
         self.telemetry_capture = TelemetryCapture()

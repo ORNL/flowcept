@@ -48,29 +48,35 @@ FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 CAMPAIGN_ID = settings["experiment"].get("campaign_id", "super_campaign")
 
 ######################
-#   Redis Settings   #
+#   MQ Settings   #
 ######################
-REDIS_URI = settings["main_redis"].get("uri", None)
-REDIS_INSTANCES = settings["main_redis"].get("instances", None)
+MQ_URI = settings["mq"].get("uri", None)
+MQ_INSTANCES = settings["mq"].get("instances", None)
 
-REDIS_CHANNEL = settings["main_redis"].get("channel", "interception")
-REDIS_PASSWORD = settings["main_redis"].get("password", None)
-REDIS_HOST = os.getenv(
-    "REDIS_HOST", settings["main_redis"].get("host", "localhost")
-)
-REDIS_PORT = int(
-    os.getenv("REDIS_PORT", settings["main_redis"].get("port", "6379"))
-)
+MQ_TYPE = os.getenv("MQ_TYPE", settings["mq"].get("type", "redis"))
+MQ_CHANNEL = settings["mq"].get("channel", "interception")
+MQ_PASSWORD = settings["mq"].get("password", None)
+MQ_HOST = os.getenv("MQ_HOST", settings["mq"].get("host", "localhost"))
+MQ_PORT = int(os.getenv("MQ_PORT", settings["mq"].get("port", "6379")))
 
-REDIS_BUFFER_SIZE = int(settings["main_redis"].get("buffer_size", 50))
-REDIS_INSERTION_BUFFER_TIME = int(
-    settings["main_redis"].get("insertion_buffer_time_secs", 5)
+MQ_BUFFER_SIZE = int(settings["mq"].get("buffer_size", 50))
+MQ_INSERTION_BUFFER_TIME = int(
+    settings["mq"].get("insertion_buffer_time_secs", 5)
 )
-REDIS_INSERTION_BUFFER_TIME = random.randint(
-    int(REDIS_INSERTION_BUFFER_TIME * 0.9),
-    int(REDIS_INSERTION_BUFFER_TIME * 1.4),
+MQ_INSERTION_BUFFER_TIME = random.randint(
+    int(MQ_INSERTION_BUFFER_TIME * 0.9),
+    int(MQ_INSERTION_BUFFER_TIME * 1.4),
 )
-REDIS_CHUNK_SIZE = int(settings["main_redis"].get("chunk_size", -1))
+MQ_CHUNK_SIZE = int(settings["mq"].get("chunk_size", -1))
+
+#####################
+# KV SETTINGS       #
+#####################
+
+KVDB_PASSWORD = settings["kv_db"].get("password", None)
+KVDB_HOST = os.getenv("KVDB_HOST", settings["kv_db"].get("host", "localhost"))
+KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
+
 
 ######################
 #  MongoDB Settings  #
@@ -110,7 +116,6 @@ MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get(
 ######################
 
 DB_FLUSH_MODE = settings["project"].get("db_flush_mode", "online")
-MQ_TYPE = settings["project"].get("mq_type", "redis")
 # DEBUG_MODE = settings["project"].get("debug", False)
 PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
@@ -235,8 +240,8 @@ except:
 
 
 EXTRA_METADATA = settings.get("extra_metadata", {})
-EXTRA_METADATA.update({"mq_host": REDIS_HOST})
-EXTRA_METADATA.update({"mq_port": REDIS_PORT})
+EXTRA_METADATA.update({"mq_host": MQ_HOST})
+EXTRA_METADATA.update({"mq_port": MQ_PORT})
 
 ######################
 #    Web Server      #
