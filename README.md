@@ -16,8 +16,9 @@ different parallel computing systems (e.g., Dask, Spark, Workflow Management Sys
 capability to seamless and automatically integrate data from various workflows using data observability.
 It builds an integrated data view at runtime enabling end-to-end exploratory data analysis and monitoring.
 It follows [W3C PROV](https://www.w3.org/TR/prov-overview/) recommendations for its data schema.
-It does not require changes in user codes or systems (i.e., instrumentation), but we provide instrumentation options for convenience. For example, by adding a `@flowcept_task` decorator on functions, FlowCept will observe their executions when they run. Also, we provide special features for PyTorch modules. Adding `@torch_task` to them will enable extra model inspection to be captured and integrated in the database at runtime.    
-All users need to do is to create adapters for their systems or tools, if one is not available yet. 
+It does not require changes in user codes or systems (i.e., instrumentation). All users need to do is to create adapters for their systems or tools, if one is not available yet. 
+In addition to observability, we provide instrumentation options for convenience. For example, by adding a `@flowcept_task` decorator on functions, FlowCept will observe their executions when they run. Also, we provide special features for PyTorch modules. Adding `@torch_task` to them will enable extra model inspection to be captured and integrated in the database at runtime.    
+ 
 
 Currently, FlowCept provides adapters for: [Dask](https://www.dask.org/), [MLFlow](https://mlflow.org/), [TensorBoard](https://www.tensorflow.org/tensorboard), and [Zambeze](https://github.com/ORNL/zambeze). 
 
