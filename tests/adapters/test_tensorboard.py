@@ -5,7 +5,7 @@ from uuid import uuid4
 from flowcept.configs import MONGO_INSERTION_BUFFER_TIME
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept import TensorboardInterceptor, FlowceptConsumerAPI, TaskQueryAPI
+from flowcept import TensorboardInterceptor, Flowcept, TaskQueryAPI
 from flowcept.commons.utils import (
     assert_by_querying_tasks_until,
     evaluate_until,
@@ -142,7 +142,7 @@ class TestTensorboard(unittest.TestCase):
 
     def test_observer_and_consumption(self):
         self.reset_log_dir()
-        with FlowceptConsumerAPI(self.interceptor):
+        with Flowcept(self.interceptor):
             wf_id = self.run_tensorboard_hparam_tuning()
             self.logger.debug("Done training. Sleeping some time...")
             watch_interval_sec = MONGO_INSERTION_BUFFER_TIME

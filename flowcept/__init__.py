@@ -7,12 +7,9 @@ from flowcept.version import __version__
 from flowcept.commons.vocabulary import Vocabulary
 
 
-from flowcept.flowcept_api.consumer_api import FlowceptConsumerAPI
+from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowcept_api.task_query_api import TaskQueryAPI
-from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
-
-INSTRUMENTATION = FlowceptConsumerAPI.INSTRUMENTATION
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,

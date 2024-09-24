@@ -2,7 +2,7 @@ import unittest
 from time import sleep
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept import MLFlowInterceptor, FlowceptConsumerAPI
+from flowcept import MLFlowInterceptor, Flowcept
 from flowcept.commons.utils import (
     assert_by_querying_tasks_until,
     evaluate_until,
@@ -67,7 +67,7 @@ class TestMLFlow(unittest.TestCase):
         # with open(self.interceptor.settings.file_path, 'w+') as f:
         #     f.write("")
 
-        with FlowceptConsumerAPI(self.interceptor):
+        with Flowcept(self.interceptor):
             run_uuid = self.test_pure_run_mlflow()
             # sleep(3)
 
