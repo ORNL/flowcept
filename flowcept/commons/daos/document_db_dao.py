@@ -58,11 +58,11 @@ class DocumentDBDao(object):
             list(x["key"].keys())[0]
             for x in self._tasks_collection.list_indexes()
         ]
-        if not TaskObject.task_id_field() in existing_indices:
+        if TaskObject.task_id_field() not in existing_indices:
             self._tasks_collection.create_index(
                 TaskObject.task_id_field(), unique=True
             )
-        if not TaskObject.workflow_id_field() in existing_indices:
+        if TaskObject.workflow_id_field() not in existing_indices:
             self._tasks_collection.create_index(
                 TaskObject.workflow_id_field()
             )
@@ -72,7 +72,7 @@ class DocumentDBDao(object):
             list(x["key"].keys())[0]
             for x in self._wfs_collection.list_indexes()
         ]
-        if not WorkflowObject.workflow_id_field() in existing_indices:
+        if WorkflowObject.workflow_id_field() not in existing_indices:
             self._wfs_collection.create_index(
                 WorkflowObject.workflow_id_field(), unique=True
             )
@@ -83,14 +83,14 @@ class DocumentDBDao(object):
             for x in self._obj_collection.list_indexes()
         ]
 
-        if not "object_id" in existing_indices:
+        if "object_id" not in existing_indices:
             self._obj_collection.create_index("object_id", unique=True)
 
-        if not WorkflowObject.workflow_id_field() in existing_indices:
+        if WorkflowObject.workflow_id_field() not in existing_indices:
             self._obj_collection.create_index(
                 WorkflowObject.workflow_id_field(), unique=False
             )
-        if not TaskObject.task_id_field() in existing_indices:
+        if TaskObject.task_id_field() not in existing_indices:
             self._obj_collection.create_index(
                 TaskObject.task_id_field(), unique=False
             )
