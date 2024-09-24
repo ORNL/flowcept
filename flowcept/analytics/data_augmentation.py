@@ -4,10 +4,12 @@ import numpy as np
 import pandas as pd
 
 from h2o.automl import H2OAutoML
+from typing_extensions import deprecated
 
 h2o.init()
 
 
+@deprecated
 def train_model(
     df,
     x_cols: List[str],
@@ -26,6 +28,7 @@ def train_model(
     return aml
 
 
+@deprecated
 def augment_df_linearly(df, N, cols_to_augment, seed=1234):
     np.random.seed(seed)
     new_df = df.copy()
@@ -48,6 +51,7 @@ def augment_df_linearly(df, N, cols_to_augment, seed=1234):
     return appended_df
 
 
+@deprecated
 def augment_data(df, N, augmentation_model: H2OAutoML, x_cols, y_col):
     new_df = augment_df_linearly(df, N, x_cols)
     h2odf = h2o.H2OFrame(new_df.loc[new_df["original"] == 0][x_cols])

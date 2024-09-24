@@ -51,13 +51,13 @@ full_requirements = requirements.copy()
 extras_requirement_keys = [
     "zambeze",
     "mlflow",
-    "tensorboard",
     "dask",
     "nvidia",
     "amd",
     "analytics",
     "responsible_ai",
-    "data_augmentation",
+    "kafka",
+    "tensorboard",
 ]
 
 skip_full = {"amd", "nvidia"}
@@ -72,6 +72,11 @@ for req in extras_requirement_keys:
 
 
 extras_require["full"] = full_requirements
+
+fulldev = full_requirements.copy()
+fulldev.extend(get_requirements(f"extra_requirements/dev-requirements.txt"))
+
+extras_require["fulldev"] = fulldev
 
 keywords = [
     "ai",

@@ -3,9 +3,9 @@ from redis import Redis
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons import singleton
 from flowcept.configs import (
-    REDIS_HOST,
-    REDIS_PORT,
-    REDIS_PASSWORD,
+    KVDB_HOST,
+    KVDB_PORT,
+    KVDB_PASSWORD,
 )
 
 
@@ -15,10 +15,10 @@ class KeyValueDAO:
         self.logger = FlowceptLogger()
         if connection is None:
             self._redis = Redis(
-                host=REDIS_HOST,
-                port=REDIS_PORT,
+                host=KVDB_HOST,
+                port=KVDB_PORT,
                 db=0,
-                password=REDIS_PASSWORD,
+                password=KVDB_PASSWORD,
             )
         else:
             self._redis = connection
@@ -30,9 +30,9 @@ class KeyValueDAO:
         self._redis.sadd(set_name, key)
 
     def remove_key_from_set(self, set_name: str, key):
-        self.logger.info(f"Removing key {key} from set: {set_name}")
+        self.logger.debug(f"Removing key {key} from set: {set_name}")
         self._redis.srem(set_name, key)
-        self.logger.info(f"Removed key {key} from set: {set_name}")
+        self.logger.debug(f"Removed key {key} from set: {set_name}")
 
     def set_has_key(self, set_name: str, key) -> bool:
         return self._redis.sismember(set_name, key)

@@ -1,5 +1,6 @@
 import os
 import time
+from threading import Thread
 
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
@@ -24,6 +25,7 @@ class MLFlowInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="mlflow"):
         super().__init__(plugin_key)
         self._observer: PollingObserver = None
+        self._observer_thread: Thread = None
         self.state_manager = InterceptorStateManager(self.settings)
         self.dao = MLFlowDAO(self.settings)
 
@@ -61,17 +63,20 @@ class MLFlowInterceptor(BaseInterceptor):
 
     def start(self, bundle_exec_id) -> "MLFlowInterceptor":
         super().start(bundle_exec_id)
-        self.observe()
+        self._observer_thread = Thread(target=self.observe, daemon=True)
+        self._observer_thread.start()
         return self
 
     def stop(self) -> bool:
         super().stop()
         self.logger.debug("Interceptor stopping...")
         self._observer.stop()
+        self._observer_thread.join()
         self.logger.debug("Interceptor stopped.")
         return True
 
     def observe(self):
+        self.logger.debug("Observing")
         event_handler = InterceptionEventHandler(
             self, self.__class__.callback
         )

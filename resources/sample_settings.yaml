@@ -31,14 +31,19 @@ experiment:
   user: root
   campaign_id: super_campaign
 
-main_redis:
+mq:
+  type: redis  # or kafka; if kafka, please adjust the port
   host: localhost
-  #instances: ["localhost:6379"] # We can have multiple redis instances being accessed by the consumers but each interceptor will currently access one single redis.
+  # instances: ["localhost:6379"] # We can have multiple redis instances being accessed by the consumers but each interceptor will currently access one single redis.
   port: 6379
   channel: interception
   buffer_size: 50
   insertion_buffer_time_secs: 5
   chunk_size: 10  # use can use 0 or -1 to disable this. Or simply omit this from the config file.
+
+kv_db:
+  host: localhost
+  port: 6379
 
 mongodb:
   host: localhost

@@ -97,30 +97,22 @@ jobs:
         run: pip install flowcept[dask]
       - name: Test pip install multiple adapters
         run: pip install flowcept[mlflow,tensorboard]
-      - name: Test pip install full
-        run: pip install flowcept[full]
-      - name: Install dev dependencies
-        run: |
-          pip install -r extra_requirements/dev-requirements.txt
+      - name: Install our dependencies
+        run: pip install -e .[fulldev]  # This will install all dependencies, for all adapters and dev deps.
+      - name: Pip list
+        run: pip list      
       - name: Run Docker Compose
-        run: docker compose -f deployment/compose.yml up -d
-      - name: Copy settings
+        run: docker compose -f deployment/compose-full.yml up -d
+      - name: Test with pytest
         run: |
           mkdir -p ~/.flowcept
           cp resources/sample_settings.yaml ~/.flowcept/settings.yaml
-          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
-      - name: Test with pytest
-        run: |
           export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
           cat $FLOWCEPT_SETTINGS_PATH
           pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
       - name: Test notebooks
         run: |
-          pip install flowcept[full]
-          pip install -r extra_requirements/dev-requirements.txt
-          pip list | grep flowcept
           export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
-          cat $FLOWCEPT_SETTINGS_PATH
           python flowcept/flowcept_webserver/app.py &
           sleep 3
           pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb

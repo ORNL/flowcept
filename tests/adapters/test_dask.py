@@ -5,7 +5,7 @@ import numpy as np
 
 from dask.distributed import Client, LocalCluster
 
-from flowcept import FlowceptConsumerAPI, TaskQueryAPI, DBAPI
+from flowcept import Flowcept, TaskQueryAPI
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import (
     assert_by_querying_tasks_until,
@@ -51,12 +51,10 @@ def forced_error_func(x):
 class TestDask(unittest.TestCase):
     client: Client = None
     cluster: LocalCluster = None
-    consumer: FlowceptConsumerAPI = None
+    consumer: Flowcept = None
 
     def __init__(self, *args, **kwargs):
         super(TestDask, self).__init__(*args, **kwargs)
-        self.query_api = TaskQueryAPI()
-        self.db_api = DBAPI()
         self.logger = FlowceptLogger()
 
     @classmethod
@@ -171,12 +169,13 @@ class TestDask(unittest.TestCase):
         print("Done workflow!")
         assert assert_by_querying_tasks_until(
             {"task_id": o2_task_id},
-            condition_to_evaluate=lambda docs: "telemetry_at_end" in docs[0]
+            condition_to_evaluate=lambda docs: "ended_at" in docs[0]
             and "y" in docs[0]["used"]
             and len(docs[0]["generated"]) > 0,
         )
         assert evaluate_until(
-            lambda: self.db_api.get_workflow(workflow_id=wf_id) is not None,
+            lambda: TestDask.consumer.db.get_workflow(workflow_id=wf_id)
+            is not None,
             msg="Checking if workflow object was saved in db",
         )
         print("All conditions met!")
