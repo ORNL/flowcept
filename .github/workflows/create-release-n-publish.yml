@@ -98,7 +98,7 @@ jobs:
       - name: Test pip install multiple adapters
         run: pip install flowcept[mlflow,tensorboard]
       - name: Install our dependencies
-        run: pip install -e .[fulldev]  # This will install all dependencies, for all adapters and dev deps.
+        run: pip install flowcept[fulldev]  # This will install all dependencies, for all adapters and dev deps.
       - name: Pip list
         run: pip list      
       - name: Run Docker Compose
