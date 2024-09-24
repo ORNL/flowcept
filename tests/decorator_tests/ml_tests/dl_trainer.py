@@ -7,7 +7,7 @@ from torch.nn import functional as F
 
 
 from flowcept import (
-    FlowceptConsumerAPI,
+    Flowcept,
 )
 from flowcept.instrumentation.decorators.flowcept_torch import (
     register_modules,
@@ -186,8 +186,7 @@ class ModelTrainer(object):
         #  We are calling the consumer api here (sometimes for the second time)
         #  because we are capturing at two levels: at the model.fit and at
         #  every layer. Can we do it better?
-        with FlowceptConsumerAPI(
-            FlowceptConsumerAPI.INSTRUMENTATION,
+        with Flowcept(
             bundle_exec_id=workflow_id,
             start_doc_inserter=False,
         ):

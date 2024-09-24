@@ -2,7 +2,7 @@ import unittest
 from time import sleep
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept import MLFlowInterceptor, FlowceptConsumerAPI, TaskQueryAPI
+from flowcept import MLFlowInterceptor, Flowcept
 from flowcept.commons.utils import (
     assert_by_querying_tasks_until,
     evaluate_until,
@@ -19,8 +19,6 @@ class TestMLFlow(unittest.TestCase):
         import uuid
         import mlflow
 
-        # from mlflow.tracking import MlflowClient
-        # client = MlflowClient()
         mlflow.set_tracking_uri(
             f"sqlite:///" f"{self.interceptor.settings.file_path}"
         )
@@ -35,27 +33,6 @@ class TestMLFlow(unittest.TestCase):
             self.logger.debug("\nTrained model")
             mlflow.log_metric("loss", 0.04)
 
-            return run.info.run_uuid
-
-    def test_pure_run_mlflow_no_ctx_mgr(self):
-        import uuid
-        import mlflow
-
-        # from mlflow.tracking import MlflowClient
-        # client = MlflowClient()
-        mlflow.set_tracking_uri(
-            f"sqlite:///" f"{self.interceptor.settings.file_path}"
-        )
-        experiment_name = "LinearRegression"
-        experiment_id = mlflow.create_experiment(
-            experiment_name + str(uuid.uuid4())
-        )
-        run = mlflow.start_run(experiment_id=experiment_id)
-        mlflow.log_params({"number_epochs": 10})
-        mlflow.log_params({"batch_size": 64})
-        self.logger.debug("\nTrained model")
-        mlflow.log_metric("loss", 0.04)
-        mlflow.end_run()
         return run.info.run_uuid
 
     def test_get_runs(self):
@@ -84,13 +61,20 @@ class TestMLFlow(unittest.TestCase):
                 self.interceptor.state_manager.add_element_id(run_uuid)
 
     def test_observer_and_consumption(self):
-        with FlowceptConsumerAPI(self.interceptor):
+        # if os.path.exists(self.interceptor.settings.file_path):
+        #     os.remove(self.interceptor.settings.file_path)
+        #
+        # with open(self.interceptor.settings.file_path, 'w+') as f:
+        #     f.write("")
+
+        with Flowcept(self.interceptor):
             run_uuid = self.test_pure_run_mlflow()
-            sleep(5)
+            # sleep(3)
 
         assert evaluate_until(
-            lambda: self.interceptor.state_manager.has_element_id(run_uuid)
+            lambda: self.interceptor.state_manager.has_element_id(run_uuid),
         )
+
         assert assert_by_querying_tasks_until(
             {"task_id": run_uuid},
         )

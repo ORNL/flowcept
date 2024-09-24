@@ -2,9 +2,9 @@ redis==4.4.2
 psutil==5.9.5
 py-cpuinfo==9.0.0
 pymongo==4.3.3
-Werkzeug==2.2.2
-flask==2.2.2
-requests==2.31.0
-flask_restful==0.3.9
 pandas==2.0.3
 omegaconf
+flask
+requests
+flask_restful
+Werkzeug
