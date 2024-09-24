@@ -114,13 +114,13 @@ jobs:
           export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
           cat $FLOWCEPT_SETTINGS_PATH
           pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
-#      - name: Test notebooks
-#        run: |
-#          pip install flowcept[full]
-#          pip install -r extra_requirements/dev-requirements.txt
-#          pip list | grep flowcept
-#          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
-#          cat $FLOWCEPT_SETTINGS_PATH
-#          python flowcept/flowcept_webserver/app.py &
-#          sleep 3
-#          pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
+      - name: Test notebooks
+        run: |
+          pip install flowcept[full]
+          pip install -r extra_requirements/dev-requirements.txt
+          pip list | grep flowcept
+          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
+          cat $FLOWCEPT_SETTINGS_PATH
+          python flowcept/flowcept_webserver/app.py &
+          sleep 3
+          pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
