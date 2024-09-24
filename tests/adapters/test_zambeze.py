@@ -7,7 +7,7 @@ from uuid import uuid4
 from pika.exceptions import AMQPConnectionError
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept import ZambezeInterceptor, FlowceptConsumerAPI, TaskQueryAPI
+from flowcept import ZambezeInterceptor, Flowcept, TaskQueryAPI
 from flowcept.flowceptor.adapters.zambeze.zambeze_dataclasses import (
     ZambezeMessage,
 )
@@ -35,7 +35,7 @@ class TestZambeze(unittest.TestCase):
             print(f"An error occurred: {e}")
             return
 
-        self.consumer = FlowceptConsumerAPI(interceptor)
+        self.consumer = Flowcept(interceptor)
         self._channel = self._connection.channel()
         self._queue_names = interceptor.settings.queue_names
         self._channel.queue_declare(queue=self._queue_names[0])

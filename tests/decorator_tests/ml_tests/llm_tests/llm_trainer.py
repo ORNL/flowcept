@@ -11,7 +11,7 @@ from torchtext.vocab import build_vocab_from_iterator
 from datasets import load_dataset
 
 import flowcept
-from flowcept import FlowceptConsumerAPI
+from flowcept import Flowcept
 from flowcept.configs import N_GPUS
 
 from flowcept.instrumentation.decorators.flowcept_torch import (
@@ -280,8 +280,7 @@ def model_train(
 
     # TODO :ml-refactor: save device type and random seed: https://pytorch.org/docs/stable/notes/randomness.html
     # TODO :base-interceptor-refactor: Can we do it better?
-    with FlowceptConsumerAPI(
-        FlowceptConsumerAPI.INSTRUMENTATION,
+    with Flowcept(
         bundle_exec_id=workflow_id,
         start_doc_inserter=False,
     ):

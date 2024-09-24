@@ -1,7 +1,7 @@
 import sys
 
 from flowcept import (
-    FlowceptConsumerAPI,
+    Flowcept,
     ZambezeInterceptor,
     MLFlowInterceptor,
     TensorboardInterceptor,
@@ -36,7 +36,7 @@ def main():
             )
             interceptors.append(interceptor)
 
-    consumer = FlowceptConsumerAPI(interceptors)
+    consumer = Flowcept(interceptors)
     consumer.start()
 
 
