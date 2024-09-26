@@ -34,6 +34,12 @@ class FlowceptAPITest(unittest.TestCase):
 
         print("workflow_id", Flowcept.current_workflow_id)
 
+        print(
+            Flowcept.db.query(
+                filter={"workflow_id": Flowcept.current_workflow_id}
+            )
+        )
+
         assert (
             len(
                 Flowcept.db.query(
@@ -51,3 +57,16 @@ class FlowceptAPITest(unittest.TestCase):
             )
             == 1
         )
+
+    @unittest.skip("Test only for dev.")
+    def test_continuous_run(self):
+        import numpy as np
+        from time import sleep
+
+        with Flowcept(workflow_name="continuous_workflow_test"):
+            print(Flowcept.current_workflow_id)
+            while True:
+                n = np.random.rand()
+                o1 = sum_one(n)
+                o2 = mult_two(o1)
+                sleep(1)

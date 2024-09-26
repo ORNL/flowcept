@@ -1,0 +1,1 @@
+# On the machines that have AMD GPUs, we use the official AMD ROCM library to capture GPU runtime data. Unfortunately, this library is not available as a pypi/conda package, so you must manually install it. See instructions in the link: https://rocm.docs.amd.com/projects/amdsmi/en/latest/
