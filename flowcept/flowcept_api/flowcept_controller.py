@@ -64,14 +64,9 @@ class Flowcept(object):
                 interceptors = [interceptors]
             self._interceptors: List[BaseInterceptor] = interceptors
 
-        if workflow_id or workflow_args or workflow_name:
-            wf_obj = WorkflowObject(
-                workflow_id, workflow_name, used=workflow_args
-            )
-            Flowcept.db.insert_or_update_workflow(wf_obj)
-            Flowcept.current_workflow_id = wf_obj.workflow_id
-        else:
-            Flowcept.current_workflow_id = None
+        self.workflow_id = workflow_id
+        self.workflow_name = workflow_name
+        self.workflow_args = workflow_args
 
         self.is_started = False
 
@@ -90,6 +85,21 @@ class Flowcept(object):
                 self.logger.debug(f"Flowceptor {key} starting...")
                 interceptor.start(bundle_exec_id=self._bundle_exec_id)
                 self.logger.debug(f"...Flowceptor {key} started ok!")
+
+                if (
+                    self.workflow_id
+                    or self.workflow_args
+                    or self.workflow_name
+                ) and interceptor.kind == "instrumentation":
+                    wf_obj = WorkflowObject(
+                        self.workflow_id,
+                        self.workflow_name,
+                        used=self.workflow_args,
+                    )
+                    interceptor.send_workflow_message(wf_obj)
+                    Flowcept.current_workflow_id = wf_obj.workflow_id
+                else:
+                    Flowcept.current_workflow_id = None
 
         if self._start_doc_inserter:
             self.logger.debug("Flowcept Consumer starting...")
