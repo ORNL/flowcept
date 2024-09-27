@@ -1,6 +1,6 @@
 import unittest
 from time import sleep
-
+import numpy as np
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import MLFlowInterceptor, Flowcept
 from flowcept.commons.utils import (
@@ -15,7 +15,7 @@ class TestMLFlow(unittest.TestCase):
         self.interceptor = MLFlowInterceptor()
         self.logger = FlowceptLogger()
 
-    def test_pure_run_mlflow(self):
+    def test_pure_run_mlflow(self, epochs=10, batch_size=64):
         import uuid
         import mlflow
 
@@ -27,11 +27,11 @@ class TestMLFlow(unittest.TestCase):
             experiment_name + str(uuid.uuid4())
         )
         with mlflow.start_run(experiment_id=experiment_id) as run:
-            mlflow.log_params({"number_epochs": 10})
-            mlflow.log_params({"batch_size": 64})
-
+            mlflow.log_params({"number_epochs": epochs})
+            mlflow.log_params({"batch_size": batch_size})
+            # Actual training code would come here
             self.logger.debug("\nTrained model")
-            mlflow.log_metric("loss", 0.04)
+            mlflow.log_metric("loss", np.random.random())
 
         return run.info.run_uuid
 
@@ -61,11 +61,6 @@ class TestMLFlow(unittest.TestCase):
                 self.interceptor.state_manager.add_element_id(run_uuid)
 
     def test_observer_and_consumption(self):
-        # if os.path.exists(self.interceptor.settings.file_path):
-        #     os.remove(self.interceptor.settings.file_path)
-        #
-        # with open(self.interceptor.settings.file_path, 'w+') as f:
-        #     f.write("")
 
         with Flowcept(self.interceptor):
             run_uuid = self.test_pure_run_mlflow()
@@ -78,6 +73,24 @@ class TestMLFlow(unittest.TestCase):
         assert assert_by_querying_tasks_until(
             {"task_id": run_uuid},
         )
+
+    @unittest.skip("Skipping this test as we need to debug it further.")
+    def test_multiple_tasks(self):
+
+        run_ids = []
+        with Flowcept(self.interceptor):
+            for i in range(1, 10):
+                run_ids.append(self.test_pure_run_mlflow(epochs=i*10, batch_size=i*2))
+                sleep(3)
+
+        for run_id in run_ids:
+            # assert evaluate_until(
+            #     lambda: self.interceptor.state_manager.has_element_id(run_id),
+            # )
+
+            assert assert_by_querying_tasks_until(
+                {"task_id": run_id}, max_trials=60, max_time=120,
+            )
 
 
 if __name__ == "__main__":
