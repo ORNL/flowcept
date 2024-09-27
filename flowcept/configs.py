@@ -126,9 +126,6 @@ ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
 TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
 
 REGISTER_WORKFLOW = settings["project"].get("register_workflow", True)
-REGISTER_INSTRUMENTED_TASKS = settings["project"].get(
-    "register_instrumented_tasks", True
-)
 
 ##################################
 # GPU TELEMETRY CAPTURE SETTINGS #
@@ -247,8 +244,9 @@ EXTRA_METADATA.update({"mq_port": MQ_PORT})
 #    Web Server      #
 ######################
 
-WEBSERVER_HOST = settings["web_server"].get("host", "0.0.0.0")
-WEBSERVER_PORT = int(settings["web_server"].get("port", "5000"))
+_webserver_settings = settings.get("web_server", {})
+WEBSERVER_HOST = _webserver_settings.get("host", "0.0.0.0")
+WEBSERVER_PORT = int(_webserver_settings.get("port", 5000))
 
 ######################
 #    ANALYTICS      #
@@ -260,6 +258,9 @@ ANALYTICS = settings.get("analytics", None)
 ####
 
 INSTRUMENTATION = settings.get("instrumentation", None)
+INSTRUMENTATION_ENABLED = False
+if INSTRUMENTATION:
+    INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", False)
 
 ################# Enabled ADAPTERS
 

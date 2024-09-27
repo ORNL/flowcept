@@ -9,7 +9,8 @@ import flowcept.instrumentation.decorators
 from flowcept.commons import logger
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.configs import MQ_INSTANCES
+from flowcept.configs import MQ_INSTANCES, INSTRUMENTATION, \
+    INSTRUMENTATION_ENABLED
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -53,10 +54,15 @@ class Flowcept(object):
             self._bundle_exec_id = id(self)
         else:
             self._bundle_exec_id = bundle_exec_id
+        self.enabled = True
+        self.is_started = False
         if isinstance(interceptors, str):
             self._interceptors = None
         else:
             if interceptors is None:
+                if not INSTRUMENTATION_ENABLED:
+                    self.enabled = False
+                    return
                 interceptors = [
                     flowcept.instrumentation.decorators.instrumentation_interceptor
                 ]
@@ -68,11 +74,9 @@ class Flowcept(object):
         self.workflow_name = workflow_name
         self.workflow_args = workflow_args
 
-        self.is_started = False
-
     def start(self):
-        if self.is_started:
-            self.logger.warning("Consumer is already started!")
+        if self.is_started or not self.enabled:
+            self.logger.warning("Consumer may be already started or instrumentation is not set")
             return self
 
         if self._interceptors and len(self._interceptors):
@@ -129,7 +133,7 @@ class Flowcept(object):
         return self
 
     def stop(self):
-        if not self.is_started:
+        if not self.is_started or not self.enabled:
             self.logger.warning("Consumer is already stopped!")
             return
         sleep_time = 1
