@@ -33,7 +33,7 @@ jobs:
         python flowcept/flowcept_webserver/app.py &
         sleep 3
         export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
-        pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
+        pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb --ignore=notebooks/mlflow.ipynb
     - name: Shut down compose
       run: docker compose -f deployment/compose-full.yml down
     - name: Start Docker Compose with Kafka

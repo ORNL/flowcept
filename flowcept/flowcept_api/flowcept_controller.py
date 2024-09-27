@@ -64,7 +64,7 @@ class Flowcept(object):
                 interceptors = [interceptors]
             self._interceptors: List[BaseInterceptor] = interceptors
 
-        self.workflow_id = workflow_id
+        self.current_workflow_id = workflow_id
         self.workflow_name = workflow_name
         self.workflow_args = workflow_args
 
@@ -87,12 +87,12 @@ class Flowcept(object):
                 self.logger.debug(f"...Flowceptor {key} started ok!")
 
                 if (
-                    self.workflow_id
+                    self.current_workflow_id
                     or self.workflow_args
                     or self.workflow_name
                 ) and interceptor.kind == "instrumentation":
                     wf_obj = WorkflowObject(
-                        self.workflow_id,
+                        self.current_workflow_id,
                         self.workflow_name,
                         used=self.workflow_args,
                     )
