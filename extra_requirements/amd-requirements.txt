@@ -1,1 +1,9 @@
 # On the machines that have AMD GPUs, we use the official AMD ROCM library to capture GPU runtime data. Unfortunately, this library is not available as a pypi/conda package, so you must manually install it. See instructions in the link: https://rocm.docs.amd.com/projects/amdsmi/en/latest/
+
+# Here is a summary:
+
+# 1. Install the AMD drivers on the machine (check if they are available already under `/opt/rocm-*`).
+# 2. Suppose it is /opt/rocm-5.7.1. Then, make sure it has a share/amd_smi subdirectory and pyproject.toml or setup.py in it.
+# 3. Copy the amd_smi to your home directory: `cp -r /opt/rocm-5.7.1/share/amd_smi ~`
+# 4. cd ~/amd_smi
+# 5. In your python environment, do a pip install .

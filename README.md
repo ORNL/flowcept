@@ -100,8 +100,7 @@ If you are doing extensive performance evaluation experiments using this softwar
 ## Install AMD GPU Lib
 
 On the machines that have AMD GPUs, we use the official AMD ROCM library to capture GPU runtime data.
-Unfortunately, this library is not available as a pypi/conda package, so you must manually install it. See instructions 
-in the link: https://rocm.docs.amd.com/projects/amdsmi/en/latest/
+See [AMD Requirements](extra_requirements/amd-requirements.txt).
 
 
 ## See also
