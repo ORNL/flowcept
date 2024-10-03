@@ -1,3 +1,12 @@
-[tool.black]
-line-length = 78
-target-version = ['py37']
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "flowcept"
+version = "0.5.3"
+requires-python = ">=3.10"
+dependencies = ["pandas"]
+
+[project.optional-dependencies]
+dev = ["ruff"]
