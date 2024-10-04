@@ -6,7 +6,22 @@ build-backend = "hatchling.build"
 name = "flowcept"
 version = "0.5.3"
 requires-python = ">=3.10"
-dependencies = ["pandas"]
+dependencies = [
+    "pandas",
+    "omegaconf",
+    "msgpack",
+    "redis",
+    "psutil",
+    "py-cpuinfo",
+    "pymongo",
+    "requests",
+    "flask_restful",
+    "dask[distributed]",
+    "watchdog",
+    "SQLAlchemy",
+    "pika",
+    "tbparse"
+]
 
 [project.optional-dependencies]
 dev = ["ruff"]
