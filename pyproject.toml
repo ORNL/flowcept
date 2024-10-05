@@ -24,4 +24,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff"]
+dev = [
+    "ruff",
+    "pytest",
+    "torch",
+    "torchvision",
+    "numpy",
+    "scipy",
+    "mlflow-skinny",
+    "tensorflow",
+    "alembic"
+]
