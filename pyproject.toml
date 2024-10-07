@@ -40,7 +40,14 @@ dev = [
     "scipy",
     "mlflow-skinny",
     "tensorflow",
-    "alembic"
+    "tensorboard",
+    "alembic",
+    "seaborn",
+    "plotly",
+    "scipy",
+    "jupyterlab",
+    "nbmake",
+    "confluent-kafka"
 ]
 
 [tool.ruff]
