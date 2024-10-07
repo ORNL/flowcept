@@ -22,6 +22,13 @@ dependencies = [
     "pika",
     "tbparse"
 ]
+readme = "README.md"
+license = "MIT"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3"
+]
 
 [project.optional-dependencies]
 dev = [
@@ -35,3 +42,13 @@ dev = [
     "tensorflow",
     "alembic"
 ]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+extend-select = ["E501", "D"]
+ignore = ["D200", "D212"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
