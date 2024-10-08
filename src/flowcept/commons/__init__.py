@@ -1,10 +1,12 @@
-from flowcept.commons.utils import get_adapter_exception_msg
+"""Commons subpackage."""
+
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 logger = FlowceptLogger()
 
 
 def singleton(cls):
+    """Get a singleton class object."""
     instances = {}
 
     class SingletonWrapper(cls):

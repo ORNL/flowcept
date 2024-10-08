@@ -1,3 +1,5 @@
+"""Document module."""
+
 from typing import List, Dict, Tuple, Any
 import io
 import json
@@ -6,7 +8,6 @@ from uuid import uuid4
 import pickle
 import zipfile
 
-import pymongo
 from bson import ObjectId
 from bson.json_util import dumps
 from pymongo import MongoClient, UpdateOne
@@ -36,6 +37,8 @@ from time import time
 
 @singleton
 class DocumentDBDao(object):
+    """Document class."""
+
     def __init__(self, create_index=MONGO_CREATE_INDEX):
         self.logger = FlowceptLogger()
 
@@ -53,47 +56,29 @@ class DocumentDBDao(object):
             self._create_indices()
 
     def _create_indices(self):
+        """Create the indices."""
         # Creating task collection indices:
-        existing_indices = [
-            list(x["key"].keys())[0]
-            for x in self._tasks_collection.list_indexes()
-        ]
+        existing_indices = [list(x["key"].keys())[0] for x in self._tasks_collection.list_indexes()]
         if TaskObject.task_id_field() not in existing_indices:
-            self._tasks_collection.create_index(
-                TaskObject.task_id_field(), unique=True
-            )
+            self._tasks_collection.create_index(TaskObject.task_id_field(), unique=True)
         if TaskObject.workflow_id_field() not in existing_indices:
-            self._tasks_collection.create_index(
-                TaskObject.workflow_id_field()
-            )
+            self._tasks_collection.create_index(TaskObject.workflow_id_field())
 
         # Creating workflow collection indices:
-        existing_indices = [
-            list(x["key"].keys())[0]
-            for x in self._wfs_collection.list_indexes()
-        ]
+        existing_indices = [list(x["key"].keys())[0] for x in self._wfs_collection.list_indexes()]
         if WorkflowObject.workflow_id_field() not in existing_indices:
-            self._wfs_collection.create_index(
-                WorkflowObject.workflow_id_field(), unique=True
-            )
+            self._wfs_collection.create_index(WorkflowObject.workflow_id_field(), unique=True)
 
         # Creating objects collection indices:
-        existing_indices = [
-            list(x["key"].keys())[0]
-            for x in self._obj_collection.list_indexes()
-        ]
+        existing_indices = [list(x["key"].keys())[0] for x in self._obj_collection.list_indexes()]
 
         if "object_id" not in existing_indices:
             self._obj_collection.create_index("object_id", unique=True)
 
         if WorkflowObject.workflow_id_field() not in existing_indices:
-            self._obj_collection.create_index(
-                WorkflowObject.workflow_id_field(), unique=False
-            )
+            self._obj_collection.create_index(WorkflowObject.workflow_id_field(), unique=False)
         if TaskObject.task_id_field() not in existing_indices:
-            self._obj_collection.create_index(
-                TaskObject.task_id_field(), unique=False
-            )
+            self._obj_collection.create_index(TaskObject.task_id_field(), unique=False)
 
     def task_query(
         self,
@@ -104,36 +89,44 @@ class DocumentDBDao(object):
         aggregation: List[Tuple] = None,
         remove_json_unserializables=True,
     ) -> List[Dict]:
-        """
+        """Task query.
+
         Generates a MongoDB query pipeline based on the provided arguments.
-        Parameters:
-            filter (dict): The filter criteria for the $match stage.
-            projection (list, optional): List of fields to include in the $project stage. Defaults to None.
-            limit (int, optional): The maximum number of documents to return. Defaults to 0 (no limit).
-            sort (list of tuples, optional): List of (field, order) tuples specifying the sorting order. Defaults to None.
-            aggregation (list of tuples, optional): List of (aggregation_operator, field_name) tuples
-                specifying additional aggregation operations. Defaults to None.
-            remove_json_unserializables: removes fields that are not JSON serializable. Defaults to True
 
-        Returns:
-            list: A list with the result set.
+        Parameters
+        ----------
+        filter (dict):
+            The filter criteria for the $match stage.
+        projection (list, optional):
+            List of fields to include in the project stage. Defaults to None.
+        limit (int, optional):
+            The maximum number of documents to return. Defaults to 0 (no limit).
+        sort(list of tuples, optional):
+            List of (field, order) tuples specifying the sorting order. Defaults to None.
+        aggregation (list of tuples, optional):
+            List of (aggregation_operator, field_name) tuples specifying
+            additional aggregation operations. Defaults to None.
+        remove_json_unserializables:
+            Removes fields that are not JSON serializable. Defaults to True.
 
-        Example:
-            # Create a pipeline with a filter, projection, sorting, and aggregation
-            rs = find(
-                filter={"campaign_id": "mycampaign1"},
-                projection=["workflow_id", "started_at", "ended_at"],
-                limit=10,
-                sort=[("workflow_id", ASC), ("end_time", DESC)],
-                aggregation=[("avg", "ended_at"), ("min", "started_at")]
-            )
+        Returns
+        -------
+        A list with the result set.
+
+        Example
+        -------
+        # Create a pipeline with a filter, projection, sorting, and aggregation
+        rs = find(
+            filter={"campaign_id": "mycampaign1"},
+            projection=["workflow_id", "started_at", "ended_at"],
+            limit=10,
+            sort=[("workflow_id", ASC), ("end_time", DESC)],
+            aggregation=[("avg", "ended_at"), ("min", "started_at")]
+        )
         """
-
         if aggregation is not None:
             try:
-                rs = self._pipeline(
-                    filter, projection, limit, sort, aggregation
-                )
+                rs = self._pipeline(filter, projection, limit, sort, aggregation)
             except Exception as e:
                 self.logger.exception(e)
                 return None
@@ -170,6 +163,7 @@ class DocumentDBDao(object):
         sort: List[Tuple] = None,
         aggregation: List[Tuple] = None,
     ):
+        """Get the pipeline."""
         if projection is not None and len(projection) > 1:
             raise Exception(
                 "Sorry, this query API is still limited to at most one "
@@ -232,6 +226,7 @@ class DocumentDBDao(object):
             return None
 
     def insert_one(self, doc: Dict) -> ObjectId:
+        """Insert one."""
         try:
             r = self._tasks_collection.insert_one(doc)
             return r.inserted_id
@@ -240,6 +235,7 @@ class DocumentDBDao(object):
             return None
 
     def insert_many(self, doc_list: List[Dict]) -> List[ObjectId]:
+        """Insert many."""
         try:
             r = self._tasks_collection.insert_many(doc_list)
             return r.inserted_ids
@@ -247,18 +243,15 @@ class DocumentDBDao(object):
             self.logger.exception(e)
             return None
 
-    def insert_and_update_many(
-        self, indexing_key, doc_list: List[Dict]
-    ) -> bool:
+    def insert_and_update_many(self, indexing_key, doc_list: List[Dict]) -> bool:
+        """Insert and update."""
         try:
             if len(doc_list) == 0:
                 return False
             t0 = 0
             if PERF_LOG:
                 t0 = time()
-            indexed_buffer = curate_dict_task_messages(
-                doc_list, indexing_key, t0
-            )
+            indexed_buffer = curate_dict_task_messages(doc_list, indexing_key, t0)
             t1 = perf_log("doc_curate_dict_task_messages", t0)
             if len(indexed_buffer) == 0:
                 return False
@@ -280,7 +273,8 @@ class DocumentDBDao(object):
             return False
 
     def delete_ids(self, ids_list: List[ObjectId]) -> bool:
-        if type(ids_list) != list:
+        """Delete ids."""
+        if type(ids_list) is not list:
             ids_list = [ids_list]
         try:
             self._tasks_collection.delete_many({"_id": {"$in": ids_list}})
@@ -290,7 +284,8 @@ class DocumentDBDao(object):
             return False
 
     def delete_keys(self, key_name, keys_list: List[Any]) -> bool:
-        if type(keys_list) != list:
+        """Delete keys."""
+        if type(keys_list) is not list:
             keys_list = [keys_list]
         try:
             self._tasks_collection.delete_many({key_name: {"$in": keys_list}})
@@ -300,6 +295,7 @@ class DocumentDBDao(object):
             return False
 
     def delete_with_filter(self, filter) -> bool:
+        """Delete with filter."""
         try:
             self._tasks_collection.delete_many(filter)
             return True
@@ -308,6 +304,7 @@ class DocumentDBDao(object):
             return False
 
     def count(self) -> int:
+        """Count stuff."""
         try:
             return self._tasks_collection.count_documents({})
         except Exception as e:
@@ -315,6 +312,7 @@ class DocumentDBDao(object):
             return -1
 
     def workflow_insert_or_update(self, workflow_obj: WorkflowObject) -> bool:
+        """Workflow insert or update."""
         _dict = workflow_obj.to_dict().copy()
         workflow_id = _dict.pop(WorkflowObject.workflow_id_field(), None)
         if workflow_id is None:
@@ -329,9 +327,7 @@ class DocumentDBDao(object):
             #         "Interceptor_ID must be a string, as Mongo can only record string keys."
             #     )
             #     return False
-            update_query.update(
-                {"$push": {"interceptor_ids": {"$each": interceptor_ids}}}
-            )
+            update_query.update({"$push": {"interceptor_ids": {"$each": interceptor_ids}}})
 
         machine_info = _dict.pop("machine_info", None)
         if machine_info is not None:
@@ -349,12 +345,8 @@ class DocumentDBDao(object):
         )
 
         try:
-            result = self._wfs_collection.update_one(
-                _filter, update_query, upsert=True
-            )
-            return (result.upserted_id is not None) or result.raw_result[
-                "updatedExisting"
-            ]
+            result = self._wfs_collection.update_one(_filter, update_query, upsert=True)
+            return (result.upserted_id is not None) or result.raw_result["updatedExisting"]
         except Exception as e:
             self.logger.exception(e)
             return False
@@ -367,6 +359,7 @@ class DocumentDBDao(object):
         sort: List[Tuple] = None,
         remove_json_unserializables=True,
     ) -> List[Dict]:
+        """Workflow query."""
         # TODO refactor: reuse code for task_query instead of copy & paste
         _projection = {}
         if projection is not None:
@@ -396,14 +389,16 @@ class DocumentDBDao(object):
         export_format="json",
         should_zip=False,
     ):
+        """Dump to file."""
         if collection_name == MONGO_TASK_COLLECTION:
             _collection = self._tasks_collection
         elif collection_name == MONGO_WORKFLOWS_COLLECTION:
             _collection = self._wfs_collection
         else:
-            raise Exception(
-                f"Sorry, only {MONGO_TASK_COLLECTION} and {MONGO_WORKFLOWS_COLLECTION} collections are currently available for dump."
-            )
+            task = MONGO_TASK_COLLECTION
+            workflow = MONGO_WORKFLOWS_COLLECTION
+            msg = f"Only {task} and {workflow} collections are available for dump."
+            raise Exception(msg)
 
         if export_format != "json":
             raise Exception("Sorry, only JSON is currently supported.")
@@ -427,9 +422,7 @@ class DocumentDBDao(object):
         try:
             if should_zip:
                 in_memory_stream = io.BytesIO()
-                with zipfile.ZipFile(
-                    in_memory_stream, "w", zipfile.ZIP_DEFLATED
-                ) as zip_file:
+                with zipfile.ZipFile(in_memory_stream, "w", zipfile.ZIP_DEFLATED) as zip_file:
                     zip_file.writestr("dump_file.json", json_data)
                 compressed_data = in_memory_stream.getvalue()
                 with open(output_file, "wb") as f:
@@ -444,6 +437,7 @@ class DocumentDBDao(object):
             return
 
     def liveness_test(self) -> bool:
+        """Livelyness test."""
         try:
             self._db.list_collection_names()
             return True
@@ -464,6 +458,7 @@ class DocumentDBDao(object):
         custom_metadata=None,
         pickle_=False,
     ):
+        """Save object."""
         if object_id is None:
             object_id = str(uuid4())
         obj_doc = {"object_id": object_id}
@@ -486,5 +481,6 @@ class DocumentDBDao(object):
         return object_id
 
     def get_objects(self, filter):
+        """Get objects."""
         documents = self._obj_collection.find(filter)
         return list(documents)

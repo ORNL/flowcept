@@ -1,3 +1,5 @@
+"""Task object module."""
+
 from enum import Enum
 from typing import Dict, AnyStr, Any, Union, List
 import msgpack
@@ -15,6 +17,8 @@ from flowcept.configs import (
 
 
 class Status(str, Enum):  # inheriting from str here for JSON serialization
+    """Status class."""
+
     SUBMITTED = "SUBMITTED"
     WAITING = "WAITING"
     RUNNING = "RUNNING"
@@ -24,10 +28,13 @@ class Status(str, Enum):  # inheriting from str here for JSON serialization
 
     @staticmethod
     def get_finished_statuses():
+        """Get status."""
         return [Status.FINISHED, Status.ERROR]
 
 
 class TaskObject:
+    """TaskObject class."""
+
     type = "task"
     task_id: AnyStr = None  # Any way to identify a task
     utc_timestamp: float = None
@@ -62,6 +69,7 @@ class TaskObject:
 
     @staticmethod
     def get_time_field_names():
+        """Get time field."""
         return [
             "started_at",
             "ended_at",
@@ -72,6 +80,7 @@ class TaskObject:
 
     @staticmethod
     def get_dict_field_names():
+        """Get dictionary field."""
         return [
             "used",
             "generated",
@@ -82,15 +91,19 @@ class TaskObject:
 
     @staticmethod
     def task_id_field():
+        """Get task id."""
         return "task_id"
 
     @staticmethod
     def workflow_id_field():
+        """Get workflow id."""
         return "workflow_id"
 
     def enrich(self, adapter_key=None):
+        """Enrich the adapter."""
         if adapter_key is not None:
-            # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
+            # TODO :base-interceptor-refactor: :code-reorg: :usability:
+            # revisit all times we assume settings is not none
             self.adapter_id = adapter_key
 
         if self.utc_timestamp is None:
@@ -115,6 +128,7 @@ class TaskObject:
             self.hostname = HOSTNAME
 
     def to_dict(self):
+        """Convert to dictionary."""
         result_dict = {}
         for attr, value in self.__dict__.items():
             if value is not None:
@@ -130,6 +144,7 @@ class TaskObject:
         return result_dict
 
     def serialize(self):
+        """Serialize it."""
         return msgpack.dumps(self.to_dict())
 
     # @staticmethod

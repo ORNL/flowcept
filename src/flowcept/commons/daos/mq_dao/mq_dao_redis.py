@@ -1,3 +1,5 @@
+"""Redis module."""
+
 from typing import Callable
 
 import msgpack
@@ -5,33 +7,20 @@ from time import time
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.utils import perf_log
-from flowcept.configs import (
-    MQ_HOST,
-    MQ_PORT,
-    MQ_CHANNEL,
-    MQ_PASSWORD,
-    JSON_SERIALIZER,
-    MQ_BUFFER_SIZE,
-    MQ_INSERTION_BUFFER_TIME,
-    MQ_CHUNK_SIZE,
-    PERF_LOG,
-    MQ_URI,
-    ENRICH_MESSAGES,
-    DB_FLUSH_MODE,
-    MQ_TYPE,
-)
+from flowcept.configs import MQ_CHANNEL, PERF_LOG
 
 
 class MQDaoRedis(MQDao):
+    """MQDaoRedis class."""
+
     MESSAGE_TYPES_IGNORE = {"psubscribe"}
 
     def __init__(self, kv_host=None, kv_port=None, adapter_settings=None):
         super().__init__(kv_host, kv_port, adapter_settings)
-        self._producer = (
-            self._kv_conn
-        )  # if MQ is redis, we use the same KV for the MQ
+        self._producer = self._kv_conn  # if MQ is redis, we use the same KV for the MQ
 
     def message_listener(self, message_handler: Callable):
+        """Listen for messages."""
         pubsub = self._kv_conn.pubsub()
         pubsub.psubscribe(MQ_CHANNEL)
         for message in pubsub.listen():
@@ -44,20 +33,17 @@ class MQDaoRedis(MQDao):
             if not message_handler(msg_obj):
                 break
 
-    def send_message(
-        self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps
-    ):
+    def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        """Send the message."""
         self._producer.publish(channel, serializer(message))
 
-    def _bulk_publish(
-        self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps
-    ):
+    def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        """Bulk publish."""
         pipe = self._producer.pipeline()
         for message in buffer:
             try:
                 self.logger.debug(
-                    f"Going to send Message:"
-                    f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
+                    f"Going to send Message:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
                 )
                 pipe.publish(MQ_CHANNEL, serializer(message))
             except Exception as e:
@@ -77,6 +63,7 @@ class MQDaoRedis(MQDao):
         perf_log("mq_pipe_execute", t0)
 
     def liveness_test(self):
+        """Test for livelyness."""
         try:
             super().liveness_test()
             return True

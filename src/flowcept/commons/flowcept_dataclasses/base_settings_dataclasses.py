@@ -1,3 +1,5 @@
+"""Base settings module."""
+
 import abc
 from dataclasses import dataclass, field
 from typing import Optional, Any
@@ -5,12 +7,16 @@ from typing import Optional, Any
 
 @dataclass
 class KeyValue:
+    """Key value pair."""
+
     key: str
     value: Any
 
 
 @dataclass
 class BaseSettings(abc.ABC):
+    """Base settings class."""
+
     key: str
     kind: str
     observer_type: str = field(init=False)
