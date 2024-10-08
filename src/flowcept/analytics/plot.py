@@ -1,3 +1,5 @@
+"""Plot module."""
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -7,10 +9,9 @@ import plotly.graph_objs as go
 from flowcept.analytics.analytics_utils import format_number, identify_pareto
 
 
-def heatmap(
-    df: pd.DataFrame, method="kendall", figsize=(13, 10), heatmap_args={}
-):
-    """
+def heatmap(df: pd.DataFrame, method="kendall", figsize=(13, 10), heatmap_args={}):
+    """Heat map plot.
+
     :param figsize:
     :param heatmap_args: Any other argument for the heatmap.
     :param df: dataframe to plot the heatmap
@@ -46,6 +47,7 @@ def scatter2d_with_colors(
     horizon_quantile=0.5,
     plot_pareto=True,
 ):
+    """Scatter 2D plot with colors."""
     x_label = x_col if x_label is None else x_label
     y_label = y_col if y_label is None else y_label
     color_label = color_col if color_label is None else color_label
