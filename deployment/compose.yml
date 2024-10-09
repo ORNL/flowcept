@@ -1,5 +1,5 @@
-version: '3.8'
 name: flowcept
+
 services:
   flowcept_redis:
     container_name: flowcept_redis
@@ -15,8 +15,6 @@ services:
     ports:
       - 27017:27017
 
-
-
 #   # This is just for the cases where one does not want to use the same Redis instance for caching and messaging, but
 #   # it's not required to have separate instances.
 # #  local_interceptor_cache:
@@ -24,4 +22,3 @@ services:
 # #    image: redis
 # #    ports:
 # #      - 60379:6379
-

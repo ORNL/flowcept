@@ -1,3 +1,61 @@
-[tool.black]
-line-length = 78
-target-version = ['py37']
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "flowcept"
+version = "0.5.3"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas",
+    "omegaconf",
+    "msgpack",
+    "redis",
+    "psutil",
+    "py-cpuinfo",
+    "pymongo",
+    "requests",
+    "flask_restful",
+    "dask[distributed]",
+    "watchdog",
+    "SQLAlchemy",
+    "pika",
+    "tbparse"
+]
+readme = "README.md"
+license = "MIT"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3"
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+    "torch",
+    "torchvision",
+    "numpy",
+    "scipy",
+    "mlflow-skinny",
+    "tensorflow",
+    "tensorboard",
+    "alembic",
+    "seaborn",
+    "plotly",
+    "scipy",
+    "jupyterlab",
+    "nbmake",
+    "confluent-kafka"
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+extend-select = ["E501", "D"]
+ignore = ["D200", "D212"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

@@ -3,36 +3,42 @@ on:
   pull_request:
     branches: [ "dev", "main" ]
     types: [opened, synchronize, reopened]
-    # branches: [ "disabled" ]
 
 jobs:
 
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 40
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
+
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
-    - name: Check python version
-      run: python --version
-    - name: Install our dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .[full]
-        pip install -r extra_requirements/dev-requirements.txt
-    - name: Run Docker Compose
-      run: docker compose -f deployment/compose-full.yml up -d
-    - name: Test with pytest
-      run: |
-        pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
-    - name: Test notebooks
-      run: |
-        pip install -e .
-        python flowcept/flowcept_webserver/app.py &
-        sleep 3
-        export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
-        pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Copy settings file
+        run: |
+          mkdir ~/.flowcept
+          cp resources/sample_settings.yaml ~/.flowcept
+          mv ~/.flowcept/sample_settings.yaml ~/.flowcept/settings.yaml
+
+      - name: Install package and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .[dev]
+
+      - name: Run docker compose
+        run: docker compose -f deployment/compose-full.yml up -d
+
+      - name: Test with pytest
+        run: pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
+
+      - name: Test notebooks
+        run: |
+          python flowcept/flowcept_webserver/app.py &
+          sleep 3
+          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
+          pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
