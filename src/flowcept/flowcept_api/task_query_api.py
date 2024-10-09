@@ -1,6 +1,5 @@
-"""
-    General overview of this module.
-"""
+"""General overview of this module."""
+
 from collections import OrderedDict
 from typing import List, Dict, Tuple
 from datetime import timedelta
@@ -34,9 +33,7 @@ from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
 @singleton
 class TaskQueryAPI(object):
-    """
-    General overview of this class.
-    """
+    """General overview of this class."""
 
     ASC = pymongo.ASCENDING
     DESC = pymongo.DESCENDING
@@ -61,13 +58,9 @@ class TaskQueryAPI(object):
                 r = requests.get(_base_url)
                 if r.status_code > 300:
                     raise Exception(r.text)
-                self.logger.debug(
-                    "Ok, webserver is ready to receive requests."
-                )
-            except Exception as e:
-                raise Exception(
-                    f"Error when accessing the webserver at {_base_url}"
-                )
+                self.logger.debug("Ok, webserver is ready to receive requests.")
+            except Exception:
+                raise Exception(f"Error when accessing the webserver at {_base_url}")
 
     def query(
         self,
@@ -113,7 +106,6 @@ class TaskQueryAPI(object):
             aggregation=[("avg", "ended_at"), ("min", "started_at")]
         )
         """
-
         if self._with_webserver:
             request_data = {"filter": json.dumps(filter)}
             if projection:
@@ -125,9 +117,7 @@ class TaskQueryAPI(object):
             if aggregation:
                 request_data["aggregation"] = json.dumps(aggregation)
             if remove_json_unserializables:
-                request_data[
-                    "remove_json_unserializables"
-                ] = remove_json_unserializables
+                request_data["remove_json_unserializables"] = remove_json_unserializables
 
             r = requests.post(self._url, json=request_data)
             if 200 <= r.status_code < 300:
@@ -150,10 +140,8 @@ class TaskQueryAPI(object):
             else:
                 self.logger.error("Error when executing query.")
 
-    def get_subworkflows_tasks_from_a_parent_workflow(
-        self, parent_workflow_id: str
-    ) -> List[Dict]:
-        """
+    def get_subworkflows_tasks_from_a_parent_workflow(self, parent_workflow_id: str) -> List[Dict]:
+        """Get subworkflows.
 
         Parameters
         ----------
@@ -161,12 +149,10 @@ class TaskQueryAPI(object):
 
         Returns
         -------
-
+        List of tasks.
         """
         db_api = DBAPI()
-        sub_wfs = db_api.workflow_query(
-            {"parent_workflow_id": parent_workflow_id}
-        )
+        sub_wfs = db_api.workflow_query({"parent_workflow_id": parent_workflow_id})
         if not sub_wfs:
             return None
         tasks = []
@@ -193,6 +179,7 @@ class TaskQueryAPI(object):
         sum_lists=False,
         aggregate_telemetry=False,
     ) -> pd.DataFrame:
+        """Query something."""
         # TODO: assert that if clean_dataframe is False, other clean_dataframe
         # related args should be default.
         docs = self.query(
@@ -206,9 +193,7 @@ class TaskQueryAPI(object):
         if len(docs) == 0:
             return pd.DataFrame()
 
-        df = self._get_dataframe_from_task_docs(
-            docs, calculate_telemetry_diff, shift_hours
-        )
+        df = self._get_dataframe_from_task_docs(docs, calculate_telemetry_diff, shift_hours)
         # Clean the telemetry DataFrame if specified
         if clean_dataframe:
             df = clean_df(
@@ -228,6 +213,7 @@ class TaskQueryAPI(object):
         calculate_telemetry_diff=False,
         shift_hours=0,
     ) -> pd.DataFrame:
+        """Get dataframe task docs."""
         if docs is None:
             raise Exception("Docs is none in _get_dataframe_from_task_docs")
 
@@ -267,8 +253,7 @@ class TaskQueryAPI(object):
         if "_id" in df.columns:
             try:
                 df["doc_generated_time"] = df["_id"].apply(
-                    lambda _id: ObjectId(_id).generation_time
-                    + timedelta(hours=shift_hours)
+                    lambda _id: ObjectId(_id).generation_time + timedelta(hours=shift_hours)
                 )
             except Exception as e:
                 self.logger.info(e)
@@ -276,28 +261,25 @@ class TaskQueryAPI(object):
         try:
             df["elapsed_time"] = df["ended_at"] - df["started_at"]
             df["elapsed_time"] = df["elapsed_time"].apply(
-                lambda x: x.total_seconds()
-                if isinstance(x, timedelta)
-                else -1
+                lambda x: x.total_seconds() if isinstance(x, timedelta) else -1
             )
         except Exception as e:
             self.logger.info(e)
 
         return df
 
-    def get_errored_tasks(
-        self, workflow_id=None, campaign_id=None, filter=None
-    ):
+    def get_errored_tasks(self, workflow_id=None, campaign_id=None, filter=None):
+        """Get errored tasks."""
         # TODO: implement
         raise NotImplementedError()
 
-    def get_successful_tasks(
-        self, workflow_id=None, campaign_id=None, filter=None
-    ):
+    def get_successful_tasks(self, workflow_id=None, campaign_id=None, filter=None):
+        """Get successful tasks."""
         # TODO: implement
         raise NotImplementedError()
 
     def df_get_campaign_tasks(self, campaign_id=None, filter=None):
+        """Get campaign tasks."""
         # TODO: implement
         raise NotImplementedError()
 
@@ -315,24 +297,37 @@ class TaskQueryAPI(object):
         sum_lists=False,
         aggregate_telemetry=False,
     ):
-        """
-        Retrieve the top K tasks from the (optionally telemetry-aware) DataFrame based on specified sorting criteria.
+        """Get top tasks.
 
-        Parameters:
-        - sort (List[Tuple], optional): A list of tuples specifying sorting criteria for columns. Each tuple should contain
-          a column name and a sorting order, where the sorting order can be TaskQueryAPI.ASC for ascending or
-          TaskQueryAPI.DESC for descending.
+        Retrieve the top K tasks from the (optionally telemetry-aware)
+        DataFrame based on specified sorting criteria.
+
+        Parameters
+        ----------
+        - sort (List[Tuple], optional): A list of tuples specifying sorting
+          criteria for columns. Each tuple should contain a column name and a
+          sorting order, where the sorting order can be TaskQueryAPI.ASC for
+          ascending or TaskQueryAPI.DESC for descending.
         - k (int, optional): The number of top tasks to retrieve. Defaults to 5.
-        - filter (optional): A filter condition to apply to the DataFrame. It should follow pymongo's query filter syntax. See: https://www.w3schools.com/python/python_mongodb_query.asp
-        - clean_telemetry_dataframe (bool, optional): If True, clean the DataFrame using the clean_df function.
-        - calculate_telemetry_diff (bool, optional): If True, calculate telemetry differences in the DataFrame.
+        - filter (optional): A filter condition to apply to the DataFrame. It
+          should follow pymongo's query filter syntax. See:
+          https://www.w3schools.com/python/python_mongodb_query.asp
+        - clean_telemetry_dataframe (bool, optional): If True, clean the
+          DataFrame using the clean_df function.
+        - calculate_telemetry_diff (bool, optional): If True, calculate
+          telemetry differences in DataFrame.
 
-        Returns:
-        pandas.DataFrame: A DataFrame containing the top K tasks based on the specified sorting criteria.
+        Returns
+        -------
+        pandas.DataFrame:
+            A DataFrame containing the top K tasks based on the specified sorting criteria.
 
-        Raises:
+        Raises
+        ------
         - Exception: If a specified column in the sorting criteria is not present in the DataFrame.
-        - Exception: If an invalid sorting order is provided. Use the constants TaskQueryAPI.ASC or TaskQueryAPI.DESC.
+        - Exception: If an invalid sorting order is provided. Use the
+          constants TaskQueryAPI.ASC or TaskQueryAPI.DESC.
+
         """
         # Retrieve telemetry DataFrame based on filter and calculation options
         df = self.df_query(
@@ -372,16 +367,14 @@ class TaskQueryAPI(object):
                 )
             if order not in {TaskQueryAPI.ASC, TaskQueryAPI.DESC}:
                 raise Exception(
-                    f"Use the constants TaskQueryAPI.ASC or TaskQueryAPI.DESC to express the sorting order."
+                    "Use TaskQueryAPI.ASC or TaskQueryAPI.DESC to express sorting order."
                 )
 
             sort_col_names.append(col_name)
             sort_col_orders.append((order == TaskQueryAPI.ASC))
 
         # Sort the DataFrame based on sorting criteria and retrieve the top K rows
-        result_df = df.sort_values(
-            by=sort_col_names, ascending=sort_col_orders
-        )
+        result_df = df.sort_values(by=sort_col_names, ascending=sort_col_orders)
         result_df = result_df.head(k)
 
         return result_df
@@ -401,7 +394,8 @@ class TaskQueryAPI(object):
         aggregate_telemetry=False,
         calculate_telemetry_diff=False,
     ) -> pd.DataFrame:
-        """
+        """Get tasks.
+
         # TODO: write docstring
         :param calculate_telemetry_diff:
         :param clean_dataframe:
@@ -411,7 +405,8 @@ class TaskQueryAPI(object):
         :param limit:
         :return:
         """
-        # TODO: :idea: think of finding the clauses, quantile threshold, and sort order automatically
+        # TODO: :idea: think of finding the clauses, quantile threshold, and
+        # sort order automatically
         df = self.df_query(
             filter=filter,
             calculate_telemetry_diff=calculate_telemetry_diff,
@@ -428,9 +423,8 @@ class TaskQueryAPI(object):
         query_parts = []
         for col_name, condition, quantile in clauses:
             if col_name not in df.columns:
-                raise Exception(
-                    f"Column {col_name} is not in the dataframe. The available columns are:\n{list(df.columns)}"
-                )
+                msg = f"Column {col_name} not in dataframe. "
+                raise Exception(msg + f"Available columns are:\n{list(df.columns)}")
             if 0 > quantile > 1:
                 raise Exception("Quantile must be 0 < float_number < 1.")
             if condition not in {">", "<", ">=", "<=", "==", "!="}:
@@ -447,20 +441,17 @@ class TaskQueryAPI(object):
             sort_col_names, sort_col_orders = [], []
             for col_name, order in sort:
                 if col_name not in result_df.columns:
-                    raise Exception(
-                        f"Column {col_name} is not in the resulting dataframe. The available columns are:\n{list(result_df.columns)}"
-                    )
+                    msg1 = f"Column {col_name} is not in the resulting dataframe. "
+                    msg2 = f"The available columns are:\n{list(result_df.columns)}"
+                    raise Exception(msg1 + msg2)
                 if order not in {TaskQueryAPI.ASC, TaskQueryAPI.DESC}:
-                    raise Exception(
-                        f"Use the constants TaskQueryAPI.ASC or TaskQueryAPI.DESC to express the sorting order."
-                    )
+                    msg = "Use TaskQueryAPI.ASC or TaskQueryAPI.DESC to express sorting order."
+                    raise Exception(msg)
 
                 sort_col_names.append(col_name)
                 sort_col_orders.append((order == TaskQueryAPI.ASC))
 
-            result_df = result_df.sort_values(
-                by=sort_col_names, ascending=sort_col_orders
-            )
+            result_df = result_df.sort_values(by=sort_col_names, ascending=sort_col_orders)
 
         if limit > 0:
             result_df = result_df.head(limit)
@@ -470,6 +461,7 @@ class TaskQueryAPI(object):
     def find_interesting_tasks_based_on_correlations_generated_and_telemetry_data(
         self, filter=None, correlation_threshold=0.5, top_k=50
     ):
+        """Find tasks."""
         return self.find_interesting_tasks_based_on_xyz(
             filter=filter,
             correlation_threshold=correlation_threshold,
@@ -485,11 +477,12 @@ class TaskQueryAPI(object):
         correlation_threshold=0.5,
         top_k=50,
     ):
-        """
-        Returns the most interesting tasks for which (xy) and (xz) are highly correlated, meaning that
-        y is very senstive to x as well as z is very sensitive to x.
-        It returns a sorted dict, based on a score calculated depending on how many
-        high (xy) and (xz) correlations are found.
+        """Find tasks.
+
+        Returns the most interesting tasks for which (xy) and (xz) are highly
+        correlated, meaning that y is very senstive to x as well as z is very
+        sensitive to x. It returns a sorted dict, based on a score calculated
+        depending on how many high (xy) and (xz) correlations are found.
         :param pattern_x:
         :param pattern_y:
         :param pattern_z:
@@ -498,27 +491,17 @@ class TaskQueryAPI(object):
         :param top_k:
         :return:
         """
-        self.logger.warning(
-            "This is an experimental feature. Use it with carefully!"
-        )
+        self.logger.warning("This is an experimental feature. Use it with carefully!")
         # TODO: improve and optmize this function.
         df = self.df_query(filter=filter, calculate_telemetry_diff=True)
         corr_df1 = analyze_correlations_between(df, pattern_x, pattern_y)
         corr_df2 = analyze_correlations_between(df, pattern_x, pattern_z)
 
-        result_df1 = corr_df1[
-            abs(corr_df1["correlation"]) >= correlation_threshold
-        ]
-        result_df1 = result_df1.iloc[
-            result_df1["correlation"].abs().argsort()
-        ][::-1].head(top_k)
+        result_df1 = corr_df1[abs(corr_df1["correlation"]) >= correlation_threshold]
+        result_df1 = result_df1.iloc[result_df1["correlation"].abs().argsort()][::-1].head(top_k)
 
-        result_df2 = corr_df2[
-            abs(corr_df2["correlation"]) >= correlation_threshold
-        ]
-        result_df2 = result_df2.iloc[
-            result_df2["correlation"].abs().argsort()
-        ][::-1].head(top_k)
+        result_df2 = corr_df2[abs(corr_df2["correlation"]) >= correlation_threshold]
+        result_df2 = result_df2.iloc[result_df2["correlation"].abs().argsort()][::-1].head(top_k)
         cols = []
         for index, row in result_df1.iterrows():
             x_col = row["col_1"]
@@ -554,10 +537,7 @@ class TaskQueryAPI(object):
                 (row["y_col"], "<=", 0.5),
             ]
             xcol_sort = TaskQueryAPI.MINIMUM_FIRST
-            if (
-                SORT_ORDERS is not None
-                and SORT_ORDERS[row["x_col"]] == "maximum_first"
-            ):
+            if SORT_ORDERS is not None and SORT_ORDERS[row["x_col"]] == "maximum_first":
                 xcol_sort = TaskQueryAPI.MAXIMUM_FIRST
 
             sort = [
@@ -655,6 +635,7 @@ class TaskQueryAPI(object):
         sum_lists=False,
         aggregate_telemetry=False,
     ):
+        """Find outliers."""
         df = self.df_query(
             filter=filter,
             calculate_telemetry_diff=calculate_telemetry_diff,
@@ -666,7 +647,5 @@ class TaskQueryAPI(object):
             sum_lists=sum_lists,
             aggregate_telemetry=aggregate_telemetry,
         )
-        df["outlier_columns"] = df.apply(
-            find_outliers_zscore, axis=1, threshold=outlier_threshold
-        )
+        df["outlier_columns"] = df.apply(find_outliers_zscore, axis=1, threshold=outlier_threshold)
         return df[df["outlier_columns"].apply(len) > 0]

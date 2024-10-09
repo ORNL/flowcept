@@ -1,3 +1,5 @@
+"""Database API module."""
+
 import uuid
 from typing import List
 
@@ -13,6 +15,8 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 
 @singleton
 class DBAPI(object):
+    """Database API class."""
+
     def __init__(
         self,
         with_webserver=False,
@@ -20,18 +24,18 @@ class DBAPI(object):
         self.logger = FlowceptLogger()
         self.with_webserver = with_webserver
         if self.with_webserver:
-            raise NotImplementedError(
-                f"We did not implement webserver API for this yet."
-            )
+            raise NotImplementedError("We did not implement webserver API for this yet.")
 
         self._dao = DocumentDBDao()
 
     def insert_or_update_task(self, task: TaskObject):
+        """Insert or update task."""
         self._dao.insert_one(task.to_dict())
 
     def insert_or_update_workflow(
         self, workflow_obj: WorkflowObject
     ) -> WorkflowObject:
+        """Get workflow object."""
         if workflow_obj.workflow_id is None:
             workflow_obj.workflow_id = str(uuid.uuid4())
         ret = self._dao.workflow_insert_or_update(workflow_obj)
@@ -42,6 +46,7 @@ class DBAPI(object):
             return workflow_obj
 
     def get_workflow(self, workflow_id) -> WorkflowObject:
+        """Get the workflow."""
         wfobs = self.workflow_query(
             filter={WorkflowObject.workflow_id_field(): workflow_id}
         )
@@ -52,6 +57,7 @@ class DBAPI(object):
             return wfobs[0]
 
     def workflow_query(self, filter) -> List[WorkflowObject]:
+        """Workflow query."""
         results = self._dao.workflow_query(filter=filter)
         if results is None:
             self.logger.error("Could not retrieve workflow with that filter.")
@@ -74,10 +80,11 @@ class DBAPI(object):
         export_format="json",
         should_zip=False,
     ):
+        """Dump to a file."""
         if filter is None and not should_zip:
-            self.logger.error(
-                "I am sorry, we will not allow you to dump the entire database without filter and without even zipping it. You are likely doing something wrong or perhaps not using the best tool for a database dump."
-            )
+            msg = "Can't dump entire database without filter and without zipping it. "
+            msg2 = "Likely doing something wrong or not using best tool for a database dump."
+            self.logger.error(msg + msg2)
             return False
         try:
             self._dao.dump_to_file(
@@ -102,6 +109,7 @@ class DBAPI(object):
         custom_metadata=None,
         pickle=False,
     ):
+        """Save an object."""
         return self._dao.save_object(
             object,
             object_id,
@@ -122,6 +130,7 @@ class DBAPI(object):
         remove_json_unserializables=True,
         type="task",
     ):
+        """Query something."""
         if type == "task":
             return self._dao.task_query(
                 filter,
@@ -150,16 +159,18 @@ class DBAPI(object):
         workflow_id=None,
         custom_metadata: dict = None,
     ) -> str:
-        """
+        """Save torch model.
+
         Save the PyTorch model's state_dict to a MongoDB collection as binary data.
 
-        Args:
+        Args
+        ----
             model (torch.nn.Module): The PyTorch model to be saved.
             custom_metadata (Dict[str, str]): Custom metadata to be stored with the model.
 
-        Returns:
+        Returns
+        -------
             str: The object ID of the saved model in the database.
-
         """
         import torch
         import io
@@ -184,6 +195,7 @@ class DBAPI(object):
         return obj_id
 
     def load_torch_model(self, torch_model, object_id: str):
+        """Load torch model."""
         import torch
         import io
 

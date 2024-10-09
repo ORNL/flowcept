@@ -1,3 +1,5 @@
+"""Module for flowcept controller."""
+
 from typing import List, Union
 from time import sleep
 
@@ -17,6 +19,8 @@ from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 
 class Flowcept(object):
+    """Flowcept class."""
+
     db = DBAPI()
 
     current_workflow_id = None
@@ -41,9 +45,11 @@ class Flowcept(object):
 
         Parameters
         ----------
-        interceptors - list of Flowcept interceptors. If none, instrumentation will be used. If a string is passed, no interceptor will be started.  # TODO: improve clarity for the documentation.
-        bundle_exec_id - A way to group interceptors.
-        start_doc_inserter - Whether you want to start consuming MQ messages to inject in the DB.
+        interceptors - list of Flowcept interceptors. If none, instrumentation
+        will be used. If a string is passed, no interceptor will be
+        started. # TODO: improve clarity for the documentation.
+        bundle_exec_id - A way to group interceptors. start_doc_inserter -
+        Whether you want to start consuming MQ messages to inject in the DB.
         """
         self.logger = FlowceptLogger()
 
@@ -76,6 +82,7 @@ class Flowcept(object):
         self.is_started = False
 
     def start(self):
+        """Start this."""
         if self.is_started:
             self.logger.warning("Consumer is already started!")
             return self
@@ -119,6 +126,7 @@ class Flowcept(object):
         return self
 
     def stop(self):
+        """Stop it."""
         if not self.is_started:
             self.logger.warning("Consumer is already stopped!")
             return
@@ -145,20 +153,24 @@ class Flowcept(object):
         self.logger.debug("All stopped!")
 
     def __enter__(self):
+        """Enter this."""
         self.start()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit this."""
         self.stop()
 
     @staticmethod
     def start_instrumentation_interceptor():
+        """Start interceptor."""
         flowcept.instrumentation.decorators.instrumentation_interceptor.start(
             None
         )
 
     @staticmethod
     def services_alive() -> bool:
+        """Determine if services are alive."""
         if not MQDao.build().liveness_test():
             logger.error("MQ Not Ready!")
             return False
