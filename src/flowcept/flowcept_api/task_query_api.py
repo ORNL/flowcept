@@ -78,29 +78,40 @@ class TaskQueryAPI(object):
         aggregation: List[Tuple] = None,
         remove_json_unserializables=True,
     ) -> List[Dict]:
-        """
+        """Task query.
+
         Generates a MongoDB query pipeline based on the provided arguments.
-        Parameters:
-            filter (dict): The filter criteria for the $match stage.
-            projection (list, optional): List of fields to include in the $project stage. Defaults to None.
-            limit (int, optional): The maximum number of documents to return. Defaults to 0 (no limit).
-            sort (list of tuples, optional): List of (field, order) tuples specifying the sorting order. Defaults to None.
-            aggregation (list of tuples, optional): List of (aggregation_operator, field_name) tuples
-                specifying additional aggregation operations. Defaults to None.
-            remove_json_unserializables: removes fields that are not JSON serializable. Defaults to True
 
-        Returns:
-            list: A list with the result set.
+        Parameters
+        ----------
+        filter (dict):
+            The filter criteria for the $match stage.
+        projection (list, optional):
+            List of fields to include in the project stage. Defaults to None.
+        limit (int, optional):
+            The maximum number of documents to return. Defaults to 0 (no limit).
+        sort(list of tuples, optional):
+            List of (field, order) tuples specifying the sorting order. Defaults to None.
+        aggregation (list of tuples, optional):
+            List of (aggregation_operator, field_name) tuples specifying
+            additional aggregation operations. Defaults to None.
+        remove_json_unserializables:
+            Removes fields that are not JSON serializable. Defaults to True.
 
-        Example:
-            # Create a pipeline with a filter, projection, sorting, and aggregation
-            rs = find(
-                filter={"campaign_id": "mycampaign1"},
-                projection=["workflow_id", "started_at", "ended_at"],
-                limit=10,
-                sort=[("workflow_id", ASC), ("end_time", DESC)],
-                aggregation=[("avg", "ended_at"), ("min", "started_at")]
-            )
+        Returns
+        -------
+        A list with the result set.
+
+        Example
+        -------
+        # Create a pipeline with a filter, projection, sorting, and aggregation
+        rs = find(
+            filter={"campaign_id": "mycampaign1"},
+            projection=["workflow_id", "started_at", "ended_at"],
+            limit=10,
+            sort=[("workflow_id", ASC), ("end_time", DESC)],
+            aggregation=[("avg", "ended_at"), ("min", "started_at")]
+        )
         """
 
         if self._with_webserver:
