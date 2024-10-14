@@ -1,3 +1,5 @@
+"""Dask plugins module."""
+
 from uuid import uuid4
 
 from dask.distributed import WorkerPlugin, SchedulerPlugin
@@ -40,6 +42,7 @@ def register_dask_workflow(
     custom_metadata: dict = None,
     used: dict = None,
 ):
+    """Register dask workflow."""
     workflow_id = workflow_id or str(uuid4())
     dask_client.run_on_scheduler(
         _set_workflow_on_scheduler,
@@ -53,28 +56,37 @@ def register_dask_workflow(
 
 
 class FlowceptDaskSchedulerAdapter(SchedulerPlugin):
+    """FlowceptDaskSchedulerAdapter class."""
+
     def __init__(self, scheduler):
         self.address = scheduler.address
         self.interceptor = DaskSchedulerInterceptor(scheduler)
 
     def transition(self, key, start, finish, *args, **kwargs):
+        """Transition it."""
         self.interceptor.callback(key, start, finish, args, kwargs)
 
     def close(self):
+        """Close it."""
         self.interceptor.logger.debug("Going to close scheduler!")
         self.interceptor.stop()
 
 
 class FlowceptDaskWorkerAdapter(WorkerPlugin):
+    """FlowceptDaskWorkerAdapter class."""
+
     def __init__(self):
         self.interceptor = DaskWorkerInterceptor()
 
     def setup(self, worker):
+        """Set the worker."""
         self.interceptor.setup_worker(worker)
 
     def transition(self, key, start, finish, *args, **kwargs):
+        """Transition it."""
         self.interceptor.callback(key, start, finish, args, kwargs)
 
     def teardown(self, worker):
+        """Tear it down."""
         self.interceptor.logger.debug("Going to close worker!")
         self.interceptor.stop()

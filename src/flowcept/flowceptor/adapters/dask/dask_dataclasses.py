@@ -1,3 +1,5 @@
+"""Dask dataclasses module."""
+
 from dataclasses import dataclass
 
 from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
@@ -7,6 +9,8 @@ from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
 
 @dataclass
 class DaskSettings(BaseSettings):
+    """Dask settings."""
+
     redis_port: int
     redis_host: str
     worker_should_get_input: bool
@@ -17,5 +21,6 @@ class DaskSettings(BaseSettings):
     kind = "dask"
 
     def __post_init__(self):
+        """Handle attributes after init."""
         self.observer_type = "outsourced"
         self.observer_subtype = None

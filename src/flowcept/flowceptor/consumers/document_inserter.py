@@ -1,3 +1,5 @@
+"""DocumentInserter module."""
+
 from time import time, sleep
 from threading import Thread, Event, Lock
 from typing import Dict
@@ -27,6 +29,8 @@ from flowcept.flowceptor.consumers.consumer_utils import (
 
 
 class DocumentInserter:
+    """DocumentInserter class."""
+
     DECODER = GenericJSONDecoder if JSON_SERIALIZER == "complex" else None
 
     @staticmethod
@@ -91,22 +95,18 @@ class DocumentInserter:
 
     @staticmethod
     def flush_function(buffer, doc_dao, logger=flowcept.commons.logger):
+        """Flush it."""
         logger.info(
-            f"Current Doc buffer size: {len(buffer)}, "
-            f"Gonna flush {len(buffer)} msgs to DocDB!"
+            f"Current Doc buffer size: {len(buffer)}, " f"Gonna flush {len(buffer)} msgs to DocDB!"
         )
-        inserted = doc_dao.insert_and_update_many(
-            TaskObject.task_id_field(), buffer
-        )
+        inserted = doc_dao.insert_and_update_many(TaskObject.task_id_field(), buffer)
         if not inserted:
-            logger.warning(
-                f"Could not insert the buffer correctly. "
-                f"Buffer content={buffer}"
-            )
+            logger.warning(f"Could not insert the buffer correctly. " f"Buffer content={buffer}")
         else:
             logger.info(f"Flushed {len(buffer)} msgs to DocDB!")
 
     def _handle_task_message(self, message: Dict):
+        """Handle task message."""
         # if "utc_timestamp" in message:
         #     dt = datetime.fromtimestamp(message["utc_timestamp"])
         #     message["timestamp"] = dt.utcnow()
@@ -121,17 +121,13 @@ class DocumentInserter:
             if wf_id:
                 message["workflow_id"] = wf_id
 
-        if not any(
-            time_field in message
-            for time_field in TaskObject.get_time_field_names()
-        ):
+        if not any(time_field in message for time_field in TaskObject.get_time_field_names()):
             message["registered_at"] = time()
 
         message.pop("type")
 
         self.logger.debug(
-            f"Received following msg in DocInserter:"
-            f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
+            f"Received following msg in DocInserter:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
         )
         if MONGO_REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
@@ -144,10 +140,10 @@ class DocumentInserter:
         #         self._flush()
 
     def _handle_workflow_message(self, message: Dict):
+        """Handle workflow message."""
         message.pop("type")
         self.logger.debug(
-            f"Received following msg in DocInserter:"
-            f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
+            f"Received following msg in DocInserter:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
         )
         if MONGO_REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
@@ -156,6 +152,7 @@ class DocumentInserter:
         return inserted
 
     def _handle_control_message(self, message):
+        """Handle control message."""
         self.logger.info(
             f"I'm doc inserter {id(self)}. I received this control msg received: {message}"
         )
@@ -163,17 +160,15 @@ class DocumentInserter:
             exec_bundle_id = message.get("exec_bundle_id", None)
             interceptor_instance_id = message.get("interceptor_instance_id")
             self.logger.info(
-                f"I'm doc inserter id {id(self)}. I ack that I received mq_dao_thread_stopped message "
-                f"in DocInserter from the interceptor "
+                f"I'm doc inserter id {id(self)}. I ack that I received "
+                f"mq_dao_thread_stopped message in DocInserter from interceptor "
                 f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
             )
             self.logger.info(
                 f"Begin register_time_based_thread_end "
                 f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
             )
-            self._mq_dao.register_time_based_thread_end(
-                interceptor_instance_id, exec_bundle_id
-            )
+            self._mq_dao.register_time_based_thread_end(interceptor_instance_id, exec_bundle_id)
             self.logger.info(
                 f"Done register_time_based_thread_end "
                 f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
@@ -184,11 +179,13 @@ class DocumentInserter:
             return "stop"
 
     def start(self) -> "DocumentInserter":
+        """Start it."""
         self._main_thread = Thread(target=self._start)
         self._main_thread.start()
         return self
 
     def _start(self):
+        """Start it."""
         stop_event = Event()
         while True:
             try:
@@ -203,6 +200,7 @@ class DocumentInserter:
         self.logger.info("Ok, we broke the doc inserter message listen loop!")
 
     def _message_handler(self, msg_obj: dict):
+        """Message handler."""
         msg_type = msg_obj.get("type")
         if msg_type == "flowcept_control":
             r = self._handle_control_message(msg_obj)
@@ -224,12 +222,11 @@ class DocumentInserter:
             return True
 
     def stop(self, bundle_exec_id=None):
+        """Stop this."""
         if self.check_safe_stops:
             max_trials = 60
             trial = 0
-            while not self._mq_dao.all_time_based_threads_ended(
-                bundle_exec_id
-            ):
+            while not self._mq_dao.all_time_based_threads_ended(bundle_exec_id):
                 trial += 1
                 sleep_time = 3
                 self.logger.info(
@@ -238,17 +235,12 @@ class DocumentInserter:
                 )
                 sleep(sleep_time)
                 if trial >= max_trials:
-                    if (
-                        len(self._task_dicts_buffer) == 0
-                    ):  # and len(self._mq_dao._buffer) == 0:
-                        self.logger.critical(
-                            f"Doc Inserter {id(self)} gave up on waiting for the signal. It is probably safe to stop by now."
-                        )
+                    if len(self._task_dicts_buffer) == 0:
+                        msg = f"Doc inserter {id(self)} gave up waiting for the signal."
+                        self.logger.critical(msg + " Probably safe to stop.")
                         break
         self.logger.info("Sending message to stop document inserter.")
         self._mq_dao.send_document_inserter_stop()
-        self.logger.info(
-            f"Doc Inserter {id(self)} Sent message to stop itself."
-        )
+        self.logger.info(f"Doc Inserter {id(self)} Sent message to stop itself.")
         self._main_thread.join()
         self.logger.info("Document Inserter is stopped.")

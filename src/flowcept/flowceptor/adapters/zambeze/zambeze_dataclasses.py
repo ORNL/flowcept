@@ -1,3 +1,5 @@
+"""Zambeze dataclass module."""
+
 from dataclasses import dataclass
 from typing import List, Dict
 
@@ -9,6 +11,8 @@ from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
 
 @dataclass
 class ZambezeMessage:
+    """Zambeze message."""
+
     name: str
     activity_id: str
     campaign_id: str
@@ -23,6 +27,8 @@ class ZambezeMessage:
 
 @dataclass
 class ZambezeSettings(BaseSettings):
+    """Zambeze settings."""
+
     host: str
     port: int
     queue_names: List[str]
@@ -30,5 +36,6 @@ class ZambezeSettings(BaseSettings):
     kind = "zambeze"
 
     def __post_init__(self):
+        """Handle attributes after init."""
         self.observer_type = "message_broker"
         self.observer_subtype = "rabbit_mq"

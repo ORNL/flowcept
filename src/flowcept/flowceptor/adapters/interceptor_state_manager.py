@@ -1,3 +1,5 @@
+"""Interceptor state manager."""
+
 from redis import Redis
 
 from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
@@ -6,6 +8,8 @@ from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
 
 
 class InterceptorStateManager(object):
+    """InterceptorStateManager class."""
+
     def __init__(self, settings: BaseSettings):
         self._set_name = settings.key
 
@@ -22,13 +26,17 @@ class InterceptorStateManager(object):
         )
 
     def reset(self):
+        """Reset it."""
         self._db.delete(self._set_name)
 
     def count(self):
+        """Count it."""
         return self._db.scard(self._set_name)
 
     def add_element_id(self, element_id: str):
+        """Add an element id."""
         self._db.sadd(self._set_name, element_id)
 
     def has_element_id(self, element_id) -> bool:
+        """Check if element id exists."""
         return self._db.sismember(self._set_name, element_id)

@@ -1,3 +1,5 @@
+"""Tensorboard interceptor module."""
+
 import os
 import time
 
@@ -22,6 +24,8 @@ from flowcept.flowceptor.adapters.mlflow.interception_event_handler import (
 
 
 class TensorboardInterceptor(BaseInterceptor):
+    """Tensorboard interceptor class."""
+
     def __init__(self, plugin_key="tensorboard"):
         super().__init__(plugin_key)
         self._observer: PollingObserver = None
@@ -30,7 +34,8 @@ class TensorboardInterceptor(BaseInterceptor):
         self.log_metrics = set(self.settings.log_metrics)
 
     def callback(self):
-        """
+        """Handle the callback.
+
         This function is called whenever a change is identified in the data.
         It decides what to do in the event of a change.
         If it's an interesting change, it calls self.intercept; otherwise,
@@ -45,9 +50,7 @@ class TensorboardInterceptor(BaseInterceptor):
         for child_event_file in reader.children:
             child_event = reader.children[child_event_file]
             if self.state_manager.has_element_id(child_event.log_path):
-                self.logger.debug(
-                    f"Already extracted metric from {child_event_file}."
-                )
+                self.logger.debug(f"Already extracted metric from {child_event_file}.")
                 continue
             event_tags = child_event.get_tags()
 
@@ -89,11 +92,13 @@ class TensorboardInterceptor(BaseInterceptor):
                 self.state_manager.add_element_id(child_event.log_path)
 
     def start(self, bundle_exec_id) -> "TensorboardInterceptor":
+        """Start it."""
         super().start(bundle_exec_id)
         self.observe()
         return self
 
     def stop(self) -> bool:
+        """Stop it."""
         self.logger.debug("Interceptor stopping...")
         super().stop()
         self._observer.stop()
@@ -101,13 +106,11 @@ class TensorboardInterceptor(BaseInterceptor):
         return True
 
     def observe(self):
-        event_handler = InterceptionEventHandler(
-            self, self.__class__.callback
-        )
+        """Observe it."""
+        event_handler = InterceptionEventHandler(self, self.__class__.callback)
         while not os.path.isdir(self.settings.file_path):
             self.logger.debug(
-                f"I can't watch the file {self.settings.file_path},"
-                f" as it does not exist."
+                f"I can't watch the file {self.settings.file_path}," f" as it does not exist."
             )
             self.logger.debug(
                 f"\tI will sleep for {self.settings.watch_interval_sec} sec."
@@ -116,8 +119,6 @@ class TensorboardInterceptor(BaseInterceptor):
             time.sleep(self.settings.watch_interval_sec)
 
         self._observer = Observer()
-        self._observer.schedule(
-            event_handler, self.settings.file_path, recursive=True
-        )
+        self._observer.schedule(event_handler, self.settings.file_path, recursive=True)
         self._observer.start()
         self.logger.debug(f"Watching {self.settings.file_path}")

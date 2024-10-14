@@ -1,4 +1,6 @@
-from abc import ABCMeta, abstractmethod
+"""Base interceptor module."""
+
+from abc import abstractmethod
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
@@ -13,8 +15,6 @@ from flowcept.commons.settings_factory import get_settings
 
 from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 
-from flowcept.version import __version__
-
 
 # TODO :base-interceptor-refactor: :ml-refactor: :code-reorg: :usability:
 #  Consider creating a new concept for instrumentation-based 'interception'.
@@ -24,11 +24,11 @@ from flowcept.version import __version__
 #  in the code. https://github.com/ORNL/flowcept/issues/109
 # class BaseInterceptor(object, metaclass=ABCMeta):
 class BaseInterceptor(object):
+    """BaseInterceptor class."""
+
     def __init__(self, plugin_key=None):
         self.logger = FlowceptLogger()
-        if (
-            plugin_key is not None
-        ):  # TODO :base-interceptor-refactor: :code-reorg: :usability:
+        if plugin_key is not None:  # TODO :base-interceptor-refactor: :code-reorg: :usability:
             self.settings = get_settings(plugin_key)
         else:
             self.settings = None
@@ -40,45 +40,39 @@ class BaseInterceptor(object):
         self._generated_workflow_id = False
 
     def prepare_task_msg(self, *args, **kwargs) -> TaskObject:
+        """Prepare task message."""
         raise NotImplementedError()
 
     def start(self, bundle_exec_id) -> "BaseInterceptor":
-        """
-        Starts an interceptor
-        :return:
-        """
+        """Start an interceptor."""
         self._bundle_exec_id = bundle_exec_id
-        self._mq_dao.init_buffer(
-            self._interceptor_instance_id, bundle_exec_id
-        )
+        self._mq_dao.init_buffer(self._interceptor_instance_id, bundle_exec_id)
         return self
 
     def stop(self) -> bool:
-        """
-        Gracefully stops an interceptor
-        :return:
-        """
+        """Stop an interceptor."""
         self._mq_dao.stop(self._interceptor_instance_id, self._bundle_exec_id)
 
     def observe(self, *args, **kwargs):
-        """
-        This method implements data observability over a data channel
-         (e.g., a file, a DBMS, an MQ)
-        :return:
+        """Observe the data.
+
+        Observe data over a channel such as file, DBMS, MQ. This method
+        implements data observability over a data channel.
         """
         raise NotImplementedError()
 
     @abstractmethod
     def callback(self, *args, **kwargs):
-        """
-        Method that implements the logic that decides what do to when a change
-         (e.g., task state change) is identified.
-        If it's an interesting change, it calls self.intercept; otherwise,
-        let it go....
+        """Handle the callback.
+
+        Implements the logic that decides what do to when a change(e.g., task
+        state change) is identified. If it's an interesting change, it calls
+        self.intercept; otherwise, let it go.
         """
         raise NotImplementedError()
 
     def send_workflow_message(self, workflow_obj: WorkflowObject):
+        """Send workflow message."""
         wf_id = workflow_obj.workflow_id
         if wf_id is None:
             self.logger.warning(
@@ -90,23 +84,21 @@ class BaseInterceptor(object):
         self._saved_workflows.add(wf_id)
         if self._mq_dao.buffer is None:
             # TODO :base-interceptor-refactor: :code-reorg: :usability:
-            raise Exception(
-                f"This interceptor {id(self)} has never been started!"
-            )
+            raise Exception(f"This interceptor {id(self)} has never been started!")
         workflow_obj.interceptor_ids = [self._interceptor_instance_id]
         machine_info = self.telemetry_capture.capture_machine_info()
         if machine_info is not None:
             if workflow_obj.machine_info is None:
                 workflow_obj.machine_info = dict()
-            # TODO :refactor-base-interceptor: we might want to register machine info even when there's no observer
-            workflow_obj.machine_info[
-                self._interceptor_instance_id
-            ] = machine_info
+            # TODO :refactor-base-interceptor: we might want to register
+            # machine info even when there's no observer
+            workflow_obj.machine_info[self._interceptor_instance_id] = machine_info
         if ENRICH_MESSAGES:
             workflow_obj.enrich(self.settings.key if self.settings else None)
         self.intercept(workflow_obj.to_dict())
 
     def intercept(self, obj_msg):
+        """Intercept message."""
         self._mq_dao.buffer.append(obj_msg)
 
     # def intercept_appends_only(self, obj_msg):

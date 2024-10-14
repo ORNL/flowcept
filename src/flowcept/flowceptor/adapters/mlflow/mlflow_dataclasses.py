@@ -1,3 +1,5 @@
+"""MLFlow dataclasses module."""
+
 from dataclasses import dataclass
 from typing import List
 
@@ -8,6 +10,8 @@ from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
 
 @dataclass
 class MLFlowSettings(BaseSettings):
+    """MLFlow settings."""
+
     file_path: str
     log_params: List[str]
     log_metrics: List[str]
@@ -17,12 +21,15 @@ class MLFlowSettings(BaseSettings):
     kind = "mlflow"
 
     def __post_init__(self):
+        """Handle attributes after init."""
         self.observer_type = "file"
         self.observer_subtype = "sqlite"
 
 
 @dataclass
 class RunData:
+    """Run dataclass."""
+
     task_id: str
     start_time: int
     end_time: int
