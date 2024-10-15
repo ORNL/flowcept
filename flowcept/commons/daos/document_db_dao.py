@@ -6,7 +6,6 @@ from uuid import uuid4
 import pickle
 import zipfile
 
-import pymongo
 from bson import ObjectId
 from bson.json_util import dumps
 from pymongo import MongoClient, UpdateOne

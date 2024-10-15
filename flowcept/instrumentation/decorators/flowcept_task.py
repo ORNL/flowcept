@@ -11,7 +11,7 @@ from flowcept.instrumentation.decorators import instrumentation_interceptor
 from flowcept.commons.utils import replace_non_serializable
 from flowcept.configs import (
     REPLACE_NON_JSON_SERIALIZABLE,
-    REGISTER_INSTRUMENTED_TASKS,
+    INSTRUMENTATION_ENABLED,
 )
 
 
@@ -120,7 +120,7 @@ def flowcept_task(func=None, **decorator_kwargs):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if not REGISTER_INSTRUMENTED_TASKS:
+            if not INSTRUMENTATION_ENABLED:
                 return func(*args, **kwargs)
 
             args_handler = decorator_kwargs.get(
