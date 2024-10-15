@@ -32,9 +32,7 @@ class DBAPI(object):
         """Insert or update task."""
         self._dao.insert_one(task.to_dict())
 
-    def insert_or_update_workflow(
-        self, workflow_obj: WorkflowObject
-    ) -> WorkflowObject:
+    def insert_or_update_workflow(self, workflow_obj: WorkflowObject) -> WorkflowObject:
         """Get workflow object."""
         if workflow_obj.workflow_id is None:
             workflow_obj.workflow_id = str(uuid.uuid4())
@@ -47,9 +45,7 @@ class DBAPI(object):
 
     def get_workflow(self, workflow_id) -> WorkflowObject:
         """Get the workflow."""
-        wfobs = self.workflow_query(
-            filter={WorkflowObject.workflow_id_field(): workflow_id}
-        )
+        wfobs = self.workflow_query(filter={WorkflowObject.workflow_id_field(): workflow_id})
         if wfobs is None or len(wfobs) == 0:
             self.logger.error("Could not retrieve workflow with that filter.")
             return None
@@ -148,8 +144,7 @@ class DBAPI(object):
             return self._dao.get_objects(filter)
         else:
             raise Exception(
-                f"You used type={type}, but we only have "
-                f"collections for task and workflow."
+                f"You used type={type}, but we only have " f"collections for task and workflow."
             )
 
     def save_torch_model(

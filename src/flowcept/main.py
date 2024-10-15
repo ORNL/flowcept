@@ -1,3 +1,5 @@
+"""Main module."""
+
 import sys
 
 from flowcept import (
@@ -19,21 +21,17 @@ INTERCEPTORS = {
 
 
 def main():
+    """Run main driver."""
     interceptors = []
     for plugin_key in settings["plugins"]:
         plugin_settings_obj = settings["plugins"][plugin_key]
-        if (
-            "enabled" in plugin_settings_obj
-            and not plugin_settings_obj["enabled"]
-        ):
+        if "enabled" in plugin_settings_obj and not plugin_settings_obj["enabled"]:
             continue
 
         kind = plugin_settings_obj["kind"]
 
         if kind in INTERCEPTORS:
-            interceptor = INTERCEPTORS[plugin_settings_obj["kind"]](
-                plugin_key
-            )
+            interceptor = INTERCEPTORS[plugin_settings_obj["kind"]](plugin_key)
             interceptors.append(interceptor)
 
     consumer = Flowcept(interceptors)

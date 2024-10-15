@@ -27,9 +27,7 @@ class Flowcept(object):
 
     def __init__(
         self,
-        interceptors: Union[
-            BaseInterceptor, List[BaseInterceptor], str
-        ] = None,
+        interceptors: Union[BaseInterceptor, List[BaseInterceptor], str] = None,
         bundle_exec_id=None,
         start_doc_inserter=True,
         workflow_id: str = None,
@@ -63,17 +61,13 @@ class Flowcept(object):
             self._interceptors = None
         else:
             if interceptors is None:
-                interceptors = [
-                    flowcept.instrumentation.decorators.instrumentation_interceptor
-                ]
+                interceptors = [flowcept.instrumentation.decorators.instrumentation_interceptor]
             elif not isinstance(interceptors, list):
                 interceptors = [interceptors]
             self._interceptors: List[BaseInterceptor] = interceptors
 
         if workflow_id or workflow_args or workflow_name:
-            wf_obj = WorkflowObject(
-                workflow_id, workflow_name, used=workflow_args
-            )
+            wf_obj = WorkflowObject(workflow_id, workflow_name, used=workflow_args)
             Flowcept.db.insert_or_update_workflow(wf_obj)
             Flowcept.current_workflow_id = wf_obj.workflow_id
         else:
@@ -164,9 +158,7 @@ class Flowcept(object):
     @staticmethod
     def start_instrumentation_interceptor():
         """Start interceptor."""
-        flowcept.instrumentation.decorators.instrumentation_interceptor.start(
-            None
-        )
+        flowcept.instrumentation.decorators.instrumentation_interceptor.start(None)
 
     @staticmethod
     def services_alive() -> bool:
