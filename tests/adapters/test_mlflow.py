@@ -61,7 +61,6 @@ class TestMLFlow(unittest.TestCase):
                 self.interceptor.state_manager.add_element_id(run_uuid)
 
     def test_observer_and_consumption(self):
-
         with Flowcept(self.interceptor):
             run_uuid = self.test_pure_run_mlflow()
             # sleep(3)
@@ -76,11 +75,12 @@ class TestMLFlow(unittest.TestCase):
 
     @unittest.skip("Skipping this test as we need to debug it further.")
     def test_multiple_tasks(self):
-
         run_ids = []
         with Flowcept(self.interceptor):
             for i in range(1, 10):
-                run_ids.append(self.test_pure_run_mlflow(epochs=i*10, batch_size=i*2))
+                run_ids.append(
+                    self.test_pure_run_mlflow(epochs=i * 10, batch_size=i * 2)
+                )
                 sleep(3)
 
         for run_id in run_ids:
@@ -89,7 +89,9 @@ class TestMLFlow(unittest.TestCase):
             # )
 
             assert assert_by_querying_tasks_until(
-                {"task_id": run_id}, max_trials=60, max_time=120,
+                {"task_id": run_id},
+                max_trials=60,
+                max_time=120,
             )
 
 

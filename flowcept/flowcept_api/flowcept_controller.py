@@ -9,8 +9,11 @@ import flowcept.instrumentation.decorators
 from flowcept.commons import logger
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.configs import MQ_INSTANCES, INSTRUMENTATION, \
-    INSTRUMENTATION_ENABLED
+from flowcept.configs import (
+    MQ_INSTANCES,
+    INSTRUMENTATION,
+    INSTRUMENTATION_ENABLED,
+)
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -76,7 +79,9 @@ class Flowcept(object):
 
     def start(self):
         if self.is_started or not self.enabled:
-            self.logger.warning("Consumer may be already started or instrumentation is not set")
+            self.logger.warning(
+                "Consumer may be already started or instrumentation is not set"
+            )
             return self
 
         if self._interceptors and len(self._interceptors):
