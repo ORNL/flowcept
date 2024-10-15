@@ -1,3 +1,5 @@
+"""Decorators subpackage."""
+
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 # TODO :base-interceptor-refactor: :ml-refactor: :code-reorg: :usability:

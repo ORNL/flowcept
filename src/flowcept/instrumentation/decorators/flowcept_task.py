@@ -1,3 +1,5 @@
+"""Flowcept task module."""
+
 from time import time
 from functools import wraps
 import flowcept.commons
@@ -17,24 +19,23 @@ from flowcept.configs import (
 
 # TODO: :code-reorg: consider moving it to utils and reusing it in dask interceptor
 def default_args_handler(task_message: TaskObject, *args, **kwargs):
+    """Handle default arguments."""
     args_handled = {}
     if args is not None and len(args):
         for i in range(len(args)):
             args_handled[f"arg_{i}"] = args[i]
     if kwargs is not None and len(kwargs):
-        task_message.workflow_id = task_message.workflow_id or kwargs.pop(
-            "workflow_id", None
-        )
+        task_message.workflow_id = task_message.workflow_id or kwargs.pop("workflow_id", None)
         args_handled.update(kwargs)
-    task_message.workflow_id = (
-        task_message.workflow_id or Flowcept.current_workflow_id
-    )
+    task_message.workflow_id = task_message.workflow_id or Flowcept.current_workflow_id
     if REPLACE_NON_JSON_SERIALIZABLE:
         args_handled = replace_non_serializable(args_handled)
     return args_handled
 
 
 def telemetry_flowcept_task(func=None):
+    """Handle telemetry for flowcept task."""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -72,6 +73,8 @@ def telemetry_flowcept_task(func=None):
 
 
 def lightweight_flowcept_task(func=None):
+    """Get the lightweight flowcept task."""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -117,24 +120,22 @@ def lightweight_flowcept_task(func=None):
 
 
 def flowcept_task(func=None, **decorator_kwargs):
+    """Get the flowcept task."""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             if not REGISTER_INSTRUMENTED_TASKS:
                 return func(*args, **kwargs)
 
-            args_handler = decorator_kwargs.get(
-                "args_handler", default_args_handler
-            )
+            args_handler = decorator_kwargs.get("args_handler", default_args_handler)
             task_obj = TaskObject()
 
             task_obj.activity_id = func.__name__
             task_obj.used = args_handler(task_obj, *args, **kwargs)
             task_obj.started_at = time()
             task_obj.task_id = str(task_obj.started_at)
-            task_obj.telemetry_at_start = (
-                instrumentation_interceptor.telemetry_capture.capture()
-            )
+            task_obj.telemetry_at_start = instrumentation_interceptor.telemetry_capture.capture()
             try:
                 result = func(*args, **kwargs)
                 task_obj.status = Status.FINISHED
@@ -143,9 +144,7 @@ def flowcept_task(func=None, **decorator_kwargs):
                 result = None
                 task_obj.stderr = str(e)
             task_obj.ended_at = time()
-            task_obj.telemetry_at_end = (
-                instrumentation_interceptor.telemetry_capture.capture()
-            )
+            task_obj.telemetry_at_end = instrumentation_interceptor.telemetry_capture.capture()
             try:
                 if isinstance(result, dict):
                     task_obj.generated = args_handler(task_obj, **result)
