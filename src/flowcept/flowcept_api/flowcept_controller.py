@@ -1,3 +1,5 @@
+"""Controller module."""
+
 from typing import List, Union
 from time import sleep
 
@@ -21,23 +23,21 @@ from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 
 class Flowcept(object):
-    db = DBAPI()
+    """Flowcept class."""
 
+    db = DBAPI()
     current_workflow_id = None
 
     def __init__(
         self,
-        interceptors: Union[
-            BaseInterceptor, List[BaseInterceptor], str
-        ] = None,
+        interceptors: Union[BaseInterceptor, List[BaseInterceptor], str] = None,
         bundle_exec_id=None,
         start_doc_inserter=True,
         workflow_id: str = None,
         workflow_name: str = None,
         workflow_args: str = None,
     ):
-        """
-        Flowcept controller.
+        """Flowcept controller.
 
         This class controls the interceptors, including instrumentation.
         If using for instrumentation, we assume one instance of this class
@@ -66,9 +66,7 @@ class Flowcept(object):
                 if not INSTRUMENTATION_ENABLED:
                     self.enabled = False
                     return
-                interceptors = [
-                    flowcept.instrumentation.decorators.instrumentation_interceptor
-                ]
+                interceptors = [flowcept.instrumentation.decorators.instrumentation_interceptor]
             elif not isinstance(interceptors, list):
                 interceptors = [interceptors]
             self._interceptors: List[BaseInterceptor] = interceptors
@@ -78,10 +76,9 @@ class Flowcept(object):
         self.workflow_args = workflow_args
 
     def start(self):
+        """Start it."""
         if self.is_started or not self.enabled:
-            self.logger.warning(
-                "Consumer may be already started or instrumentation is not set"
-            )
+            self.logger.warning("Consumer may be already started or instrumentation is not set")
             return self
 
         if self._interceptors and len(self._interceptors):
@@ -96,9 +93,7 @@ class Flowcept(object):
                 self.logger.debug(f"...Flowceptor {key} started ok!")
 
                 if (
-                    self.current_workflow_id
-                    or self.workflow_args
-                    or self.workflow_name
+                    self.current_workflow_id or self.workflow_args or self.workflow_name
                 ) and interceptor.kind == "instrumentation":
                     wf_obj = WorkflowObject(
                         self.current_workflow_id,
@@ -138,6 +133,7 @@ class Flowcept(object):
         return self
 
     def stop(self):
+        """Stop it."""
         if not self.is_started or not self.enabled:
             self.logger.warning("Consumer is already stopped!")
             return
@@ -172,12 +168,12 @@ class Flowcept(object):
 
     @staticmethod
     def start_instrumentation_interceptor():
-        flowcept.instrumentation.decorators.instrumentation_interceptor.start(
-            None
-        )
+        """Start it."""
+        flowcept.instrumentation.decorators.instrumentation_interceptor.start(None)
 
     @staticmethod
     def services_alive() -> bool:
+        """Get alive services."""
         if not MQDao.build().liveness_test():
             logger.error("MQ Not Ready!")
             return False
