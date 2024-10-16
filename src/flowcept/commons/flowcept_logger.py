@@ -1,3 +1,5 @@
+"""Logger module."""
+
 import logging
 
 from flowcept.configs import (
@@ -10,6 +12,8 @@ from flowcept.configs import (
 
 
 class FlowceptLogger(object):
+    """Logger class."""
+
     _instance = None
 
     @classmethod
@@ -43,8 +47,6 @@ class FlowceptLogger(object):
 
     def __new__(cls, *args, **kwargs) -> logging.Logger:
         if not cls._instance:
-            cls._instance = super(FlowceptLogger, cls).__new__(
-                cls, *args, **kwargs
-            )
+            cls._instance = super(FlowceptLogger, cls).__new__(cls, *args, **kwargs)
             cls._instance._logger = FlowceptLogger._build_logger()
         return cls._instance._logger

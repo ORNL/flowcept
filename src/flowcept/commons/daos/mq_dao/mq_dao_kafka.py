@@ -1,3 +1,5 @@
+"""MQ kafka module."""
+
 from typing import Callable
 
 import msgpack
@@ -17,6 +19,8 @@ from flowcept.configs import (
 
 
 class MQDaoKafka(MQDao):
+    """MQ kafka class."""
+
     def __init__(self, kv_host=None, kv_port=None, adapter_settings=None):
         super().__init__(kv_host, kv_port, adapter_settings)
 
@@ -26,6 +30,7 @@ class MQDaoKafka(MQDao):
         self._producer = Producer(self._kafka_conf)
 
     def message_listener(self, message_handler: Callable):
+        """Get message listener."""
         self._kafka_conf.update(
             {
                 "group.id": "my_group",
@@ -56,26 +61,18 @@ class MQDaoKafka(MQDao):
         finally:
             consumer.close()
 
-    def send_message(
-        self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps
-    ):
-        self._producer.produce(
-            channel, key=channel, value=serializer(message)
-        )
+    def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        """Send the message."""
+        self._producer.produce(channel, key=channel, value=serializer(message))
         self._producer.flush()
 
-    def _bulk_publish(
-        self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps
-    ):
+    def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         for message in buffer:
             try:
                 self.logger.debug(
-                    f"Going to send Message:"
-                    f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
+                    f"Going to send Message:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
                 )
-                self._producer.produce(
-                    channel, key=channel, value=serializer(message)
-                )
+                self._producer.produce(channel, key=channel, value=serializer(message))
             except Exception as e:
                 self.logger.exception(e)
                 self.logger.error(
@@ -93,6 +90,7 @@ class MQDaoKafka(MQDao):
         perf_log("mq_pipe_flush", t0)
 
     def liveness_test(self):
+        """Get the livelyness of it."""
         try:
             super().liveness_test()
             admin_client = AdminClient(self._kafka_conf)

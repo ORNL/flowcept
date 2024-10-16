@@ -1,10 +1,13 @@
-from typing import Callable
+"""Autoflush module."""
 
+from typing import Callable
 from threading import Thread, Event
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 
 class AutoflushBuffer:
+    """Autoflush class."""
+
     def __init__(
         self,
         max_size,
@@ -32,6 +35,7 @@ class AutoflushBuffer:
         self._flush_function_kwargs = flush_function_kwargs
 
     def append(self, item):
+        """Append it."""
         # if self.stop_event.is_set():
         #     return
         buffer = self._buffers[self._current_buffer_index]
@@ -40,6 +44,7 @@ class AutoflushBuffer:
             self._swap_event.set()
 
     def time_based_flush(self):
+        """Time flush."""
         while not self._stop_event.is_set():
             self._swap_event.wait(self._flush_interval)
             if not self._stop_event.is_set():
@@ -68,6 +73,7 @@ class AutoflushBuffer:
                 break
 
     def stop(self):
+        """Stop it."""
         self._stop_event.set()
         self._swap_event.set()
         self._flush_thread.join()

@@ -1,3 +1,5 @@
+"""Workflow module."""
+
 from typing import Dict, AnyStr, List
 import msgpack
 from omegaconf import OmegaConf
@@ -18,6 +20,8 @@ from flowcept.configs import (
 # Not a dataclass because a dataclass stores keys even when there's no value,
 # adding unnecessary overhead.
 class WorkflowObject:
+    """Workflow class."""
+
     workflow_id: AnyStr = None
     parent_workflow_id: AnyStr = None
     machine_info: Dict = None
@@ -37,9 +41,7 @@ class WorkflowObject:
     used: Dict = None
     generated: Dict = None
 
-    def __init__(
-        self, workflow_id=None, name=None, used=None, generated=None
-    ):
+    def __init__(self, workflow_id=None, name=None, used=None, generated=None):
         self.workflow_id = workflow_id
         self.name = name
         self.used = used
@@ -47,16 +49,19 @@ class WorkflowObject:
 
     @staticmethod
     def workflow_id_field():
+        """Get workflow id."""
         return "workflow_id"
 
     @staticmethod
     def from_dict(dict_obj: Dict) -> "WorkflowObject":
+        """Convert from dictionary."""
         wf_obj = WorkflowObject()
         for k, v in dict_obj.items():
             setattr(wf_obj, k, v)
         return wf_obj
 
     def to_dict(self):
+        """Convert to dictionary."""
         result_dict = {}
         for attr, value in self.__dict__.items():
             if value is not None:
@@ -65,6 +70,7 @@ class WorkflowObject:
         return result_dict
 
     def enrich(self, adapter_key=None):
+        """Enrich it."""
         self.utc_timestamp = flowcept.commons.utils.get_utc_now()
         self.flowcept_settings = OmegaConf.to_container(settings)
 
@@ -91,10 +97,12 @@ class WorkflowObject:
             self.flowcept_version = __version__
 
     def serialize(self):
+        """Serialize it."""
         return msgpack.dumps(self.to_dict())
 
     @staticmethod
     def deserialize(serialized_data) -> "WorkflowObject":
+        """Deserialize it."""
         dict_obj = msgpack.loads(serialized_data)
         obj = WorkflowObject()
         for k, v in dict_obj.items():

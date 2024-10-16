@@ -1,3 +1,5 @@
+"""Settings module."""
+
 from flowcept.commons.vocabulary import Vocabulary
 from flowcept.configs import settings
 
@@ -33,13 +35,13 @@ def _build_base_settings(kind: str, settings_dict: dict) -> BaseSettings:
 
 
 def get_settings(adapter_key: str) -> BaseSettings:
+    """Get the settings."""
     if adapter_key is None:  # TODO: :base-interceptor-refactor:
         return None
     settings_dict = settings[Vocabulary.Settings.ADAPTERS][adapter_key]
     if not settings_dict:
         raise Exception(
-            f"You must specify the adapter <<{adapter_key}>> in"
-            f" the settings YAML file."
+            f"You must specify the adapter <<{adapter_key}>> in" f" the settings YAML file."
         )
     settings_dict["key"] = adapter_key
     kind = settings_dict[Vocabulary.Settings.KIND]
