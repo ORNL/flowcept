@@ -59,7 +59,7 @@ class TaskQueryAPI(object):
                 if r.status_code > 300:
                     raise Exception(r.text)
                 self.logger.debug("Ok, webserver is ready to receive requests.")
-            except Exception as e:
+            except Exception:
                 raise Exception(f"Error when accessing the webserver at {_base_url}")
 
     def query(
@@ -294,7 +294,8 @@ class TaskQueryAPI(object):
         Retrieve the top K tasks from the (optionally telemetry-aware)
         DataFrame based on specified sorting criteria.
 
-        Parameters:
+        Parameters
+        ----------
         - sort (List[Tuple], optional): A list of tuples specifying sorting
           criteria for columns. Each tuple should contain a column name and a
           sorting order, where the sorting order can be TaskQueryAPI.ASC for
@@ -312,11 +313,13 @@ class TaskQueryAPI(object):
         - calculate_telemetry_diff (bool, optional): If True, calculate
           telemetry differences in the DataFrame.
 
-        Returns:
+        Returns
+        -------
             pandas.DataFrame: A DataFrame containing the top K tasks
             based on the specified sorting criteria.
 
-        Raises:
+        Raises
+        ------
         - Exception: If a specified column in the sorting criteria is not
           present in the DataFrame.
 
@@ -360,9 +363,7 @@ class TaskQueryAPI(object):
                     f"The available columns are:\n{list(df.columns)}"
                 )
             if order not in {TaskQueryAPI.ASC, TaskQueryAPI.DESC}:
-                raise Exception(
-                    f"Use the constants TaskQueryAPI.ASC or TaskQueryAPI.DESC to express the sorting order."
-                )
+                raise Exception("Use TaskQueryAPI.ASC or TaskQueryAPI.DESC for sorting order.")
 
             sort_col_names.append(col_name)
             sort_col_orders.append((order == TaskQueryAPI.ASC))
@@ -399,7 +400,8 @@ class TaskQueryAPI(object):
         :param limit:
         :return:
         """
-        # TODO: :idea: think of finding the clauses, quantile threshold, and sort order automatically
+        # TODO: :idea: think of finding the clauses, quantile threshold, and
+        # sort order automatically
         df = self.df_query(
             filter=filter,
             calculate_telemetry_diff=calculate_telemetry_diff,
@@ -416,9 +418,8 @@ class TaskQueryAPI(object):
         query_parts = []
         for col_name, condition, quantile in clauses:
             if col_name not in df.columns:
-                raise Exception(
-                    f"Column {col_name} is not in the dataframe. The available columns are:\n{list(df.columns)}"
-                )
+                msg = f"Column {col_name} is not in dataframe. "
+                raise Exception(msg + f"The available columns are:\n{list(df.columns)}")
             if 0 > quantile > 1:
                 raise Exception("Quantile must be 0 < float_number < 1.")
             if condition not in {">", "<", ">=", "<=", "==", "!="}:
@@ -435,12 +436,11 @@ class TaskQueryAPI(object):
             sort_col_names, sort_col_orders = [], []
             for col_name, order in sort:
                 if col_name not in result_df.columns:
-                    raise Exception(
-                        f"Column {col_name} is not in the resulting dataframe. The available columns are:\n{list(result_df.columns)}"
-                    )
+                    msg = f"Column {col_name} is not in resulting dataframe. "
+                    raise Exception(msg + f"Available columns are:\n{list(result_df.columns)}")
                 if order not in {TaskQueryAPI.ASC, TaskQueryAPI.DESC}:
                     raise Exception(
-                        f"Use the constants TaskQueryAPI.ASC or TaskQueryAPI.DESC to express the sorting order."
+                        "Use TaskQueryAPI.ASC or TaskQueryAPI.DESC to express sorting order."
                     )
 
                 sort_col_names.append(col_name)
@@ -474,10 +474,10 @@ class TaskQueryAPI(object):
     ):
         """Find tasks.
 
-        Returns the most interesting tasks for which (xy) and (xz) are highly correlated, meaning that
-        y is very senstive to x as well as z is very sensitive to x.
-        It returns a sorted dict, based on a score calculated depending on how many
-        high (xy) and (xz) correlations are found.
+        Returns the most interesting tasks for which (xy) and (xz) are highly
+        correlated, meaning that y is very senstive to x as well as z is very
+        sensitive to x. It returns a sorted dict, based on a score calculated
+        depending on how many high (xy) and (xz) correlations are found.
         :param pattern_x:
         :param pattern_y:
         :param pattern_z:

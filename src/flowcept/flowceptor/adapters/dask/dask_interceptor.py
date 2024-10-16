@@ -171,7 +171,9 @@ class DaskWorkerInterceptor(BaseInterceptor):
         """
         self._worker = worker
         super().__init__(self._plugin_key)
-        self._generated_workflow_id = True  # TODO: :refactor: This is just to avoid the auto-generation of workflow id, which doesnt make sense in Dask case..
+        # TODO: :refactor: This is just to avoid the auto-generation of
+        # workflow id, which doesnt make sense in Dask case..
+        self._generated_workflow_id = True
         super().start(bundle_exec_id=self._worker.scheduler.address)
         # Note that both scheduler and worker get the exact same input.
         # Worker does not resolve intermediate inputs, just like the scheduler.

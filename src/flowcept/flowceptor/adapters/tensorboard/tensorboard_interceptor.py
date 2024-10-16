@@ -50,9 +50,7 @@ class TensorboardInterceptor(BaseInterceptor):
         for child_event_file in reader.children:
             child_event = reader.children[child_event_file]
             if self.state_manager.has_element_id(child_event.log_path):
-                self.logger.debug(
-                    f"Already extracted metric from {child_event_file}."
-                )
+                self.logger.debug(f"Already extracted metric from {child_event_file}.")
                 continue
             event_tags = child_event.get_tags()
 
@@ -109,13 +107,10 @@ class TensorboardInterceptor(BaseInterceptor):
 
     def observe(self):
         """Observe it."""
-        event_handler = InterceptionEventHandler(
-            self, self.__class__.callback
-        )
+        event_handler = InterceptionEventHandler(self, self.__class__.callback)
         while not os.path.isdir(self.settings.file_path):
             self.logger.debug(
-                f"I can't watch the file {self.settings.file_path},"
-                f" as it does not exist."
+                f"I can't watch the file {self.settings.file_path}," f" as it does not exist."
             )
             self.logger.debug(
                 f"\tI will sleep for {self.settings.watch_interval_sec} sec."
@@ -124,8 +119,6 @@ class TensorboardInterceptor(BaseInterceptor):
             time.sleep(self.settings.watch_interval_sec)
 
         self._observer = Observer()
-        self._observer.schedule(
-            event_handler, self.settings.file_path, recursive=True
-        )
+        self._observer.schedule(event_handler, self.settings.file_path, recursive=True)
         self._observer.start()
         self.logger.debug(f"Watching {self.settings.file_path}")

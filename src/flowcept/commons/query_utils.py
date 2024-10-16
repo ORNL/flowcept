@@ -39,18 +39,18 @@ def to_datetime(logger, df, column_name, _shift_hours=0):
 def _calc_telemetry_diff_for_row(start, end):
     if isinstance(start, numbers.Number):
         return end - start
-    elif type(start) == dict:
+    elif type(start) is dict:
         diff_dict = {}
         for key in start:
             diff_dict[key] = _calc_telemetry_diff_for_row(start[key], end[key])
         return diff_dict
 
-    elif type(start) == list:
+    elif type(start) is list:
         diff_list = []
         for i in range(0, len(start)):
             diff_list.append(_calc_telemetry_diff_for_row(start[i], end[i]))
         return diff_list
-    elif type(start) == str:
+    elif type(start) is str:
         return start
     else:
         raise Exception("This is unexpected", start, end, type(start), type(end))

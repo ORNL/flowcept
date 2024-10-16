@@ -21,5 +21,6 @@ class TensorboardSettings(BaseSettings):
     kind = "tensorboard"
 
     def __post_init__(self):
+        """Set attributes after init."""
         self.observer_type = "file"
         self.observer_subtype = "binary"

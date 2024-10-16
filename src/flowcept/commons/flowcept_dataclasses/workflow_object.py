@@ -75,7 +75,8 @@ class WorkflowObject:
         self.flowcept_settings = OmegaConf.to_container(settings)
 
         if adapter_key is not None:
-            # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
+            # TODO :base-interceptor-refactor: :code-reorg: :usability:
+            # revisit all times we assume settings is not none
             self.adapter_id = adapter_key
 
         if self.user is None:
@@ -110,6 +111,7 @@ class WorkflowObject:
         return obj
 
     def __repr__(self):
+        """Set the repr."""
         return (
             f"WorkflowObject("
             f"workflow_id={repr(self.workflow_id)}, "
@@ -129,4 +131,5 @@ class WorkflowObject:
         )
 
     def __str__(self):
+        """Set the string."""
         return self.__repr__()

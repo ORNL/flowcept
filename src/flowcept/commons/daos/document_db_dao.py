@@ -274,7 +274,7 @@ class DocumentDBDao(object):
 
     def delete_ids(self, ids_list: List[ObjectId]) -> bool:
         """Delete the ids."""
-        if type(ids_list) != list:
+        if type(ids_list) is not list:
             ids_list = [ids_list]
         try:
             self._tasks_collection.delete_many({"_id": {"$in": ids_list}})
@@ -285,7 +285,7 @@ class DocumentDBDao(object):
 
     def delete_keys(self, key_name, keys_list: List[Any]) -> bool:
         """Delete the keys."""
-        if type(keys_list) != list:
+        if type(keys_list) is not list:
             keys_list = [keys_list]
         try:
             self._tasks_collection.delete_many({key_name: {"$in": keys_list}})
@@ -395,9 +395,8 @@ class DocumentDBDao(object):
         elif collection_name == MONGO_WORKFLOWS_COLLECTION:
             _collection = self._wfs_collection
         else:
-            raise Exception(
-                f"Sorry, only {MONGO_TASK_COLLECTION} and {MONGO_WORKFLOWS_COLLECTION} collections are currently available for dump."
-            )
+            msg = f"Only {MONGO_TASK_COLLECTION} and {MONGO_WORKFLOWS_COLLECTION} "
+            raise Exception(msg + "collections are currently available for dump.")
 
         if export_format != "json":
             raise Exception("Sorry, only JSON is currently supported.")

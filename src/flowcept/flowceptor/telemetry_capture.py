@@ -18,13 +18,10 @@ from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
 
 if GPU_TYPE == "nvidia":
     try:
-        import pynvml
         from pynvml import (
-            nvmlDeviceGetCount,
             nvmlDeviceGetHandleByIndex,
             nvmlDeviceGetMemoryInfo,
             nvmlDeviceGetName,
-            nvmlInit,
             nvmlShutdown,
             nvmlDeviceGetTemperature,
             nvmlDeviceGetPowerUsage,
@@ -38,9 +35,7 @@ if GPU_TYPE == "amd":
     try:
         from amdsmi import (
             amdsmi_get_gpu_memory_usage,
-            amdsmi_get_processor_handles,
             amdsmi_shut_down,
-            amdsmi_get_gpu_memory_usage,
             AmdSmiMemoryType,
             AmdSmiTemperatureType,
             amdsmi_get_gpu_activity,
@@ -49,20 +44,22 @@ if GPU_TYPE == "amd":
             amdsmi_get_temp_metric,
             AmdSmiTemperatureMetric,
             amdsmi_get_gpu_metrics_info,
-            amdsmi_get_processor_handles,
-            amdsmi_init,
         )
     except Exception as e:
         print(f"Exception to import AMD libs! {e}")
         pass
 
-# from amdsmi import amdsmi_init, amdsmi_get_processor_handles
-
 
 class TelemetryCapture:
     """Telemetry class."""
 
-    _gpu_unsuccessful_queries = dict()  # TODO: refactor; I need this to avoid querying GPU stuff that is generating errors. The idea is to try once and if it fails, add this in this dictionary to avoid trying again. The mapping will be {gpu_device_id: {query_type: True or False}}; False if it found that it's unsuccessful. If it's mapping to an empty dict, the whole GPU is bad for capture.
+    # TODO: refactor; I need this to avoid querying GPU stuff that is
+    # generating errors. The idea is to try once and if it fails, add this in
+    # this dictionary to avoid trying again. The mapping will be
+    # {gpu_device_id:{query_type: True or False}}; False if it found that
+    # it's unsuccessful. If it's mapping to an empty dict, the whole GPU is
+    # bad for capture.
+    _gpu_unsuccessful_queries = dict()
 
     def __init__(self, conf=TELEMETRY_CAPTURE):
         self.logger = FlowceptLogger()
@@ -96,8 +93,7 @@ class TelemetryCapture:
                     self._gpu_capture_func = self.__get_gpu_info_amd
                 else:
                     self.logger.exception(
-                        "You are trying to capture telemetry GPU info, but we"
-                        " couldn't detect any GPU, neither NVIDIA nor AMD. Consider disabling GPU capture in the settings file."
+                        "No GPU found. Consider disabling GPU capture in the settings file."
                     )
 
     def capture(self) -> Telemetry:
@@ -214,7 +210,7 @@ class TelemetryCapture:
                 p.pid = psutil_p.pid
                 try:
                     p.cpu_number = psutil_p.cpu_num()
-                except:
+                except Exception:
                     pass
                 p.memory = psutil_p.memory_info()._asdict()
                 p.memory_percent = psutil_p.memory_percent()
@@ -226,7 +222,7 @@ class TelemetryCapture:
                 p.num_connections = len(psutil_p.connections())
                 try:
                     p.io_counters = psutil_p.io_counters()._asdict()
-                except:
+                except Exception:
                     pass
                 p.num_open_files = len(psutil_p.open_files())
                 p.num_threads = psutil_p.num_threads()
@@ -332,7 +328,7 @@ class TelemetryCapture:
             or len(self._gpu_conf) == 0
         ):
             self.logger.debug(
-                "Gpu capture is off or gpu capture has never been initialized, so we won't shut down."
+                "GPU capture is off or has never been initialized, so we won't shut down."
             )
             return None
         if self._gpu_type == "nvidia":

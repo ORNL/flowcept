@@ -16,8 +16,6 @@ from flowcept.commons.settings_factory import get_settings
 
 from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 
-from flowcept.version import __version__
-
 
 # TODO :base-interceptor-refactor: :ml-refactor: :code-reorg: :usability:
 #  Consider creating a new concept for instrumentation-based 'interception'.
@@ -31,9 +29,7 @@ class BaseInterceptor(object):
 
     def __init__(self, plugin_key=None, kind=None):
         self.logger = FlowceptLogger()
-        if (
-            plugin_key is not None
-        ):  # TODO :base-interceptor-refactor: :code-reorg: :usability:
+        if plugin_key is not None:  # TODO :base-interceptor-refactor: :code-reorg: :usability:
             self.settings = get_settings(plugin_key)
         else:
             self.settings = None
@@ -52,9 +48,7 @@ class BaseInterceptor(object):
     def start(self, bundle_exec_id) -> "BaseInterceptor":
         """Start an interceptor."""
         self._bundle_exec_id = bundle_exec_id
-        self._mq_dao.init_buffer(
-            self._interceptor_instance_id, bundle_exec_id
-        )
+        self._mq_dao.init_buffer(self._interceptor_instance_id, bundle_exec_id)
         return self
 
     def stop(self) -> bool:
@@ -88,18 +82,15 @@ class BaseInterceptor(object):
         self._saved_workflows.add(wf_id)
         if self._mq_dao.buffer is None:
             # TODO :base-interceptor-refactor: :code-reorg: :usability:
-            raise Exception(
-                f"This interceptor {id(self)} has never been started!"
-            )
+            raise Exception(f"This interceptor {id(self)} has never been started!")
         workflow_obj.interceptor_ids = [self._interceptor_instance_id]
         machine_info = self.telemetry_capture.capture_machine_info()
         if machine_info is not None:
             if workflow_obj.machine_info is None:
                 workflow_obj.machine_info = dict()
-            # TODO :refactor-base-interceptor: we might want to register machine info even when there's no observer
-            workflow_obj.machine_info[
-                self._interceptor_instance_id
-            ] = machine_info
+            # TODO :refactor-base-interceptor: we might want to register
+            # machine info even when there's no observer
+            workflow_obj.machine_info[self._interceptor_instance_id] = machine_info
         if ENRICH_MESSAGES:
             workflow_obj.enrich(self.settings.key if self.settings else None)
         self.intercept(workflow_obj.to_dict())

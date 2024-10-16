@@ -24,7 +24,7 @@ class DBAPI(object):
         self.logger = FlowceptLogger()
         self.with_webserver = with_webserver
         if self.with_webserver:
-            raise NotImplementedError(f"We did not implement webserver API for this yet.")
+            raise NotImplementedError("We did not implement webserver API for this yet.")
 
         self._dao = DocumentDBDao()
 
@@ -79,7 +79,7 @@ class DBAPI(object):
         """Dump to the file."""
         if filter is None and not should_zip:
             self.logger.error(
-                "I am sorry, we will not allow you to dump the entire database without filter and without even zipping it. You are likely doing something wrong or perhaps not using the best tool for a database dump."
+                "Not allowed to dump entire database without filter and without zipping it."
             )
             return False
         try:
@@ -162,7 +162,8 @@ class DBAPI(object):
             model (torch.nn.Module): The PyTorch model to be saved.
             custom_metadata (Dict[str, str]): Custom metadata to be stored with the model.
 
-        Returns:
+        Returns
+        -------
             str: The object ID of the saved model in the database.
         """
         import torch

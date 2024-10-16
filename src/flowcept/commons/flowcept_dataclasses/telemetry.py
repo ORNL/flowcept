@@ -2,7 +2,9 @@
 
 from typing import List, Dict
 
+
 def remove_none_values(_dict):
+    """Remove the none values."""
     return {k: v for (k, v) in _dict if v is not None}
 
 
@@ -19,6 +21,7 @@ class Telemetry:
 
     class CPU:
         """CPU class."""
+
         times_avg: Dict[str, float] = None
         percent_all: float = None
 
@@ -27,22 +30,26 @@ class Telemetry:
 
     class Memory:
         """Memory class."""
+
         virtual: Dict[str, float]
         swap: Dict[str, float]
 
     class Network:
         """Network class."""
+
         netio: Dict[str, int]
         netio_per_interface: Dict[str, Dict[str, int]]
 
     class Disk:
         """Disk class."""
+
         disk_usage: Dict[str, float]
         io: Dict[str, float]
         io_per_disk: Dict[str, Dict[str, float]]
 
     class Process:
         """Process class."""
+
         pid: int
         cpu_number: int
         memory: Dict[str, float]

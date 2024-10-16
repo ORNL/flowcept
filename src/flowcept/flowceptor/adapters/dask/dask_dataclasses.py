@@ -21,5 +21,6 @@ class DaskSettings(BaseSettings):
     kind = "dask"
 
     def __post_init__(self):
+        """Set attributes after init."""
         self.observer_type = "outsourced"
         self.observer_subtype = None
