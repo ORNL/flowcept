@@ -132,6 +132,22 @@ class TaskObject:
     def serialize(self):
         return msgpack.dumps(self.to_dict())
 
+    @staticmethod
+    def enrich_task_dict(task_dict: dict):
+        attributes = {
+            "campaign_id": CAMPAIGN_ID,
+            "node_name": NODE_NAME,
+            "login_name": LOGIN_NAME,
+            "public_ip": PUBLIC_IP,
+            "private_ip": PRIVATE_IP,
+            "hostname": HOSTNAME,
+        }
+        for key, fallback_value in attributes.items():
+            if (
+                key not in task_dict or task_dict[key] is None
+            ) and fallback_value is not None:
+                task_dict[key] = fallback_value
+
     # @staticmethod
     # def deserialize(serialized_data) -> 'TaskObject':
     #     dict_obj = msgpack.loads(serialized_data)

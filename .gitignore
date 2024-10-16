@@ -17,3 +17,4 @@ test.py
 **/*dump*
 time.txt
 tmp/
+deployment/data

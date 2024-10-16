@@ -18,6 +18,7 @@ project:
     machine_info: true
 
 instrumentation:
+  enabled: true
   torch:
     mode: telemetry_and_tensor_inspection   # tensor_inspection, telemetry, telemetry_and_tensor_inspection, full, ~
     save_models: True

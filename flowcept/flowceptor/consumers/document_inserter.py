@@ -1,7 +1,10 @@
+from datetime import datetime
 from time import time, sleep
 from threading import Thread, Event, Lock
 from typing import Dict
 from uuid import uuid4
+
+import pytz
 
 import flowcept.commons
 from flowcept.commons.daos.autoflush_buffer import AutoflushBuffer
@@ -17,6 +20,7 @@ from flowcept.configs import (
     MONGO_ADAPTIVE_BUFFER_SIZE,
     JSON_SERIALIZER,
     MONGO_REMOVE_EMPTY_FIELDS,
+    ENRICH_MESSAGES,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
@@ -107,10 +111,6 @@ class DocumentInserter:
             logger.info(f"Flushed {len(buffer)} msgs to DocDB!")
 
     def _handle_task_message(self, message: Dict):
-        # if "utc_timestamp" in message:
-        #     dt = datetime.fromtimestamp(message["utc_timestamp"])
-        #     message["timestamp"] = dt.utcnow()
-
         # if DEBUG_MODE:
         #     message["debug"] = True
         if "task_id" not in message:
@@ -121,11 +121,21 @@ class DocumentInserter:
             if wf_id:
                 message["workflow_id"] = wf_id
 
-        if not any(
-            time_field in message
-            for time_field in TaskObject.get_time_field_names()
-        ):
-            message["registered_at"] = time()
+        has_time_fields = False
+        for time_field in TaskObject.get_time_field_names():
+            if time_field in message:
+                has_time_fields = True
+                message[time_field] = datetime.fromtimestamp(
+                    message[time_field], pytz.utc
+                )
+
+        if not has_time_fields:
+            message["registered_at"] = datetime.fromtimestamp(
+                time(), pytz.utc
+            )
+
+        if ENRICH_MESSAGES:
+            TaskObject.enrich_task_dict(message)
 
         message.pop("type")
 
