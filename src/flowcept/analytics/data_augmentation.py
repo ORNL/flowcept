@@ -1,8 +1,9 @@
+"""Data augmentation module."""
+
 from typing import List
 import h2o
 import numpy as np
 import pandas as pd
-
 from h2o.automl import H2OAutoML
 from typing_extensions import deprecated
 
@@ -18,10 +19,9 @@ def train_model(
     train_test_split_size=0.8,
     seed=1234,
 ):
+    """Train model."""
     h2o_df = h2o.H2OFrame(df)
-    train, test = h2o_df.split_frame(
-        ratios=[train_test_split_size], seed=seed
-    )
+    train, test = h2o_df.split_frame(ratios=[train_test_split_size], seed=seed)
     aml = H2OAutoML(max_models=max_models, seed=seed)
 
     aml.train(x=x_cols, y=y_col, training_frame=train)
@@ -30,6 +30,7 @@ def train_model(
 
 @deprecated
 def augment_df_linearly(df, N, cols_to_augment, seed=1234):
+    """Linearly augment dataframe."""
     np.random.seed(seed)
     new_df = df.copy()
     new_df["original"] = 1
@@ -45,14 +46,13 @@ def augment_df_linearly(df, N, cols_to_augment, seed=1234):
 
     augmented_data["original"] = [0] * N
 
-    appended_df = pd.concat(
-        [new_df, pd.DataFrame(augmented_data)], ignore_index=True
-    )
+    appended_df = pd.concat([new_df, pd.DataFrame(augmented_data)], ignore_index=True)
     return appended_df
 
 
 @deprecated
 def augment_data(df, N, augmentation_model: H2OAutoML, x_cols, y_col):
+    """Augment data."""
     new_df = augment_df_linearly(df, N, x_cols)
     h2odf = h2o.H2OFrame(new_df.loc[new_df["original"] == 0][x_cols])
     h2opred = augmentation_model.predict(h2odf)
