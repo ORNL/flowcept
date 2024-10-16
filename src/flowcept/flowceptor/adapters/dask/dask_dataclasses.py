@@ -1,3 +1,5 @@
+"""Dataclasses module."""
+
 from dataclasses import dataclass
 
 from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
@@ -7,6 +9,8 @@ from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
 
 @dataclass
 class DaskSettings(BaseSettings):
+    """Dask settings."""
+
     redis_port: int
     redis_host: str
     worker_should_get_input: bool

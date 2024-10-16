@@ -1,3 +1,5 @@
+"""Telemetry module."""
+
 import psutil
 import platform
 import cpuinfo
@@ -58,9 +60,9 @@ if GPU_TYPE == "amd":
 
 
 class TelemetryCapture:
-    _gpu_unsuccessful_queries = (
-        dict()
-    )  # TODO: refactor; I need this to avoid querying GPU stuff that is generating errors. The idea is to try once and if it fails, add this in this dictionary to avoid trying again. The mapping will be {gpu_device_id: {query_type: True or False}}; False if it found that it's unsuccessful. If it's mapping to an empty dict, the whole GPU is bad for capture.
+    """Telemetry class."""
+
+    _gpu_unsuccessful_queries = dict()  # TODO: refactor; I need this to avoid querying GPU stuff that is generating errors. The idea is to try once and if it fails, add this in this dictionary to avoid trying again. The mapping will be {gpu_device_id: {query_type: True or False}}; False if it found that it's unsuccessful. If it's mapping to an empty dict, the whole GPU is bad for capture.
 
     def __init__(self, conf=TELEMETRY_CAPTURE):
         self.logger = FlowceptLogger()
@@ -82,9 +84,7 @@ class TelemetryCapture:
             self._gpu_conf = set(self._gpu_conf)
 
             if len(self._gpu_conf):
-                self.logger.info(
-                    f"These are the visible GPUs by Flowcept Capture: {N_GPUS}"
-                )
+                self.logger.info(f"These are the visible GPUs by Flowcept Capture: {N_GPUS}")
                 # TODO: refactor! This below is bad coding
                 nvidia = N_GPUS.get("nvidia", [])
                 amd = N_GPUS.get("amd", [])
@@ -101,6 +101,7 @@ class TelemetryCapture:
                     )
 
     def capture(self) -> Telemetry:
+        """Capture it."""
         if self.conf is None:
             return None
         tel = Telemetry()
@@ -129,6 +130,7 @@ class TelemetryCapture:
         return tel
 
     def capture_machine_info(self):
+        """Capture info."""
         # TODO: add ifs for each type of telem; improve this method overall
         if self.conf is None or self.conf.get("machine_info", None) is None:
             return None
@@ -240,9 +242,7 @@ class TelemetryCapture:
                 cpu.times_avg = psutil.cpu_times(percpu=False)._asdict()
                 cpu.percent_all = psutil.cpu_percent()
             if capt_per_cpu:
-                cpu.times_per_cpu = [
-                    c._asdict() for c in psutil.cpu_times(percpu=True)
-                ]
+                cpu.times_per_cpu = [c._asdict() for c in psutil.cpu_times(percpu=True)]
                 cpu.percent_per_cpu = psutil.cpu_percent(percpu=True)
             return cpu
         except Exception as e:
@@ -260,9 +260,7 @@ class TelemetryCapture:
         flowcept_gpu_info = {
             "total": nvidia_info.total,
             "used": nvidia_info.used,
-            "temperature": nvmlDeviceGetTemperature(
-                handle, NVML_TEMPERATURE_GPU
-            ),
+            "temperature": nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU),
             "power_usage": nvmlDeviceGetPowerUsage(handle),
             "name": nvmlDeviceGetName(handle),
             "device_ix": gpu_ix,
@@ -270,14 +268,10 @@ class TelemetryCapture:
         return flowcept_gpu_info
 
     def __register_unsuccessful_gpu_query(self, gpu_ix, gpu_info_key):
-        self.logger.error(
-            f"Error to get {gpu_info_key} for the GPU device ix {gpu_ix}"
-        )
+        self.logger.error(f"Error to get {gpu_info_key} for the GPU device ix {gpu_ix}")
         if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries:
             TelemetryCapture._gpu_unsuccessful_queries[gpu_ix] = {}
-        TelemetryCapture._gpu_unsuccessful_queries[gpu_ix][
-            gpu_info_key
-        ] = True
+        TelemetryCapture._gpu_unsuccessful_queries[gpu_ix][gpu_info_key] = True
 
     def __get_gpu_info_amd(self, gpu_ix: int = 0):
         # See: https://rocm.docs.amd.com/projects/amdsmi/en/docs-5.7.1/py-interface_readme_link.html#api
@@ -285,9 +279,7 @@ class TelemetryCapture:
         flowcept_gpu_info = {"gpu_ix": gpu_ix}
 
         if "used" in self._gpu_conf:
-            flowcept_gpu_info["used"] = amdsmi_get_gpu_memory_usage(
-                device, AmdSmiMemoryType.VRAM
-            )
+            flowcept_gpu_info["used"] = amdsmi_get_gpu_memory_usage(device, AmdSmiMemoryType.VRAM)
         if "usage" in self._gpu_conf:
             flowcept_gpu_info["usage"] = amdsmi_get_gpu_activity(device)
         if "power" in self._gpu_conf:
@@ -321,23 +313,18 @@ class TelemetryCapture:
 
     def _capture_gpu(self):
         try:
-            if (
-                self._visible_gpus is None
-                or self._gpu_conf is None
-                or len(self._gpu_conf) == 0
-            ):
+            if self._visible_gpus is None or self._gpu_conf is None or len(self._gpu_conf) == 0:
                 return
             gpu_telemetry = {}
             for gpu_ix in self._visible_gpus:
-                gpu_telemetry[f"gpu_{gpu_ix}"] = self._gpu_capture_func(
-                    gpu_ix
-                )
+                gpu_telemetry[f"gpu_{gpu_ix}"] = self._gpu_capture_func(gpu_ix)
             return gpu_telemetry
         except Exception as e:
             self.logger.exception(e)
             return None
 
     def shutdown_gpu_telemetry(self):
+        """Shutdown GPU telemetry."""
         if (
             self.conf is None
             or self._visible_gpus is None
