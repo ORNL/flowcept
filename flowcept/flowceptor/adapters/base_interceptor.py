@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from uuid import uuid4
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
@@ -24,7 +25,7 @@ from flowcept.version import __version__
 #  in the code. https://github.com/ORNL/flowcept/issues/109
 # class BaseInterceptor(object, metaclass=ABCMeta):
 class BaseInterceptor(object):
-    def __init__(self, plugin_key=None):
+    def __init__(self, plugin_key=None, kind=None):
         self.logger = FlowceptLogger()
         if (
             plugin_key is not None
@@ -38,6 +39,7 @@ class BaseInterceptor(object):
         self.telemetry_capture = TelemetryCapture()
         self._saved_workflows = set()
         self._generated_workflow_id = False
+        self.kind = kind
 
     def prepare_task_msg(self, *args, **kwargs) -> TaskObject:
         raise NotImplementedError()
@@ -79,12 +81,8 @@ class BaseInterceptor(object):
         raise NotImplementedError()
 
     def send_workflow_message(self, workflow_obj: WorkflowObject):
-        wf_id = workflow_obj.workflow_id
-        if wf_id is None:
-            self.logger.warning(
-                f"Workflow_id is empty, we can't save this workflow_obj: {workflow_obj}"
-            )
-            return
+        wf_id = workflow_obj.workflow_id or str(uuid4())
+        workflow_obj.workflow_id = wf_id
         if wf_id in self._saved_workflows:
             return
         self._saved_workflows.add(wf_id)
@@ -105,6 +103,7 @@ class BaseInterceptor(object):
         if ENRICH_MESSAGES:
             workflow_obj.enrich(self.settings.key if self.settings else None)
         self.intercept(workflow_obj.to_dict())
+        return wf_id
 
     def intercept(self, obj_msg):
         self._mq_dao.buffer.append(obj_msg)

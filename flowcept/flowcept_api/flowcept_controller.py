@@ -9,7 +9,11 @@ import flowcept.instrumentation.decorators
 from flowcept.commons import logger
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.configs import MQ_INSTANCES
+from flowcept.configs import (
+    MQ_INSTANCES,
+    INSTRUMENTATION,
+    INSTRUMENTATION_ENABLED,
+)
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -53,10 +57,15 @@ class Flowcept(object):
             self._bundle_exec_id = id(self)
         else:
             self._bundle_exec_id = bundle_exec_id
+        self.enabled = True
+        self.is_started = False
         if isinstance(interceptors, str):
             self._interceptors = None
         else:
             if interceptors is None:
+                if not INSTRUMENTATION_ENABLED:
+                    self.enabled = False
+                    return
                 interceptors = [
                     flowcept.instrumentation.decorators.instrumentation_interceptor
                 ]
@@ -64,20 +73,15 @@ class Flowcept(object):
                 interceptors = [interceptors]
             self._interceptors: List[BaseInterceptor] = interceptors
 
-        if workflow_id or workflow_args or workflow_name:
-            wf_obj = WorkflowObject(
-                workflow_id, workflow_name, used=workflow_args
-            )
-            Flowcept.db.insert_or_update_workflow(wf_obj)
-            Flowcept.current_workflow_id = wf_obj.workflow_id
-        else:
-            Flowcept.current_workflow_id = None
-
-        self.is_started = False
+        self.current_workflow_id = workflow_id
+        self.workflow_name = workflow_name
+        self.workflow_args = workflow_args
 
     def start(self):
-        if self.is_started:
-            self.logger.warning("Consumer is already started!")
+        if self.is_started or not self.enabled:
+            self.logger.warning(
+                "Consumer may be already started or instrumentation is not set"
+            )
             return self
 
         if self._interceptors and len(self._interceptors):
@@ -90,6 +94,21 @@ class Flowcept(object):
                 self.logger.debug(f"Flowceptor {key} starting...")
                 interceptor.start(bundle_exec_id=self._bundle_exec_id)
                 self.logger.debug(f"...Flowceptor {key} started ok!")
+
+                if (
+                    self.current_workflow_id
+                    or self.workflow_args
+                    or self.workflow_name
+                ) and interceptor.kind == "instrumentation":
+                    wf_obj = WorkflowObject(
+                        self.current_workflow_id,
+                        self.workflow_name,
+                        used=self.workflow_args,
+                    )
+                    interceptor.send_workflow_message(wf_obj)
+                    Flowcept.current_workflow_id = wf_obj.workflow_id
+                else:
+                    Flowcept.current_workflow_id = None
 
         if self._start_doc_inserter:
             self.logger.debug("Flowcept Consumer starting...")
@@ -119,7 +138,7 @@ class Flowcept(object):
         return self
 
     def stop(self):
-        if not self.is_started:
+        if not self.is_started or not self.enabled:
             self.logger.warning("Consumer is already stopped!")
             return
         sleep_time = 1
