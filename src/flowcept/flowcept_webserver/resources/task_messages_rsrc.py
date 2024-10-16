@@ -1,3 +1,5 @@
+"""Module for TaskMessages object."""
+
 from flask import jsonify, request
 from flask_restful import Resource
 
@@ -5,9 +7,12 @@ from flowcept.commons.daos.document_db_dao import DocumentDBDao
 
 
 class TaskMessages(Resource):
+    """TaskMessages class."""
+
     ROUTE = "/task_messages"
 
     def get(self):
+        """Get something."""
         args = request.args
         task_id = args.get("task_id", None)
         filter = {}
