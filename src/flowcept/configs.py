@@ -1,3 +1,5 @@
+"""Configuration module."""
+
 import os
 import socket
 import getpass
@@ -62,9 +64,7 @@ MQ_HOST = os.getenv("MQ_HOST", settings["mq"].get("host", "localhost"))
 MQ_PORT = int(os.getenv("MQ_PORT", settings["mq"].get("port", "6379")))
 
 MQ_BUFFER_SIZE = int(settings["mq"].get("buffer_size", 50))
-MQ_INSERTION_BUFFER_TIME = int(
-    settings["mq"].get("insertion_buffer_time_secs", 5)
-)
+MQ_INSERTION_BUFFER_TIME = int(settings["mq"].get("insertion_buffer_time_secs", 5))
 MQ_INSERTION_BUFFER_TIME = random.randint(
     int(MQ_INSERTION_BUFFER_TIME * 0.9),
     int(MQ_INSERTION_BUFFER_TIME * 1.4),
@@ -84,12 +84,8 @@ KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
 #  MongoDB Settings  #
 ######################
 MONGO_URI = settings["mongodb"].get("uri", os.environ.get("MONGO_URI", None))
-MONGO_HOST = settings["mongodb"].get(
-    "host", os.environ.get("MONGO_HOST", "localhost")
-)
-MONGO_PORT = int(
-    settings["mongodb"].get("port", os.environ.get("MONGO_PORT", "27017"))
-)
+MONGO_HOST = settings["mongodb"].get("host", os.environ.get("MONGO_HOST", "localhost"))
+MONGO_PORT = int(settings["mongodb"].get("port", os.environ.get("MONGO_PORT", "27017")))
 MONGO_DB = settings["mongodb"].get("db", PROJECT_NAME)
 MONGO_CREATE_INDEX = settings["mongodb"].get("create_collection_index", True)
 
@@ -97,24 +93,16 @@ MONGO_TASK_COLLECTION = "tasks"
 MONGO_WORKFLOWS_COLLECTION = "workflows"
 
 # In seconds:
-MONGO_INSERTION_BUFFER_TIME = int(
-    settings["mongodb"].get("insertion_buffer_time_secs", 5)
-)
+MONGO_INSERTION_BUFFER_TIME = int(settings["mongodb"].get("insertion_buffer_time_secs", 5))
 MONGO_INSERTION_BUFFER_TIME = random.randint(
     int(MONGO_INSERTION_BUFFER_TIME * 0.9),
     int(MONGO_INSERTION_BUFFER_TIME * 1.4),
 )
 
-MONGO_ADAPTIVE_BUFFER_SIZE = settings["mongodb"].get(
-    "adaptive_buffer_size", True
-)
+MONGO_ADAPTIVE_BUFFER_SIZE = settings["mongodb"].get("adaptive_buffer_size", True)
 MONGO_MAX_BUFFER_SIZE = int(settings["mongodb"].get("max_buffer_size", 50))
-MONGO_MIN_BUFFER_SIZE = max(
-    1, int(settings["mongodb"].get("min_buffer_size", 10))
-)
-MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get(
-    "remove_empty_fields", False
-)
+MONGO_MIN_BUFFER_SIZE = max(1, int(settings["mongodb"].get("min_buffer_size", 10)))
+MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get("remove_empty_fields", False)
 
 
 ######################
@@ -125,9 +113,7 @@ DB_FLUSH_MODE = settings["project"].get("db_flush_mode", "online")
 # DEBUG_MODE = settings["project"].get("debug", False)
 PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
-REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get(
-    "replace_non_json_serializable", True
-)
+REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get("replace_non_json_serializable", True)
 ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
 TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
 
@@ -142,17 +128,12 @@ REGISTER_WORKFLOW = settings["project"].get("register_workflow", True)
 #   We could move this to the static part of TelemetryCapture
 N_GPUS = dict()
 GPU_HANDLES = None
-if (
-    TELEMETRY_CAPTURE is not None
-    and TELEMETRY_CAPTURE.get("gpu", None) is not None
-):
+if TELEMETRY_CAPTURE is not None and TELEMETRY_CAPTURE.get("gpu", None) is not None:
     if eval(TELEMETRY_CAPTURE.get("gpu", "None")) is not None:
         try:
             visible_devices_var = os.environ.get("CUDA_VISIBLE_DEVICES", None)
             if visible_devices_var is not None:
-                visible_devices = [
-                    int(i) for i in visible_devices_var.split(",")
-                ]
+                visible_devices = [int(i) for i in visible_devices_var.split(",")]
                 if len(visible_devices):
                     N_GPUS["nvidia"] = visible_devices
                     GPU_HANDLES = []  # TODO
@@ -161,15 +142,12 @@ if (
 
                 N_GPUS["nvidia"] = list(range(0, nvmlDeviceGetCount()))
                 GPU_HANDLES = []
-        except Exception as e:
-            # print(e)
+        except Exception:
             pass
         try:
             visible_devices_var = os.environ.get("ROCR_VISIBLE_DEVICES", None)
             if visible_devices_var is not None:
-                visible_devices = [
-                    int(i) for i in visible_devices_var.split(",")
-                ]
+                visible_devices = [int(i) for i in visible_devices_var.split(",")]
                 if len(visible_devices):
                     N_GPUS["amd"] = visible_devices
                     from amdsmi import (
@@ -185,8 +163,7 @@ if (
                 amdsmi_init()
                 GPU_HANDLES = amdsmi_get_processor_handles()
                 N_GPUS["amd"] = list(range(0, len(GPU_HANDLES)))
-        except Exception as e:
-            # print(e)
+        except Exception:
             pass
 
 if len(N_GPUS.get("amd", [])):
@@ -220,10 +197,10 @@ if sys_metadata is not None:
 if LOGIN_NAME is None:
     try:
         LOGIN_NAME = sys_metadata.get("login_name", getpass.getuser())
-    except:
+    except Exception:
         try:
             LOGIN_NAME = os.getlogin()
-        except:
+        except Exception:
             LOGIN_NAME = None
 
 SYS_NAME = SYS_NAME if SYS_NAME is not None else os.uname()[0]
@@ -231,14 +208,14 @@ NODE_NAME = NODE_NAME if NODE_NAME is not None else os.uname()[1]
 
 try:
     HOSTNAME = socket.getfqdn()
-except:
+except Exception:
     try:
         HOSTNAME = socket.gethostname()
-    except:
+    except Exception:
         try:
             with open("/etc/hostname", "r") as f:
                 HOSTNAME = f.read().strip()
-        except:
+        except Exception:
             HOSTNAME = "unknown_hostname"
 
 
