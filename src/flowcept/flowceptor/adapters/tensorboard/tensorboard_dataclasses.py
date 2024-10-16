@@ -1,3 +1,5 @@
+"""Tensorboard dataclasses module."""
+
 from dataclasses import dataclass
 from typing import List
 
@@ -8,6 +10,8 @@ from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
 
 @dataclass
 class TensorboardSettings(BaseSettings):
+    """Tensorboard settings."""
+
     file_path: str
     log_tags: List[str]
     log_metrics: List[str]

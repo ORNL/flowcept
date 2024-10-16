@@ -1,9 +1,11 @@
-from typing import List, Dict
+"""Consumer utilities module."""
 
+from typing import List, Dict
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 
 
 def curate_task_msg(task_msg_dict: dict):
+    """Curate a task message."""
     # Converting any arg to kwarg in the form {"arg1": val1, "arg2: val2}
     for field in TaskObject.get_dict_field_names():
         if field not in task_msg_dict:
@@ -47,16 +49,20 @@ def remove_empty_fields_from_dict(obj: dict):
 def curate_dict_task_messages(
     doc_list: List[Dict], indexing_key: str, utc_time_at_insertion: float = 0
 ):
-    """
-       This function removes duplicates based on the
-        indexing_key (e.g., task_id) locally before sending
-        to MongoDB.
-        # It also avoids tasks changing states once they go into finished state.
-        This is needed because we can't guarantee MQ orders.
-        # Finished states have higher priority in status changes, as we don't expect a
-        # status change once a task goes into finished state.
-        It also resolves updates (instead of replacement) of
-        inner nested fields in a JSON object.
+    """Remove duplicates.
+
+    This function removes duplicates based on the indexing_key (e.g., task_id)
+    locally before sending to MongoDB.
+
+    It also avoids tasks changing states once they go into finished state.
+    This is needed because we can't guarantee MQ orders.
+
+    Finished states have higher priority in status changes, as we don't expect
+    a status change once a task goes into finished state.
+
+    It also resolves updates (instead of replacement) of inner nested fields
+    in a JSON object.
+
     :param doc_list:
     :param indexing_key: #the key we want to index. E.g., task_id in tasks collection
     :return:
@@ -86,18 +92,6 @@ def curate_dict_task_messages(
         if indexing_key_value not in indexed_buffer:
             indexed_buffer[indexing_key_value] = doc
             continue
-
-        # if (
-        #     "finished" in indexed_buffer[indexing_key_value]
-        #     and "status" in doc
-        # ):
-        #     doc.pop("status")
-        #
-        # if "status" in doc:
-        #     for finished_status in Status.get_finished_statuses():
-        #         if finished_status == doc["status"]:
-        #             indexed_buffer[indexing_key_value]["finished"] = True
-        #             break
 
         for field in TaskObject.get_dict_field_names():
             if field in doc:

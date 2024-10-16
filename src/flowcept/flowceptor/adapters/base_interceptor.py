@@ -1,4 +1,6 @@
-from abc import ABCMeta, abstractmethod
+"""Base module."""
+
+from abc import abstractmethod
 from uuid import uuid4
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
@@ -25,6 +27,8 @@ from flowcept.version import __version__
 #  in the code. https://github.com/ORNL/flowcept/issues/109
 # class BaseInterceptor(object, metaclass=ABCMeta):
 class BaseInterceptor(object):
+    """Base interceptor class."""
+
     def __init__(self, plugin_key=None, kind=None):
         self.logger = FlowceptLogger()
         if (
@@ -42,13 +46,11 @@ class BaseInterceptor(object):
         self.kind = kind
 
     def prepare_task_msg(self, *args, **kwargs) -> TaskObject:
+        """Prepare a task."""
         raise NotImplementedError()
 
     def start(self, bundle_exec_id) -> "BaseInterceptor":
-        """
-        Starts an interceptor
-        :return:
-        """
+        """Start an interceptor."""
         self._bundle_exec_id = bundle_exec_id
         self._mq_dao.init_buffer(
             self._interceptor_instance_id, bundle_exec_id
@@ -56,31 +58,29 @@ class BaseInterceptor(object):
         return self
 
     def stop(self) -> bool:
-        """
-        Gracefully stops an interceptor
-        :return:
-        """
+        """Stop an interceptor."""
         self._mq_dao.stop(self._interceptor_instance_id, self._bundle_exec_id)
 
     def observe(self, *args, **kwargs):
-        """
-        This method implements data observability over a data channel
-         (e.g., a file, a DBMS, an MQ)
-        :return:
+        """Oberve data.
+
+        This method implements data observability over a data channel (e.g., a
+        file, a DBMS, an MQ)
         """
         raise NotImplementedError()
 
     @abstractmethod
     def callback(self, *args, **kwargs):
-        """
+        """Implement a callback.
+
         Method that implements the logic that decides what do to when a change
-         (e.g., task state change) is identified.
-        If it's an interesting change, it calls self.intercept; otherwise,
-        let it go....
+        (e.g., task state change) is identified. If it's an interesting
+        change, it calls self.intercept; otherwise, let it go....
         """
         raise NotImplementedError()
 
     def send_workflow_message(self, workflow_obj: WorkflowObject):
+        """Send workflow."""
         wf_id = workflow_obj.workflow_id or str(uuid4())
         workflow_obj.workflow_id = wf_id
         if wf_id in self._saved_workflows:
@@ -106,6 +106,7 @@ class BaseInterceptor(object):
         return wf_id
 
     def intercept(self, obj_msg):
+        """Intercept it."""
         self._mq_dao.buffer.append(obj_msg)
 
     # def intercept_appends_only(self, obj_msg):

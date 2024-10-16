@@ -1,3 +1,5 @@
+"""Interceptor module."""
+
 import inspect
 
 from flowcept import WorkflowObject
@@ -18,6 +20,7 @@ from flowcept.configs import (
 
 
 def get_run_spec_data(task_msg: TaskObject, run_spec):
+    """Get the run specs."""
     # def _get_arg(arg_name):
     #     if type(run_spec) == dict:
     #         return run_spec.get(arg_name, None)
@@ -90,6 +93,7 @@ def get_run_spec_data(task_msg: TaskObject, run_spec):
 
 
 def get_task_deps(task_state, task_msg: TaskObject):
+    """Get the task dependencies."""
     if len(task_state.dependencies):
         task_msg.dependencies = [t.key for t in task_state.dependencies]
     if len(task_state.dependents):
@@ -97,6 +101,7 @@ def get_task_deps(task_state, task_msg: TaskObject):
 
 
 def get_times_from_task_state(task_msg, ts):
+    """Get the times."""
     for times in ts.startstops:
         if times["action"] == "compute":
             task_msg.started_at = times["start"]
@@ -104,12 +109,15 @@ def get_times_from_task_state(task_msg, ts):
 
 
 class DaskSchedulerInterceptor(BaseInterceptor):
+    """Dask scheduler."""
+
     def __init__(self, scheduler, plugin_key="dask"):
         self._scheduler = scheduler
         super().__init__(plugin_key)
         super().start(bundle_exec_id=self._scheduler.address)
 
     def callback(self, task_id, start, finish, *args, **kwargs):
+        """Implement the callback."""
         try:
             if task_id in self._scheduler.tasks:
                 ts = self._scheduler.tasks[task_id]
@@ -133,9 +141,7 @@ class DaskSchedulerInterceptor(BaseInterceptor):
 
                 if REGISTER_WORKFLOW:
                     if hasattr(self._scheduler, "current_workflow"):
-                        wf_obj: WorkflowObject = (
-                            self._scheduler.current_workflow
-                        )
+                        wf_obj: WorkflowObject = self._scheduler.current_workflow
                         task_msg.workflow_id = wf_obj.workflow_id
                         self.send_workflow_message(wf_obj)
                     else:
@@ -150,13 +156,16 @@ class DaskSchedulerInterceptor(BaseInterceptor):
 
 
 class DaskWorkerInterceptor(BaseInterceptor):
+    """Dask worker."""
+
     def __init__(self, plugin_key="dask"):
         self._plugin_key = plugin_key
         self._worker = None
         # super().__init__ goes to setup_worker.
 
     def setup_worker(self, worker):
-        """
+        """Set the worker.
+
         Dask Worker's constructor happens actually in this setup method.
         That's why we call the super() constructor here.
         """
@@ -170,6 +179,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
         # workers.
 
     def callback(self, task_id, start, finish, *args, **kwargs):
+        """Implement the callback."""
         try:
             if task_id not in self._worker.state.tasks:
                 return
@@ -181,9 +191,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
 
             if ts.state == "executing":
                 if TELEMETRY_CAPTURE is not None:
-                    task_msg.telemetry_at_start = (
-                        self.telemetry_capture.capture()
-                    )
+                    task_msg.telemetry_at_start = self.telemetry_capture.capture()
                 task_msg.status = Status.RUNNING
                 task_msg.address = self._worker.worker_address
                 if self.settings.worker_create_timestamps:
@@ -195,9 +203,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
                 else:
                     get_times_from_task_state(task_msg, ts)
                 if TELEMETRY_CAPTURE is not None:
-                    task_msg.telemetry_at_end = (
-                        self.telemetry_capture.capture()
-                    )
+                    task_msg.telemetry_at_end = self.telemetry_capture.capture()
 
             elif ts.state == "error":
                 task_msg.status = Status.ERROR
@@ -210,9 +216,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
                     "traceback": ts.traceback_text,
                 }
                 if TELEMETRY_CAPTURE is not None:
-                    task_msg.telemetry_at_end = (
-                        self.telemetry_capture.capture()
-                    )
+                    task_msg.telemetry_at_end = self.telemetry_capture.capture()
             else:
                 return
 
@@ -224,16 +228,12 @@ class DaskWorkerInterceptor(BaseInterceptor):
                 if task_id in self._worker.data.memory:
                     task_msg.generated = self._worker.data.memory[task_id]
                     if REPLACE_NON_JSON_SERIALIZABLE:
-                        task_msg.generated = replace_non_serializable(
-                            task_msg.generated
-                        )
+                        task_msg.generated = replace_non_serializable(task_msg.generated)
             if ENRICH_MESSAGES:
                 task_msg.enrich(self._plugin_key)
 
             self.intercept(task_msg.to_dict())
 
         except Exception as e:
-            self.logger.error(
-                f"Error with dask worker: {self._worker.worker_address}"
-            )
+            self.logger.error(f"Error with dask worker: {self._worker.worker_address}")
             self.logger.exception(e)

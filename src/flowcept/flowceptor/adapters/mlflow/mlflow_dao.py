@@ -1,3 +1,5 @@
+"""DAO module."""
+
 from typing import List
 from sqlalchemy.engine import Row, create_engine
 from sqlalchemy import text
@@ -13,6 +15,8 @@ from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import (
 
 @singleton
 class MLFlowDAO:
+    """DAO class."""
+
     _LIMIT = 10
     # TODO: This should not at all be hard coded.
     # This value needs to be greater than the amount of
@@ -32,6 +36,7 @@ class MLFlowDAO:
             raise Exception(f"Could not create DB engine with uri: {db_uri}")
 
     def get_finished_run_uuids(self) -> List[Row]:
+        """Get the finished run."""
         sql = text(
             dedent(
                 f"""
@@ -56,6 +61,7 @@ class MLFlowDAO:
             conn.close()
 
     def get_run_data(self, run_uuid: str) -> RunData:
+        """Get the run data."""
         # TODO: consider outer joins to get the run data even if there's
         #  no metric or param or if the task hasn't finished yet
         sql = text(

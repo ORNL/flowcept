@@ -1,3 +1,5 @@
+"""Tensorboard interceptor module."""
+
 import os
 import time
 
@@ -22,6 +24,8 @@ from flowcept.flowceptor.adapters.mlflow.interception_event_handler import (
 
 
 class TensorboardInterceptor(BaseInterceptor):
+    """Tensorboard interceptor."""
+
     def __init__(self, plugin_key="tensorboard"):
         super().__init__(plugin_key)
         self._observer: PollingObserver = None
@@ -30,11 +34,12 @@ class TensorboardInterceptor(BaseInterceptor):
         self.log_metrics = set(self.settings.log_metrics)
 
     def callback(self):
-        """
+        """Implement the callback.
+
         This function is called whenever a change is identified in the data.
-        It decides what to do in the event of a change.
-        If it's an interesting change, it calls self.intercept; otherwise,
-        let it go....
+        It decides what to do in the event of a change. If it's an
+        interesting change, it calls self.intercept; otherwise, let it
+        go....
         """
         self.logger.debug("New tensorboard directory event!")
         # TODO: now we're waiting for the file to be completely written.
@@ -89,11 +94,13 @@ class TensorboardInterceptor(BaseInterceptor):
                 self.state_manager.add_element_id(child_event.log_path)
 
     def start(self, bundle_exec_id) -> "TensorboardInterceptor":
+        """Start it."""
         super().start(bundle_exec_id)
         self.observe()
         return self
 
     def stop(self) -> bool:
+        """Stop it."""
         self.logger.debug("Interceptor stopping...")
         super().stop()
         self._observer.stop()
@@ -101,6 +108,7 @@ class TensorboardInterceptor(BaseInterceptor):
         return True
 
     def observe(self):
+        """Observe it."""
         event_handler = InterceptionEventHandler(
             self, self.__class__.callback
         )
