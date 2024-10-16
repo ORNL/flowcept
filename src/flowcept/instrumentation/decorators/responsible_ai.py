@@ -1,3 +1,5 @@
+"""AI module."""
+
 from functools import wraps
 import numpy as np
 from torch import nn
@@ -52,9 +54,7 @@ def _inspect_inner_modules(model, modules_dict={}, in_named=None):
     }
     if in_named is not None:
         modules_dict[key]["in_named"] = in_named
-    modules_dict[key].update(
-        {k: v for k, v in model.__dict__.items() if not k.startswith("_")}
-    )
+    modules_dict[key].update({k: v for k, v in model.__dict__.items() if not k.startswith("_")})
     for name, module in model.named_children():
         if isinstance(module, nn.Module):
             _inspect_inner_modules(module, modules_dict, in_named=name)
@@ -62,18 +62,18 @@ def _inspect_inner_modules(model, modules_dict={}, in_named=None):
 
 
 def model_profiler():
+    """Get the model profiler."""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
-            if type(result) != dict or "model" not in result:
-                raise Exception(
-                    "We expect that you give us the model so we can profile it. Return a dict with a 'model' key in it with the pytorch model to be profiled."
-                )
+            if type(result) is not dict or "model" not in result:
+                msg = "We expect a model so we can profile it. "
+                msg2 = "Return a dict with a 'model' key with the pytorch model to be profiled."
+                raise Exception(msg + msg2)
 
-            random_seed = (
-                result["random_seed"] if "random_seed" in result else None
-            )
+            random_seed = result["random_seed"] if "random_seed" in result else None
 
             model = result.pop("model", None)
             nparams = 0
@@ -107,9 +107,9 @@ def model_profiler():
                 ret["responsible_ai_metadata"] = {}
             ret["responsible_ai_metadata"].update(this_result)
 
-            if INSTRUMENTATION.get("torch", False) and INSTRUMENTATION[
-                "torch"
-            ].get("save_models", False):
+            if INSTRUMENTATION.get("torch", False) and INSTRUMENTATION["torch"].get(
+                "save_models", False
+            ):
                 obj_id = Flowcept.db.save_torch_model(
                     model, custom_metadata=ret["responsible_ai_metadata"]
                 )
