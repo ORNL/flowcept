@@ -1,23 +1,24 @@
-from typing import List, Dict
-from dataclasses import dataclass, asdict
+"""Telemetry module."""
 
+from typing import List, Dict
 
 def remove_none_values(_dict):
     return {k: v for (k, v) in _dict if v is not None}
 
 
 class Telemetry:
-    """
-     Class representing telemetry information captured in the platform where
-     the experiment runs.
+    """Telemetry class.
+
+    Class representing telemetry information captured in the platform where
+    the experiment runs.
 
     We are using psutils and the data it can capture depends on the platform.
-    So, we won't use dataclasses because we can't list all possible info
-    to be captured in any platform.
-
+    So, we won't use dataclasses because we can't list all possible info to
+    be captured in any platform.
     """
 
     class CPU:
+        """CPU class."""
         times_avg: Dict[str, float] = None
         percent_all: float = None
 
@@ -25,19 +26,23 @@ class Telemetry:
         percent_per_cpu: List[float] = None
 
     class Memory:
+        """Memory class."""
         virtual: Dict[str, float]
         swap: Dict[str, float]
 
     class Network:
+        """Network class."""
         netio: Dict[str, int]
         netio_per_interface: Dict[str, Dict[str, int]]
 
     class Disk:
+        """Disk class."""
         disk_usage: Dict[str, float]
         io: Dict[str, float]
         io_per_disk: Dict[str, Dict[str, float]]
 
     class Process:
+        """Process class."""
         pid: int
         cpu_number: int
         memory: Dict[str, float]
@@ -75,6 +80,7 @@ class Telemetry:
     gpu: Dict = None  # TODO: use dataclasses
 
     def to_dict(self):
+        """Convert to dictionary."""
         ret = {}
         if self.cpu is not None:
             ret["cpu"] = self.cpu.__dict__

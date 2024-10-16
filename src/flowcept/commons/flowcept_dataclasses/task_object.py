@@ -1,3 +1,5 @@
+"""Task object module."""
+
 from enum import Enum
 from typing import Dict, AnyStr, Any, Union, List
 import msgpack
@@ -14,7 +16,11 @@ from flowcept.configs import (
 )
 
 
-class Status(str, Enum):  # inheriting from str here for JSON serialization
+class Status(str, Enum):
+    """Status class.
+
+    Inheriting from str here for JSON serialization.
+    """
     SUBMITTED = "SUBMITTED"
     WAITING = "WAITING"
     RUNNING = "RUNNING"
@@ -24,10 +30,13 @@ class Status(str, Enum):  # inheriting from str here for JSON serialization
 
     @staticmethod
     def get_finished_statuses():
+        """Get finished status."""
         return [Status.FINISHED, Status.ERROR]
 
 
 class TaskObject:
+    """Task class."""
+
     type = "task"
     task_id: AnyStr = None  # Any way to identify a task
     utc_timestamp: float = None
@@ -62,6 +71,7 @@ class TaskObject:
 
     @staticmethod
     def get_time_field_names():
+        """Get the time field."""
         return [
             "started_at",
             "ended_at",
@@ -72,6 +82,7 @@ class TaskObject:
 
     @staticmethod
     def get_dict_field_names():
+        """Get field names."""
         return [
             "used",
             "generated",
@@ -82,13 +93,16 @@ class TaskObject:
 
     @staticmethod
     def task_id_field():
+        """Get task id."""
         return "task_id"
 
     @staticmethod
     def workflow_id_field():
+        """Get workflow id."""
         return "workflow_id"
 
     def enrich(self, adapter_key=None):
+        """Enrich it."""
         if adapter_key is not None:
             # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
             self.adapter_id = adapter_key
@@ -115,6 +129,7 @@ class TaskObject:
             self.hostname = HOSTNAME
 
     def to_dict(self):
+        """Convert to dictionary."""
         result_dict = {}
         for attr, value in self.__dict__.items():
             if value is not None:
@@ -130,10 +145,12 @@ class TaskObject:
         return result_dict
 
     def serialize(self):
+        """Serialize it."""
         return msgpack.dumps(self.to_dict())
 
     @staticmethod
     def enrich_task_dict(task_dict: dict):
+        """Enrich the task."""
         attributes = {
             "campaign_id": CAMPAIGN_ID,
             "node_name": NODE_NAME,
@@ -143,9 +160,7 @@ class TaskObject:
             "hostname": HOSTNAME,
         }
         for key, fallback_value in attributes.items():
-            if (
-                key not in task_dict or task_dict[key] is None
-            ) and fallback_value is not None:
+            if (key not in task_dict or task_dict[key] is None) and fallback_value is not None:
                 task_dict[key] = fallback_value
 
     # @staticmethod

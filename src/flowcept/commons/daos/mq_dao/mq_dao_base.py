@@ -1,3 +1,5 @@
+"""MQ base module."""
+
 from abc import ABC, abstractmethod
 from typing import Union, List, Callable
 
@@ -28,11 +30,14 @@ from flowcept.commons.utils import GenericJSONEncoder
 
 
 class MQDao(ABC):
+    """MQ base class."""
+
     ENCODER = GenericJSONEncoder if JSON_SERIALIZER == "complex" else None
     # TODO we don't have a unit test to cover complex dict!
 
     @staticmethod
     def build(*args, **kwargs) -> "MQDao":
+        """Build it."""
         if MQ_TYPE == "redis":
             from flowcept.commons.daos.mq_dao.mq_dao_redis import MQDaoRedis
 
@@ -76,12 +81,11 @@ class MQDao(ABC):
         self.buffer: Union[AutoflushBuffer, List] = None
 
     @abstractmethod
-    def _bulk_publish(
-        self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps
-    ):
+    def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         raise NotImplementedError()
 
     def bulk_publish(self, buffer):
+        """Publish it."""
         self.logger.info(f"Going to flush {len(buffer)} to MQ...")
         if MQ_CHUNK_SIZE > 1:
             for chunk in chunked(buffer, MQ_CHUNK_SIZE):
@@ -89,34 +93,32 @@ class MQDao(ABC):
         else:
             self._bulk_publish(buffer)
 
-    def register_time_based_thread_init(
-        self, interceptor_instance_id: str, exec_bundle_id=None
-    ):
+    def register_time_based_thread_init(self, interceptor_instance_id: str, exec_bundle_id=None):
+        """Register the time."""
         set_name = MQDao._get_set_name(exec_bundle_id)
         self.logger.info(
             f"Registering the beginning of the time_based MQ flush thread {set_name}.{interceptor_instance_id}"
         )
         self._keyvalue_dao.add_key_into_set(set_name, interceptor_instance_id)
 
-    def register_time_based_thread_end(
-        self, interceptor_instance_id: str, exec_bundle_id=None
-    ):
+    def register_time_based_thread_end(self, interceptor_instance_id: str, exec_bundle_id=None):
+        """Register time."""
         set_name = MQDao._get_set_name(exec_bundle_id)
         self.logger.info(
             f"Registering the end of the time_based MQ flush thread {set_name}.{interceptor_instance_id}"
         )
-        self._keyvalue_dao.remove_key_from_set(
-            set_name, interceptor_instance_id
-        )
+        self._keyvalue_dao.remove_key_from_set(set_name, interceptor_instance_id)
         self.logger.info(
             f"Done registering the end of the time_based MQ flush thread {set_name}.{interceptor_instance_id}"
         )
 
     def all_time_based_threads_ended(self, exec_bundle_id=None):
+        """Get all time."""
         set_name = MQDao._get_set_name(exec_bundle_id)
         return self._keyvalue_dao.set_is_empty(set_name)
 
     def init_buffer(self, interceptor_instance_id: str, exec_bundle_id=None):
+        """Create the buffer."""
         if flowcept.configs.DB_FLUSH_MODE == "online":
             self.logger.info(
                 f"Starting MQ time-based flushing! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}"
@@ -127,9 +129,7 @@ class MQDao(ABC):
                 flush_function=self.bulk_publish,
             )
             #
-            self.register_time_based_thread_init(
-                interceptor_instance_id, exec_bundle_id
-            )
+            self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
             self._time_based_flushing_started = True
         else:
             self.buffer = list()
@@ -146,6 +146,7 @@ class MQDao(ABC):
             self.buffer = list()
 
     def stop(self, interceptor_instance_id: str, bundle_exec_id: int = None):
+        """Stop it."""
         self.logger.info(
             f"MQ publisher received stop signal! bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}"
         )
@@ -153,13 +154,9 @@ class MQDao(ABC):
         self.logger.info(
             f"Flushed MQ for the last time! Now going to send stop msg. bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}"
         )
-        self._send_mq_dao_time_thread_stop(
-            interceptor_instance_id, bundle_exec_id
-        )
+        self._send_mq_dao_time_thread_stop(interceptor_instance_id, bundle_exec_id)
 
-    def _send_mq_dao_time_thread_stop(
-        self, interceptor_instance_id, exec_bundle_id=None
-    ):
+    def _send_mq_dao_time_thread_stop(self, interceptor_instance_id, exec_bundle_id=None):
         # These control_messages are handled by the document inserter
         # TODO: these should be constants
         msg = {
@@ -172,22 +169,24 @@ class MQDao(ABC):
         self.send_message(msg)
 
     def send_document_inserter_stop(self):
+        """Send the document."""
         # These control_messages are handled by the document inserter
         msg = {"type": "flowcept_control", "info": "stop_document_inserter"}
         self.send_message(msg)
 
     @abstractmethod
-    def send_message(
-        self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps
-    ):
+    def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        """Send a message."""
         raise NotImplementedError()
 
     @abstractmethod
     def message_listener(self, message_handler: Callable):
+        """Get message listener."""
         raise NotImplementedError()
 
     @abstractmethod
     def liveness_test(self):
+        """Get livelyness of it."""
         try:
             response = self._kv_conn.ping()
             if response:

@@ -1,3 +1,5 @@
+"""Document module."""
+
 from typing import List, Dict, Tuple, Any
 import io
 import json
@@ -35,6 +37,8 @@ from time import time
 
 @singleton
 class DocumentDBDao(object):
+    """Document class."""
+
     def __init__(self, create_index=MONGO_CREATE_INDEX):
         self.logger = FlowceptLogger()
 
@@ -53,46 +57,27 @@ class DocumentDBDao(object):
 
     def _create_indices(self):
         # Creating task collection indices:
-        existing_indices = [
-            list(x["key"].keys())[0]
-            for x in self._tasks_collection.list_indexes()
-        ]
+        existing_indices = [list(x["key"].keys())[0] for x in self._tasks_collection.list_indexes()]
         if TaskObject.task_id_field() not in existing_indices:
-            self._tasks_collection.create_index(
-                TaskObject.task_id_field(), unique=True
-            )
+            self._tasks_collection.create_index(TaskObject.task_id_field(), unique=True)
         if TaskObject.workflow_id_field() not in existing_indices:
-            self._tasks_collection.create_index(
-                TaskObject.workflow_id_field()
-            )
+            self._tasks_collection.create_index(TaskObject.workflow_id_field())
 
         # Creating workflow collection indices:
-        existing_indices = [
-            list(x["key"].keys())[0]
-            for x in self._wfs_collection.list_indexes()
-        ]
+        existing_indices = [list(x["key"].keys())[0] for x in self._wfs_collection.list_indexes()]
         if WorkflowObject.workflow_id_field() not in existing_indices:
-            self._wfs_collection.create_index(
-                WorkflowObject.workflow_id_field(), unique=True
-            )
+            self._wfs_collection.create_index(WorkflowObject.workflow_id_field(), unique=True)
 
         # Creating objects collection indices:
-        existing_indices = [
-            list(x["key"].keys())[0]
-            for x in self._obj_collection.list_indexes()
-        ]
+        existing_indices = [list(x["key"].keys())[0] for x in self._obj_collection.list_indexes()]
 
         if "object_id" not in existing_indices:
             self._obj_collection.create_index("object_id", unique=True)
 
         if WorkflowObject.workflow_id_field() not in existing_indices:
-            self._obj_collection.create_index(
-                WorkflowObject.workflow_id_field(), unique=False
-            )
+            self._obj_collection.create_index(WorkflowObject.workflow_id_field(), unique=False)
         if TaskObject.task_id_field() not in existing_indices:
-            self._obj_collection.create_index(
-                TaskObject.task_id_field(), unique=False
-            )
+            self._obj_collection.create_index(TaskObject.task_id_field(), unique=False)
 
     def task_query(
         self,
@@ -103,7 +88,8 @@ class DocumentDBDao(object):
         aggregation: List[Tuple] = None,
         remove_json_unserializables=True,
     ) -> List[Dict]:
-        """
+        """Generate a mongo query pipeline.
+
         Generates a MongoDB query pipeline based on the provided arguments.
         Parameters:
             filter (dict): The filter criteria for the $match stage.
@@ -130,9 +116,7 @@ class DocumentDBDao(object):
 
         if aggregation is not None:
             try:
-                rs = self._pipeline(
-                    filter, projection, limit, sort, aggregation
-                )
+                rs = self._pipeline(filter, projection, limit, sort, aggregation)
             except Exception as e:
                 self.logger.exception(e)
                 return None
@@ -231,6 +215,7 @@ class DocumentDBDao(object):
             return None
 
     def insert_one(self, doc: Dict) -> ObjectId:
+        """Insert only one."""
         try:
             r = self._tasks_collection.insert_one(doc)
             return r.inserted_id
@@ -239,6 +224,7 @@ class DocumentDBDao(object):
             return None
 
     def insert_many(self, doc_list: List[Dict]) -> List[ObjectId]:
+        """Insert many."""
         try:
             r = self._tasks_collection.insert_many(doc_list)
             return r.inserted_ids
@@ -246,18 +232,15 @@ class DocumentDBDao(object):
             self.logger.exception(e)
             return None
 
-    def insert_and_update_many(
-        self, indexing_key, doc_list: List[Dict]
-    ) -> bool:
+    def insert_and_update_many(self, indexing_key, doc_list: List[Dict]) -> bool:
+        """Insert and update."""
         try:
             if len(doc_list) == 0:
                 return False
             t0 = 0
             if PERF_LOG:
                 t0 = time()
-            indexed_buffer = curate_dict_task_messages(
-                doc_list, indexing_key, t0
-            )
+            indexed_buffer = curate_dict_task_messages(doc_list, indexing_key, t0)
             t1 = perf_log("doc_curate_dict_task_messages", t0)
             if len(indexed_buffer) == 0:
                 return False
@@ -279,6 +262,7 @@ class DocumentDBDao(object):
             return False
 
     def delete_ids(self, ids_list: List[ObjectId]) -> bool:
+        """Delete the ids."""
         if type(ids_list) != list:
             ids_list = [ids_list]
         try:
@@ -289,6 +273,7 @@ class DocumentDBDao(object):
             return False
 
     def delete_keys(self, key_name, keys_list: List[Any]) -> bool:
+        """Delete the keys."""
         if type(keys_list) != list:
             keys_list = [keys_list]
         try:
@@ -299,6 +284,7 @@ class DocumentDBDao(object):
             return False
 
     def delete_with_filter(self, filter) -> bool:
+        """Delete with filter."""
         try:
             self._tasks_collection.delete_many(filter)
             return True
@@ -307,6 +293,7 @@ class DocumentDBDao(object):
             return False
 
     def count(self) -> int:
+        """Count it."""
         try:
             return self._tasks_collection.count_documents({})
         except Exception as e:
@@ -314,6 +301,7 @@ class DocumentDBDao(object):
             return -1
 
     def workflow_insert_or_update(self, workflow_obj: WorkflowObject) -> bool:
+        """Insert or update workflow."""
         _dict = workflow_obj.to_dict().copy()
         workflow_id = _dict.pop(WorkflowObject.workflow_id_field(), None)
         if workflow_id is None:
@@ -328,9 +316,7 @@ class DocumentDBDao(object):
             #         "Interceptor_ID must be a string, as Mongo can only record string keys."
             #     )
             #     return False
-            update_query.update(
-                {"$push": {"interceptor_ids": {"$each": interceptor_ids}}}
-            )
+            update_query.update({"$push": {"interceptor_ids": {"$each": interceptor_ids}}})
 
         machine_info = _dict.pop("machine_info", None)
         if machine_info is not None:
@@ -348,12 +334,8 @@ class DocumentDBDao(object):
         )
 
         try:
-            result = self._wfs_collection.update_one(
-                _filter, update_query, upsert=True
-            )
-            return (result.upserted_id is not None) or result.raw_result[
-                "updatedExisting"
-            ]
+            result = self._wfs_collection.update_one(_filter, update_query, upsert=True)
+            return (result.upserted_id is not None) or result.raw_result["updatedExisting"]
         except Exception as e:
             self.logger.exception(e)
             return False
@@ -366,6 +348,7 @@ class DocumentDBDao(object):
         sort: List[Tuple] = None,
         remove_json_unserializables=True,
     ) -> List[Dict]:
+        """Get the workflow query."""
         # TODO refactor: reuse code for task_query instead of copy & paste
         _projection = {}
         if projection is not None:
@@ -395,6 +378,7 @@ class DocumentDBDao(object):
         export_format="json",
         should_zip=False,
     ):
+        """Dump it to file."""
         if collection_name == MONGO_TASK_COLLECTION:
             _collection = self._tasks_collection
         elif collection_name == MONGO_WORKFLOWS_COLLECTION:
@@ -426,9 +410,7 @@ class DocumentDBDao(object):
         try:
             if should_zip:
                 in_memory_stream = io.BytesIO()
-                with zipfile.ZipFile(
-                    in_memory_stream, "w", zipfile.ZIP_DEFLATED
-                ) as zip_file:
+                with zipfile.ZipFile(in_memory_stream, "w", zipfile.ZIP_DEFLATED) as zip_file:
                     zip_file.writestr("dump_file.json", json_data)
                 compressed_data = in_memory_stream.getvalue()
                 with open(output_file, "wb") as f:
@@ -443,6 +425,7 @@ class DocumentDBDao(object):
             return
 
     def liveness_test(self) -> bool:
+        """Test for livelyness."""
         try:
             self._db.list_collection_names()
             return True
@@ -463,6 +446,7 @@ class DocumentDBDao(object):
         custom_metadata=None,
         pickle_=False,
     ):
+        """Save an object."""
         if object_id is None:
             object_id = str(uuid4())
         obj_doc = {"object_id": object_id}
@@ -485,5 +469,6 @@ class DocumentDBDao(object):
         return object_id
 
     def get_objects(self, filter):
+        """Get some objects."""
         documents = self._obj_collection.find(filter)
         return list(documents)

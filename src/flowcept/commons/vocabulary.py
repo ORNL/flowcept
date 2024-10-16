@@ -1,5 +1,12 @@
+"""Vocab module."""
+
+
 class Vocabulary:
+    """Vocab class."""
+
     class Settings:
+        """Setting class."""
+
         ADAPTERS = "adapters"
         KIND = "kind"
 
