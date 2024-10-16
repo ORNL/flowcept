@@ -1,3 +1,5 @@
+"""Query resources."""
+
 import json
 from flask_restful import Resource, reqparse
 
@@ -5,9 +7,12 @@ from flowcept.commons.daos.document_db_dao import DocumentDBDao
 
 
 class TaskQuery(Resource):
+    """TaskQuery class."""
+
     ROUTE = "/task_query"
 
     def post(self):
+        """Post it."""
         parser = reqparse.RequestParser()
         req_args = ["filter", "projection", "sort", "limit", "aggregation"]
         for arg in req_args:
@@ -29,4 +34,4 @@ class TaskQuery(Resource):
         if docs is not None and len(docs):
             return docs, 201
         else:
-            return f"Could not find matching docs", 404
+            return "Could not find matching docs", 404
