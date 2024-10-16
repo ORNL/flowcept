@@ -1,3 +1,5 @@
+"""Pytorch module."""
+
 from time import time
 from functools import wraps
 import flowcept.commons
@@ -11,7 +13,6 @@ import uuid
 import torch
 from torch import nn
 
-import flowcept.commons
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
@@ -57,6 +58,8 @@ def _inspect_torch_tensor(tensor: torch.Tensor):
 
 
 def full_torch_task(func=None):
+    """Get pytorch task."""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -71,15 +74,9 @@ def full_torch_task(func=None):
             task_obj["workflow_id"] = args[0].workflow_id
             task_obj["used"] = {
                 "tensor": _inspect_torch_tensor(args[1]),
-                **{
-                    k: v
-                    for k, v in vars(args[0]).items()
-                    if not k.startswith("_")
-                },
+                **{k: v for k, v in vars(args[0]).items() if not k.startswith("_")},
             }
-            task_obj[
-                "telemetry_at_start"
-            ] = (
+            task_obj["telemetry_at_start"] = (
                 instrumentation_interceptor.telemetry_capture.capture().to_dict()
             )
             try:
@@ -90,9 +87,7 @@ def full_torch_task(func=None):
                 result = None
                 task_obj["stderr"] = str(e)
             task_obj["ended_at"] = time()
-            task_obj[
-                "telemetry_at_end"
-            ] = (
+            task_obj["telemetry_at_end"] = (
                 instrumentation_interceptor.telemetry_capture.capture().to_dict()
             )
             task_obj["generated"] = {
@@ -123,6 +118,8 @@ def full_torch_task(func=None):
 
 
 def lightweight_tensor_inspection_torch_task(func=None):
+    """Get lightweight pytorch task."""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -156,6 +153,8 @@ def lightweight_tensor_inspection_torch_task(func=None):
 
 
 def lightweight_telemetry_tensor_inspection_torch_task(func=None):
+    """Get lightweight tensor inspect task."""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -189,45 +188,9 @@ def lightweight_telemetry_tensor_inspection_torch_task(func=None):
         return decorator(func)
 
 
-# def lightweight_telemetry_tensor_inspection_counted_torch_task(func=None):
-#     def decorator(func):
-#         @wraps(func)
-#         def wrapper(*args, **kwargs):
-#             FrequencyCount.counter += 1
-#             result = func(*args, **kwargs)
-#             if FrequencyCount.counter < FrequencyCount.MAX:
-#                 return result
-#             FrequencyCount.counter = 0
-#             used = {"tensor": _inspect_torch_tensor(args[1])}
-#             for k, v in vars(args[0]).items():
-#                 if not k.startswith("_"):
-#                     if isinstance(v, torch.Tensor):
-#                         used[k] = _inspect_torch_tensor(v)
-#                     elif callable(v):
-#                         used[k] = v.__qualname__
-#                     else:
-#                         used[k] = v
-#             task_dict = dict(
-#                 type="task",
-#                 workflow_id=args[0].workflow_id,
-#                 parent_task_id=args[0].parent_task_id,
-#                 activity_id=args[0].__class__.__name__,
-#                 used=used,
-#                 generated={"tensor": _inspect_torch_tensor(result)},
-#                 telemetry_at_start=instrumentation_interceptor.telemetry_capture.capture().to_dict(),
-#             )
-#             instrumentation_interceptor.intercept(task_dict)
-#             return result
-#
-#         return wrapper
-#
-#     if func is None:
-#         return decorator
-#     else:
-#         return decorator(func)
-
-
 def lightweight_telemetry_torch_task(func=None):
+    """Get lightweight telemetry torch task."""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -252,6 +215,7 @@ def lightweight_telemetry_torch_task(func=None):
 
 
 def torch_task():
+    """Get the torch task."""
     mode = INSTRUMENTATION["torch"]["mode"]
     if mode is None:
         return lambda _: _
@@ -271,9 +235,7 @@ def torch_task():
     elif mode == "full":
         return full_torch_task
     else:
-        raise NotImplementedError(
-            f"There is no torch instrumentation mode {mode}"
-        )
+        raise NotImplementedError(f"There is no torch instrumentation mode {mode}")
 
 
 @torch_task()
@@ -283,12 +245,10 @@ def _our_forward(self, *args, **kwargs):
 
 def _create_dynamic_class(base_class, class_name, extra_attributes):
     attributes = {
-        "__init__": lambda self, *args, **kwargs: super(
-            self.__class__, self
-        ).__init__(*args, **kwargs),
-        "forward": lambda self, *args, **kwargs: _our_forward(
-            self, *args, **kwargs
+        "__init__": lambda self, *args, **kwargs: super(self.__class__, self).__init__(
+            *args, **kwargs
         ),
+        "forward": lambda self, *args, **kwargs: _our_forward(self, *args, **kwargs),
         **extra_attributes,
     }
 
@@ -300,6 +260,7 @@ def register_modules(
     workflow_id: str = None,
     parent_task_id: str = None,
 ) -> Dict[nn.Module, nn.Module]:
+    """Register some modules."""
     flowcept_torch_modules: List[nn.Module] = []
 
     for module in modules:
@@ -324,6 +285,7 @@ def register_module_as_workflow(
     # parent_task_id=None,
     custom_metadata: Dict = None,
 ):
+    """Register as a workflow."""
     workflow_obj = WorkflowObject()
     workflow_obj.workflow_id = str(uuid.uuid4())
     workflow_obj.parent_workflow_id = parent_workflow_id
