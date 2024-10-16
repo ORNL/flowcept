@@ -51,11 +51,14 @@ class MQDao(ABC):
 
     @staticmethod
     def _get_set_name(exec_bundle_id=None):
-        """
-        :param exec_bundle_id: A way to group one or many interceptors, and treat each group as a bundle to control when their time_based threads started and ended.
+        """Get the set name.
+
+        :param exec_bundle_id: A way to group one or many interceptors, and
+         treat each group as a bundle to control when their time_based
+         threads started and ended.
         :return:
         """
-        set_id = f"started_mq_thread_execution"
+        set_id = "started_mq_thread_execution"
         if exec_bundle_id is not None:
             set_id += "_" + str(exec_bundle_id)
         return set_id
@@ -97,7 +100,7 @@ class MQDao(ABC):
         """Register the time."""
         set_name = MQDao._get_set_name(exec_bundle_id)
         self.logger.info(
-            f"Registering the beginning of the time_based MQ flush thread {set_name}.{interceptor_instance_id}"
+            f"Register start of time_based MQ flush thread {set_name}.{interceptor_instance_id}"
         )
         self._keyvalue_dao.add_key_into_set(set_name, interceptor_instance_id)
 
@@ -105,11 +108,11 @@ class MQDao(ABC):
         """Register time."""
         set_name = MQDao._get_set_name(exec_bundle_id)
         self.logger.info(
-            f"Registering the end of the time_based MQ flush thread {set_name}.{interceptor_instance_id}"
+            f"Registering end of time_based MQ flush thread {set_name}.{interceptor_instance_id}"
         )
         self._keyvalue_dao.remove_key_from_set(set_name, interceptor_instance_id)
         self.logger.info(
-            f"Done registering the end of the time_based MQ flush thread {set_name}.{interceptor_instance_id}"
+            f"Done registering time_based MQ flush thread {set_name}.{interceptor_instance_id}"
         )
 
     def all_time_based_threads_ended(self, exec_bundle_id=None):
@@ -120,15 +123,13 @@ class MQDao(ABC):
     def init_buffer(self, interceptor_instance_id: str, exec_bundle_id=None):
         """Create the buffer."""
         if flowcept.configs.DB_FLUSH_MODE == "online":
-            self.logger.info(
-                f"Starting MQ time-based flushing! bundle: {exec_bundle_id}; interceptor id: {interceptor_instance_id}"
-            )
+            msg = "Starting MQ time-based flushing! bundle: "
+            self.logger.info(msg + f"{exec_bundle_id}; interceptor id: {interceptor_instance_id}")
             self.buffer = AutoflushBuffer(
                 max_size=MQ_BUFFER_SIZE,
                 flush_interval=MQ_INSERTION_BUFFER_TIME,
                 flush_function=self.bulk_publish,
             )
-            #
             self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
             self._time_based_flushing_started = True
         else:
@@ -147,13 +148,11 @@ class MQDao(ABC):
 
     def stop(self, interceptor_instance_id: str, bundle_exec_id: int = None):
         """Stop it."""
-        self.logger.info(
-            f"MQ publisher received stop signal! bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}"
-        )
+        msg0 = "MQ publisher received stop signal! bundle: "
+        self.logger.info(msg0 + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
         self._close_buffer()
-        self.logger.info(
-            f"Flushed MQ for the last time! Now going to send stop msg. bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}"
-        )
+        msg = "Flushed MQ for last time! Send stop msg. bundle: "
+        self.logger.info(msg + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
         self._send_mq_dao_time_thread_stop(interceptor_instance_id, bundle_exec_id)
 
     def _send_mq_dao_time_thread_stop(self, interceptor_instance_id, exec_bundle_id=None):

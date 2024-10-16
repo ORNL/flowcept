@@ -11,16 +11,13 @@ def curate_task_msg(task_msg_dict: dict):
         if field not in task_msg_dict:
             continue
         field_val = task_msg_dict[field]
-        if type(field_val) == dict and not field_val:
+        if type(field_val) is dict and not field_val:
             task_msg_dict.pop(field)  # removing empty fields
             continue
-        if type(field_val) == dict:
+        if type(field_val) is dict:
             original_field_val = field_val.copy()
             for k in original_field_val:
-                if (
-                    type(original_field_val[k]) == dict
-                    and not original_field_val[k]
-                ):
+                if type(original_field_val[k]) is dict and not original_field_val[k]:
                     field_val.pop(k)  # removing inner empty fields
             task_msg_dict[field] = field_val
         else:
@@ -69,11 +66,7 @@ def curate_dict_task_messages(
     """
     indexed_buffer = {}
     for doc in doc_list:
-        if (
-            (len(doc) == 1)
-            and (indexing_key in doc)
-            and (doc[indexing_key] in indexed_buffer)
-        ):
+        if (len(doc) == 1) and (indexing_key in doc) and (doc[indexing_key] in indexed_buffer):
             # This task_msg does not add any metadata
             continue
 
@@ -97,9 +90,7 @@ def curate_dict_task_messages(
             if field in doc:
                 if doc[field] is not None and len(doc[field]):
                     if field in indexed_buffer[indexing_key_value]:
-                        indexed_buffer[indexing_key_value][field].update(
-                            doc[field]
-                        )
+                        indexed_buffer[indexing_key_value][field].update(doc[field])
                     else:
                         indexed_buffer[indexing_key_value][field] = doc[field]
                 doc.pop(field)

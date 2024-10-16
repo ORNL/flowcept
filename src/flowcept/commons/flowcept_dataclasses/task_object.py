@@ -21,6 +21,7 @@ class Status(str, Enum):
 
     Inheriting from str here for JSON serialization.
     """
+
     SUBMITTED = "SUBMITTED"
     WAITING = "WAITING"
     RUNNING = "RUNNING"
@@ -104,7 +105,8 @@ class TaskObject:
     def enrich(self, adapter_key=None):
         """Enrich it."""
         if adapter_key is not None:
-            # TODO :base-interceptor-refactor: :code-reorg: :usability: revisit all times we assume settings is not none
+            # TODO :base-interceptor-refactor: :code-reorg: :usability:
+            # revisit all times we assume settings is not none
             self.adapter_id = adapter_key
 
         if self.utc_timestamp is None:

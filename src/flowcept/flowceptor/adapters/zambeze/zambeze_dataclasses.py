@@ -36,5 +36,6 @@ class ZambezeSettings(BaseSettings):
     kind = "zambeze"
 
     def __post_init__(self):
+        """Set attributes after init."""
         self.observer_type = "message_broker"
         self.observer_subtype = "rabbit_mq"

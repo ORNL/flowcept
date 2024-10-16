@@ -6,6 +6,7 @@ logger = FlowceptLogger()
 
 
 def singleton(cls):
+    """Create a singleton."""
     instances = {}
 
     class SingletonWrapper(cls):

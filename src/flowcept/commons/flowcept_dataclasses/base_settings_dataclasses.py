@@ -8,6 +8,7 @@ from typing import Optional, Any
 @dataclass
 class KeyValue:
     """Key value class."""
+
     key: str
     value: Any
 
@@ -15,6 +16,7 @@ class KeyValue:
 @dataclass
 class BaseSettings(abc.ABC):
     """Base settings class."""
+
     key: str
     kind: str
     observer_type: str = field(init=False)

@@ -13,7 +13,6 @@ from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.configs import (
     MQ_INSTANCES,
-    INSTRUMENTATION,
     INSTRUMENTATION_ENABLED,
 )
 from flowcept.flowcept_api.db_api import DBAPI
@@ -45,8 +44,12 @@ class Flowcept(object):
 
         Parameters
         ----------
-        interceptors - list of Flowcept interceptors. If none, instrumentation will be used. If a string is passed, no interceptor will be started.  # TODO: improve clarity for the documentation.
+        interceptors - list of Flowcept interceptors. If none, instrumentation
+        will be used. If a string is passed, no interceptor will be
+        started. # TODO: improve clarity for the documentation.
+
         bundle_exec_id - A way to group interceptors.
+
         start_doc_inserter - Whether you want to start consuming MQ messages to inject in the DB.
         """
         self.logger = FlowceptLogger()
@@ -160,10 +163,12 @@ class Flowcept(object):
         self.logger.debug("All stopped!")
 
     def __enter__(self):
+        """Run the start function."""
         self.start()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Run the stop function."""
         self.stop()
 
     @staticmethod

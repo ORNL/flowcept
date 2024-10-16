@@ -31,7 +31,8 @@ class FlowceptLogger(object):
         file_handler.setLevel(file_level)
 
         # Create formatters and add it to handlers
-        base_format = f"[%(name)s][%(levelname)s][{HOSTNAME}][pid=%(process)d][thread=%(thread)d][function=%(funcName)s][%(message)s]"
+        fmt = f"[%(name)s][%(levelname)s][{HOSTNAME}][pid=%(process)d]"
+        base_format = fmt + "[thread=%(thread)d][function=%(funcName)s][%(message)s]"
         stream_format = logging.Formatter(base_format)
         file_format = logging.Formatter(f"[%(asctime)s]{base_format}")
         stream_handler.setFormatter(stream_format)
@@ -46,6 +47,7 @@ class FlowceptLogger(object):
         return logger
 
     def __new__(cls, *args, **kwargs) -> logging.Logger:
+        """Create a new instance."""
         if not cls._instance:
             cls._instance = super(FlowceptLogger, cls).__new__(cls, *args, **kwargs)
             cls._instance._logger = FlowceptLogger._build_logger()

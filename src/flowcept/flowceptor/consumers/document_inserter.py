@@ -167,7 +167,7 @@ class DocumentInserter:
             exec_bundle_id = message.get("exec_bundle_id", None)
             interceptor_instance_id = message.get("interceptor_instance_id")
             self.logger.info(
-                f"I'm doc inserter id {id(self)}. I ack that I received mq_dao_thread_stopped message "
+                f"DocInserter id {id(self)}. Received mq_dao_thread_stopped message "
                 f"in DocInserter from the interceptor "
                 f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
             )
@@ -241,9 +241,8 @@ class DocumentInserter:
                 sleep(sleep_time)
                 if trial >= max_trials:
                     if len(self._task_dicts_buffer) == 0:  # and len(self._mq_dao._buffer) == 0:
-                        self.logger.critical(
-                            f"Doc Inserter {id(self)} gave up on waiting for the signal. It is probably safe to stop by now."
-                        )
+                        msg = f"DocInserter {id(self)} gave up waiting for signal. "
+                        self.logger.critical(msg + "Safe to stop now.")
                         break
         self.logger.info("Sending message to stop document inserter.")
         self._mq_dao.send_document_inserter_stop()

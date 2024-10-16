@@ -101,14 +101,14 @@ class MLFlowDAO:
             metric_key = tuple_dict.get("metric_key", None)
             metric_value = tuple_dict.get("metric_value", None)
             if metric_key and metric_value:
-                if not (metric_key in run_data_dict["generated"]):
+                if metric_key not in run_data_dict["generated"]:
                     run_data_dict["generated"][metric_key] = None
                 run_data_dict["generated"][metric_key] = metric_value
 
             param_key = tuple_dict.get("parameter_key", None)
             param_value = tuple_dict.get("parameter_value", None)
             if param_key and param_value:
-                if not (param_key in run_data_dict["used"]):
+                if param_key not in run_data_dict["used"]:
                     run_data_dict["used"][param_key] = None
                 run_data_dict["used"][param_key] = param_value
 

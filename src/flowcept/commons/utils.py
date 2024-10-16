@@ -44,7 +44,7 @@ def get_utc_minutes_ago(minutes_ago=1):
 
 
 def perf_log(func_name, t0: float):
-    """Configurate performance log."""
+    """Configure the performance log."""
     if PERF_LOG:
         t1 = time()
         logger = FlowceptLogger()
@@ -100,7 +100,7 @@ def assert_by_querying_tasks_until(
                 if condition_to_evaluate(docs):
                     flowcept.commons.logger.debug("Query conditions have been met! :D")
                     return True
-            except:
+            except Exception:
                 pass
 
         trials += 1
@@ -141,7 +141,7 @@ class GenericJSONEncoder(json.JSONEncoder):
     """JSON encoder class."""
 
     def default(self, obj):
-        """Default method."""
+        """Run the default method."""
         if isinstance(obj, (list, tuple)):
             return [self.default(item) for item in obj]
         elif isinstance(obj, dict):
@@ -151,7 +151,7 @@ class GenericJSONEncoder(json.JSONEncoder):
         elif isinstance(obj, object):
             try:
                 return str(obj)
-            except:
+            except Exception:
                 return None
         elif isinstance(obj, np.int) or isinstance(obj, np.int32) or isinstance(obj, np.int64):
             return int(obj)

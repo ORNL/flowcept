@@ -1,6 +1,6 @@
 """Event handler module."""
 
-from watchdog.events import LoggingEventHandler, FileSystemEventHandler
+from watchdog.events import FileSystemEventHandler
 
 
 class InterceptionEventHandler(FileSystemEventHandler):
