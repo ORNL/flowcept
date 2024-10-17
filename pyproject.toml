@@ -7,20 +7,15 @@ name = "flowcept"
 version = "0.5.3"
 requires-python = ">=3.10"
 dependencies = [
-    "pandas",
-    "omegaconf",
+    "flask-restful",
     "msgpack",
-    "redis",
+    "omegaconf",
+    "pandas",
     "psutil",
     "py-cpuinfo",
     "pymongo",
-    "requests",
-    "flask_restful",
-    "dask[distributed]",
-    "watchdog",
-    "SQLAlchemy",
-    "pika",
-    "tbparse"
+    "redis",
+    "requests"
 ]
 authors = [{name = "Oak Ridge National Laboratory"}]
 description = "Capture and query workflow provenance data using data observability"
@@ -59,23 +54,29 @@ keywords = [
 GitHub = "https://github.com/ORNL/flowcept"
 
 [project.optional-dependencies]
+dask = ["tomli", "dask[distributed]"]
+mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog"]
+tensorboard = ["tensorboard", "tensorflow", "tbparse"]
 dev = [
-    "ruff",
+    "alembic",
+    "confluent-kafka",
+    "dask[distributed]",
+    "jupyterlab",
+    "plotly",
     "pytest",
-    "torch",
-    "torchvision",
-    "numpy",
-    "scipy",
     "mlflow-skinny",
+    "nbmake",
+    "ruff",
+    "scipy",
+    "SQLAlchemy",
+    "tbparse",
     "tensorflow",
     "tensorboard",
-    "alembic",
+    "tomli",
     "seaborn",
-    "plotly",
-    "scipy",
-    "jupyterlab",
-    "nbmake",
-    "confluent-kafka"
+    "torch",
+    "torchvision",
+    "watchdog"
 ]
 
 [tool.ruff]
