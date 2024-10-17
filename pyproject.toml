@@ -22,6 +22,8 @@ dependencies = [
     "pika",
     "tbparse"
 ]
+authors = [{name = "Oak Ridge National Laboratory"}]
+description = "Capture and query workflow provenance data using data observability"
 readme = "README.md"
 license = "MIT"
 classifiers = [
@@ -29,6 +31,32 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3"
 ]
+keywords = [
+    "ai",
+    "ml",
+    "machine-learning",
+    "provenance",
+    "lineage",
+    "responsible-ai",
+    "databases",
+    "big-data",
+    "provenance",
+    "tensorboard",
+    "data-integration",
+    "scientific-workflows",
+    "dask",
+    "reproducibility",
+    "workflows",
+    "parallel-processing",
+    "lineage",
+    "model-management",
+    "mlflow",
+    "responsible-ai",
+    "data-analytics"
+]
+
+[project.urls]
+GitHub = "https://github.com/ORNL/flowcept"
 
 [project.optional-dependencies]
 dev = [
