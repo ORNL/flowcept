@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flowcept"
-version = "0.5.3"
+dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
     "flask-restful",
@@ -79,6 +79,9 @@ dev = [
     "torchvision",
     "watchdog"
 ]
+
+[tool.hatch.version]
+path = "src/flowcept/version.py"
 
 [tool.ruff]
 line-length = 100
