@@ -41,7 +41,7 @@ jobs:
         run: |
           export MQ_TYPE=kafka
           export MQ_PORT=9092
-          python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_TYPE={MQ_PORT}")'
+          python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_PORT={MQ_PORT}")'
           python -c 'from flowcept import Flowcept; assert Flowcept.services_alive()'
 
       - name: Run tests with kafka
@@ -55,7 +55,7 @@ jobs:
           pip install -e .[full]
           export MQ_TYPE=kafka
           export MQ_PORT=9092
-          python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_TYPE={MQ_PORT}")'
+          python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_PORT={MQ_PORT}")'
           python -c 'from flowcept import Flowcept; assert Flowcept.services_alive()'
 
           python flowcept/flowcept_webserver/app.py &
