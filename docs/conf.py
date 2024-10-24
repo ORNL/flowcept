@@ -6,20 +6,21 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'FlowCept'
-copyright = '2024, Oak Ridge National Lab'
-author = 'Oak Ridge National Lab'
+project = "FlowCept"
+copyright = "2024, Oak Ridge National Lab"
+author = "Oak Ridge National Lab"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = []
 
-templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
-html_static_path = ['_static']
+html_theme = "furo"
+html_title = "FlowCept"
+html_static_path = ["_static"]
