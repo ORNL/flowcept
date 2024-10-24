@@ -3,7 +3,6 @@
 import os
 import time
 
-from watchdog.observers import Observer
 from tbparse import SummaryReader
 from watchdog.observers.polling import PollingObserver
 
@@ -118,7 +117,7 @@ class TensorboardInterceptor(BaseInterceptor):
             )
             time.sleep(self.settings.watch_interval_sec)
 
-        self._observer = Observer()
+        self._observer = PollingObserver()
         self._observer.schedule(event_handler, self.settings.file_path, recursive=True)
         self._observer.start()
         self.logger.debug(f"Watching {self.settings.file_path}")
