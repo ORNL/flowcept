@@ -1,4 +1,0 @@
-mlflow-skinny>2.1.1,<=2.16.2
-SQLAlchemy==1.4.42
-alembic==1.8.1
-watchdog==2.2.1
