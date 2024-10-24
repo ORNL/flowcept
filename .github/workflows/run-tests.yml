@@ -28,6 +28,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install .[all]
 
+      - name: List installed packages
+        run: pip list
+
       - name: Start docker compose with redis
         run: docker compose -f deployment/compose-full.yml up -d
 
@@ -55,7 +58,7 @@ jobs:
         run: |
           export MQ_TYPE=kafka
           export MQ_PORT=9092
-          python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_TYPE={MQ_PORT}")'
+          python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_PORT={MQ_PORT}")'
           python -c 'from flowcept import Flowcept; assert Flowcept.services_alive()'
 
       - name: Run tests with kafka
