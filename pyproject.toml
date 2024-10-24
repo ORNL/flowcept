@@ -63,10 +63,11 @@ responsibleai = ["torch"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
 dev = [
     "jupyterlab",
+    "nbmake",
     "pika",
     "pytest",
-    "nbmake",
     "ruff",
+    "sphinx",
     "torchvision"
 ]
 all = [
