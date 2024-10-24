@@ -67,7 +67,13 @@ dev = [
     "pytest",
     "nbmake",
     "ruff",
-    "torchvision"
+    # Dependencies for torch instrumentation:
+    "torch",
+    "torchvision",
+    "datasets",
+    "torchtext",
+    "sacremoses",
+    "nltk"
 ]
 all = [
     "flowcept[analytics]",
