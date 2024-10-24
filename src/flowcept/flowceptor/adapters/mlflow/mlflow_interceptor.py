@@ -4,7 +4,6 @@ import os
 import time
 from threading import Thread
 
-from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
@@ -94,7 +93,7 @@ class MLFlowInterceptor(BaseInterceptor):
             )
             time.sleep(self.settings.watch_interval_sec)
 
-        self._observer = Observer()
+        self._observer = PollingObserver()
         self._observer.schedule(event_handler, self.settings.file_path, recursive=True)
         self._observer.start()
         self.logger.info(f"Watching {self.settings.file_path}")

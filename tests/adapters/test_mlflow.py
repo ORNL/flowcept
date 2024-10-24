@@ -1,6 +1,10 @@
 import unittest
 from time import sleep
 import numpy as np
+import os
+import uuid
+import mlflow
+
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import MLFlowInterceptor, Flowcept
 from flowcept.commons.utils import (
@@ -10,33 +14,38 @@ from flowcept.commons.utils import (
 
 
 class TestMLFlow(unittest.TestCase):
+    interceptor = None
+
     def __init__(self, *args, **kwargs):
         super(TestMLFlow, self).__init__(*args, **kwargs)
-        self.interceptor = MLFlowInterceptor()
         self.logger = FlowceptLogger()
 
-    def test_pure_run_mlflow(self, epochs=10, batch_size=64):
-        import uuid
-        import mlflow
+    @classmethod
+    def setUpClass(cls):
+        TestMLFlow.interceptor = MLFlowInterceptor()
+        if os.path.exists(TestMLFlow.interceptor.settings.file_path):
+            os.remove(TestMLFlow.interceptor.settings.file_path)
+        open(TestMLFlow.interceptor.settings.file_path, "w")
+        sleep(0.5)
+        mlflow.set_tracking_uri(f"sqlite:///{TestMLFlow.interceptor.settings.file_path}")
+        mlflow.delete_experiment(mlflow.create_experiment("starter"))
 
-        mlflow.set_tracking_uri(
-            f"sqlite:///" f"{self.interceptor.settings.file_path}"
-        )
+    def test_pure_run_mlflow(self, epochs=10, batch_size=64):
         experiment_name = "LinearRegression"
-        experiment_id = mlflow.create_experiment(
-            experiment_name + str(uuid.uuid4())
-        )
+        experiment_id = mlflow.create_experiment(experiment_name + str(uuid.uuid4()))
         with mlflow.start_run(experiment_id=experiment_id) as run:
+            sleep(5)
             mlflow.log_params({"number_epochs": epochs})
             mlflow.log_params({"batch_size": batch_size})
             # Actual training code would come here
             self.logger.debug("\nTrained model")
             mlflow.log_metric("loss", np.random.random())
-
+        run_data = TestMLFlow.interceptor.dao.get_run_data(run.info.run_uuid)
+        assert run_data.task_id == run.info.run_uuid
         return run.info.run_uuid
 
     def test_get_runs(self):
-        runs = self.interceptor.dao.get_finished_run_uuids()
+        runs = TestMLFlow.interceptor.dao.get_finished_run_uuids()
         assert len(runs) > 0
         for run in runs:
             assert type(run[0]) == str
@@ -44,27 +53,27 @@ class TestMLFlow(unittest.TestCase):
 
     def test_get_run_data(self):
         run_uuid = self.test_pure_run_mlflow()
-        run_data = self.interceptor.dao.get_run_data(run_uuid)
+        run_data = TestMLFlow.interceptor.dao.get_run_data(run_uuid)
         assert run_data.task_id == run_uuid
 
     def test_check_state_manager(self):
-        self.interceptor.state_manager.reset()
-        self.interceptor.state_manager.add_element_id("dummy-value")
+        TestMLFlow.interceptor.state_manager.reset()
+        TestMLFlow.interceptor.state_manager.add_element_id("dummy-value")
         self.test_pure_run_mlflow()
-        runs = self.interceptor.dao.get_finished_run_uuids()
+        runs = TestMLFlow.interceptor.dao.get_finished_run_uuids()
         assert len(runs) > 0
         for run_tuple in runs:
             run_uuid = run_tuple[0]
             assert type(run_uuid) == str
-            if not self.interceptor.state_manager.has_element_id(run_uuid):
+            if not TestMLFlow.interceptor.state_manager.has_element_id(run_uuid):
                 self.logger.debug(f"We need to intercept {run_uuid}")
-                self.interceptor.state_manager.add_element_id(run_uuid)
+                TestMLFlow.interceptor.state_manager.add_element_id(run_uuid)
 
     def test_observer_and_consumption(self):
-        with Flowcept(self.interceptor):
+        assert TestMLFlow.interceptor is not None
+        with Flowcept(TestMLFlow.interceptor):
             run_uuid = self.test_pure_run_mlflow()
-            # sleep(3)
-
+        print(run_uuid)
         assert evaluate_until(
             lambda: self.interceptor.state_manager.has_element_id(run_uuid),
         )
@@ -78,9 +87,7 @@ class TestMLFlow(unittest.TestCase):
         run_ids = []
         with Flowcept(self.interceptor):
             for i in range(1, 10):
-                run_ids.append(
-                    self.test_pure_run_mlflow(epochs=i * 10, batch_size=i * 2)
-                )
+                run_ids.append(self.test_pure_run_mlflow(epochs=i * 10, batch_size=i * 2))
                 sleep(3)
 
         for run_id in run_ids:
