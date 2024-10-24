@@ -26,9 +26,10 @@ class TestMLFlow(unittest.TestCase):
         if os.path.exists(TestMLFlow.interceptor.settings.file_path):
             os.remove(TestMLFlow.interceptor.settings.file_path)
         open(TestMLFlow.interceptor.settings.file_path, "w")
-        sleep(0.5)
+        sleep(1)
         mlflow.set_tracking_uri(f"sqlite:///{TestMLFlow.interceptor.settings.file_path}")
         mlflow.delete_experiment(mlflow.create_experiment("starter"))
+        sleep(1)
 
     def test_pure_run_mlflow(self, epochs=10, batch_size=64):
         experiment_name = "LinearRegression"
@@ -48,7 +49,7 @@ class TestMLFlow(unittest.TestCase):
         runs = TestMLFlow.interceptor.dao.get_finished_run_uuids()
         assert len(runs) > 0
         for run in runs:
-            assert type(run[0]) == str
+            assert isinstance(run[0], str)
             self.logger.debug(run[0])
 
     def test_get_run_data(self):
@@ -64,7 +65,7 @@ class TestMLFlow(unittest.TestCase):
         assert len(runs) > 0
         for run_tuple in runs:
             run_uuid = run_tuple[0]
-            assert type(run_uuid) == str
+            assert isinstance(run_uuid, str)
             if not TestMLFlow.interceptor.state_manager.has_element_id(run_uuid):
                 self.logger.debug(f"We need to intercept {run_uuid}")
                 TestMLFlow.interceptor.state_manager.add_element_id(run_uuid)
