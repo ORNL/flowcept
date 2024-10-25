@@ -41,6 +41,10 @@ class MQDao(ABC):
             from flowcept.commons.daos.mq_dao.mq_dao_kafka import MQDaoKafka
 
             return MQDaoKafka(*args, **kwargs)
+        elif MQ_TYPE == "mofka":
+            from flowcept.commons.daos.mq_dao.mq_dao_kafka import MQDaoMofka
+
+            return MQDaoMofka(*args, **kwargs)
         else:
             raise NotImplementedError
 
