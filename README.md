@@ -1,7 +1,7 @@
 [![Build](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml)
 [![PyPI](https://badge.fury.io/py/flowcept.svg)](https://pypi.org/project/flowcept)
 [![Tests](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml)
-[![Code Formatting](https://github.com/ORNL/flowcept/actions/workflows/code-formatting.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/code-formatting.yml)
+[![Code Formatting](https://github.com/ORNL/flowcept/actions/workflows/run-checks.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-checks.yml)
 [![License: MIT](https://img.shields.io/github/license/ORNL/flowcept)](LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
@@ -128,6 +128,15 @@ Here is a summary:
 
 Current code is compatible with this version: amdsmi==24.6.2+2b02a07
 Which was installed using Frontier's /opt/rocm-6.2.0/share/amd_smi
+
+## Torch Dependencies
+
+Some unit tests utilize `torch==2.2.0`, `torchtext=0.17`, and `torchvision==0.17.0`. They are only really needed for development purposes and will be installed if you run `pip install flowcept[dev]` or `pip install flowcept[all]`. 
+If you want to use FlowCept with Torch, please adapt torch dependencies according to your project's dependencies.
+
+
+
+
 
 ## Cite us
 
