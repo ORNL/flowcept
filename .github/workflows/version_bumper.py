@@ -1,6 +1,6 @@
 import re
 
-version_file_path = "flowcept/version.py"
+version_file_path = "src/flowcept/version.py"
 with open(version_file_path) as f:
     exec(f.read())
     version = locals()["__version__"]
