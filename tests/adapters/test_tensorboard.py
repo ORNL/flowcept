@@ -80,9 +80,7 @@ class TestTensorboard(unittest.TestCase):
             model = tf.keras.models.Sequential(
                 [
                     tf.keras.layers.Flatten(),
-                    tf.keras.layers.Dense(
-                        hparams[HP_NUM_UNITS], activation=tf.nn.relu
-                    ),
+                    tf.keras.layers.Dense(hparams[HP_NUM_UNITS], activation=tf.nn.relu),
                     tf.keras.layers.Dropout(hparams[HP_DROPOUT]),
                     tf.keras.layers.Dense(10, activation=tf.nn.softmax),
                 ]
@@ -155,9 +153,7 @@ class TestTensorboard(unittest.TestCase):
         )
         assert assert_by_querying_tasks_until({"workflow_id": wf_id})
 
-    @unittest.skip(
-        "This test is useful only for developing. No need to run " "in CI"
-    )
+    @unittest.skip("This test is useful only for developing. No need to run " "in CI")
     def test_read_tensorboard_hparam_tuning(self):
         self.reset_log_dir()
         self.run_tensorboard_hparam_tuning()
