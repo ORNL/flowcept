@@ -1,8 +1,8 @@
 name: Release and Publish
 on:
   push:  # It has to be push, otherwise error happens in code below.
-    branches: [ "main" ]
-    #branches: [ "main", "dev" ] # use this only to test the CI
+    #branches: [ "main" ]
+    branches: [ "main", "dev" ] # use this only to test the CI
     #branches: [ "disabled" ]
 jobs:
   build:
@@ -12,11 +12,12 @@ jobs:
 #      FLOWCEPT_SETTINGS_PATH: 'resources/settings.yaml'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v3
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: "3.10"
       - name: Get branch names
         id: branch-name
         uses: tj-actions/branch-names@v6
@@ -35,7 +36,7 @@ jobs:
           git push --force
       - name: Get Latest PR and Create Release
         run: |
-            export CURRENT_VERSION=`python -c "f = open('flowcept/version.py'); exec(f.read()); print(locals()['__version__']); f.close()"`
+            export CURRENT_VERSION=`python -c "f = open('src/flowcept/version.py'); exec(f.read()); print(locals()['__version__']); f.close()"`
             echo $CURRENT_VERSION
             REPOSITORY=${{ github.repository }}
             ACCESS_TOKEN=${{ secrets.GITHUB_TOKEN  }}
@@ -98,11 +99,11 @@ jobs:
       - name: Test pip install multiple adapters
         run: pip install flowcept[mlflow,tensorboard]
       - name: Install our dependencies
-        run: pip install flowcept[fulldev]  # This will install all dependencies, for all adapters and dev deps.
+        run: pip install flowcept[all]  # This will install all dependencies, for all adapters and dev deps.
       - name: Pip list
         run: pip list      
       - name: Run Docker Compose
-        run: docker compose -f deployment/compose-full.yml up -d
+        run: docker compose -f deployment/compose.yml up -d
       - name: Test with pytest
         run: |
           mkdir -p ~/.flowcept
