@@ -68,10 +68,10 @@ dev = [
     "nbmake",
     "ruff",
     # Dependencies for torch instrumentation:
-    "torch",
-    "torchvision",
+    "torch==2.2.0",
+    "torchvision==0.17.0",
+    "torchtext==0.17.0",
     "datasets",
-    "torchtext",
     "sacremoses",
     "nltk"
 ]
