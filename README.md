@@ -130,12 +130,8 @@ Which was installed using Frontier's /opt/rocm-6.2.0/share/amd_smi
 
 ## Torch Dependencies
 
-Some unit tests utilize `torch==2.2.0`, `torchtext=0.17`, and `torchvision==0.17.0`. They are only really needed for development purposes and will be installed if you run `pip install flowcept[dev]` or `pip install flowcept[all]`. 
+Some unit tests utilize `torch==2.2.2`, `torchtext=0.17.2`, and `torchvision==0.17.2`. They are only really needed to run some tests and will be installed if you run `pip install flowcept[ml_dev]` or `pip install flowcept[all]`. 
 If you want to use FlowCept with Torch, please adapt torch dependencies according to your project's dependencies.
-
-
-
-
 
 ## Cite us
 
