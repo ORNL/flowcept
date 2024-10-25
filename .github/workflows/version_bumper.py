@@ -20,8 +20,7 @@ new_version = ".".join(split_version)
 print("New version: " + new_version)
 
 with open(version_file_path, "w") as f:
-    f.write(f"""
-\"\"\"Version module.\"\"\"
+    f.write(f"""\"\"\"Version module.\"\"\"
 
 # WARNING: CHANGE THIS FILE MANUALLY ONLY TO RESOLVE CONFLICTS!
 # This file is supposed to be automatically modified by the CI Bot.
