@@ -17,3 +17,4 @@ documentation for details.
 
    getstarted
    contributing
+   api-reference
