@@ -1,4 +1,4 @@
-name: All tests on Kafka MQ
+name: MacOS Tests
 on:
   pull_request:
     branches: [ "dev", "main" ]
