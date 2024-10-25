@@ -276,7 +276,7 @@ def model_train(
 ):
     from distributed.worker import thread_state
 
-    dask_task_id = thread_state.key
+    dask_task_id = thread_state.key if hasattr(thread_state, "key") else None
 
     # TODO :ml-refactor: save device type and random seed: https://pytorch.org/docs/stable/notes/randomness.html
     # TODO :base-interceptor-refactor: Can we do it better?

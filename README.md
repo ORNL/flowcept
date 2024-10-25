@@ -1,9 +1,8 @@
 [![Build](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml)
 [![PyPI](https://badge.fury.io/py/flowcept.svg)](https://pypi.org/project/flowcept)
 [![Tests](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml)
-[![Code Formatting](https://github.com/ORNL/flowcept/actions/workflows/code-formatting.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/code-formatting.yml)
+[![Code Formatting](https://github.com/ORNL/flowcept/actions/workflows/run-checks.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-checks.yml)
 [![License: MIT](https://img.shields.io/github/license/ORNL/flowcept)](LICENSE)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 # FlowCept
 
@@ -32,18 +31,31 @@ term 'plugin' in the codebase as a synonym to adapter. Future releases should st
 
 1. Install FlowCept: 
 
-`pip install .[full]` in this directory (or `pip install flowcept[full]`).
+`pip install .[all]` in this directory (or `pip install flowcept[all]`) if you want to install all dependencies.
 
 For convenience, this will install all dependencies for all adapters. But it can install
 dependencies for adapters you will not use. For this reason, you may want to install 
 like this: `pip install .[adapter_key1,adapter_key2]` for the adapters we have implemented, e.g., `pip install .[dask]`.
-See [extra_requirements](extra_requirements) if you want to install the dependencies individually.
+Currently, the optional dependencies available are:
+
+```
+pip install flowcept[mlflow]        # To install mlflow's adapter.
+pip install flowcept[dask]          # To install dask's adapter.
+pip install flowcept[tensorboard]   # To install tensorboaard's adapter
+pip install flowcept[kafka]         # To utilize Kafka as the MQ, instead of Redis
+pip install flowcept[nvidia]        # To capture NVIDIA GPU runtime information.
+pip install flowcept[analytics]     # For extra analytics features.
+pip install flowcept[dev]           # To install dev dependencies
+```
+
+You do not need to install any optional dependency to run Flowcept without any adapter, e.g., if you want to use simple instrumentation (see below).
+In this case, you need to remove the adapter part from the [settings.yaml](resources/settings.yaml) file.
  
 2. Start MongoDB and Redis:
 
 To enable the full advantages of FlowCept, one needs to start a Redis and MongoDB instances.
 FlowCept uses Redis as its message queue system and Mongo for its persistent database.
-For convenience, we set up a [docker-compose file](deployment/compose.yml) deployment file for this. Run `docker-compose -f deployment/compose.yml up`. RabbitMQ is only needed if Zambeze messages are observed, otherwise, feel free to comment out RabbitMQ service in the compose file.
+For convenience, we set up a [docker-compose file](deployment/compose.yml) deployment file for this. Run `docker-compose -f deployment/compose.yml up`.
 
 3. Define the settings (e.g., routes and ports) accordingly in the [settings.yaml](resources/settings.yaml) file.
 You may need to set the environment variable `FLOWCEPT_SETTINGS_PATH` with the absolute path to the settings file. 
@@ -99,7 +111,9 @@ If you are doing extensive performance evaluation experiments using this softwar
 
 ## Install AMD GPU Lib
 
-On the machines that have AMD GPUs, we use the official AMD ROCM library to capture GPU runtime data.
+This section is only important if you want to enable GPU runtime data capture and the GPU is from AMD. NVIDIA GPUs don't need this step.
+
+For AMD GPUs, we rely on the official AMD ROCM library to capture GPU data.
 
 Unfortunately, this library is not available as a pypi/conda package, so you must manually install it. See instructions in the link: https://rocm.docs.amd.com/projects/amdsmi/en/latest/
 
@@ -114,13 +128,14 @@ Here is a summary:
 Current code is compatible with this version: amdsmi==24.6.2+2b02a07
 Which was installed using Frontier's /opt/rocm-6.2.0/share/amd_smi
 
-## See also
+## Torch Dependencies
 
-- [Zambeze Repository](https://github.com/ORNL/zambeze)
+Some unit tests utilize `torch==2.2.2`, `torchtext=0.17.2`, and `torchvision==0.17.2`. They are only really needed to run some tests and will be installed if you run `pip install flowcept[ml_dev]` or `pip install flowcept[all]`. 
+If you want to use FlowCept with Torch, please adapt torch dependencies according to your project's dependencies.
 
 ## Cite us
 
-If you used FlowCept for your research, consider citing our paper.
+If you used FlowCept in your research, consider citing our paper.
 
 ```
 Towards Lightweight Data Integration using Multi-workflow Provenance and Data Observability
