@@ -17,6 +17,9 @@ jobs:
           python-version: "3.10"
           cache: "pip"
 
+      - name: Show OS Info
+        run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
+
       - name: Copy settings file
         run: |
           mkdir ~/.flowcept
@@ -32,7 +35,7 @@ jobs:
         run: pip list
 
       - name: Start docker compose with redis
-        run: docker compose -f deployment/compose-full.yml up -d
+        run: docker compose -f deployment/compose.yml up -d
 
       - name: Test with pytest and redis
         run: |
@@ -46,7 +49,7 @@ jobs:
           pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
 
       - name: Shut down docker compose
-        run: docker compose -f deployment/compose-full.yml down
+        run: docker compose -f deployment/compose.yml down
 
       - name: Start docker compose with kafka
         run: docker compose -f deployment/compose-kafka.yml up -d
