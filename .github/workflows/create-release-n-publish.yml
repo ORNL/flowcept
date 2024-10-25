@@ -1,8 +1,8 @@
 name: Release and Publish
 on:
   push:  # It has to be push, otherwise error happens in code below.
-    branches: [ "main" ]
-    # branches: [ "main", "dev" ] # use this only to test the CI
+    # branches: [ "main" ]
+    branches: [ "main", "dev", "pyproject-layout" ] # use this only to test the CI
     #branches: [ "disabled" ]
 jobs:
   build:
