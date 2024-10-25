@@ -67,11 +67,14 @@ dev = [
     "pytest",
     "nbmake",
     "ruff",
-    # Dependencies for torch instrumentation:
-    "torch==2.2.0",
-    "torchvision==0.17.0",
-    "torchtext==0.17.0",
-    "datasets",
+]
+# Torch and some other ml-specific libs, only used for dev purposes, require the following specific versions.
+ml_dev = [
+    "torch==2.2.2",
+    "torchvision==0.17.2",
+    "torchtext==0.17.2",
+    "datasets==2.17.0",
+    "numpy<2.0",
     "sacremoses",
     "nltk"
 ]
@@ -83,7 +86,8 @@ all = [
     "flowcept[nvidia]",
     "flowcept[responsibleai]",
     "flowcept[tensorboard]",
-    "flowcept[dev]"
+    "flowcept[dev]",
+    "flowcept[ml_dev]"
 ]
 
 [tool.hatch.version]
