@@ -3,7 +3,6 @@
 [![Tests](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml)
 [![Code Formatting](https://github.com/ORNL/flowcept/actions/workflows/run-checks.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-checks.yml)
 [![License: MIT](https://img.shields.io/github/license/ORNL/flowcept)](LICENSE)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 # FlowCept
 
