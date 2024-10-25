@@ -31,7 +31,7 @@ jobs:
           git config --global user.name 'Flowcept CI Bot'
           git config --global user.email 'flowcept@users.noreply.github.com'
           git branch
-          git add flowcept/version.py
+          git add src/flowcept/version.py
           git commit -m "Flowcept CI Bot: bumping master version"
           git push --force
       - name: Get Latest PR and Create Release
