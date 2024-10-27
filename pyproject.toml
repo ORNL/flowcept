@@ -1,3 +1,104 @@
-[tool.black]
-line-length = 78
-target-version = ['py37']
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "flowcept"
+dynamic = ["version"]
+requires-python = ">=3.10"
+dependencies = [
+    "flask-restful",
+    "msgpack",
+    "omegaconf",
+    "pandas",
+    "psutil",
+    "py-cpuinfo",
+    "pymongo",
+    "redis",
+    "requests"
+]
+authors = [{name = "Oak Ridge National Laboratory"}]
+description = "Capture and query workflow provenance data using data observability"
+readme = "README.md"
+license = "MIT"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3"
+]
+keywords = [
+    "ai",
+    "ml",
+    "machine-learning",
+    "provenance",
+    "lineage",
+    "responsible-ai",
+    "databases",
+    "big-data",
+    "provenance",
+    "tensorboard",
+    "data-integration",
+    "scientific-workflows",
+    "dask",
+    "reproducibility",
+    "workflows",
+    "parallel-processing",
+    "lineage",
+    "model-management",
+    "mlflow",
+    "responsible-ai",
+    "data-analytics"
+]
+
+[project.urls]
+GitHub = "https://github.com/ORNL/flowcept"
+
+[project.optional-dependencies]
+analytics = ["seaborn", "plotly", "scipy"]
+dask = ["tomli", "dask[distributed]"]
+kafka = ["confluent-kafka"]
+mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog"]
+nvidia = ["nvidia-ml-py"]
+responsibleai = ["torch"]
+tensorboard = ["tensorboard", "tensorflow", "tbparse"]
+dev = [
+    "jupyterlab",
+    "pika",
+    "pytest",
+    "nbmake",
+    "ruff",
+]
+# Torch and some other ml-specific libs, only used for dev purposes, require the following specific versions.
+ml_dev = [
+    "torch==2.2.2",
+    "torchvision==0.17.2",
+    "torchtext==0.17.2",
+    "datasets==2.17.0",
+    "numpy<2.0",
+    "sacremoses",
+    "nltk"
+]
+all = [
+    "flowcept[analytics]",
+    "flowcept[dask]",
+    "flowcept[kafka]",
+    "flowcept[mlflow]",
+    "flowcept[nvidia]",
+    "flowcept[responsibleai]",
+    "flowcept[tensorboard]",
+    "flowcept[dev]",
+    "flowcept[ml_dev]"
+]
+
+[tool.hatch.version]
+path = "src/flowcept/version.py"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+extend-select = ["E501", "D"]
+ignore = ["D200", "D212"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
