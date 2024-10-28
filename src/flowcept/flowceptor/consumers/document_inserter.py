@@ -249,3 +249,5 @@ class DocumentInserter:
         self.logger.info(f"Doc Inserter {id(self)} Sent message to stop itself.")
         self._main_thread.join()
         self.logger.info("Document Inserter is stopped.")
+
+        self.logger.info("Closing DocDB client.")
