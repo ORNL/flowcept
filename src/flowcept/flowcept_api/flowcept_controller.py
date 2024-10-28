@@ -143,7 +143,6 @@ class Flowcept(object):
         self.is_started = True
         return self
 
-
     def stop(self):
         """Stop it."""
         if not self.is_started or not self.enabled:

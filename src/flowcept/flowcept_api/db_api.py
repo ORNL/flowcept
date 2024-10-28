@@ -15,9 +15,9 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 class DBAPI(object):
     """DB API class."""
 
-    _instance: 'DBAPI' = None
+    _instance: "DBAPI" = None
 
-    def __new__(cls, *args, **kwargs) -> 'DBAPI':
+    def __new__(cls, *args, **kwargs) -> "DBAPI":
         """Singleton creator for DBAPI."""
         # Check if an instance already exists
         if cls._instance is None:
@@ -29,7 +29,7 @@ class DBAPI(object):
         self,
         with_webserver=False,
     ):
-        if not hasattr(self, '_initialized'):
+        if not hasattr(self, "_initialized"):
             self._initialized = True
             self.logger = FlowceptLogger()
             self.with_webserver = with_webserver
