@@ -113,3 +113,11 @@ class TestDocDBInserter(unittest.TestCase):
         self.doc_dao.delete_keys("myid", [uid])
         c1 = self.doc_dao.count()
         assert c0 == c1
+
+    def test_doc_dao_singleton(self):
+        doc_dao1 = DocumentDBDao()
+        doc_dao2 = DocumentDBDao()
+        self.assertIs(doc_dao1, doc_dao2)
+
+        doc_dao1.v = "test_val"
+        self.assertEqual(doc_dao2.v, "test_val")
