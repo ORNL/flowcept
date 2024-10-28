@@ -63,9 +63,9 @@ responsibleai = ["torch"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
 dev = [
     "jupyterlab",
+    "nbmake",
     "pika",
     "pytest",
-    "nbmake",
     "ruff",
 ]
 # Torch and some other ml-specific libs, only used for dev purposes, require the following specific versions.
