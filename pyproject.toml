@@ -56,6 +56,7 @@ GitHub = "https://github.com/ORNL/flowcept"
 [project.optional-dependencies]
 analytics = ["seaborn", "plotly", "scipy"]
 dask = ["tomli", "dask[distributed]"]
+docs = ["sphinx", "furo"]
 kafka = ["confluent-kafka"]
 mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog"]
 nvidia = ["nvidia-ml-py"]
