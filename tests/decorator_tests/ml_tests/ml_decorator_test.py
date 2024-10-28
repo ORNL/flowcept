@@ -5,10 +5,18 @@ import unittest
 from torch import nn
 
 from flowcept import Flowcept
-from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer, TestNet
+from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer, MyNet
 
 
 class MLDecoratorTests(unittest.TestCase):
+
+    def test_torch_save_n_load(self):
+        model = nn.Module()
+        model_id = Flowcept.db.save_torch_model(model)
+        new_model = nn.Module()
+        loaded_model = Flowcept.db.load_torch_model(model=new_model, object_id=model_id)
+        assert model.state_dict() == loaded_model.state_dict()
+
     @staticmethod
     def test_cnn_model_trainer():
         trainer = ModelTrainer()
@@ -32,18 +40,11 @@ class MLDecoratorTests(unittest.TestCase):
             c = conf.copy()
             c.pop("max_epochs")
             c.pop("workflow_id")
-            loaded_model = TestNet(**c)
+            loaded_model = MyNet(**c)
 
             loaded_model = Flowcept.db.load_torch_model(
                 loaded_model, result["object_id"]
             )
             assert len(loaded_model(result["test_data"]))
-
-    def test_torch_save_n_load(self):
-        model = nn.Module()
-        model_id = Flowcept.db.save_torch_model(model)
-        new_model = nn.Module()
-        loaded_model = Flowcept.db.load_torch_model(model=new_model, object_id=model_id)
-        assert model.state_dict() == loaded_model.state_dict()
 
 
