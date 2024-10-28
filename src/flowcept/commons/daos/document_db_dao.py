@@ -37,17 +37,16 @@ from time import time
 class DocumentDBDao(object):
     """Document class."""
 
-    _instance: 'DocumentDBDao' = None
+    _instance: "DocumentDBDao" = None
 
-    def __new__(cls, *args, **kwargs) -> 'DocumentDBDao':
+    def __new__(cls, *args, **kwargs) -> "DocumentDBDao":
         """Singleton creator for DocumentDBDao."""
         if cls._instance is None:
             cls._instance = super(DocumentDBDao, cls).__new__(cls)
         return cls._instance
 
     def __init__(self, create_index=MONGO_CREATE_INDEX):
-
-        if not hasattr(self, '_initialized'):
+        if not hasattr(self, "_initialized"):
             self._initialized = True
 
             self.logger = FlowceptLogger()
@@ -481,6 +480,7 @@ class DocumentDBDao(object):
 
         else:
             from gridfs import GridFS
+
             fs = GridFS(self._db)
             grid_fs_file_id = fs.put(object)
             obj_doc["grid_fs_file_id"] = grid_fs_file_id
@@ -501,6 +501,7 @@ class DocumentDBDao(object):
     def get_file_data(self, file_id):
         """Get a file in the GridFS."""
         from gridfs import GridFS, NoFile
+
         fs = GridFS(self._db)
         try:
             file_data = fs.get(file_id)

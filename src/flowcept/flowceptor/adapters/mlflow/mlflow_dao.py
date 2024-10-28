@@ -15,13 +15,13 @@ from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import (
 class MLFlowDAO:
     """DAO class."""
 
-    _instance: 'MLFlowDAO' = None
+    _instance: "MLFlowDAO" = None
     _LIMIT = 10
     # TODO: This should not at all be hard coded.
     # This value needs to be greater than the amount of
     # runs inserted in the Runs table at each data observation
 
-    def __new__(cls, *args, **kwargs) -> 'MLFlowDAO':
+    def __new__(cls, *args, **kwargs) -> "MLFlowDAO":
         """Singleton creator for MLFlowDAO."""
         # Check if an instance already exists
         if cls._instance is None:
@@ -30,7 +30,7 @@ class MLFlowDAO:
         return cls._instance
 
     def __init__(self, mlflow_settings: MLFlowSettings):
-        if not hasattr(self, '_initialized'):
+        if not hasattr(self, "_initialized"):
             self._initialized = True
             self._engine = MLFlowDAO._get_db_engine(mlflow_settings.file_path)
             self.logger = FlowceptLogger()

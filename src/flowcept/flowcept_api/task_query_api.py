@@ -38,9 +38,9 @@ class TaskQueryAPI(object):
     MINIMUM_FIRST = ASC
     MAXIMUM_FIRST = DESC
 
-    _instance: 'TaskQueryAPI' = None
+    _instance: "TaskQueryAPI" = None
 
-    def __new__(cls, *args, **kwargs) -> 'TaskQueryAPI':
+    def __new__(cls, *args, **kwargs) -> "TaskQueryAPI":
         """Singleton creator for TaskQueryAPI."""
         if cls._instance is None:
             # Create a new instance if not
@@ -54,7 +54,7 @@ class TaskQueryAPI(object):
         port: int = WEBSERVER_PORT,
         auth=None,
     ):
-        if not hasattr(self, '_initialized'):
+        if not hasattr(self, "_initialized"):
             self._initialized = True
             self.logger = FlowceptLogger()
             self._with_webserver = with_webserver

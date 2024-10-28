@@ -13,9 +13,9 @@ from flowcept.configs import (
 class KeyValueDAO:
     """Key value DAO class."""
 
-    _instance: 'KeyValueDAO' = None
+    _instance: "KeyValueDAO" = None
 
-    def __new__(cls, *args, **kwargs) -> 'KeyValueDAO':
+    def __new__(cls, *args, **kwargs) -> "KeyValueDAO":
         """Singleton creator for KeyValueDAO."""
         # Check if an instance already exists
         if cls._instance is None:
@@ -24,7 +24,7 @@ class KeyValueDAO:
         return cls._instance
 
     def __init__(self, connection=None):
-        if not hasattr(self, '_initialized'):
+        if not hasattr(self, "_initialized"):
             self._initialized = True
             self.logger = FlowceptLogger()
             if connection is None:
