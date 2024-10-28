@@ -3,6 +3,7 @@
 import os
 import socket
 import getpass
+import textwrap
 
 from omegaconf import OmegaConf
 import random
@@ -12,21 +13,24 @@ import random
 ########################
 
 PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
-SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
 SETTINGS_DIR = os.path.expanduser(f"~/.{PROJECT_NAME}")
-if SETTINGS_PATH is None:
-    SETTINGS_PATH = os.path.join(SETTINGS_DIR, "settings.yaml")
+SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", f"{SETTINGS_DIR}/settings.yaml")
 
 if not os.path.exists(SETTINGS_PATH):
-    raise Exception(
-        f"Settings file {SETTINGS_PATH} was not found. "
-        f"You should either define the "
-        f"environment variable FLOWCEPT_SETTINGS_PATH with its path or "
-        f"install Flowcept's package to create the directory "
-        f"~/.flowcept with the file in it.\n"
-        "A sample settings file is found in the 'resources' directory "
-        "under the project's root path."
-    )
+    os.makedirs(SETTINGS_DIR)
+
+    with open(SETTINGS_PATH, "w") as f:
+        base_settings = """\
+        project: {}
+        log: {}
+        experiment: {}
+        mq: {}
+        kv_db: {}
+        mongodb: {}
+        """
+        f.write(textwrap.dedent(base_settings))
+
+    print(f"\n*** Created a minimum FlowCept settings file at {SETTINGS_PATH} ***\n")
 
 settings = OmegaConf.load(SETTINGS_PATH)
 
