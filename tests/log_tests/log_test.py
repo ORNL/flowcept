@@ -1,6 +1,5 @@
 import logging
 import unittest
-from asyncio import sleep
 
 import flowcept.commons
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -29,3 +28,7 @@ class TestLog(unittest.TestCase):
             == id(FlowceptLogger())
             == id(logging.getLogger(PROJECT_NAME))
         )
+
+        self.assertIs(_logger, _logger2)
+        _logger.v = "test_val"
+        self.assertEqual(_logger2.v, "test_val")
