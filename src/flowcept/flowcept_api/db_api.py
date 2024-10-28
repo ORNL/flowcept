@@ -1,9 +1,8 @@
-"""DB module."""
+"""DB API module."""
 
 import uuid
 from typing import List
 
-from flowcept.commons import singleton
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
@@ -13,20 +12,31 @@ from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 
-@singleton
 class DBAPI(object):
-    """DB class."""
+    """DB API class."""
+
+    _instance: 'DBAPI' = None
+
+    def __new__(cls, *args, **kwargs) -> 'DBAPI':
+        """Singleton creator for DBAPI."""
+        # Check if an instance already exists
+        if cls._instance is None:
+            # Create a new instance if not
+            cls._instance = super(DBAPI, cls).__new__(cls)
+        return cls._instance
 
     def __init__(
         self,
         with_webserver=False,
     ):
-        self.logger = FlowceptLogger()
-        self.with_webserver = with_webserver
-        if self.with_webserver:
-            raise NotImplementedError("We did not implement webserver API for this yet.")
+        if not hasattr(self, '_initialized'):
+            self._initialized = True
+            self.logger = FlowceptLogger()
+            self.with_webserver = with_webserver
+            if self.with_webserver:
+                raise NotImplementedError("We did not implement webserver API for this yet.")
 
-        self._dao = DocumentDBDao()
+            self._dao = DocumentDBDao(create_index=False)
 
     def insert_or_update_task(self, task: TaskObject):
         """Insert or update task."""
@@ -152,7 +162,7 @@ class DBAPI(object):
         model,
         task_id=None,
         workflow_id=None,
-        custom_metadata: dict = None,
+        custom_metadata: dict = {},
     ) -> str:
         """Save model.
 
@@ -188,16 +198,27 @@ class DBAPI(object):
 
         return obj_id
 
-    def load_torch_model(self, torch_model, object_id: str):
-        """Load it."""
+    def load_torch_model(self, model, object_id: str):
+        """Load a torch model stored in the database.
+
+        Args:
+            model (torch.nn.Module): An empty PyTorch model to be loaded. The class of this model
+            in argument should be the same of the model that was saved.
+            object_id (str): Id of the object stored in the objects collection.
+        """
         import torch
         import io
 
         doc = self.query({"object_id": object_id}, type="object")[0]
-        binary_data = doc["data"]
+
+        if "data" in doc:
+            binary_data = doc["data"]
+        else:
+            file_id = doc["grid_fs_file_id"]
+            binary_data = self._dao.get_file_data(file_id)
 
         buffer = io.BytesIO(binary_data)
         state_dict = torch.load(buffer, weights_only=True)
-        torch_model.load_state_dict(state_dict)
+        model.load_state_dict(state_dict)
 
-        return torch_model
+        return model

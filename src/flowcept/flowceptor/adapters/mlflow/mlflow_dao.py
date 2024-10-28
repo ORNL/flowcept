@@ -5,7 +5,6 @@ from sqlalchemy.engine import Row, create_engine
 from sqlalchemy import text
 from textwrap import dedent
 
-from flowcept.commons import singleton
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import (
     RunData,
@@ -13,18 +12,28 @@ from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import (
 )
 
 
-@singleton
 class MLFlowDAO:
     """DAO class."""
 
+    _instance: 'MLFlowDAO' = None
     _LIMIT = 10
     # TODO: This should not at all be hard coded.
     # This value needs to be greater than the amount of
     # runs inserted in the Runs table at each data observation
 
+    def __new__(cls, *args, **kwargs) -> 'MLFlowDAO':
+        """Singleton creator for MLFlowDAO."""
+        # Check if an instance already exists
+        if cls._instance is None:
+            # Create a new instance if not
+            cls._instance = super(MLFlowDAO, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, mlflow_settings: MLFlowSettings):
-        self._engine = MLFlowDAO._get_db_engine(mlflow_settings.file_path)
-        self.logger = FlowceptLogger()
+        if not hasattr(self, '_initialized'):
+            self._initialized = True
+            self._engine = MLFlowDAO._get_db_engine(mlflow_settings.file_path)
+            self.logger = FlowceptLogger()
 
     @staticmethod
     def _get_db_engine(sqlite_file):

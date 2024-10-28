@@ -3,7 +3,6 @@
 from redis import Redis
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons import singleton
 from flowcept.configs import (
     KVDB_HOST,
     KVDB_PORT,
@@ -11,21 +10,32 @@ from flowcept.configs import (
 )
 
 
-@singleton
 class KeyValueDAO:
-    """Key value class."""
+    """Key value DAO class."""
+
+    _instance: 'KeyValueDAO' = None
+
+    def __new__(cls, *args, **kwargs) -> 'KeyValueDAO':
+        """Singleton creator for KeyValueDAO."""
+        # Check if an instance already exists
+        if cls._instance is None:
+            # Create a new instance if not
+            cls._instance = super(KeyValueDAO, cls).__new__(cls)
+        return cls._instance
 
     def __init__(self, connection=None):
-        self.logger = FlowceptLogger()
-        if connection is None:
-            self._redis = Redis(
-                host=KVDB_HOST,
-                port=KVDB_PORT,
-                db=0,
-                password=KVDB_PASSWORD,
-            )
-        else:
-            self._redis = connection
+        if not hasattr(self, '_initialized'):
+            self._initialized = True
+            self.logger = FlowceptLogger()
+            if connection is None:
+                self._redis = Redis(
+                    host=KVDB_HOST,
+                    port=KVDB_PORT,
+                    db=0,
+                    password=KVDB_PASSWORD,
+                )
+            else:
+                self._redis = connection
 
     def delete_set(self, set_name: str):
         """Delete it."""
