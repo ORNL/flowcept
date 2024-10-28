@@ -113,6 +113,7 @@ class DBAPI(object):
         workflow_id=None,
         type=None,
         custom_metadata=None,
+        save_data_in_collection=False,
         pickle=False,
     ):
         """Save the object."""
@@ -123,6 +124,7 @@ class DBAPI(object):
             workflow_id,
             type,
             custom_metadata,
+            save_data_in_collection=save_data_in_collection,
             pickle_=pickle,
         )
 

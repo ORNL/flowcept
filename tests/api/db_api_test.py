@@ -16,7 +16,7 @@ class OurObject:
         return f"It worked! {self.a} {self.b}"
 
 
-class WorkflowDBTest(unittest.TestCase):
+class DBAPITest(unittest.TestCase):
     def test_wf_dao(self):
         workflow1_id = str(uuid4())
         wf1 = WorkflowObject()
@@ -59,7 +59,7 @@ class WorkflowDBTest(unittest.TestCase):
 
         obj = pickle.dumps(OurObject())
 
-        obj_id = Flowcept.db.save_object(object=obj)
+        obj_id = Flowcept.db.save_object(object=obj, save_data_in_collection=True)
         print(obj_id)
 
         obj_docs = Flowcept.db.query(
