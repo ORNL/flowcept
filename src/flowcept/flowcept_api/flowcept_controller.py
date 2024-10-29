@@ -22,10 +22,18 @@ from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 
 class Flowcept(object):
-    """Flowcept class."""
+    """Flowcept Controller class."""
 
-    db = DBAPI()
+    _db: DBAPI = None
     current_workflow_id = None
+
+    @classmethod
+    @property
+    def db(cls) -> DBAPI:
+        """Property to expose the DBAPI. This also assures the DBAPI init will be called once."""
+        if cls._db is None:
+            cls._db = DBAPI()
+        return cls._db
 
     def __init__(
         self,
@@ -182,7 +190,7 @@ class Flowcept(object):
         if not MQDao.build().liveness_test():
             logger.error("MQ Not Ready!")
             return False
-        if not DocumentDBDao().liveness_test():
+        if not DocumentDBDao(create_index=False).liveness_test():
             logger.error("DocDB Not Ready!")
             return False
         logger.info("MQ and DocDB are alive!")
