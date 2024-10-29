@@ -7,10 +7,12 @@ from typing import Callable
 import os
 import platform
 import subprocess
+import types
 
 import numpy as np
 
 import flowcept.commons
+from flowcept import configs
 from flowcept.configs import (
     PERF_LOG,
     SETTINGS_PATH,
@@ -221,6 +223,17 @@ def get_gpu_vendor():
             pass
 
     return None
+
+
+def get_current_config_values():
+    """Get current config values."""
+    _vars = {}
+    for var_name in dir(configs):
+        if not var_name.startswith("_"):
+            val = getattr(configs, var_name)
+            if not isinstance(val, types.ModuleType):
+                _vars[var_name] = val
+    return _vars
 
 
 class GenericJSONDecoder(json.JSONDecoder):
