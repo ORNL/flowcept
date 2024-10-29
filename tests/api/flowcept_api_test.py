@@ -1,6 +1,5 @@
 import unittest
 from time import sleep
-
 from flowcept import (
     Flowcept,
     flowcept_task,

@@ -23,7 +23,7 @@ import threading
 thread_state = threading.local()
 
 
-class TestNet(nn.Module):
+class MyNet(nn.Module):
     def __init__(
         self,
         conv_in_outs=[[1, 10], [10, 20]],
@@ -34,7 +34,7 @@ class TestNet(nn.Module):
         parent_workflow_id=None,
         parent_task_id=None,
     ):
-        super(TestNet, self).__init__()
+        super(MyNet, self).__init__()
         print("parent workflow id", parent_workflow_id)
         self.workflow_id = register_module_as_workflow(
             self, parent_workflow_id=parent_workflow_id
@@ -195,7 +195,7 @@ class ModelTrainer(object):
                 device = torch.device("mps")
             else:
                 device = torch.device("cpu")
-            model = TestNet(
+            model = MyNet(
                 conv_in_outs=conv_in_outs,
                 conv_kernel_sizes=conv_kernel_sizes,
                 conv_pool_sizes=conv_pool_sizes,
