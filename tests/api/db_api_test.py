@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept import Flowcept, WorkflowObject
+from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 
 
@@ -15,7 +16,7 @@ class OurObject:
         return f"It worked! {self.a} {self.b}"
 
 
-class WorkflowDBTest(unittest.TestCase):
+class DBAPITest(unittest.TestCase):
     def test_wf_dao(self):
         workflow1_id = str(uuid4())
         wf1 = WorkflowObject()
@@ -58,7 +59,7 @@ class WorkflowDBTest(unittest.TestCase):
 
         obj = pickle.dumps(OurObject())
 
-        obj_id = Flowcept.db.save_object(object=obj)
+        obj_id = Flowcept.db.save_object(object=obj, save_data_in_collection=True)
         print(obj_id)
 
         obj_docs = Flowcept.db.query(
@@ -90,3 +91,11 @@ class WorkflowDBTest(unittest.TestCase):
         Flowcept.db._dao.delete_with_filter(_filter)
         c1 = Flowcept.db._dao.count()
         assert c0 == c1
+
+    def test_dbapi_singleton(self):
+        db1 = DBAPI()
+        db2 = DBAPI()
+        self.assertIs(db1, db2)
+
+        db1.v = "test_val"
+        self.assertEqual(db2.v, "test_val")
