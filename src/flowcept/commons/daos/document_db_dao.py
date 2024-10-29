@@ -1,4 +1,4 @@
-"""Document module."""
+"""Document DB interaction module."""
 
 from typing import List, Dict, Tuple, Any
 import io
@@ -18,7 +18,6 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.utils import perf_log, get_utc_now_str
-from flowcept.commons import singleton
 from flowcept.configs import (
     MONGO_HOST,
     MONGO_PORT,
@@ -35,25 +34,35 @@ from flowcept.flowceptor.consumers.consumer_utils import (
 from time import time
 
 
-@singleton
 class DocumentDBDao(object):
     """Document class."""
 
+    _instance: "DocumentDBDao" = None
+
+    def __new__(cls, *args, **kwargs) -> "DocumentDBDao":
+        """Singleton creator for DocumentDBDao."""
+        if cls._instance is None:
+            cls._instance = super(DocumentDBDao, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, create_index=MONGO_CREATE_INDEX):
-        self.logger = FlowceptLogger()
+        if not hasattr(self, "_initialized"):
+            self._initialized = True
 
-        if MONGO_URI is not None:
-            client = MongoClient(MONGO_URI)
-        else:
-            client = MongoClient(MONGO_HOST, MONGO_PORT)
-        self._db = client[MONGO_DB]
+            self.logger = FlowceptLogger()
 
-        self._tasks_collection = self._db[MONGO_TASK_COLLECTION]
-        self._wfs_collection = self._db[MONGO_WORKFLOWS_COLLECTION]
-        self._obj_collection = self._db["objects"]
+            if MONGO_URI is not None:
+                self._client = MongoClient(MONGO_URI)
+            else:
+                self._client = MongoClient(MONGO_HOST, MONGO_PORT)
+            self._db = self._client[MONGO_DB]
 
-        if create_index:
-            self._create_indices()
+            self._tasks_collection = self._db[MONGO_TASK_COLLECTION]
+            self._wfs_collection = self._db[MONGO_WORKFLOWS_COLLECTION]
+            self._obj_collection = self._db["objects"]
+
+            if create_index:
+                self._create_indices()
 
     def _create_indices(self):
         # Creating task collection indices:
@@ -454,17 +463,28 @@ class DocumentDBDao(object):
         workflow_id=None,
         type=None,
         custom_metadata=None,
+        save_data_in_collection=False,
         pickle_=False,
     ):
         """Save an object."""
         if object_id is None:
             object_id = str(uuid4())
         obj_doc = {"object_id": object_id}
-        blob = object
-        if pickle_:
-            blob = pickle.dumps(object)
-            obj_doc["pickle"] = True
-        obj_doc["data"] = blob
+
+        if save_data_in_collection:
+            blob = object
+            if pickle_:
+                blob = pickle.dumps(object)
+                obj_doc["pickle"] = True
+            obj_doc["data"] = blob
+
+        else:
+            from gridfs import GridFS
+
+            fs = GridFS(self._db)
+            grid_fs_file_id = fs.put(object)
+            obj_doc["grid_fs_file_id"] = grid_fs_file_id
+
         if task_id is not None:
             obj_doc["task_id"] = task_id
         if workflow_id is not None:
@@ -478,7 +498,26 @@ class DocumentDBDao(object):
 
         return object_id
 
+    def get_file_data(self, file_id):
+        """Get a file in the GridFS."""
+        from gridfs import GridFS, NoFile
+
+        fs = GridFS(self._db)
+        try:
+            file_data = fs.get(file_id)
+            return file_data.read()
+        except NoFile:
+            self.logger.error(f"File with ID {file_id} not found.")
+            return None
+        except Exception as e:
+            self.logger.exception(f"An error occurred: {e}")
+            return None
+
     def get_objects(self, filter):
-        """Get some objects."""
+        """Get objects."""
         documents = self._obj_collection.find(filter)
         return list(documents)
+
+    def close_client(self):
+        """Close Mongo client."""
+        self._client.close()

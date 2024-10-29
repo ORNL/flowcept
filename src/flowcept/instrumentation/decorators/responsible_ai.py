@@ -110,10 +110,13 @@ def model_profiler():
             if INSTRUMENTATION.get("torch", False) and INSTRUMENTATION["torch"].get(
                 "save_models", False
             ):
-                obj_id = Flowcept.db.save_torch_model(
-                    model, custom_metadata=ret["responsible_ai_metadata"]
-                )
-                ret["object_id"] = obj_id
+                try:
+                    obj_id = Flowcept.db.save_torch_model(
+                        model, custom_metadata=ret["responsible_ai_metadata"]
+                    )
+                    ret["object_id"] = obj_id
+                except Exception as e:
+                    print("Could not save model in the dataabse.", e)
             return ret
 
         return wrapper

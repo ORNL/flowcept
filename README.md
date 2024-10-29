@@ -41,11 +41,11 @@ Currently, the optional dependencies available are:
 ```
 pip install flowcept[mlflow]        # To install mlflow's adapter.
 pip install flowcept[dask]          # To install dask's adapter.
-pip install flowcept[tensorboard]   # To install tensorboaard's adapter
-pip install flowcept[kafka]         # To utilize Kafka as the MQ, instead of Redis
+pip install flowcept[tensorboard]   # To install tensorboaard's adapter.
+pip install flowcept[kafka]         # To utilize Kafka as the MQ, instead of Redis.
 pip install flowcept[nvidia]        # To capture NVIDIA GPU runtime information.
 pip install flowcept[analytics]     # For extra analytics features.
-pip install flowcept[dev]           # To install dev dependencies
+pip install flowcept[dev]           # To install dev dependencies.
 ```
 
 You do not need to install any optional dependency to run Flowcept without any adapter, e.g., if you want to use simple instrumentation (see below).
