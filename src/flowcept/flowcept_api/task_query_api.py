@@ -25,13 +25,11 @@ from flowcept.commons.query_utils import (
     calculate_telemetry_diff_for_docs,
 )
 from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.commons import singleton
 from flowcept.configs import WEBSERVER_HOST, WEBSERVER_PORT, ANALYTICS
 from flowcept.flowcept_webserver.app import BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
 
-@singleton
 class TaskQueryAPI(object):
     """Task class."""
 
@@ -40,6 +38,15 @@ class TaskQueryAPI(object):
     MINIMUM_FIRST = ASC
     MAXIMUM_FIRST = DESC
 
+    _instance: "TaskQueryAPI" = None
+
+    def __new__(cls, *args, **kwargs) -> "TaskQueryAPI":
+        """Singleton creator for TaskQueryAPI."""
+        if cls._instance is None:
+            # Create a new instance if not
+            cls._instance = super(TaskQueryAPI, cls).__new__(cls)
+        return cls._instance
+
     def __init__(
         self,
         with_webserver=False,
@@ -47,20 +54,22 @@ class TaskQueryAPI(object):
         port: int = WEBSERVER_PORT,
         auth=None,
     ):
-        self.logger = FlowceptLogger()
-        self._with_webserver = with_webserver
-        if self._with_webserver:
-            self._host = host
-            self._port = port
-            _base_url = f"http://{self._host}:{self._port}"
-            self._url = f"{_base_url}{BASE_ROUTE}{TaskQuery.ROUTE}"
-            try:
-                r = requests.get(_base_url)
-                if r.status_code > 300:
-                    raise Exception(r.text)
-                self.logger.debug("Ok, webserver is ready to receive requests.")
-            except Exception:
-                raise Exception(f"Error when accessing the webserver at {_base_url}")
+        if not hasattr(self, "_initialized"):
+            self._initialized = True
+            self.logger = FlowceptLogger()
+            self._with_webserver = with_webserver
+            if self._with_webserver:
+                self._host = host
+                self._port = port
+                _base_url = f"http://{self._host}:{self._port}"
+                self._url = f"{_base_url}{BASE_ROUTE}{TaskQuery.ROUTE}"
+                try:
+                    r = requests.get(_base_url)
+                    if r.status_code > 300:
+                        raise Exception(r.text)
+                    self.logger.debug("Ok, webserver is ready to receive requests.")
+                except Exception:
+                    raise Exception(f"Error when accessing the webserver at {_base_url}")
 
     def query(
         self,
@@ -128,7 +137,7 @@ class TaskQueryAPI(object):
                 raise Exception(r.text)
 
         else:
-            dao = DocumentDBDao()
+            dao = DocumentDBDao(create_index=False)
             docs = dao.task_query(
                 filter,
                 projection,
