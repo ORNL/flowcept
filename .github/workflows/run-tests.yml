@@ -20,11 +20,11 @@ jobs:
       - name: Show OS Info
         run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
 
-      - name: Copy settings file
-        run: |
-          mkdir ~/.flowcept
-          cp resources/sample_settings.yaml ~/.flowcept
-          mv ~/.flowcept/sample_settings.yaml ~/.flowcept/settings.yaml
+#      - name: Copy settings file
+#        run: |
+#          mkdir ~/.flowcept
+#          cp resources/sample_settings.yaml ~/.flowcept
+#          mv ~/.flowcept/sample_settings.yaml ~/.flowcept/settings.yaml
 
       - name: Install package and dependencies
         run: |
@@ -45,7 +45,7 @@ jobs:
         run: |
           python src/flowcept/flowcept_webserver/app.py &
           sleep 3
-          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
+          # export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
           pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
 
       - name: Shut down docker compose

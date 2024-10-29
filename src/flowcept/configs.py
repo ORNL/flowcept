@@ -3,7 +3,6 @@
 import os
 import socket
 import getpass
-import textwrap
 
 from omegaconf import OmegaConf
 import random
@@ -13,34 +12,24 @@ import random
 ########################
 
 PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
-SETTINGS_DIR = os.path.expanduser(f"~/.{PROJECT_NAME}")
-SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", f"{SETTINGS_DIR}/settings.yaml")
+_SETTINGS_DIR = os.path.expanduser(f"~/.{PROJECT_NAME}")
+SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", f"{_SETTINGS_DIR}/settings.yaml")
 
 if not os.path.exists(SETTINGS_PATH):
-    os.makedirs(SETTINGS_DIR)
-
-    with open(SETTINGS_PATH, "w") as f:
-        base_settings = """\
-        project: {}
-        log: {}
-        experiment: {}
-        mq: {}
-        kv_db: {}
-        mongodb: {}
-        """
-        f.write(textwrap.dedent(base_settings))
-
-    print(f"\n*** Created a minimum FlowCept settings file at {SETTINGS_PATH} ***\n")
-
-settings = OmegaConf.load(SETTINGS_PATH)
+    # The default values will be set if no yaml file was found.
+    SETTINGS_PATH = None
+    settings = {}
+else:
+    settings = OmegaConf.load(SETTINGS_PATH)
 
 ########################
 #   Log Settings       #
 ########################
+settings.setdefault("log", {})
 LOG_FILE_PATH = settings["log"].get("log_path", "default")
 
 if LOG_FILE_PATH == "default":
-    LOG_FILE_PATH = os.path.join(SETTINGS_DIR, f"{PROJECT_NAME}.log")
+    LOG_FILE_PATH = f"{PROJECT_NAME}.log"
 
 # Possible values below are the typical python logging levels.
 LOG_FILE_LEVEL = settings["log"].get("log_file_level", "debug").upper()
@@ -49,7 +38,7 @@ LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "debug").upper()
 ##########################
 #  Experiment Settings   #
 ##########################
-
+settings.setdefault("experiment", {})
 FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 CAMPAIGN_ID = settings["experiment"].get(
     "campaign_id", os.environ.get("CAMPAIGN_ID", "super_campaign")
@@ -58,6 +47,7 @@ CAMPAIGN_ID = settings["experiment"].get(
 ######################
 #   MQ Settings   #
 ######################
+settings.setdefault("mq", {})
 MQ_URI = settings["mq"].get("uri", None)
 MQ_INSTANCES = settings["mq"].get("instances", None)
 
@@ -78,7 +68,7 @@ MQ_CHUNK_SIZE = int(settings["mq"].get("chunk_size", -1))
 #####################
 # KV SETTINGS       #
 #####################
-
+settings.setdefault("kv_db", {})
 KVDB_PASSWORD = settings["kv_db"].get("password", None)
 KVDB_HOST = os.getenv("KVDB_HOST", settings["kv_db"].get("host", "localhost"))
 KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
@@ -87,6 +77,7 @@ KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
 ######################
 #  MongoDB Settings  #
 ######################
+settings.setdefault("mongodb", {})
 MONGO_URI = settings["mongodb"].get("uri", os.environ.get("MONGO_URI", None))
 MONGO_HOST = settings["mongodb"].get("host", os.environ.get("MONGO_HOST", "localhost"))
 MONGO_PORT = int(settings["mongodb"].get("port", os.environ.get("MONGO_PORT", "27017")))
@@ -113,6 +104,7 @@ MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get("remove_empty_fields", False
 # PROJECT SYSTEM SETTINGS #
 ######################
 
+settings.setdefault("project", {})
 DB_FLUSH_MODE = settings["project"].get("db_flush_mode", "online")
 # DEBUG_MODE = settings["project"].get("debug", False)
 PERF_LOG = settings["project"].get("performance_logging", False)
@@ -230,7 +222,7 @@ EXTRA_METADATA.update({"mq_port": MQ_PORT})
 ######################
 #    Web Server      #
 ######################
-
+settings.setdefault("web_server", {})
 _webserver_settings = settings.get("web_server", {})
 WEBSERVER_HOST = _webserver_settings.get("host", "0.0.0.0")
 WEBSERVER_PORT = int(_webserver_settings.get("port", 5000))
@@ -241,16 +233,16 @@ WEBSERVER_PORT = int(_webserver_settings.get("port", 5000))
 
 ANALYTICS = settings.get("analytics", None)
 
+####################
+# INSTRUMENTATION  #
+####################
 
-####
+INSTRUMENTATION = settings.get("instrumentation", {})
+INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", False)
 
-INSTRUMENTATION = settings.get("instrumentation", None)
-INSTRUMENTATION_ENABLED = False
-if INSTRUMENTATION:
-    INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", False)
-
-################# Enabled ADAPTERS
-
+####################
+# Enabled ADAPTERS #
+####################
 ADAPTERS = set()
 
 for adapter in settings.get("adapters", set()):
