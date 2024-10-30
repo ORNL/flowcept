@@ -5,7 +5,7 @@ import numpy as np
 
 from dask.distributed import Client, LocalCluster
 
-from flowcept import Flowcept, TaskQueryAPI
+from flowcept import Flowcept
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import (
     assert_by_querying_tasks_until,

@@ -51,18 +51,19 @@ pip install flowcept[dev]           # To install dev dependencies.
 You do not need to install any optional dependency to run Flowcept without any adapter, e.g., if you want to use simple instrumentation (see below).
 In this case, you need to remove the adapter part from the [settings.yaml](resources/settings.yaml) file.
  
-2. Start MongoDB and Redis:
+2. Start the Database and MQ System:
 
-To enable the full advantages of FlowCept, one needs to start a Redis and MongoDB instances.
-FlowCept uses Redis as its message queue system and Mongo for its persistent database.
-For convenience, we set up a [docker-compose file](deployment/compose.yml) deployment file for this. Run `docker-compose -f deployment/compose.yml up`.
+To use FlowCept, one needs to start a database and a MQ system. Currently, FlowCept supports MongoDB as its database and it supports both Redis and Kafka as the MQ system.
 
-3. Define the settings (e.g., routes and ports) accordingly in the [settings.yaml](resources/settings.yaml) file.
-You may need to set the environment variable `FLOWCEPT_SETTINGS_PATH` with the absolute path to the settings file. 
+For convenience, the default needed services can be started using a [docker-compose file](deployment/compose.yml) deployment file. 
+You can start them using `$> docker-compose -f deployment/compose.yml up`.
 
-4. Start the observation using the Controller API, as shown in the [Jupyter Notebooks](notebooks).
+3. Optionally, define custom settings (e.g., routes and ports) accordingly in a settings.yaml file. There is a sample file [here](resources/sample_settings.yaml), which can be used as basis.
+Then, set an environment var `FLOWCEPT_SETTINGS_PATH` with the absolute path to the yaml file.
+If you do not follow this step, the default values defined [here](resources/sample_settings.yaml) will be used.
 
-5. To use FlowCept's Query API, see utilization examples in the notebooks.
+4. See the [Jupyter Notebooks](notebooks) and [Examples directory](examples) for utilization examples.
+
 
 ### Simple Example with Decorators Instrumentation
 
@@ -89,8 +90,6 @@ with Flowcept(workflow_name='test_workflow'):
 
 print(Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id}))
 ```
-
-
 
 ## Performance Tuning for Performance Evaluation
 
