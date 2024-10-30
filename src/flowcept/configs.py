@@ -12,31 +12,28 @@ import random
 ########################
 
 PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
-SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
-SETTINGS_DIR = os.path.expanduser(f"~/.{PROJECT_NAME}")
-if SETTINGS_PATH is None:
-    SETTINGS_PATH = os.path.join(SETTINGS_DIR, "settings.yaml")
+_SETTINGS_DIR = os.path.expanduser(f"~/.{PROJECT_NAME}")
+SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", f"{_SETTINGS_DIR}/settings.yaml")
 
 if not os.path.exists(SETTINGS_PATH):
-    raise Exception(
-        f"Settings file {SETTINGS_PATH} was not found. "
-        f"You should either define the "
-        f"environment variable FLOWCEPT_SETTINGS_PATH with its path or "
-        f"install Flowcept's package to create the directory "
-        f"~/.flowcept with the file in it.\n"
-        "A sample settings file is found in the 'resources' directory "
-        "under the project's root path."
-    )
+    SETTINGS_PATH = None
+    import importlib.resources
 
-settings = OmegaConf.load(SETTINGS_PATH)
+    with importlib.resources.open_text("resources", "sample_settings.yaml") as f:
+        settings = OmegaConf.load(f)
+
+else:
+    settings = OmegaConf.load(SETTINGS_PATH)
+
 
 ########################
 #   Log Settings       #
 ########################
+
 LOG_FILE_PATH = settings["log"].get("log_path", "default")
 
 if LOG_FILE_PATH == "default":
-    LOG_FILE_PATH = os.path.join(SETTINGS_DIR, f"{PROJECT_NAME}.log")
+    LOG_FILE_PATH = f"{PROJECT_NAME}.log"
 
 # Possible values below are the typical python logging levels.
 LOG_FILE_LEVEL = settings["log"].get("log_file_level", "debug").upper()
@@ -54,6 +51,7 @@ CAMPAIGN_ID = settings["experiment"].get(
 ######################
 #   MQ Settings   #
 ######################
+
 MQ_URI = settings["mq"].get("uri", None)
 MQ_INSTANCES = settings["mq"].get("instances", None)
 
@@ -83,6 +81,7 @@ KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
 ######################
 #  MongoDB Settings  #
 ######################
+
 MONGO_URI = settings["mongodb"].get("uri", os.environ.get("MONGO_URI", None))
 MONGO_HOST = settings["mongodb"].get("host", os.environ.get("MONGO_HOST", "localhost"))
 MONGO_PORT = int(settings["mongodb"].get("port", os.environ.get("MONGO_PORT", "27017")))
@@ -226,7 +225,7 @@ EXTRA_METADATA.update({"mq_port": MQ_PORT})
 ######################
 #    Web Server      #
 ######################
-
+settings.setdefault("web_server", {})
 _webserver_settings = settings.get("web_server", {})
 WEBSERVER_HOST = _webserver_settings.get("host", "0.0.0.0")
 WEBSERVER_PORT = int(_webserver_settings.get("port", 5000))
@@ -237,16 +236,16 @@ WEBSERVER_PORT = int(_webserver_settings.get("port", 5000))
 
 ANALYTICS = settings.get("analytics", None)
 
+####################
+# INSTRUMENTATION  #
+####################
 
-####
+INSTRUMENTATION = settings.get("instrumentation", {})
+INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", False)
 
-INSTRUMENTATION = settings.get("instrumentation", None)
-INSTRUMENTATION_ENABLED = False
-if INSTRUMENTATION:
-    INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", False)
-
-################# Enabled ADAPTERS
-
+####################
+# Enabled ADAPTERS #
+####################
 ADAPTERS = set()
 
 for adapter in settings.get("adapters", set()):

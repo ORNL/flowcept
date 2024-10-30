@@ -2,7 +2,7 @@ name: Release and Publish
 on:
   push:  # It has to be push, otherwise error happens in code below.
     branches: [ "main" ]
-    # branches: [ "main", "dev" ] # use this only to test the CI
+    # branches: [ "main", "dev" ] # use this only to test the CI. If testing this CI, consider commenting out the automatic version updates and manually adjust the patch version.
     #branches: [ "disabled" ]
 jobs:
   build:
@@ -24,7 +24,7 @@ jobs:
       - name: Update version.py
         run: |
           export PYTHONPATH=$PYTHONPATH:flowcept
-          export BRANCH_NAME="${{ steps.branch-name.outputs.current_branch }}" 
+          export BRANCH_NAME="${{ steps.branch-name.outputs.current_branch }}"
           python .github/workflows/version_bumper.py
       - name: Commit new version
         run: |
@@ -108,15 +108,10 @@ jobs:
       - name: Run Docker Compose
         run: docker compose -f deployment/compose.yml up -d
       - name: Test with pytest
-        run: |
-          mkdir -p ~/.flowcept
-          cp resources/sample_settings.yaml ~/.flowcept/settings.yaml
-          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
-          cat $FLOWCEPT_SETTINGS_PATH
-          pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
+        run: pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
       - name: Test notebooks
         run: |
-          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
-          python flowcept/flowcept_webserver/app.py &
+          # export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
+          python src/flowcept/flowcept_webserver/app.py &
           sleep 3
           pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
