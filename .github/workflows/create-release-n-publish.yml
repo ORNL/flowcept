@@ -1,7 +1,7 @@
 name: Release and Publish
 on:
   push:  # It has to be push, otherwise error happens in code below.
-    branches: [ "main" , "settings" ]
+    branches: [ "main" ]
     # branches: [ "main", "dev" ] # use this only to test the CI. If testing this CI, consider commenting out the automatic version updates and manually adjust the patch version.
     #branches: [ "disabled" ]
 jobs:
@@ -21,19 +21,19 @@ jobs:
       - name: Get branch names
         id: branch-name
         uses: tj-actions/branch-names@v6
-#      - name: Update version.py
-#        run: |
-#          export PYTHONPATH=$PYTHONPATH:flowcept
-#          export BRANCH_NAME="${{ steps.branch-name.outputs.current_branch }}"
-#          python .github/workflows/version_bumper.py
-#      - name: Commit new version
-#        run: |
-#          git config --global user.name 'Flowcept CI Bot'
-#          git config --global user.email 'flowcept@users.noreply.github.com'
-#          git branch
-#          git add src/flowcept/version.py
-#          git commit -m "Flowcept CI Bot: bumping master version"
-#          git push --force
+      - name: Update version.py
+        run: |
+          export PYTHONPATH=$PYTHONPATH:flowcept
+          export BRANCH_NAME="${{ steps.branch-name.outputs.current_branch }}"
+          python .github/workflows/version_bumper.py
+      - name: Commit new version
+        run: |
+          git config --global user.name 'Flowcept CI Bot'
+          git config --global user.email 'flowcept@users.noreply.github.com'
+          git branch
+          git add src/flowcept/version.py
+          git commit -m "Flowcept CI Bot: bumping master version"
+          git push --force
 
       - name: Get Latest PR and Create Release
         run: |
