@@ -31,7 +31,7 @@ class FlowceptAPITest(unittest.TestCase):
 
     def test_configs(self):
         current_configs = get_current_config_values()
-        assert "log" in current_configs
+        assert "LOG_FILE_PATH" in current_configs
 
     def test_simple_workflow(self):
         assert Flowcept.services_alive()
