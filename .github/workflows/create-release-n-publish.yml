@@ -108,15 +108,10 @@ jobs:
       - name: Run Docker Compose
         run: docker compose -f deployment/compose.yml up -d
       - name: Test with pytest
-        run: |
-          mkdir -p ~/.flowcept
-          cp resources/sample_settings.yaml ~/.flowcept/settings.yaml
-          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
-          cat $FLOWCEPT_SETTINGS_PATH
-          pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
+        run: pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
       - name: Test notebooks
         run: |
-          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
-          python flowcept/flowcept_webserver/app.py &
+          # export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
+          python src/flowcept/flowcept_webserver/app.py &
           sleep 3
           pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
