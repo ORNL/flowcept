@@ -16,16 +16,20 @@ _SETTINGS_DIR = os.path.expanduser(f"~/.{PROJECT_NAME}")
 SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", f"{_SETTINGS_DIR}/settings.yaml")
 
 if not os.path.exists(SETTINGS_PATH):
-    # The default values will be set if no yaml file was found.
     SETTINGS_PATH = None
-    settings = {}
+    import importlib.resources
+
+    with importlib.resources.open_text("resources", "sample_settings.yaml") as f:
+        settings = OmegaConf.load(f)
+
 else:
     settings = OmegaConf.load(SETTINGS_PATH)
+
 
 ########################
 #   Log Settings       #
 ########################
-settings.setdefault("log", {})
+
 LOG_FILE_PATH = settings["log"].get("log_path", "default")
 
 if LOG_FILE_PATH == "default":
@@ -38,7 +42,7 @@ LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "debug").upper()
 ##########################
 #  Experiment Settings   #
 ##########################
-settings.setdefault("experiment", {})
+
 FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 CAMPAIGN_ID = settings["experiment"].get(
     "campaign_id", os.environ.get("CAMPAIGN_ID", "super_campaign")
@@ -47,7 +51,7 @@ CAMPAIGN_ID = settings["experiment"].get(
 ######################
 #   MQ Settings   #
 ######################
-settings.setdefault("mq", {})
+
 MQ_URI = settings["mq"].get("uri", None)
 MQ_INSTANCES = settings["mq"].get("instances", None)
 
@@ -68,7 +72,7 @@ MQ_CHUNK_SIZE = int(settings["mq"].get("chunk_size", -1))
 #####################
 # KV SETTINGS       #
 #####################
-settings.setdefault("kv_db", {})
+
 KVDB_PASSWORD = settings["kv_db"].get("password", None)
 KVDB_HOST = os.getenv("KVDB_HOST", settings["kv_db"].get("host", "localhost"))
 KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
@@ -77,7 +81,7 @@ KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
 ######################
 #  MongoDB Settings  #
 ######################
-settings.setdefault("mongodb", {})
+
 MONGO_URI = settings["mongodb"].get("uri", os.environ.get("MONGO_URI", None))
 MONGO_HOST = settings["mongodb"].get("host", os.environ.get("MONGO_HOST", "localhost"))
 MONGO_PORT = int(settings["mongodb"].get("port", os.environ.get("MONGO_PORT", "27017")))
@@ -104,7 +108,6 @@ MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get("remove_empty_fields", False
 # PROJECT SYSTEM SETTINGS #
 ######################
 
-settings.setdefault("project", {})
 DB_FLUSH_MODE = settings["project"].get("db_flush_mode", "online")
 # DEBUG_MODE = settings["project"].get("debug", False)
 PERF_LOG = settings["project"].get("performance_logging", False)
