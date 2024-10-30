@@ -4,7 +4,7 @@ from flowcept import (
     Flowcept,
     flowcept_task,
 )
-from flowcept.commons.utils import assert_by_querying_tasks_until
+from flowcept.commons.utils import assert_by_querying_tasks_until, get_current_config_values
 
 
 @flowcept_task
@@ -28,6 +28,11 @@ def mult_two_(y):
 
 
 class FlowceptAPITest(unittest.TestCase):
+
+    def test_configs(self):
+        current_configs = get_current_config_values()
+        assert "LOG_FILE_PATH" in current_configs
+
     def test_simple_workflow(self):
         assert Flowcept.services_alive()
 
