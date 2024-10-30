@@ -23,11 +23,6 @@ from flowcept.configs import (
 )
 
 
-# class FrequencyCount:
-#     counter = 0
-#     MAX = INSTRUMENTATION["torch"]["max_frequency"]
-
-
 def _inspect_torch_tensor(tensor: torch.Tensor):
     _id = id(tensor)
     tensor_inspection = {"id": _id}
@@ -58,7 +53,7 @@ def _inspect_torch_tensor(tensor: torch.Tensor):
 
 
 def full_torch_task(func=None):
-    """Get pytorch task."""
+    """Generate pytorch task."""
 
     def decorator(func):
         @wraps(func)
@@ -215,8 +210,12 @@ def lightweight_telemetry_torch_task(func=None):
 
 
 def torch_task():
-    """Get the torch task."""
-    mode = INSTRUMENTATION["torch"]["mode"]
+    """Pick the torch_task function."""
+    torch_instrumentation = INSTRUMENTATION.get("torch")
+    if torch_instrumentation is None:
+        return lambda _: _
+
+    mode = torch_instrumentation.get("mode", None)
     if mode is None:
         return lambda _: _
     if "telemetry" in mode and TELEMETRY_CAPTURE is None:
