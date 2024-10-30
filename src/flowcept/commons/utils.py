@@ -8,7 +8,6 @@ import os
 import platform
 import subprocess
 import types
-
 import numpy as np
 
 import flowcept.commons
@@ -17,7 +16,6 @@ from flowcept.configs import (
     PERF_LOG,
     SETTINGS_PATH,
 )
-from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_object import Status
 
 
@@ -49,8 +47,7 @@ def perf_log(func_name, t0: float):
     """Configure the performance log."""
     if PERF_LOG:
         t1 = time()
-        logger = FlowceptLogger()
-        logger.debug(f"[PERFEVAL][{func_name}]={t1 - t0}")
+        flowcept.commons.logger.debug(f"[PERFEVAL][{func_name}]={t1 - t0}")
         return t1
     return None
 
@@ -233,6 +230,7 @@ def get_current_config_values():
             val = getattr(configs, var_name)
             if not isinstance(val, types.ModuleType):
                 _vars[var_name] = val
+    _vars["ADAPTERS"] = list(_vars.get("ADAPTERS", []))
     return _vars
 
 
