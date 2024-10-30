@@ -20,11 +20,11 @@ jobs:
           python-version: "3.10"
           cache: "pip"
 
-      - name: Copy settings file
-        run: |
-          mkdir ~/.flowcept
-          cp resources/sample_settings.yaml ~/.flowcept
-          mv ~/.flowcept/sample_settings.yaml ~/.flowcept/settings.yaml
+#      - name: Copy settings file
+#        run: |
+#          mkdir ~/.flowcept
+#          cp resources/sample_settings.yaml ~/.flowcept
+#          mv ~/.flowcept/sample_settings.yaml ~/.flowcept/settings.yaml
 
       - name: Install package and dependencies
         run: |
@@ -58,7 +58,7 @@ jobs:
           python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_PORT={MQ_PORT}")'
           python -c 'from flowcept import Flowcept; assert Flowcept.services_alive()'
 
-          python flowcept/flowcept_webserver/app.py &
+          python src/flowcept/flowcept_webserver/app.py &
           sleep 3
-          export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
+          # export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
           pytest --ignore=notebooks/zambeze.ipynb --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
