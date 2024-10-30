@@ -6,7 +6,8 @@ import uuid
 import mlflow
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept import MLFlowInterceptor, Flowcept
+from flowcept import MLFlowInterceptor
+from flowcept import Flowcept
 from flowcept.commons.utils import (
     assert_by_querying_tasks_until,
     evaluate_until,
@@ -25,7 +26,8 @@ class TestMLFlow(unittest.TestCase):
         TestMLFlow.interceptor = MLFlowInterceptor()
         if os.path.exists(TestMLFlow.interceptor.settings.file_path):
             os.remove(TestMLFlow.interceptor.settings.file_path)
-        open(TestMLFlow.interceptor.settings.file_path, "w")
+        with open(TestMLFlow.interceptor.settings.file_path, "w") as f:
+            f.write("")
         sleep(1)
         mlflow.set_tracking_uri(f"sqlite:///{TestMLFlow.interceptor.settings.file_path}")
         mlflow.delete_experiment(mlflow.create_experiment("starter"))
