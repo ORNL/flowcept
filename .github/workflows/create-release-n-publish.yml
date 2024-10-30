@@ -2,7 +2,7 @@ name: Release and Publish
 on:
   push:  # It has to be push, otherwise error happens in code below.
     branches: [ "main" , "settings" ]
-    # branches: [ "main", "dev" ] # use this only to test the CI
+    # branches: [ "main", "dev" ] # use this only to test the CI. If testing this CI, consider commenting out the automatic version updates and manually adjust the patch version.
     #branches: [ "disabled" ]
 jobs:
   build:
