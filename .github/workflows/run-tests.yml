@@ -38,7 +38,7 @@ jobs:
 
       - name: Install MLFlow dependencies and run a simple MLFlow test
         run: |          
-          pip install .[dask]
+          pip install .[mlflow]
           python examples/mlflow_example.py      
 
       - name: Install all dependencies
