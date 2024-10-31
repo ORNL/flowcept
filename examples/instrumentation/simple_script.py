@@ -17,4 +17,3 @@ with Flowcept(workflow_name='test_workflow'):
     print(o2)
 
 print(Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id}))
-
