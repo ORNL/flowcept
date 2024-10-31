@@ -34,7 +34,7 @@ jobs:
       - name: Install Dask dependencies and run a simple Dask test
         run: |          
           pip install .[dask]
-          python examples/dask/dask_example.py          
+          python examples/dask_example.py          
 
       - name: Install all dependencies
         run: |
