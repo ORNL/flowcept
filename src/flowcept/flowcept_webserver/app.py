@@ -1,4 +1,8 @@
-"""App module."""
+"""App module.
+
+The webservice is currently not being maintained. It is still here because we might go back to work
+with it the future.
+"""
 
 from flask_restful import Api
 from flask import Flask
@@ -20,7 +24,7 @@ api.add_resource(TaskQuery, f"{BASE_ROUTE}/{TaskQuery.ROUTE}")
 
 @app.route("/")
 def liveness():
-    """Livelyness string."""
+    """Liveliness string."""
     return "Server up!"
 
 

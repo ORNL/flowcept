@@ -18,7 +18,6 @@ def sum_list(values):
 
 
 if __name__ == "__main__":
-
     # Starting a local Dask cluster
     cluster = LocalCluster(n_workers=1)
     scheduler = cluster.scheduler
