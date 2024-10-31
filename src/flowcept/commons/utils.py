@@ -14,7 +14,6 @@ import flowcept.commons
 from flowcept import configs
 from flowcept.configs import (
     PERF_LOG,
-    SETTINGS_PATH,
 )
 from flowcept.commons.flowcept_dataclasses.task_object import Status
 
