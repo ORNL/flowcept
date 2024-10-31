@@ -31,15 +31,23 @@ jobs:
           pip install .
           python examples/instrumentation/simple_script.py
 
-      - name: Install Dask dependencies and run a simple Dask test
+      - name: Install Dask dependencies alone and run a simple Dask test
         run: |          
+          pip uninstall flowcept
           pip install .[dask]
           python examples/dask_example.py          
 
-      - name: Install MLFlow dependencies and run a simple MLFlow test
+      - name: Install MLFlow dependencies alone and run a simple MLFlow test
         run: |          
+          pip uninstall flowcept
           pip install .[mlflow]
-          python examples/mlflow_example.py      
+          python examples/mlflow_example.py    
+
+      - name: Install Tensorboard dependencies alone and run a simple Tensorboard test
+        run: |          
+          pip uninstall flowcept
+          pip install .[tensorboard]
+          python examples/tensorboard_example.py              
 
       - name: Install all dependencies
         run: |

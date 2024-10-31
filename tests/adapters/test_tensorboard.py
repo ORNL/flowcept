@@ -5,7 +5,7 @@ from uuid import uuid4
 from flowcept.configs import MONGO_INSERTION_BUFFER_TIME
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept import TensorboardInterceptor, Flowcept, TaskQueryAPI
+from flowcept import TensorboardInterceptor, Flowcept
 from flowcept.commons.utils import (
     assert_by_querying_tasks_until,
     evaluate_until,
