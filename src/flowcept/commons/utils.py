@@ -63,18 +63,6 @@ def get_status_from_str(status_str: str) -> Status:
         return Status.UNKNOWN
 
 
-def get_adapter_exception_msg(adapter_kind):
-    """Get the adapter."""
-    return (
-        f"You have an adapter for {adapter_kind} in"
-        f" {SETTINGS_PATH} but we couldn't import its interceptor."
-        f" Consider fixing the following exception (e.g., try installing the"
-        f" adapter requirements -- see the README file remove that adapter"
-        f" from the settings."
-        f" Exception:"
-    )
-
-
 def assert_by_querying_tasks_until(
     filter,
     condition_to_evaluate: Callable = None,
