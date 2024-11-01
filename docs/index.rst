@@ -1,15 +1,7 @@
-.. FlowCept documentation master file, created by
-   sphinx-quickstart on Thu Oct 24 13:41:54 2024.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 FlowCept
 ========
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
-
+FlowCept is a runtime data integration system that empowers any data processing system to capture and query workflow provenance data using data observability, requiring minimal or no changes in the target system code. It seamlessly integrates data from multiple workflows, enabling users to comprehend complex, heterogeneous, and large-scale data from various sources in federated environments.
 
 .. toctree::
    :maxdepth: 2
