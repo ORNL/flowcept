@@ -59,7 +59,6 @@ adjust the [setup.py](setup.py).
 
 7. [Optional] Ajust flowcept.__init__.py.
 
-
 # Issue Labels
 
 When a new issue is created a priority label should be added indicating how important the issue is.
@@ -69,3 +68,7 @@ When a new issue is created a priority label should be added indicating how impo
 * `priority:high` - is essential to the completion of a milestone
 
 Reference: https://github.com/ORNL/zambeze/blob/main/CONTRIBUTING.md
+
+# Documentation
+
+[Sphinx](https://www.sphinx-doc.org) along with the [Furo theme](https://github.com/pradyunsg/furo) are used to generate documentation for the project. The **docs** optional dependencies are needed to build the documentation on your local machine. Sphinx uses docstrings from the source code to build the API documentation. These docstrings should adhere to the [NumPy docstring conventions](https://numpydoc.readthedocs.io/en/latest/format.html).
