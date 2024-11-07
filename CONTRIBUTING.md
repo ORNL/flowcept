@@ -1,10 +1,10 @@
 # Contributing
 
-The following is a set of guidelines for contributing to FlowCept. Submitted code that does not conform to these guidelines will not be merged into the package.
+Welcome to the FlowCept project! To make sure new contributions align well with the project, following there are some guidelines to help you create code that fits right in. Following them increases the chances of your contributions being merged smoothly.
 
 ## Code Linting and Formatting
 
-All Python code in the FlowCept package should adhere to the [PEP 8](https://peps.python.org/pep-0008/) style guide. All linting and formatting checks should be performed with [Ruff](https://github.com/astral-sh/ruff). Configuration for Ruff is defined in the `pyproject.toml` file. The commands shown below will run the Ruff linter and formatter checks on the source directory:
+All Python code in the FlowCept package should adhere to the [PEP 8](https://peps.python.org/pep-0008/) style guide. All linting and formatting checks should be performed with [Ruff](https://github.com/astral-sh/ruff). Configuration for Ruff is defined in the [pyproject.toml](./pyproject.toml) file. The commands shown below will run the Ruff linter and formatter checks on the source directory:
 
 ```text
 ruff check src
@@ -36,8 +36,6 @@ When a new issue is created a priority label should be added indicating how impo
 * `priority:medium` - is important to the completion of the milestone but does not require immediate attention
 * `priority:high` - is essential to the completion of a milestone
 
-Reference: https://github.com/ORNL/zambeze/blob/main/CONTRIBUTING.md
-
 ## CI/CD Pipeline
 
 ### Automated versioning
@@ -46,7 +44,7 @@ FlowCept follows semantic versioning. There is a [GitHub Action](.github/workflo
 
 ### Automated tests and code format check
 
-All human-triggered commits to any branch will launch the [automated tests GitHub Action](.github/workflows/run-tests.yml). They will also trigger the [code linter and formatter checks](.github/workflows/run-checks.yml), using Ruff.
+All human-triggered commits to any branch will launch the [automated tests GitHub Action](.github/workflows/run-tests.yml). PRs into `dev` or `main` will also trigger the [code linter and formatter checks](.github/workflows/run-checks.yml), using Ruff.
 
 ### Automated releases
 
@@ -65,6 +63,6 @@ See the existing plugins for a reference.
 
 3. [Optional] You may need extra classes, such as local state manager (we provide a generic [`Interceptor State Manager`](flowcept/flowceptor/adapters/interceptor_state_manager.py)), `@dataclasses`, Data Access Objects (`DAOs`), and event handlers.
 4. Create a new entry in the [settings.yaml](resources/settings.yaml) file and in the [Settings factory](flowcept/commons/settings_factory.py)
-5. Create a new `requirements.txt` file under the directory [extra_requirements](extra_requirements) and adjust the [setup.py](setup.py).
+5. Create a new entry in the [pyproject.toml](./pyproject.toml) file under the `[project.optional-dependencies]` section and adjust the rest of the file accordingly.
 6. [Optional] Add a new constant to [vocabulary.py](flowcept/commons/vocabulary.py).
 7. [Optional] Adjust flowcept.__init__.py.
