@@ -12,7 +12,7 @@ FlowCept is intended to address scenarios where multiple workflows in a science 
 
 Currently, FlowCept provides adapters for: [Dask](https://www.dask.org/), [MLFlow](https://mlflow.org/), [TensorBoard](https://www.tensorflow.org/tensorboard), and [Zambeze](https://github.com/ORNL/zambeze). 
 
-See the [Jupyter Notebooks](notebooks) for utilization examples.
+See the [Jupyter Notebooks](notebooks) and [Examples](examples) for utilization examples.
 
 See the [Contributing](CONTRIBUTING.md) file for guidelines to contribute with new adapters. Note that we may use the term 'plugin' in the codebase as a synonym to adapter. Future releases should standardize the terminology to use adapter.
 
@@ -138,7 +138,7 @@ R. Souza, T. Skluzacek, S. Wilkinson, M. Ziatdinov, and R. da Silva
 
 ## Disclaimer & Get in Touch
 
-Please note that this a research software. We encourage you to give it a try and use it with your own stack. We are continuously working on improving documentation and adding more examples and notebooks, but we are still far from a good documentation covering the whole system. If you are interested in working with FlowCept in your own scientific project, we can give you a jump start if you reach out to us. Feel free to [create an issue](https://github.com/ORNL/flowcept/issues/new), [create a new discussion thread](https://github.com/ORNL/flowcept/discussions/new/choose) or drop us an email (we trust you'll find a way to reach out to us :wink: ).
+Please note that this a research software. We encourage you to give it a try and use it with your own stack. We are continuously working on improving documentation and adding more examples and notebooks, but we are still far from a good documentation covering the whole system. If you are interested in working with FlowCept in your own scientific project, we can give you a jump start if you reach out to us. Feel free to [create an issue](https://github.com/ORNL/flowcept/issues/new), [create a new discussion thread](https://github.com/ORNL/flowcept/discussions/new/choose) or drop us an email (we trust you'll find a way to reach out to us :wink:).
 
 ## Acknowledgement
 
