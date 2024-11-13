@@ -24,11 +24,8 @@ jobs:
           python -m pip install ruff
           python -m pip install .[docs]
 
-      - name: Run ruff linter checks
-        run: ruff check src
+      - name: Run linter and formatter checks using ruff
+        run: make checks
 
-      - name: Run ruff formatter checks
-        run: ruff format --check src
-
-      - name: Check Sphinx HTML build
-        run: cd docs; make html
+      - name: Run HTML builder for Sphinx documentation
+        run: make docs
