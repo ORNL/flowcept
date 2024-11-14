@@ -1,4 +1,4 @@
-name: Ruff linter and formatter checks
+name: Linter, formatter, and docs checks
 on: [pull_request]
 
 permissions:
@@ -18,13 +18,14 @@ jobs:
           python-version: "3.10"
           cache: "pip"
 
-      - name: Install Ruff
+      - name: Install package and dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install ruff
+          python -m pip install .[docs]
 
-      - name: Run ruff linter checks
-        run: ruff check src
+      - name: Run linter and formatter checks using ruff
+        run: make checks
 
-      - name: Run ruff formatter checks
-        run: ruff format --check src
+      - name: Run HTML builder for Sphinx documentation
+        run: make docs
