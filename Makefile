@@ -18,6 +18,13 @@ checks:
 clean:
 	rm -rf .ruff_cache
 	rm -rf .pytest_cache
+	rm -rf mlruns
+	rm -rf mnist_data
+	rm -rf tensorboard_events
+	rm -f docs_dump_tasks_*
+	rm -f dump_test.json
+	rm -f flowcept.log
+	rm -f mlflow.db
 	sphinx-build -M clean docs docs/_build
 
 # Build the HTML documentation using Sphinx
@@ -34,5 +41,6 @@ services-stop:
 	docker compose --file deployment/compose.yml down --volumes
 
 # Run unit tests using pytest
+.PHONY: tests
 tests:
 	pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
