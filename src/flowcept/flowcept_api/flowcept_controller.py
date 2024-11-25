@@ -77,7 +77,7 @@ class Flowcept(object):
                 if not INSTRUMENTATION_ENABLED:
                     self.enabled = False
                     return
-                interceptors = [flowcept.instrumentation.decorators.instrumentation_interceptor]
+                interceptors = [BaseInterceptor(kind="instrumentation")]
             elif not isinstance(interceptors, list):
                 interceptors = [interceptors]
             self._interceptors: List[BaseInterceptor] = interceptors
