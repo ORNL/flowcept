@@ -6,11 +6,13 @@ from time import time
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.utils import perf_log
 
-from pymargo.core import Engine
+#from pymargo.core import Engine
 import mochi.mofka.client as mofka
 from flowcept.configs import (
     MQ_CHANNEL,
-    PERF_LOG)
+    PERF_LOG,
+    MQ_SETTINGS
+    )
 
 import json
 def data_selector(metadata, descriptor):
@@ -21,66 +23,86 @@ def data_broker(metadata, descriptor):
 
 class MQDaoMofka(MQDao):
     def __init__(self,
-                 mofka_protocol: str,
-                 group_file: str,
-                 topic_name: MQ_CHANNEL = "flowcept"):
+                #  mofka_protocol: str = MQ_SETTINGS["mofka_protocol"],
+                #  group_file: str = MQ_SETTINGS["group_file"],
+                #  topic_name: MQ_CHANNEL = "flowcept",
+                 kv_host=None, kv_port=None, adapter_settings=None):
+        super().__init__(kv_host=None, kv_port=None, adapter_settings=None)
         self._mofka_conf = {
-            "protocol": mofka_protocol,
-            "group_file": group_file,
-            "topic_name": topic_name
+            "group_file": "mofka.json",
+            "topic_name": "flowcept"
         }
-        self._engine = Engine(self._mofka_conf["protocol"])
-        self._driver = mofka.MofkaDriver(self._mofka_conf["group_file"], self._engine)
+
+        print("In init", self._mofka_conf)
+        #self._engine = Engine(self._mofka_conf["protocol"])
+        self._driver = mofka.MofkaDriver(self._mofka_conf["group_file"])
+        print("after driver created ")
+
+
+    def producer(self):
+        print("in producer ")
         if not (self._driver.topic_exists(self._mofka_conf["topic_name"])):
             topic = self._driver.create_topic(self._mofka_conf["topic_name"])
             self._driver.add_memory_partition(self._mofka_conf["topic_name"], 0)
-        topic = self._driver.open_topic(topic_name)
-        self._producer = topic.producer("producer_"+self._mofka_conf["topic_name"],
+        print("after topic creation ")
+        topic = self._driver.open_topic(self._mofka_conf["topic_name"])
+        producer = topic.producer("producer_"+self._mofka_conf["topic_name"],
                                         batch_size=mofka.AdaptiveBatchSize,
                                         thread_pool=mofka.ThreadPool(1),
                                         ordering=mofka.Ordering.Strict)
+        return producer
 
-    def message_listener(self, message_handler: Callable, topic_name: MQ_CHANNEL):
-        if not (self._driver.topic_exists(topic_name)):
-            self._driver.create_topic(topic_name)
-            self._driver.add_memory_partition(topic_name, 0)
+    def consumer(self):
+        print("")
+        if not (self._driver.topic_exists(self._mofka_conf["topic_name"])):
+            topic = self._driver.create_topic(self._mofka_conf["topic_name"])
+            self._driver.add_memory_partition(self._mofka_conf["topic_name"], 0)
+        print("after topic creation ")
+        consumer = topic.consumer(name="consumer_"+self._mofka_conf["topic_name"],
+                            thread_pool=mofka.ThreadPool(0),
+                            batch_size=mofka.AdaptiveBatchSize,
+                            data_selector=data_selector,
+                            data_broker=data_broker)
+        return consumer
 
-        topic = self._driver.open_topic(topic_name)
-        consumer = topic.consumer(name="consumer_"+topic_name,
-                                  thread_pool=mofka.ThreadPool(1),
-                                  batch_size=mofka.AdaptiveBatchSize,
-                                  data_selector=data_selector,
-                                  data_broker=data_broker)
+    def message_listener(self, message_handler: Callable):
+        consumer = self.consumer()
         try:
             while True:
+                print("in message listner loop", flush=True)
                 event = consumer.pull().wait()
-                messages = [msgpack.loads(event.data[i].value(), raw=False) for i in range(len(event.data))]
+                #messages = [msgpack.loads(event.data[i].value(), raw=False) for i in range(len(event.data))]
                 metadata = json.loads(event.metadata)
-                self.logger.debug(f"Received message: {messages}")
-                if not message_handler(messages):
+                self.logger.debug(f"Received message: {metadata}")
+                if not message_handler(metadata):
                     break
         except Exception as e:
             self.logger.exception(e)
         finally:
             del consumer
 
+
     def send_message(
         self, message: dict
     ):
-        self._producer.push(metadata=message, data=bytes()) # using metadata to send data
-        self._producer.flush()
+        producer = self.producer()
+        print("here in send msg", message, flush=True)
+        producer.push(metadata=message) # using metadata to send data
+        producer.flush()
 
     def _bulk_publish(
         self, buffer, serializer=msgpack.dump
     ):
+        producer = self.producer()
+        print("in bulk msg", flush=True)
         try:
             self.logger.debug(
                 f"Going to send Message:"
                 f"\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t"
             )
-            self._producer.push(metadata={"msg": "bulk"}  ,
-                                data=[serializer(m) for m in buffer]
-            )
+            print("buffer", type(buffer[0]))
+            [producer.push(m) for m in buffer]
+
         except Exception as e:
             self.logger.exception(e)
             self.logger.error(
@@ -91,8 +113,11 @@ class MQDaoMofka(MQDao):
         if PERF_LOG:
             t0 = time()
         try:
-            self._producer.flush()
+            producer.flush()
             self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)
         perf_log("mq_pipe_flush", t0)
+
+    def liveness_test(self):
+        return True

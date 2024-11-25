@@ -7,15 +7,15 @@ project:
   enrich_messages: true
   db_flush_mode: online   # or offline
 
-  telemetry_capture:
-    gpu: ~ # ~ means None. This is a list that should specify which metrics of the GPU that should be monitored
-    cpu: true
-    per_cpu: true
-    process_info: true
-    mem: true
-    disk: true
-    network: true
-    machine_info: true
+  # telemetry_capture:
+  #   gpu: ~ # ~ means None. This is a list that should specify which metrics of the GPU that should be monitored
+  #   cpu: true
+  #   per_cpu: true
+  #   process_info: true
+  #   mem: true
+  #   disk: true
+  #   network: true
+  #   machine_info: true
 
 instrumentation:
   enabled: true
@@ -25,22 +25,35 @@ instrumentation:
 
 log:
   log_path: "default"
-  log_file_level: error
-  log_stream_level: error
+  log_file_level: debug
+  log_stream_level: debug
 
 experiment:
   user: root
   campaign_id: super_campaign
 
 mq:
-  type: redis  # or kafka; if kafka, please adjust the port
+  type: mofka #redis  # or kafka; if kafka, please adjust the port
+  mofka_protocol: na+sm
+  # instances: ["localhost:6379"] # We can have multiple redis instances being accessed by the consumers but each interceptor will currently access one single redis.
+  group_file: mofka.json
+  channel: flowcept
   host: localhost
   # instances: ["localhost:6379"] # We can have multiple redis instances being accessed by the consumers but each interceptor will currently access one single redis.
   port: 6379
-  channel: interception
   buffer_size: 50
   insertion_buffer_time_secs: 5
   chunk_size: 10  # use can use 0 or -1 to disable this. Or simply omit this from the config file.
+
+# mq:
+#   type: redis  # or kafka; if kafka, please adjust the port
+#   host: localhost
+#   # instances: ["localhost:6379"] # We can have multiple redis instances being accessed by the consumers but each interceptor will currently access one single redis.
+#   port: 6379
+#   channel: interception
+#   buffer_size: 50
+#   insertion_buffer_time_secs: 5
+#   chunk_size: 10  # use can use 0 or -1 to disable this. Or simply omit this from the config file.
 
 kv_db:
   host: localhost
@@ -73,43 +86,43 @@ analytics:
     generated.accuracy: maximum_first
 
 
-adapters:
-  # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2. Use an empty dict, {}, if you won't use any adapter.
-  zambeze:
-    kind: zambeze
-    host: localhost
-    port: 5672
-    queue_names:
-      - hello
-      - hello2
-#    key_values_to_filter:
-#      - key: activity_status
-#        value: CREATED
+# adapters:
+#   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2. Use an empty dict, {}, if you won't use any adapter.
+#   zambeze:
+#     kind: zambeze
+#     host: localhost
+#     port: 5672
+#     queue_names:
+#       - hello
+#       - hello2
+# #    key_values_to_filter:
+# #      - key: activity_status
+# #        value: CREATED
 
-  mlflow:
-    kind: mlflow
-    file_path: mlflow.db
-    log_params: ['*']
-    log_metrics: ['*']
-    redis_host: localhost
-    redis_port: 6379
-    watch_interval_sec: 2
+#   mlflow:
+#     kind: mlflow
+#     file_path: mlflow.db
+#     log_params: ['*']
+#     log_metrics: ['*']
+#     redis_host: localhost
+#     redis_port: 6379
+#     watch_interval_sec: 2
 
-  tensorboard:
-    kind: tensorboard
-    file_path: tensorboard_events
-    log_tags: ['scalars', 'hparams', 'tensors']
-    log_metrics: ['accuracy']
-    redis_host: localhost
-    redis_port: 6379
-    watch_interval_sec: 5
+#   tensorboard:
+#     kind: tensorboard
+#     file_path: tensorboard_events
+#     log_tags: ['scalars', 'hparams', 'tensors']
+#     log_metrics: ['accuracy']
+#     redis_host: localhost
+#     redis_port: 6379
+#     watch_interval_sec: 5
 
-  dask:
-    kind: dask
-    redis_host: localhost
-    redis_port: 6379
-    worker_should_get_input: true
-    scheduler_should_get_input: true
-    worker_should_get_output: true
-    scheduler_create_timestamps: true
-    worker_create_timestamps: false
+#   dask:
+#     kind: dask
+#     redis_host: localhost
+#     redis_port: 6379
+#     worker_should_get_input: true
+#     scheduler_should_get_input: true
+#     worker_should_get_output: true
+#     scheduler_create_timestamps: true
+#     worker_create_timestamps: false
