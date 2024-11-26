@@ -35,15 +35,15 @@ class MQDao(ABC):
     def build(*args, **kwargs) -> "MQDao":
         if MQ_TYPE == "redis":
             from flowcept.commons.daos.mq_dao.mq_dao_redis import MQDaoRedis
-
+            print("redis :)")
             return MQDaoRedis(*args, **kwargs)
         elif MQ_TYPE == "kafka":
             from flowcept.commons.daos.mq_dao.mq_dao_kafka import MQDaoKafka
-
+            print("kafka :)")
             return MQDaoKafka(*args, **kwargs)
         elif MQ_TYPE == "mofka":
             from flowcept.commons.daos.mq_dao.mq_dao_mofka import MQDaoMofka
-
+            print("mofka :)")
             return MQDaoMofka(*args, **kwargs)
         else:
             raise NotImplementedError

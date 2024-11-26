@@ -25,11 +25,10 @@ consumer = topic.consumer(name=consumer_name,
                             data_selector=data_selector,
                             data_broker=data_broker)
 
-
+print("before while in consumer ")
 while True:
     data = []
     metadata = []
-
     f = consumer.pull()
     event = f.wait()
     print(json.loads(event.metadata))
