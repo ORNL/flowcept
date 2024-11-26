@@ -40,13 +40,13 @@ class MQDaoMofka(MQDao):
             self._driver.create_topic(self._mofka_conf["topic_name"])
             self._driver.add_memory_partition(self._mofka_conf["topic_name"], 0)
 
-        print("in producer ")
+        print("before producer creation")
         topic = self._driver.open_topic(self._mofka_conf["topic_name"])
         self.producer = topic.producer("producer_"+self._mofka_conf["topic_name"],
                                         batch_size=mofka.AdaptiveBatchSize,
                                         thread_pool=mofka.ThreadPool(1),
                                         ordering=mofka.Ordering.Strict)
-        print("got producer")
+        print("after producer created")
 
     def message_listener(self, message_handler: Callable):
         print("in message listener")
@@ -73,7 +73,7 @@ class MQDaoMofka(MQDao):
     def send_message(
         self, message: dict
     ):
-        print("here in send msg", message, flush=True)
+        print("in send msg", message, flush=True)
         self.producer.push(metadata=message) # using metadata to send data
         self.producer.flush()
 
