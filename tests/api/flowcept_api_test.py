@@ -4,7 +4,9 @@ from flowcept import (
     Flowcept,
     flowcept_task,
 )
+from flowcept.commons import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until, get_current_config_values
+from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 
 @flowcept_task
@@ -73,6 +75,19 @@ class FlowceptAPITest(unittest.TestCase):
             )
             == 1
         )
+
+    def test_instrumentation_interceptor(self):
+        logger = FlowceptLogger()
+        try:
+            InstrumentationInterceptor()
+        except Exception as e:
+            logger.debug(f"This exception is expected: {e}")
+
+        a = InstrumentationInterceptor.get_instance()
+        b = InstrumentationInterceptor.get_instance()
+
+        assert a == b
+        assert id(a) == id(b)
 
     @unittest.skip("Test only for dev.")
     def test_continuous_run(self):

@@ -7,7 +7,6 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 
-import flowcept.instrumentation.decorators
 from flowcept.commons import logger
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
@@ -16,6 +15,7 @@ from flowcept.configs import (
     INSTRUMENTATION_ENABLED,
 )
 from flowcept.flowcept_api.db_api import DBAPI
+from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
@@ -77,7 +77,7 @@ class Flowcept(object):
                 if not INSTRUMENTATION_ENABLED:
                     self.enabled = False
                     return
-                interceptors = [BaseInterceptor(kind="instrumentation")]
+                interceptors = [InstrumentationInterceptor.get_instance()]
             elif not isinstance(interceptors, list):
                 interceptors = [interceptors]
             self._interceptors: List[BaseInterceptor] = interceptors
@@ -178,11 +178,6 @@ class Flowcept(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Run the stop function."""
         self.stop()
-
-    @staticmethod
-    def start_instrumentation_interceptor():
-        """Start it."""
-        flowcept.instrumentation.decorators.instrumentation_interceptor.start(None)
 
     @staticmethod
     def services_alive() -> bool:

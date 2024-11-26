@@ -34,18 +34,23 @@ if __name__ == "__main__":
     print(f"workflow_id={wf_id}")
 
     # Start Flowcept's Dask observer
-    flowcept = Flowcept("dask").start()
-    t1 = client.submit(add, 1, 2)
-    t2 = client.submit(multiply, 3, 4)
-    t3 = client.submit(add, t1.result(), t2.result())
-    t4 = client.submit(sum_list, [t1, t2, t3])
-    result = t4.result()
-    print("Result:", result)
-    assert result == 30
-    # Closing Dask and Flowcept
-    client.close()   # This is to avoid generating errors
-    cluster.close()  # This calls the needed closeouts to inform Flowcept that the workflow is done.
-    flowcept.stop()
+
+    with Flowcept("dask"):  # Optionally: Flowcept("dask").start()
+
+        t1 = client.submit(add, 1, 2)
+        t2 = client.submit(multiply, 3, 4)
+        t3 = client.submit(add, t1.result(), t2.result())
+        t4 = client.submit(sum_list, [t1, t2, t3])
+        result = t4.result()
+        print("Result:", result)
+        assert result == 30
+
+        # Closing Dask and Flowcept
+        client.close()   # This is to avoid generating errors
+        cluster.close()  # This calls are needed closeouts to inform of workflow conclusion.
+
+    # Optionally: flowcept.stop()
+
     # Querying Flowcept's database about this run
     print(f"t1_key={t1.key}")
     print("Getting first task only:")

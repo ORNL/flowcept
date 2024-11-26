@@ -7,6 +7,8 @@ help:
 	@printf "\033[32mservices\033[0m        run services using Docker\n"
 	@printf "\033[32mservices-stop\033[0m   stop the running Docker services\n"
 	@printf "\033[32mtests\033[0m           run unit tests with pytest\n"
+	@printf "\033[32mtests-all\033[0m       run all unit tests with pytest, including very long-running ones\n"
+	@printf "\033[32mtests-notebooks\033[0m Tests the notebooks, using pytest\n"
 
 
 # Run linter and formatter checks using ruff
@@ -44,3 +46,11 @@ services-stop:
 .PHONY: tests
 tests:
 	pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
+
+.PHONY: tests-notebooks
+tests-notebooks:
+	pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
+
+.PHONY: tests-all
+tests-all:
+	pytest

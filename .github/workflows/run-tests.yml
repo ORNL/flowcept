@@ -24,7 +24,7 @@ jobs:
         run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
 
       - name: Start docker compose with redis
-        run: docker compose -f deployment/compose.yml up -d
+        run: make services
 
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
@@ -62,13 +62,13 @@ jobs:
 
       - name: Test with pytest and redis
         run: |
-          pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
+          make tests
 
       - name: Test notebooks with pytest and redis
-        run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
+        run: make tests-notebooks
 
       - name: Shut down docker compose
-        run: docker compose -f deployment/compose.yml down
+        run: make services-stop
 
       - name: Start docker compose with kafka
         run: docker compose -f deployment/compose-kafka.yml up -d
@@ -87,5 +87,4 @@ jobs:
         run: |
           export MQ_TYPE=kafka
           export MQ_PORT=9092
-          # Ignoring heavy tests. They are executed with Kafka in another GH Action.
-          pytest --ignore=tests/decorator_tests/ml_tests --ignore=tests/adapters/test_tensorboard.py
+          make tests

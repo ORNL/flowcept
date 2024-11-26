@@ -9,12 +9,12 @@ from flowcept.commons.flowcept_dataclasses.task_object import (
     Status,
 )
 
-from flowcept.instrumentation.decorators import instrumentation_interceptor
 from flowcept.commons.utils import replace_non_serializable
 from flowcept.configs import (
     REPLACE_NON_JSON_SERIALIZABLE,
     INSTRUMENTATION_ENABLED,
 )
+from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 
 # TODO: :code-reorg: consider moving it to utils and reusing it in dask interceptor
@@ -35,6 +35,7 @@ def default_args_handler(task_message: TaskObject, *args, **kwargs):
 
 def telemetry_flowcept_task(func=None):
     """Get telemetry task."""
+    interceptor = InstrumentationInterceptor.get_instance()
 
     def decorator(func):
         @wraps(func)
@@ -46,7 +47,7 @@ def telemetry_flowcept_task(func=None):
             task_obj["task_id"] = str(id(task_obj))
             task_obj["workflow_id"] = kwargs.pop("workflow_id")
             task_obj["used"] = kwargs
-            tel = instrumentation_interceptor.telemetry_capture.capture()
+            tel = interceptor.telemetry_capture.capture()
             if tel is not None:
                 task_obj["telemetry_at_start"] = tel.to_dict()
             try:
@@ -57,11 +58,11 @@ def telemetry_flowcept_task(func=None):
                 result = None
                 task_obj["stderr"] = str(e)
             # task_obj["ended_at"] = time()
-            tel = instrumentation_interceptor.telemetry_capture.capture()
+            tel = interceptor.telemetry_capture.capture()
             if tel is not None:
                 task_obj["telemetry_at_end"] = tel.to_dict()
             task_obj["generated"] = result
-            instrumentation_interceptor.intercept(task_obj)
+            interceptor.intercept(task_obj)
             return result
 
         return wrapper
@@ -74,6 +75,7 @@ def telemetry_flowcept_task(func=None):
 
 def lightweight_flowcept_task(func=None):
     """Get lightweight task."""
+    interceptor = InstrumentationInterceptor.get_instance()
 
     def decorator(func):
         @wraps(func)
@@ -108,7 +110,7 @@ def lightweight_flowcept_task(func=None):
                 used=kwargs,
                 generated=result,
             )
-            instrumentation_interceptor.intercept(task_dict)
+            interceptor.intercept(task_dict)
             return result
 
         return wrapper
@@ -121,6 +123,7 @@ def lightweight_flowcept_task(func=None):
 
 def flowcept_task(func=None, **decorator_kwargs):
     """Get flowcept task."""
+    interceptor = InstrumentationInterceptor.get_instance()
 
     def decorator(func):
         @wraps(func)
@@ -135,7 +138,7 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.used = args_handler(task_obj, *args, **kwargs)
             task_obj.started_at = time()
             task_obj.task_id = str(task_obj.started_at)
-            task_obj.telemetry_at_start = instrumentation_interceptor.telemetry_capture.capture()
+            task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
             try:
                 result = func(*args, **kwargs)
                 task_obj.status = Status.FINISHED
@@ -144,7 +147,7 @@ def flowcept_task(func=None, **decorator_kwargs):
                 result = None
                 task_obj.stderr = str(e)
             task_obj.ended_at = time()
-            task_obj.telemetry_at_end = instrumentation_interceptor.telemetry_capture.capture()
+            task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
             try:
                 if isinstance(result, dict):
                     task_obj.generated = args_handler(task_obj, **result)
@@ -153,7 +156,7 @@ def flowcept_task(func=None, **decorator_kwargs):
             except Exception as e:
                 flowcept.commons.logger.exception(e)
 
-            instrumentation_interceptor.intercept(task_obj.to_dict())
+            interceptor.intercept(task_obj.to_dict())
             return result
 
         return wrapper
