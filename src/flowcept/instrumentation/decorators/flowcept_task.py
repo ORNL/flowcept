@@ -2,12 +2,12 @@
 
 from time import time
 from functools import wraps
-import flowcept.commons
 from flowcept import Flowcept
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
     Status,
 )
+from flowcept.commons.flowcept_logger import FlowceptLogger
 
 from flowcept.commons.utils import replace_non_serializable
 from flowcept.configs import (
@@ -124,6 +124,7 @@ def lightweight_flowcept_task(func=None):
 def flowcept_task(func=None, **decorator_kwargs):
     """Get flowcept task."""
     interceptor = InstrumentationInterceptor.get_instance()
+    logger = FlowceptLogger()
 
     def decorator(func):
         @wraps(func)
@@ -154,7 +155,7 @@ def flowcept_task(func=None, **decorator_kwargs):
                 else:
                     task_obj.generated = args_handler(task_obj, result)
             except Exception as e:
-                flowcept.commons.logger.exception(e)
+                logger.exception(e)
 
             interceptor.intercept(task_obj.to_dict())
             return result

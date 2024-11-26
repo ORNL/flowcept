@@ -8,7 +8,6 @@ from uuid import uuid4
 
 import pytz
 
-import flowcept.commons
 from flowcept.commons.daos.autoflush_buffer import AutoflushBuffer
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
@@ -99,8 +98,10 @@ class DocumentInserter:
                 )
 
     @staticmethod
-    def flush_function(buffer, doc_dao, logger=flowcept.commons.logger):
+    def flush_function(buffer, doc_dao, logger=None):
         """Flush it."""
+        if logger is None:
+            logger = FlowceptLogger()
         logger.info(
             f"Current Doc buffer size: {len(buffer)}, " f"Gonna flush {len(buffer)} msgs to DocDB!"
         )

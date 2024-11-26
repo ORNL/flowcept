@@ -7,7 +7,6 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 
-from flowcept.commons import logger
 from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.configs import (
@@ -182,6 +181,7 @@ class Flowcept(object):
     @staticmethod
     def services_alive() -> bool:
         """Get alive services."""
+        logger = FlowceptLogger()
         if not MQDao.build().liveness_test():
             logger.error("MQ Not Ready!")
             return False
