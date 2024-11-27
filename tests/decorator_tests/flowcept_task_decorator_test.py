@@ -135,6 +135,42 @@ def print_system_stats():
     )
 
 
+def simple_decorated_function(
+        max_tasks=10, start_doc_inserter=True, check_insertions=True
+):
+    workflow_id = str(uuid.uuid4())
+    print(workflow_id)
+    # TODO :refactor-base-interceptor:
+    consumer = Flowcept(start_doc_inserter=start_doc_inserter)
+    consumer.start()
+    t0 = time()
+    for i in range(max_tasks):
+        decorated_all_serializable(x=i, workflow_id=workflow_id)
+    t1 = time()
+    print("Decorated:")
+    print_system_stats()
+    consumer.stop()
+    decorated = t1 - t0
+    print(workflow_id)
+
+    if check_insertions:
+        assert assert_by_querying_tasks_until(
+            filter={"workflow_id": workflow_id},
+            condition_to_evaluate=lambda docs: len(docs) == max_tasks,
+            max_time=60,
+            max_trials=60,
+        )
+
+    t0 = time()
+    for i in range(max_tasks):
+        not_decorated_func(x=i, workflow_id=workflow_id)
+    t1 = time()
+    print("Not Decorated:")
+    print_system_stats()
+    not_decorated = t1 - t0
+    return decorated, not_decorated
+
+
 class DecoratorTests(unittest.TestCase):
     @lightweight_flowcept_task
     def decorated_function_with_self(self, x, workflow_id=None):
@@ -160,41 +196,6 @@ class DecoratorTests(unittest.TestCase):
             max_trials=60,
         )
 
-    def test_decorated_function_simple(
-        self, max_tasks=10, start_doc_inserter=True, check_insertions=True
-    ):
-        workflow_id = str(uuid.uuid4())
-        print(workflow_id)
-        # TODO :refactor-base-interceptor:
-        consumer = Flowcept(start_doc_inserter=start_doc_inserter)
-        consumer.start()
-        t0 = time()
-        for i in range(max_tasks):
-            decorated_all_serializable(x=i, workflow_id=workflow_id)
-        t1 = time()
-        print("Decorated:")
-        print_system_stats()
-        consumer.stop()
-        decorated = t1 - t0
-        print(workflow_id)
-
-        if check_insertions:
-            assert assert_by_querying_tasks_until(
-                filter={"workflow_id": workflow_id},
-                condition_to_evaluate=lambda docs: len(docs) == max_tasks,
-                max_time=60,
-                max_trials=60,
-            )
-
-        t0 = time()
-        for i in range(max_tasks):
-            not_decorated_func(x=i, workflow_id=workflow_id)
-        t1 = time()
-        print("Not Decorated:")
-        print_system_stats()
-        not_decorated = t1 - t0
-        return decorated, not_decorated
-
     def test_online_offline(self):
         flowcept.configs.DB_FLUSH_MODE = "offline"
         # flowcept.instrumentation.decorators.instrumentation_interceptor = (
@@ -214,7 +215,7 @@ class DecoratorTests(unittest.TestCase):
         times = []
         for i in range(10):
             times.append(
-                self.test_decorated_function_simple(
+                simple_decorated_function(
                     max_tasks=10,  # 100000,
                     check_insertions=False,
                     start_doc_inserter=False,

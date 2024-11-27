@@ -79,7 +79,6 @@ class TestDask(unittest.TestCase):
         i1 = np.random.random()
         o1 = self.client.submit(dummy_func1, i1)
         # self.logger.debug(o1.result())
-        return o1.key
 
     def test_long_workflow(self):
         i1 = np.random.random()
@@ -88,7 +87,6 @@ class TestDask(unittest.TestCase):
         o2 = TestDask.client.submit(dummy_func2, o1)
         o3 = TestDask.client.submit(dummy_func3, o1, o2)
         self.logger.debug(o3.result())
-        return o3.key
 
     def varying_args(self):
         i1 = np.random.random()
@@ -108,7 +106,6 @@ class TestDask(unittest.TestCase):
             assert result > 0
             self.logger.debug(f"{o.key}, {result}")
         sleep(3)
-        return o1
 
     def test_evaluate_submit(self):
         wf_id = register_dask_workflow(self.client)
@@ -136,7 +133,6 @@ class TestDask(unittest.TestCase):
             condition_to_evaluate=lambda docs: "phenome" in docs[0]["used"]
             and len(docs[0]["generated"]) > 0,
         )
-        return o1
 
     def test_map_workflow_kwargs(self):
         i1 = [
@@ -151,7 +147,6 @@ class TestDask(unittest.TestCase):
             result = o.result()
             assert result["z"] > 0
             self.logger.debug(o.key, result)
-        return o1
 
     def error_task_submission(self):
         i1 = np.random.random()
