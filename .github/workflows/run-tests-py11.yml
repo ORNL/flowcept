@@ -32,7 +32,7 @@ jobs:
       - name: Install default dependencies and run simple test
         run: |          
           pip install .
-          python examples/instrumentation/simple_script.py
+          python examples/simple_instrumented_script.py
 
       - name: Install Dask dependencies alone and run a simple Dask test
         run: |          
