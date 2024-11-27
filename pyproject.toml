@@ -88,7 +88,6 @@ all = [
     "flowcept[responsibleai]",
     "flowcept[tensorboard]",
     "flowcept[dev]",
-    "flowcept[ml_dev]"
 ]
 
 [tool.hatch.version]
