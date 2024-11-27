@@ -3,18 +3,15 @@ import psutil
 import uuid
 import random
 
-from time import sleep
 import pandas as pd
 from time import time, sleep
 
-from flowcept.commons import FlowceptLogger
-
-import flowcept.commons
 import flowcept.instrumentation.decorators
 from flowcept import Flowcept
 
 import unittest
 
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.instrumentation.decorators.flowcept_task import (
     flowcept_task,

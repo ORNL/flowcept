@@ -19,7 +19,7 @@ class TestLog(unittest.TestCase):
             _logger.exception(e)
             _logger.info("It's ok")
 
-        _logger2 = flowcept.commons.logger
+        _logger2 = FlowceptLogger()
 
         # Testing singleton
         assert (

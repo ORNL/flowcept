@@ -76,6 +76,7 @@ class TestMLFlow(unittest.TestCase):
         assert TestMLFlow.interceptor is not None
         with Flowcept(TestMLFlow.interceptor):
             run_uuid = self.test_pure_run_mlflow()
+            sleep(5)
         print(run_uuid)
         assert evaluate_until(
             lambda: self.interceptor.state_manager.has_element_id(run_uuid),
