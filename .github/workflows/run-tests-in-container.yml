@@ -1,5 +1,5 @@
 name: Tests inside a Container
-on: [push]
+on: [pull_request]
 
 jobs:
 
@@ -14,10 +14,10 @@ jobs:
       - name: Show OS Info
         run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
 
-      - name: Build Flowcept's docker image
+      - name: Build Flowcept's image
         run: make build
 
-      - name: Start docker compose
+      - name: Start dependent services (Mongo and Redis)
         run: make services
 
       - name: Run tests in container
