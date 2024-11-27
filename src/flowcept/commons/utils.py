@@ -10,11 +10,9 @@ import subprocess
 import types
 import numpy as np
 
-import flowcept.commons
 from flowcept import configs
-from flowcept.configs import (
-    PERF_LOG,
-)
+from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.configs import PERF_LOG
 from flowcept.commons.flowcept_dataclasses.task_object import Status
 
 
@@ -42,11 +40,11 @@ def get_utc_minutes_ago(minutes_ago=1):
     return rounded.timestamp()
 
 
-def perf_log(func_name, t0: float):
+def perf_log(func_name, t0: float, logger=FlowceptLogger()):
     """Configure the performance log."""
     if PERF_LOG:
         t1 = time()
-        flowcept.commons.logger.debug(f"[PERFEVAL][{func_name}]={t1 - t0}")
+        logger.debug(f"[PERFEVAL][{func_name}]={t1 - t0}")
         return t1
     return None
 
@@ -71,6 +69,7 @@ def assert_by_querying_tasks_until(
     """Assert by query."""
     from flowcept.flowcept_api.task_query_api import TaskQueryAPI
 
+    logger = FlowceptLogger()
     query_api = TaskQueryAPI()
     start_time = time()
     trials = 0
@@ -79,24 +78,20 @@ def assert_by_querying_tasks_until(
         docs = query_api.query(filter)
         if condition_to_evaluate is None:
             if docs is not None and len(docs):
-                flowcept.commons.logger.debug("Query conditions have been met! :D")
+                logger.debug("Query conditions have been met! :D")
                 return True
         else:
             try:
                 if condition_to_evaluate(docs):
-                    flowcept.commons.logger.debug("Query conditions have been met! :D")
+                    logger.debug("Query conditions have been met! :D")
                     return True
             except Exception:
                 pass
 
         trials += 1
-        flowcept.commons.logger.debug(
-            f"Task Query condition not yet met. Trials={trials}/{max_trials}."
-        )
+        logger.debug(f"Task Query condition not yet met. Trials={trials}/{max_trials}.")
         sleep(1)
-    flowcept.commons.logger.debug(
-        "We couldn't meet the query conditions after all trials or timeout! :("
-    )
+    logger.debug("We couldn't meet the query conditions after all trials or timeout! :(")
     return False
 
 
@@ -109,6 +104,7 @@ def chunked(iterable, size):
 # TODO: consider reusing this function in the function assert_by_querying_task_collections_until
 def evaluate_until(evaluation_condition: Callable, max_trials=30, max_time=60, msg=""):
     """Evaluate something."""
+    logger = FlowceptLogger()
     start_time = time()
     trials = 0
 
@@ -117,7 +113,7 @@ def evaluate_until(evaluation_condition: Callable, max_trials=30, max_time=60, m
             return True  # Condition met
 
         trials += 1
-        flowcept.commons.logger.debug(f"Condition not yet met. Trials={trials}/{max_trials}. {msg}")
+        logger.debug(f"Condition not yet met. Trials={trials}/{max_trials}. {msg}")
         sleep(1)
 
     return False  # Condition not met within max_trials or max_time

@@ -1,6 +1,7 @@
 """Base module."""
 
 from abc import abstractmethod
+from time import time
 from uuid import uuid4
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
@@ -29,6 +30,8 @@ class BaseInterceptor(object):
 
     def __init__(self, plugin_key=None, kind=None):
         self.logger = FlowceptLogger()
+        self.logger.debug(f"Starting Interceptor{id(self)} at {time()}")
+
         if plugin_key is not None:  # TODO :base-interceptor-refactor: :code-reorg: :usability:
             self.settings = get_settings(plugin_key)
         else:

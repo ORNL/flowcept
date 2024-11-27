@@ -2,11 +2,9 @@
 
 from time import time
 from functools import wraps
-import flowcept.commons
 from flowcept.commons.flowcept_dataclasses.task_object import (
     Status,
 )
-from flowcept.instrumentation.decorators import instrumentation_interceptor
 from typing import List, Dict
 import uuid
 
@@ -21,6 +19,7 @@ from flowcept.configs import (
     INSTRUMENTATION,
     TELEMETRY_CAPTURE,
 )
+from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 
 def _inspect_torch_tensor(tensor: torch.Tensor):
@@ -54,6 +53,7 @@ def _inspect_torch_tensor(tensor: torch.Tensor):
 
 def full_torch_task(func=None):
     """Generate pytorch task."""
+    interceptor = InstrumentationInterceptor.get_instance()
 
     def decorator(func):
         @wraps(func)
@@ -71,9 +71,7 @@ def full_torch_task(func=None):
                 "tensor": _inspect_torch_tensor(args[1]),
                 **{k: v for k, v in vars(args[0]).items() if not k.startswith("_")},
             }
-            task_obj["telemetry_at_start"] = (
-                instrumentation_interceptor.telemetry_capture.capture().to_dict()
-            )
+            task_obj["telemetry_at_start"] = interceptor.telemetry_capture.capture().to_dict()
             try:
                 result = func(*args, **kwargs)
                 task_obj["status"] = Status.FINISHED.value
@@ -82,14 +80,12 @@ def full_torch_task(func=None):
                 result = None
                 task_obj["stderr"] = str(e)
             task_obj["ended_at"] = time()
-            task_obj["telemetry_at_end"] = (
-                instrumentation_interceptor.telemetry_capture.capture().to_dict()
-            )
+            task_obj["telemetry_at_end"] = interceptor.telemetry_capture.capture().to_dict()
             task_obj["generated"] = {
                 "tensor": _inspect_torch_tensor(args[1]),
                 # add other module metadata
             }
-            instrumentation_interceptor.intercept(task_obj)
+            interceptor.intercept(task_obj)
             return result
 
         return wrapper
@@ -114,6 +110,7 @@ def full_torch_task(func=None):
 
 def lightweight_tensor_inspection_torch_task(func=None):
     """Get lightweight pytorch task."""
+    interceptor = InstrumentationInterceptor.get_instance()
 
     def decorator(func):
         @wraps(func)
@@ -136,7 +133,7 @@ def lightweight_tensor_inspection_torch_task(func=None):
                 used=used,
                 generated={"tensor": _inspect_torch_tensor(result)},
             )
-            instrumentation_interceptor.intercept(task_dict)
+            interceptor.intercept(task_dict)
             return result
 
         return wrapper
@@ -149,6 +146,7 @@ def lightweight_tensor_inspection_torch_task(func=None):
 
 def lightweight_telemetry_tensor_inspection_torch_task(func=None):
     """Get lightweight tensor inspect task."""
+    interceptor = InstrumentationInterceptor.get_instance()
 
     def decorator(func):
         @wraps(func)
@@ -170,9 +168,9 @@ def lightweight_telemetry_tensor_inspection_torch_task(func=None):
                 activity_id=args[0].__class__.__name__,
                 used=used,
                 generated={"tensor": _inspect_torch_tensor(result)},
-                telemetry_at_start=instrumentation_interceptor.telemetry_capture.capture().to_dict(),
+                telemetry_at_start=interceptor.telemetry_capture.capture().to_dict(),
             )
-            instrumentation_interceptor.intercept(task_dict)
+            interceptor.intercept(task_dict)
             return result
 
         return wrapper
@@ -185,6 +183,7 @@ def lightweight_telemetry_tensor_inspection_torch_task(func=None):
 
 def lightweight_telemetry_torch_task(func=None):
     """Get lightweight telemetry torch task."""
+    interceptor = InstrumentationInterceptor.get_instance()
 
     def decorator(func):
         @wraps(func)
@@ -196,9 +195,9 @@ def lightweight_telemetry_torch_task(func=None):
                 type="task",
                 workflow_id=args[0].workflow_id,
                 activity_id=func.__qualname__,
-                telemetry_at_start=instrumentation_interceptor.telemetry_capture.capture().to_dict(),
+                telemetry_at_start=interceptor.telemetry_capture.capture().to_dict(),
             )
-            instrumentation_interceptor.intercept(task_dict)
+            interceptor.intercept(task_dict)
             return result
 
         return wrapper
@@ -295,7 +294,5 @@ def register_module_as_workflow(
     # workflow_obj.parent_task_id = parent_task_id
 
     if REGISTER_WORKFLOW:
-        flowcept.instrumentation.decorators.instrumentation_interceptor.send_workflow_message(
-            workflow_obj
-        )
+        InstrumentationInterceptor.get_instance().send_workflow_message(workflow_obj)
     return workflow_obj.workflow_id
