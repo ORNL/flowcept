@@ -4,7 +4,7 @@ from flowcept import (
     Flowcept,
     flowcept_task,
 )
-from flowcept.commons import FlowceptLogger
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until, get_current_config_values
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
