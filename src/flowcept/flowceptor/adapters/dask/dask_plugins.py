@@ -66,7 +66,7 @@ class FlowceptDaskSchedulerAdapter(SchedulerPlugin):
         """Get the transition."""
         self.interceptor.callback(key, start, finish, args, kwargs)
 
-    def close(self):
+    async def close(self):
         """Close it."""
         self.interceptor.logger.debug("Going to close scheduler!")
         self.interceptor.stop()
