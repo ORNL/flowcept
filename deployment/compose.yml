@@ -9,8 +9,6 @@ services:
   flowcept_mongo:
     container_name: flowcept_mongo
     image: mongo:latest
-    # volumes:
-    #   - /Users/rsr/Downloads/mongo_data/db:/data/db
     ports:
       - 27017:27017
 
@@ -18,11 +16,11 @@ networks:
   flowcept:
     driver: bridge
 
-#   # This is just for the cases where one does not want to use the same Redis instance for caching and messaging, but
-#   # it's not required to have separate instances.
-# #  local_interceptor_cache:
-# #    container_name: local_interceptor_cache
-# #    image: redis
-# #    ports:
-# #      - 60379:6379
+# This is just for the cases where one does not want to use the same Redis instance for caching and messaging, but
+# it's not required to have separate instances.
+#  local_interceptor_cache:
+#    container_name: local_interceptor_cache
+#    image: redis
+#    ports:
+#      - 60379:6379
 

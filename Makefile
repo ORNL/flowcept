@@ -1,19 +1,19 @@
 # Show help, place this first so it runs with just `make`
 help:
 	@printf "\nCommands:\n"
-	@printf "\033[32mbuild\033[0m           build the Docker image\n"
-	@printf "\033[32mrun\033[0m             run the Docker container\n"
-	@printf "\033[32mliveness\033[0m        check if the services are alive\n"
-	@printf "\033[32mservices\033[0m        run services using Docker\n"
-	@printf "\033[32mservices-stop\033[0m   stop the running Docker services\n"
-	@printf "\033[32mtests\033[0m           run unit tests with pytest\n"
-	@printf "\033[32mtests-in-docker\033[0m run unit tests with pytest inside Flowcept's container\n"
-	@printf "\033[32mtests-all\033[0m       run all unit tests with pytest, including very long-running ones\n"
-	@printf "\033[32mtests-notebooks\033[0m tests the notebooks, using pytest\n"
-	@printf "\033[32mclean\033[0m           remove cache directories and Sphinx build output\n"
-	@printf "\033[32mdocs\033[0m            build HTML documentation using Sphinx\n"
-	@printf "\033[32mchecks\033[0m          run ruff linter and formatter checks\n"
-	@printf "\033[32mreformat\033[0m        run ruff linter and formatter\n"
+	@printf "\033[32mbuild\033[0m           	build the Docker image\n"
+	@printf "\033[32mrun\033[0m             	run the Docker container\n"
+	@printf "\033[32mliveness\033[0m        	check if the services are alive\n"
+	@printf "\033[32mservices\033[0m        	run services using Docker\n"
+	@printf "\033[32mservices-stop\033[0m   	stop the running Docker services\n"
+	@printf "\033[32mtests\033[0m           	run unit tests with pytest\n"
+	@printf "\033[32mtests-in-container\033[0m 	run unit tests with pytest inside Flowcept's container\n"
+	@printf "\033[32mtests-all\033[0m       	run all unit tests with pytest, including very long-running ones\n"
+	@printf "\033[32mtests-notebooks\033[0m 	tests the notebooks, using pytest\n"
+	@printf "\033[32mclean\033[0m           	remove cache directories and Sphinx build output\n"
+	@printf "\033[32mdocs\033[0m            	build HTML documentation using Sphinx\n"
+	@printf "\033[32mchecks\033[0m          	run ruff linter and formatter checks\n"
+	@printf "\033[32mreformat\033[0m        	run ruff linter and formatter\n"
 
 # Run linter and formatter checks using ruff
 checks:
@@ -57,11 +57,10 @@ build:
 	bash deployment/build-image.sh
 
 run:
-	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis  -e MONGO_HOST=flowcept_mongo --network flowcept_default -it flowcept
+	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_HOST=flowcept_mongo --network flowcept_default -it flowcept
 
-tests-in-docker:
-	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis  -e MONGO_HOST=flowcept_mongo --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest --ignore=tests/decorator_tests/ml_tests
-
+tests-in-container:
+	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_HOST=flowcept_mongo --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest --ignore=tests/decorator_tests/ml_tests
 
 # This command can be removed once we have our CLI
 liveness:

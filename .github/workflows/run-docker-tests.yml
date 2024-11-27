@@ -20,5 +20,5 @@ jobs:
       - name: Start docker compose
         run: make services
 
-      - name: Start docker compose
-        run: make tests-in-docker
+      - name: Run tests in container
+        run: make tests-in-container

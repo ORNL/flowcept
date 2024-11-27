@@ -16,8 +16,6 @@ class TensorboardSettings(BaseSettings):
     log_tags: List[str]
     log_metrics: List[str]
     watch_interval_sec: int
-    redis_port: int
-    redis_host: str
     kind = "tensorboard"
 
     def __post_init__(self):
