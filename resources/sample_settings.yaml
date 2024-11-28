@@ -91,8 +91,6 @@ adapters:
     file_path: mlflow.db
     log_params: ['*']
     log_metrics: ['*']
-    redis_host: localhost
-    redis_port: 6379
     watch_interval_sec: 2
 
   tensorboard:
@@ -100,14 +98,10 @@ adapters:
     file_path: tensorboard_events
     log_tags: ['scalars', 'hparams', 'tensors']
     log_metrics: ['accuracy']
-    redis_host: localhost
-    redis_port: 6379
     watch_interval_sec: 5
 
   dask:
     kind: dask
-    redis_host: localhost
-    redis_port: 6379
     worker_should_get_input: true
     scheduler_should_get_input: true
     worker_should_get_output: true

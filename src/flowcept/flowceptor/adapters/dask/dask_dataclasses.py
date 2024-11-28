@@ -11,8 +11,6 @@ from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
 class DaskSettings(BaseSettings):
     """Dask settings."""
 
-    redis_port: int
-    redis_host: str
     worker_should_get_input: bool
     worker_should_get_output: bool
     scheduler_should_get_input: bool

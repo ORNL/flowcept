@@ -5,6 +5,7 @@ from redis import Redis
 from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
     BaseSettings,
 )
+from flowcept.configs import KVDB_HOST, KVDB_PORT
 
 
 class InterceptorStateManager(object):
@@ -12,16 +13,9 @@ class InterceptorStateManager(object):
 
     def __init__(self, settings: BaseSettings):
         self._set_name = settings.key
-
-        if not hasattr(settings, "redis_host"):
-            raise Exception(
-                f"This adapter setting {settings.key} manages state in Redis, so"
-                f"Redis Host is required in the settings yaml file."
-            )
-
         self._db = Redis(
-            host=settings.redis_host,
-            port=settings.redis_port,
+            host=KVDB_HOST,
+            port=KVDB_PORT,
             db=0,
         )
 
