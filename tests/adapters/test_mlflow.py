@@ -33,7 +33,10 @@ class TestMLFlow(unittest.TestCase):
         mlflow.delete_experiment(mlflow.create_experiment("starter"))
         sleep(1)
 
-    def test_pure_run_mlflow(self, epochs=10, batch_size=64):
+    def test_simple_mlflow_run(self):
+        self.simple_mlflow_run()
+
+    def simple_mlflow_run(self, epochs=10, batch_size=64):
         experiment_name = "LinearRegression"
         experiment_id = mlflow.create_experiment(experiment_name + str(uuid.uuid4()))
         with mlflow.start_run(experiment_id=experiment_id) as run:
@@ -55,14 +58,14 @@ class TestMLFlow(unittest.TestCase):
             self.logger.debug(run[0])
 
     def test_get_run_data(self):
-        run_uuid = self.test_pure_run_mlflow()
+        run_uuid = self.simple_mlflow_run()
         run_data = TestMLFlow.interceptor.dao.get_run_data(run_uuid)
         assert run_data.task_id == run_uuid
 
     def test_check_state_manager(self):
         TestMLFlow.interceptor.state_manager.reset()
         TestMLFlow.interceptor.state_manager.add_element_id("dummy-value")
-        self.test_pure_run_mlflow()
+        self.simple_mlflow_run()
         runs = TestMLFlow.interceptor.dao.get_finished_run_uuids()
         assert len(runs) > 0
         for run_tuple in runs:
@@ -75,7 +78,7 @@ class TestMLFlow(unittest.TestCase):
     def test_observer_and_consumption(self):
         assert TestMLFlow.interceptor is not None
         with Flowcept(TestMLFlow.interceptor):
-            run_uuid = self.test_pure_run_mlflow()
+            run_uuid = self.simple_mlflow_run()
             sleep(5)
         print(run_uuid)
         assert evaluate_until(
@@ -91,7 +94,7 @@ class TestMLFlow(unittest.TestCase):
         run_ids = []
         with Flowcept(self.interceptor):
             for i in range(1, 10):
-                run_ids.append(self.test_pure_run_mlflow(epochs=i * 10, batch_size=i * 2))
+                run_ids.append(self.simple_mlflow_run(epochs=i * 10, batch_size=i * 2))
                 sleep(3)
 
         for run_id in run_ids:

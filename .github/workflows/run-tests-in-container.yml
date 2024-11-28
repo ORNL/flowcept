@@ -1,0 +1,24 @@
+name: Tests inside a Container
+on: [pull_request]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    if: "!contains(github.event.head_commit.message, 'CI Bot')"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show OS Info
+        run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
+
+      - name: Build Flowcept's image
+        run: make build
+
+      - name: Start dependent services (Mongo and Redis)
+        run: make services
+
+      - name: Run tests in container
+        run: make tests-in-container

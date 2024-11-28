@@ -17,11 +17,10 @@ SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", f"{_SETTINGS_DIR}/settings.y
 
 if not os.path.exists(SETTINGS_PATH):
     SETTINGS_PATH = None
-    import importlib.resources
+    from importlib import resources
 
-    with importlib.resources.open_text("resources", "sample_settings.yaml") as f:
+    with resources.files("resources").joinpath("sample_settings.yaml").open("r") as f:
         settings = OmegaConf.load(f)
-
 else:
     settings = OmegaConf.load(SETTINGS_PATH)
 
@@ -82,9 +81,9 @@ KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
 #  MongoDB Settings  #
 ######################
 
-MONGO_URI = settings["mongodb"].get("uri", os.environ.get("MONGO_URI", None))
-MONGO_HOST = settings["mongodb"].get("host", os.environ.get("MONGO_HOST", "localhost"))
-MONGO_PORT = int(settings["mongodb"].get("port", os.environ.get("MONGO_PORT", "27017")))
+MONGO_URI = os.environ.get("MONGO_URI", settings["mongodb"].get("uri", None))
+MONGO_HOST = os.environ.get("MONGO_HOST", settings["mongodb"].get("host", "localhost"))
+MONGO_PORT = int(os.environ.get("MONGO_PORT", settings["mongodb"].get("port", 27017)))
 MONGO_DB = settings["mongodb"].get("db", PROJECT_NAME)
 MONGO_CREATE_INDEX = settings["mongodb"].get("create_collection_index", True)
 
