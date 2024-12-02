@@ -49,6 +49,7 @@ def perf_log(func_name, t0: float, logger=None):
         return t1
     return None
 
+
 def get_status_from_str(status_str: str) -> Status:
     """Get the status."""
     # TODO: complete this utility function
