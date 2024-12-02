@@ -52,7 +52,7 @@ class DocumentInserter:
         bundle_exec_id=None,
     ):
         self._task_dicts_buffer = list()
-        self._mq_dao = MQDao.build(mq_host, mq_port)
+        self._mq_dao = MQDao.build(mq_host, mq_port, None, True)
         self._doc_dao = DocumentDBDao()
         self._previous_time = time()
         self.logger = FlowceptLogger()

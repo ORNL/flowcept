@@ -59,7 +59,7 @@ class MQDao(ABC):
             set_id += "_" + str(exec_bundle_id)
         return set_id
 
-    def __init__(self, kv_host=None, kv_port=None, adapter_settings=None):
+    def __init__(self, kv_host=None, kv_port=None, adapter_settings=None, consume=False):
         self.logger = FlowceptLogger()
 
         if MQ_URI is not None:
