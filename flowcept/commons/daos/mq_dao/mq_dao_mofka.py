@@ -53,27 +53,6 @@ class MQDaoMofka(MQDao):
                                  thread_pool=mofka.ThreadPool(1))
 
 
-    def message_listener1(self, message_handler: Callable):
-        print("in message listener")
-        topic = self._driver.open_topic(self._mofka_conf["topic_name"])
-        print("in msg lstr opened a topic")
-        consumer = topic.consumer(name="consumer",
-                            thread_pool=mofka.ThreadPool(0))
-        print("consumer created ")
-        try:
-            while True:
-                print("in message listner loop", flush=True)
-                event = consumer.pull().wait()
-                #messages = [msgpack.loads(event.data[i].value(), raw=False) for i in range(len(event.data))]
-                metadata = json.loads(event.metadata)
-                self.logger.debug(f"Received message: {metadata}")
-                if not message_handler(metadata):
-                    break
-        except Exception as e:
-            self.logger.exception(e)
-        finally:
-            del consumer
-
     def message_listener(self, message_handler: Callable):
         print("in message listener")
         try:
