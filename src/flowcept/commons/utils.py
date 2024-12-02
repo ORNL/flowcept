@@ -40,14 +40,14 @@ def get_utc_minutes_ago(minutes_ago=1):
     return rounded.timestamp()
 
 
-def perf_log(func_name, t0: float, logger=FlowceptLogger()):
+def perf_log(func_name, t0: float, logger=None):
     """Configure the performance log."""
     if PERF_LOG:
+        _logger = logger or FlowceptLogger()
         t1 = time()
-        logger.debug(f"[PERFEVAL][{func_name}]={t1 - t0}")
+        _logger.debug(f"[PERFEVAL][{func_name}]={t1 - t0}")
         return t1
     return None
-
 
 def get_status_from_str(status_str: str) -> Status:
     """Get the status."""
