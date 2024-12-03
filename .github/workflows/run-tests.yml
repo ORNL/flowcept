@@ -86,6 +86,9 @@ jobs:
       - name: Clean up log files
         run: find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \;
 
+      - name: Clean up Docker volume
+        run: docker volume rm flowcept_mongo_data
+
       - name: Start docker compose with kafka
         run: docker compose -f deployment/compose-kafka.yml up -d
 
@@ -110,3 +113,6 @@ jobs:
 
       - name: Clean up log files again
         run: find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \;
+
+      - name: Clean up Docker volume
+        run: docker volume rm flowcept_mongo_data
