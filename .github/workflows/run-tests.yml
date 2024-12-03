@@ -104,3 +104,6 @@ jobs:
           export MQ_TYPE=kafka
           export MQ_PORT=9092
           make tests
+
+      - name: Stop docker compose with kafka
+        run: docker compose -f deployment/compose-kafka.yml down
