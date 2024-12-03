@@ -84,7 +84,10 @@ jobs:
         run: make services-stop
 
       - name: Clean up log files
-        run: find /home/runner/runners/ -type f -name "*.log" -exec sh -c '>"{}"' \;
+        run: find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \;
+
+      - name: Start docker compose with kafka
+        run: docker compose -f deployment/compose-kafka.yml up -d
 
       - name: Wait for one minute
         run: sleep 60
