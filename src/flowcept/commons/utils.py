@@ -43,8 +43,8 @@ def get_utc_minutes_ago(minutes_ago=1):
 def perf_log(func_name, t0: float, logger=None):
     """Configure the performance log."""
     if PERF_LOG:
-        _logger = logger or FlowceptLogger()
         t1 = time()
+        _logger = logger or FlowceptLogger()
         _logger.debug(f"[PERFEVAL][{func_name}]={t1 - t0}")
         return t1
     return None

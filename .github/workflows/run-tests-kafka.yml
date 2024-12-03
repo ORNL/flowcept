@@ -47,12 +47,3 @@ jobs:
 
       - name: Test notebooks
         run: pytest --ignore=notebooks/zambeze.ipynb --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
-
-#      - name: Test notebooks
-#        run: |
-#          pip install -e .[all] # Installing stuff again may not be needed
-#          export MQ_TYPE=kafka
-#          export MQ_PORT=9092
-#          python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_PORT={MQ_PORT}")'
-#          python -c 'from flowcept import Flowcept; assert Flowcept.services_alive()'
-#          pytest --ignore=notebooks/zambeze.ipynb --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb

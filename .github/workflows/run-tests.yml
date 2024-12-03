@@ -107,3 +107,6 @@ jobs:
 
       - name: Stop docker compose with kafka
         run: docker compose -f deployment/compose-kafka.yml down
+
+      - name: Clean up log files again
+        run: find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \;
