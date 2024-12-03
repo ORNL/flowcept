@@ -83,8 +83,8 @@ jobs:
       - name: Shut down docker compose
         run: make services-stop
 
-      - name: Start docker compose with kafka
-        run: docker compose -f deployment/compose-kafka.yml up -d
+      - name: Clean up log files
+        run: find /home/runner/runners/ -type f -name "*.log" -exec sh -c '>"{}"' \;
 
       - name: Wait for one minute
         run: sleep 60
