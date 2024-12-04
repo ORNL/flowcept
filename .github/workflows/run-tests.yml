@@ -116,6 +116,7 @@ jobs:
         run: |
           make clean
           find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
+          docker image prune -a -f
 
       - name: List large files
         run: find . -type f -exec du -h {} + | sort -h

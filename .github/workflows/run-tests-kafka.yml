@@ -57,3 +57,4 @@ jobs:
         run: |
           make clean
           find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
+          docker image prune -a -f
