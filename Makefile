@@ -26,18 +26,20 @@ reformat:
 
 # Remove cache directories and Sphinx build output
 clean:
-	rm -rf .ruff_cache
-	rm -rf .pytest_cache
-	rm -rf mnist_data
-	rm -rf tensorboard_events
-	rm -f docs_dump_tasks_*
-	rm -f dump_test.json
-	find . -type f -name "*.log" -exec rm -f {} \;
-	find . -type f -name "*.pth" -exec rm -f {} \;
-	find . -type f -name "mlflow.db" -exec rm -f {} \;
-	find . -type d -name "mlruns" -exec rm -rf {} \;
-	find . -type d -name "__pycache__" -exec rm -rf {} \;  2>/dev/null
-	sphinx-build -M clean docs docs/_build
+	rm -rf .ruff_cache || true
+	rm -rf .pytest_cache || true
+	rm -rf mnist_data || true
+	rm -rf tensorboard_events || true
+	rm -f docs_dump_tasks_* || true
+	rm -f dump_test.json || true
+	find . -type f -name "*.log" -exec rm -f {} \; || true
+	find . -type f -name "*.pth" -exec rm -f {} \; || true
+	find . -type f -name "mlflow.db" -exec rm -f {} \; || true
+	find . -type d -name "mlruns" -exec rm -rf {} \; 2>/dev/null || true
+	find . -type d -name "mlruns" -exec rm -rf {} \; 2>/dev/null || true
+	find . -type d -name "__pycache__" -exec rm -rf {} \;  2>/dev/null || true
+	find . -type d -name "*tfevents*" -exec rm -rf {} \;  2>/dev/null || true
+	# sphinx-build -M clean docs docs/_build This needs to be fixed.
 
 # Build the HTML documentation using Sphinx
 .PHONY: docs
