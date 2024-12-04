@@ -32,11 +32,12 @@ clean:
 	rm -rf tensorboard_events
 	rm -f docs_dump_tasks_*
 	rm -f dump_test.json
-	find . -type f -name "*.log" -exec rm -f {} \;
-	find . -type f -name "*.pth" -exec rm -f {} \;
-	find . -type f -name "mlflow.db" -exec rm -f {} \;
-	find . -type d -name "mlruns" -exec rm -rf {} \;  2>/dev/null
-	find . -type d -name "__pycache__" -exec rm -rf {} \;  2>/dev/null
+	find . -type f -name "*.log" -exec rm -f {} \; || true
+	find . -type f -name "*.pth" -exec rm -f {} \; || true
+	find . -type f -name "mlflow.db" -exec rm -f {} \; || true
+	find . -type d -name "mlruns" -exec rm -rf {} \; 2>/dev/null || true
+	find . -type d -name "mlruns" -exec rm -rf {} \; 2>/dev/null || true
+	find . -type d -name "__pycache__" -exec rm -rf {} \;  2>/dev/null || true
 	# sphinx-build -M clean docs docs/_build This needs to be fixed.
 
 # Build the HTML documentation using Sphinx
