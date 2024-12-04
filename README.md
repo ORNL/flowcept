@@ -6,15 +6,40 @@
 
 # FlowCept
 
-FlowCept is a runtime data integration system that empowers any data processing system to capture and query workflow provenance data using data observability, requiring minimal or no changes in the target system code. It seamlessly integrates data from multiple workflows, enabling users to comprehend complex, heterogeneous, and large-scale data from various sources in federated environments.
+FlowCept is a runtime data integration system that enables any data processing system to capture and query workflow provenance with minimal or no code changes. It integrates data across workflows, providing insights into complex, large-scale, and heterogeneous data in federated environments. It has additional features if there are Machine Learning (ML) workflows involved. 
 
-FlowCept is intended to address scenarios where multiple workflows in a science campaign or in an enterprise run and generate important data to be analyzed in an integrated manner. Since these workflows may use different data manipulation tools (e.g., provenance or lineage capture tools, database systems, performance profiling tools) or can be executed within different parallel computing systems (e.g., Dask, Spark, Workflow Management Systems), its key differentiator is the capability to seamless and automatically integrate data from various workflows using data observability. It builds an integrated data view at runtime enabling end-to-end exploratory data analysis and monitoring. It follows [W3C PROV](https://www.w3.org/TR/prov-overview/) recommendations for its data schema. It does not require changes in user codes or systems (i.e., instrumentation). All users need to do is to create adapters for their systems or tools, if one is not available yet. In addition to observability, we provide instrumentation options for convenience. For example, by adding a `@flowcept_task` decorator on functions, FlowCept will observe their executions when they run. Also, we provide special features for PyTorch modules. Adding `@torch_task` to them will enable extra model inspection to be captured and integrated in the database at runtime.
+FlowCept is designed for scenarios where multiple workflows generate critical data requiring integrated analysis. These workflows may use diverse tools (e.g., provenance capture, databases, performance profiling, ML frameworks) or run on different data processing systems. FlowCept’s key capability is to seamlessly integrate data using observability, creating a unified data view at runtime for end-to-end analysis and monitoring.
 
-Currently, FlowCept provides adapters for: [Dask](https://www.dask.org/), [MLFlow](https://mlflow.org/), [TensorBoard](https://www.tensorflow.org/tensorboard), and [Zambeze](https://github.com/ORNL/zambeze). 
+Other capabilities include:
 
-See the [Jupyter Notebooks](notebooks) and [Examples](examples) for utilization examples.
+- Automatic multi-workflow provenance data capture;
+- Data observability, enabling minimal intrusion to user workflows;
+- Explicit user workflow instrumentation, if this is preferred over data observability;
+- ML data capture in various levels of details: workflow, model fitting or evaluation task, epoch iteration, layer forwarding;
+- ML model management;
+- Adapter-based system architecture, making it easy to plug and play with different data processing systems and backend database (e.g., MongoDB) or MQ services (e.g., Redis, Kafka);
+- Low-overhead focused system architecture, to avoid adding performance overhead particularly to workloads that run on HPC machines;
+- Telemetry data capture (e.g., CPU, GPU, Memory consumption) linked to the application dataflow;
+- Highly customizable to multiple use cases, enabling easy toggle between settings (e.g., with/without provenance capture; with/without telemetry and which telemetry type to capture; which adapters or backend services to run with); 
+- [W3C PROV](https://www.w3.org/TR/prov-overview/) adherence;
+ 
+Notes:
 
-See the [Contributing](CONTRIBUTING.md) file for guidelines to contribute with new adapters. Note that we may use the term 'plugin' in the codebase as a synonym to adapter. Future releases should standardize the terminology to use adapter.
+- Currently implemented data observability adapters:
+  - MLFlow
+  - Dask
+  - TensorBoard
+- Python scripts can be easily instrumented via `@decorators` using `@flowcept_task` (for generic Python method) or `@torch_task` (for methods that encapsulate PyTorch model manipulation, such as training or evaluation). 
+- Currently supported MQ systems:
+  - Kafka
+  - Redis
+- Currently supported database systems:
+  - MongoDB
+  - Lightning Memory-Mapped Database (lightweight file-only database system)
+
+Explore [Jupyter Notebooks](notebooks) and [Examples](examples) for usage.
+
+Refer to [Contributing](CONTRIBUTING.md) for adding new adapters. Note: The term "plugin" in the codebase is synonymous with "adapter," and future updates will standardize terminology.
 
 ## Install and Setup:
 
@@ -46,6 +71,37 @@ For convenience, the default needed services can be started using a [docker-comp
 3. Optionally, define custom settings (e.g., routes and ports) accordingly in a settings.yaml file. There is a sample file [here](resources/sample_settings.yaml), which can be used as basis. Then, set an environment var `FLOWCEPT_SETTINGS_PATH` with the absolute path to the yaml file. If you do not follow this step, the default values defined [here](resources/sample_settings.yaml) will be used.
 
 4. See the [Jupyter Notebooks](notebooks) and [Examples directory](examples) for utilization examples.
+
+## Installing and Running with Docker
+
+To use containers instead of installing FlowCept's dependencies on your host system, we provide a [Dockerfile](deployment/Dockerfile) alongside a [docker-compose.yml](deployment/compose.yml) for dependent services (e.g., Redis, MongoDB).  
+
+#### Notes:  
+- As seen in the steps below, there are [Makefile](Makefile) commands to build and run the image. Please use them instead of running the Docker commands to build and run the image.
+- The Dockerfile builds from a local `miniconda` image, which will be built first using the [build-image.sh](deployment/build-image.sh) script.  
+- All dependencies for all adapters are installed, increasing build time. Edit the Dockerfile to customize dependencies based on our [pyproject.toml](pyproject.toml) to reduce build time if needed.  
+
+#### Steps:
+
+1. Build the Docker image:  
+    ```bash
+    make build
+    ```
+
+2. Start dependent services:
+    ```bash
+    make services
+    ```
+
+3. Run the image interactively:
+    ```bash
+    make run
+    ```
+
+4. Optionally, run Unit tests in the container:
+    ```bash
+    make tests-in-container
+    ```
 
 ### Simple Example with Decorators Instrumentation
 
