@@ -13,6 +13,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
@@ -47,3 +49,11 @@ jobs:
 
       - name: Test notebooks
         run: pytest --ignore=notebooks/zambeze.ipynb --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
+
+      - name: Stop services
+        run: docker compose -f deployment/compose-kafka.yml down
+
+      - name: Clean up
+        run: |
+          make clean
+          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true

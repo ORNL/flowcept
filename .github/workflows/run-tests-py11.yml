@@ -10,6 +10,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -68,8 +70,13 @@ jobs:
       - name: Test notebooks with pytest and redis
         run: make tests-notebooks
 
-      - name: Shut down docker compose
+      - name: Stop services
         run: make services-stop
+
+      - name: Clean up
+        run: |
+          make clean
+          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
 
       - name: Start docker compose with kafka
         run: docker compose -f deployment/compose-kafka.yml up -d
@@ -90,3 +97,11 @@ jobs:
           export MQ_PORT=9092
           # Ignoring heavy tests. They are executed with Kafka in another GH Action.
           pytest --ignore=tests/decorator_tests/ml_tests --ignore=tests/adapters/test_tensorboard.py
+
+      - name: Stop services
+        run: docker compose -f deployment/compose-kafka.yml down
+
+      - name: Clean up
+        run: |
+          make clean
+          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
