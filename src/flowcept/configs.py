@@ -1,11 +1,11 @@
 """Configuration module."""
 
-import os
-import socket
 import getpass
-
-from omegaconf import OmegaConf
+import importlib.resources
+import os
 import random
+import socket
+from omegaconf import OmegaConf
 
 ########################
 #   Project Settings   #
@@ -17,9 +17,9 @@ SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", f"{_SETTINGS_DIR}/settings.y
 
 if not os.path.exists(SETTINGS_PATH):
     SETTINGS_PATH = None
-    from importlib import resources
+    settings_res = importlib.resources.files("flowcept") / "settings"
 
-    with resources.files("resources").joinpath("sample_settings.yaml").open("r") as f:
+    with importlib.resources.as_file(settings_res / "sample_settings.yaml") as f:
         settings = OmegaConf.load(f)
 else:
     settings = OmegaConf.load(SETTINGS_PATH)
