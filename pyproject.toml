@@ -105,9 +105,3 @@ ignore = ["D200", "D212", "D105", "D401"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/flowcept"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"resources/sample_settings.yaml" = "resources/sample_settings.yaml"
