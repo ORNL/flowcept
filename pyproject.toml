@@ -90,6 +90,9 @@ all = [
     "flowcept[dev]",
 ]
 
+[project.scripts]
+flowcept = "flowcept.cli:main"
+
 [tool.hatch.version]
 path = "src/flowcept/version.py"
 
