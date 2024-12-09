@@ -76,7 +76,7 @@ tests-in-container-mongo:
 	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_HOST=flowcept_mongo --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest --ignore=tests/decorator_tests/ml_tests
 
 tests-in-container:
-	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_ENABLED=false --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest --ignore=tests/decorator_tests/ml_tests
+	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_ENABLED=false -e LMDB_ENABLED=true --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest --ignore=tests/decorator_tests/ml_tests
 
 # This command can be removed once we have our CLI
 liveness:
