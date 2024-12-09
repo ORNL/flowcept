@@ -1,5 +1,6 @@
 .idea
 **/*mlruns*
+**/*.env*
 **/*build*
 **/*egg*
 **/*pycache*

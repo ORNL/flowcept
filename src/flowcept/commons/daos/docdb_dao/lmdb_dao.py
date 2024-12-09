@@ -292,7 +292,7 @@ class LMDBDAO(DocumentDBDAO):
 
     def close(self):
         """Close lmdb."""
-        self.logger.warn("We are not closing this database.")
+        self.logger.warning("We are not closing this database.")
         return
         # self._env.close()
         # self._is_closed = True

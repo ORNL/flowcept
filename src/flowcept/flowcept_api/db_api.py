@@ -10,7 +10,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
-from flowcept.configs import DATABASES
+from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED
 
 
 class DBAPI(object):
@@ -37,12 +37,12 @@ class DBAPI(object):
             if self.with_webserver:
                 raise NotImplementedError("We did not implement webserver API for this yet.")
 
-            if "mongodb" in DATABASES and DATABASES["mongodb"].get("enabled", False):
+            if MONGO_ENABLED:
                 # Currently MongoDB has precedence over LMDB if both are enabled.
                 from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 
                 self._dao = MongoDBDAO(create_indices=False)
-            elif "lmdb" in DATABASES and DATABASES["lmdb"].get("enabled", False):
+            elif LMDB_ENABLED:
                 from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
 
                 self._dao = LMDBDAO()

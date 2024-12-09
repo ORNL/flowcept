@@ -17,7 +17,7 @@ from flowcept.commons.flowcept_dataclasses.task_object import (
     Status,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.configs import WEBSERVER_PORT, WEBSERVER_HOST
+from flowcept.configs import WEBSERVER_PORT, WEBSERVER_HOST, MONGO_ENABLED
 from flowcept.flowcept_api.task_query_api import TaskQueryAPI
 from flowcept.flowcept_webserver.app import app, BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
@@ -129,6 +129,7 @@ def gen_mock_data(size=1, with_telemetry=False):
     return new_docs, new_task_ids
 
 
+@unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
 class QueryTest(unittest.TestCase):
     URL = f"http://{WEBSERVER_HOST}:{WEBSERVER_PORT}{BASE_ROUTE}{TaskQuery.ROUTE}"
 

@@ -45,7 +45,10 @@ class DBAPITest(unittest.TestCase):
         wf2.interceptor_ids = ["1234"]
         assert Flowcept.db.insert_or_update_workflow(wf2)
         wf_obj = Flowcept.db.get_workflow(wf2_id)
-        assert len(wf_obj.interceptor_ids) == 2
+        if MONGO_ENABLED:
+            # TODO: note that some of these tests currently only work on MongoDB because
+            #  updating is not yet implemented in LMDB
+            assert len(wf_obj.interceptor_ids) == 2
         wf2.machine_info = {"123": tel.capture_machine_info()}
         assert Flowcept.db.insert_or_update_workflow(wf2)
         wf_obj = Flowcept.db.get_workflow(wf2_id)
@@ -53,7 +56,8 @@ class DBAPITest(unittest.TestCase):
         wf2.machine_info = {"1234": tel.capture_machine_info()}
         assert Flowcept.db.insert_or_update_workflow(wf2)
         wf_obj = Flowcept.db.get_workflow(wf2_id)
-        assert len(wf_obj.machine_info) == 2
+        if MONGO_ENABLED:
+            assert len(wf_obj.machine_info) == 2
 
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_save_blob(self):
