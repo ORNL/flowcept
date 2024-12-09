@@ -1,4 +1,4 @@
-name: Unit, integration, and notebook tests with Mongo
+name: [With Mongo] Unit, integration, and notebook tests
 on:
   push:
   schedule:

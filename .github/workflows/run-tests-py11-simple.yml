@@ -73,38 +73,4 @@ jobs:
         run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb" --ignore="notebooks/analytics.ipynb"
 
       - name: Stop services
-        run: make services-stop-mongo
-
-      - name: Clean up
-        run: |
-          make clean
-          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
-
-      - name: Start docker compose with kafka
-        run: docker compose -f deployment/compose-kafka.yml up -d
-
-      - name: Wait for one minute
-        run: sleep 60
-
-      - name: Check liveness
-        run: |
-          export MQ_TYPE=kafka
-          export MQ_PORT=9092
-          python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_PORT={MQ_PORT}")'
-          python -c 'from flowcept import Flowcept; assert Flowcept.services_alive()'
-
-      - name: Run tests with kafka
-        run: |
-          export MQ_TYPE=kafka
-          export MQ_PORT=9092
-          # Ignoring heavy tests. They are executed with Kafka in another GH Action.
-          pytest --ignore=tests/decorator_tests/ml_tests --ignore=tests/adapters/test_tensorboard.py
-
-      - name: Stop services
-        run: docker compose -f deployment/compose-kafka.yml down
-
-      - name: Clean up
-        run: |
-          make clean
-          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
-          docker image prune -a -f
+        run: make services-stop

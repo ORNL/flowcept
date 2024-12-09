@@ -185,7 +185,7 @@ class Flowcept(object):
         if not MQDao.build().liveness_test():
             logger.error("MQ Not Ready!")
             return False
-        if MONGO_ENABLED and not MongoDBDAO(create_index=False).liveness_test():
+        if MONGO_ENABLED and not MongoDBDAO(create_indices=False).liveness_test():
             logger.error("DocDB Not Ready!")
             return False
         logger.info("MQ and DocDB are alive!")
