@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MONGO_ENABLED: false
+      LMDB_ENABLED: true
     timeout-minutes: 60
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
 

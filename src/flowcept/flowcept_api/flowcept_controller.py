@@ -8,7 +8,6 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 
-from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.configs import MQ_INSTANCES, INSTRUMENTATION_ENABLED, DATABASES, MONGO_ENABLED
 from flowcept.flowcept_api.db_api import DBAPI
@@ -185,8 +184,10 @@ class Flowcept(object):
         if not MQDao.build().liveness_test():
             logger.error("MQ Not Ready!")
             return False
-        if MONGO_ENABLED and not MongoDBDAO(create_indices=False).liveness_test():
-            logger.error("DocDB Not Ready!")
-            return False
+        if MONGO_ENABLED:
+            from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+            if not MongoDBDAO(create_indices=False).liveness_test():
+                logger.error("DocDB Not Ready!")
+                return False
         logger.info("MQ and DocDB are alive!")
         return True
