@@ -1,8 +1,10 @@
 name: All tests on Kafka MQ
+#on:
+#  pull_request:
+#    branches: [ "dev", "main" ]
+#    types: [opened, synchronize, reopened]
 on:
-  pull_request:
-    branches: [ "dev", "main" ]
-    types: [opened, synchronize, reopened]
+  push:
 
 jobs:
 
@@ -48,7 +50,7 @@ jobs:
         run: |
           export MQ_TYPE=kafka
           export MQ_PORT=9092
-          pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
+          make tests
 
       - name: Test notebooks
         run: pytest --ignore=notebooks/zambeze.ipynb --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb

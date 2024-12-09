@@ -78,6 +78,10 @@ tests-in-container-mongo:
 tests-in-container:
 	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_ENABLED=false -e LMDB_ENABLED=true --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest --ignore=tests/decorator_tests/ml_tests
 
+tests-in-container-kafka:
+	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=kafka -e MONGO_HOST=flowcept_mongo  -e MQ_PORT=29092 -e MQ_TYPE=kafka -e MONGO_ENABLED=true -e LMDB_ENABLED=false --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest --ignore=tests/decorator_tests/ml_tests
+
+
 # This command can be removed once we have our CLI
 liveness:
 	python -c 'from flowcept import Flowcept; print(Flowcept.services_alive())'
