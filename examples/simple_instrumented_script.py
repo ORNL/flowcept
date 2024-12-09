@@ -11,7 +11,7 @@ def mult_two(n):
     return n * 2
 
 
-with Flowcept(workflow_name="test_workflow"):
+with Flowcept():
     n = 3
     o1 = sum_one(n)
     o2 = mult_two(o1)

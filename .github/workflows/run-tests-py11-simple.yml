@@ -70,7 +70,7 @@ jobs:
           make tests
 
       - name: Test notebooks with pytest and redis
-        run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb,notebooks/analytics.ipynb
+        run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb" --ignore="notebooks/analytics.ipynb"
 
       - name: Stop services
         run: make services-stop-mongo

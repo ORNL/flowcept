@@ -137,7 +137,7 @@ class TaskQueryAPI(object):
                 raise Exception(r.text)
 
         else:
-            dao = DocumentDBDAO.build(create_index=False)
+            dao = DocumentDBDAO.build(create_indices=False)
             docs = dao.task_query(
                 filter,
                 projection,
