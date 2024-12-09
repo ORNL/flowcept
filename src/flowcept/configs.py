@@ -75,7 +75,7 @@ KVDB_PASSWORD = settings["kv_db"].get("password", None)
 KVDB_HOST = os.getenv("KVDB_HOST", settings["kv_db"].get("host", "localhost"))
 KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
 
-DATABASES = settings["databases"]
+DATABASES = settings.get("databases", {})
 
 ######################
 #  MongoDB Settings  #

@@ -215,7 +215,7 @@ class MongoDBDAO(DocumentDBDAO):
         ----------
         doc_list : list of dict
             The list of task data to be inserted or updated.
-        indexing_key : str, optional
+        indexing_key : str
             The key used to index the task documents for upsert operations.
 
         Returns
@@ -231,6 +231,8 @@ class MongoDBDAO(DocumentDBDAO):
         try:
             if len(doc_list) == 0:
                 return False
+            if indexing_key is None:
+                raise Exception("To use this method in MongoDB, please provide the indexing key.")
             t0 = 0
             if PERF_LOG:
                 t0 = time()

@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
-      MONGO_ENABLED: "false"
+      MONGO_ENABLED: false
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
 
     steps:
@@ -70,7 +70,7 @@ jobs:
           make tests
 
       - name: Test notebooks with pytest and redis
-        run: make tests-notebooks
+        run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb,notebooks/analytics.ipynb
 
       - name: Stop services
         run: make services-stop-mongo

@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      MONGO_ENABLED: "false"
+      MONGO_ENABLED: false
     timeout-minutes: 40
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
 
@@ -82,7 +82,7 @@ jobs:
           make tests
 
       - name: Test notebooks with pytest and redis
-        run: make tests-notebooks
+        run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb,notebooks/analytics.ipynb
 
       - name: Shut down docker compose
         run: make services-stop

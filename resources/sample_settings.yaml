@@ -71,11 +71,11 @@ buffer:
 databases:
 
   lmdb:
-    enabled: false
+    enabled: ${oc.env:LMDB_ENABLED, true}
     path: flowcept.lmdb
 
   mongodb:
-    enabled: true
+    enabled: ${oc.env:MONGO_ENABLED, false}
     host: localhost
     port: 27017
     db: flowcept
