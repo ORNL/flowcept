@@ -1,4 +1,4 @@
-name: [Without Mongo] Unit, integration, and notebook tests
+name: (Without Mongo) Unit, integration, and notebook tests
 on:
   push:
   schedule:
