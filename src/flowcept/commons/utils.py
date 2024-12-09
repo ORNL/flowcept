@@ -29,6 +29,12 @@ def get_utc_now_str() -> str:
     return now.strftime(format_string)
 
 
+def datetime_to_str(dt: datetime) -> str:
+    """Format a datetime object to a string in ISO-like format."""
+    format_string = "%Y-%m-%dT%H:%M:%S.%f"
+    return dt.strftime(format_string)
+
+
 def get_utc_minutes_ago(minutes_ago=1):
     """Get UTC minutes."""
     now = datetime.utcnow()

@@ -2,20 +2,22 @@
 
 from typing import List, Union
 from time import sleep
+from uuid import uuid4
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 
-from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.configs import (
     MQ_INSTANCES,
     INSTRUMENTATION_ENABLED,
+    DATABASES, MONGO_ENABLED
 )
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
-from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
+
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
@@ -38,10 +40,10 @@ class Flowcept(object):
         self,
         interceptors: Union[BaseInterceptor, List[BaseInterceptor], str] = None,
         bundle_exec_id=None,
-        start_doc_inserter=True,
         workflow_id: str = None,
         workflow_name: str = None,
         workflow_args: str = None,
+        enable_persistence=True
     ):
         """Flowcept controller.
 
@@ -57,12 +59,11 @@ class Flowcept(object):
 
         bundle_exec_id - A way to group interceptors.
 
-        start_doc_inserter - Whether you want to start consuming MQ messages to inject in the DB.
+        enable_persistence - Whether you want to persist the messages in one of the DBs defined in the `databases` settings.
         """
         self.logger = FlowceptLogger()
-
-        self._document_inserters: List[DocumentInserter] = []
-        self._start_doc_inserter = start_doc_inserter
+        self._enable_persistence = enable_persistence
+        self._db_inserters: List = []  # TODO: typing
         if bundle_exec_id is None:
             self._bundle_exec_id = id(self)
         else:
@@ -88,7 +89,7 @@ class Flowcept(object):
     def start(self):
         """Start it."""
         if self.is_started or not self.enabled:
-            self.logger.warning("Consumer may be already started or instrumentation is not set")
+            self.logger.warning("DB inserter may be already started or instrumentation is not set")
             return self
 
         if self._interceptors and len(self._interceptors):
@@ -102,50 +103,49 @@ class Flowcept(object):
                 interceptor.start(bundle_exec_id=self._bundle_exec_id)
                 self.logger.debug(f"...Flowceptor {key} started ok!")
 
-                if (
-                    self.current_workflow_id or self.workflow_args or self.workflow_name
-                ) and interceptor.kind == "instrumentation":
-                    wf_obj = WorkflowObject(
-                        self.current_workflow_id,
-                        self.workflow_name,
-                        used=self.workflow_args,
-                    )
+                if interceptor.kind == "instrumentation":
+                    wf_obj = WorkflowObject()
+                    wf_obj.workflow_id = self.current_workflow_id or str(uuid4())
+                    Flowcept.current_workflow_id = self.current_workflow_id = wf_obj.workflow_id
+
+                    if self.workflow_name:
+                        wf_obj.name = self.workflow_name
+                    if self.workflow_args:
+                        wf_obj.used = self.workflow_args
                     interceptor.send_workflow_message(wf_obj)
-                    Flowcept.current_workflow_id = wf_obj.workflow_id
                 else:
                     Flowcept.current_workflow_id = None
 
-        if self._start_doc_inserter:
-            self.logger.debug("Flowcept Consumer starting...")
-
+        if self._enable_persistence:
+            self.logger.debug("Flowcept persistence starting...")
             if MQ_INSTANCES is not None and len(MQ_INSTANCES):
                 for mq_host_port in MQ_INSTANCES:
                     split = mq_host_port.split(":")
                     mq_host = split[0]
                     mq_port = int(split[1])
-                    self._document_inserters.append(
-                        DocumentInserter(
-                            check_safe_stops=True,
-                            mq_host=mq_host,
-                            mq_port=mq_port,
-                            bundle_exec_id=self._bundle_exec_id,
-                        ).start()
-                    )
+                    self._init_persistence(mq_host, mq_port)
             else:
-                self._document_inserters.append(
-                    DocumentInserter(
-                        check_safe_stops=True,
-                        bundle_exec_id=self._bundle_exec_id,
-                    ).start()
-                )
-        self.logger.debug("Ok, we're consuming messages!")
+                self._init_persistence()
+
+        self.logger.debug("Ok, we're consuming messages to persist!")
         self.is_started = True
         return self
+
+    def _init_persistence(self, mq_host=None, mq_port=None):
+        from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
+        for database in DATABASES:
+            if DATABASES[database].get("enabled", False):
+                self._db_inserters.append(DocumentInserter(
+                    check_safe_stops=True,
+                    bundle_exec_id=self._bundle_exec_id,
+                    mq_host=mq_host,
+                    mq_port=mq_port
+                ).start())
 
     def stop(self):
         """Stop it."""
         if not self.is_started or not self.enabled:
-            self.logger.warning("Consumer is already stopped!")
+            self.logger.warning("Persistence is already stopped!")
             return
         sleep_time = 1
         self.logger.info(
@@ -162,10 +162,10 @@ class Flowcept(object):
                     key = interceptor.settings.key
                 self.logger.info(f"Flowceptor {key} stopping...")
                 interceptor.stop()
-        if self._start_doc_inserter:
-            self.logger.info("Stopping Doc Inserters...")
-            for doc_inserter in self._document_inserters:
-                doc_inserter.stop(bundle_exec_id=self._bundle_exec_id)
+        if len(self._db_inserters):
+            self.logger.info("Stopping DB Inserters...")
+            for database_inserter in self._db_inserters:
+                database_inserter.stop(bundle_exec_id=self._bundle_exec_id)
         self.is_started = False
         self.logger.debug("All stopped!")
 
@@ -185,7 +185,7 @@ class Flowcept(object):
         if not MQDao.build().liveness_test():
             logger.error("MQ Not Ready!")
             return False
-        if not DocumentDBDao(create_index=False).liveness_test():
+        if MONGO_ENABLED and not MongoDBDAO(create_index=False).liveness_test():
             logger.error("DocDB Not Ready!")
             return False
         logger.info("MQ and DocDB are alive!")

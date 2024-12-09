@@ -43,8 +43,13 @@ TIME_TO_SLEEP = calc_time_to_sleep()
 
 
 @flowcept_task
-def decorated_static_function(df: pd.DataFrame, workflow_id=None):
-    return {"decorated_static_function": 2}
+def decorated_static_function2(x):
+    return {"y": 2}
+
+
+@flowcept_task
+def decorated_static_function(df: pd.DataFrame):
+    return 2
 
 
 @lightweight_flowcept_task
@@ -59,12 +64,12 @@ def not_decorated_func(x: int, workflow_id: str = None):
 
 
 @lightweight_flowcept_task
-def decorated_static_function2(workflow_id=None):
+def lightweight_decorated_static_function2(workflow_id=None):
     return [2]
 
 
 @lightweight_flowcept_task
-def decorated_static_function3(x, workflow_id=None):
+def lightweight_decorated_static_function3(x, workflow_id=None):
     return 3
 
 
@@ -136,12 +141,12 @@ def print_system_stats():
 
 
 def simple_decorated_function(
-        max_tasks=10, start_doc_inserter=True, check_insertions=True
+        max_tasks=10, enable_persistence=True, check_insertions=True
 ):
     workflow_id = str(uuid.uuid4())
     print(workflow_id)
     # TODO :refactor-base-interceptor:
-    consumer = Flowcept(start_doc_inserter=start_doc_inserter)
+    consumer = Flowcept(enable_persistence=enable_persistence)
     consumer.start()
     t0 = time()
     for i in range(max_tasks):
@@ -173,25 +178,42 @@ def simple_decorated_function(
 
 class DecoratorTests(unittest.TestCase):
     @lightweight_flowcept_task
-    def decorated_function_with_self(self, x, workflow_id=None):
+    def lightweight_decorated_function_with_self(self, x, workflow_id=None):
         sleep(x)
         return {"y": 2}
 
-    def test_decorated_function(self):
+    def test_lightweight_decorated_function(self):
         workflow_id = str(uuid.uuid4())
-        # TODO :refactor-base-interceptor:
-        with Flowcept():
-            self.decorated_function_with_self(x=0.1, workflow_id=workflow_id)
-            decorated_static_function(
-                df=pd.DataFrame(), workflow_id=workflow_id
-            )
-            decorated_static_function2(workflow_id=workflow_id)
-            decorated_static_function3(x=0.1, workflow_id=workflow_id)
         print(workflow_id)
+        with Flowcept():
+            self.lightweight_decorated_function_with_self(x=0.1, workflow_id=workflow_id)
+            lightweight_decorated_static_function2(workflow_id=workflow_id)
+            lightweight_decorated_static_function3(x=0.1, workflow_id=workflow_id)
 
+        sleep(3)
         assert assert_by_querying_tasks_until(
             filter={"workflow_id": workflow_id},
-            condition_to_evaluate=lambda docs: len(docs) == 4,
+            condition_to_evaluate=lambda docs: len(docs) == 3,
+            max_time=60,
+            max_trials=60,
+        )
+
+    def test_decorated_function(self):
+        # Compare this with the test_lightweight_decorated_function;
+        # Here, Flowcept manages the workflow_id for the user;
+        # Using the light decorator, the user has to control it.
+        with Flowcept():
+            print(Flowcept.current_workflow_id)
+            decorated_static_function(
+                df=pd.DataFrame()
+            )
+            decorated_static_function2(x=1)
+            decorated_static_function2(2)
+
+        sleep(3)
+        assert assert_by_querying_tasks_until(
+            filter={"workflow_id": Flowcept.current_workflow_id},
+            condition_to_evaluate=lambda docs: len(docs) == 3,
             max_time=60,
             max_trials=60,
         )
@@ -218,7 +240,7 @@ class DecoratorTests(unittest.TestCase):
                 simple_decorated_function(
                     max_tasks=10,  # 100000,
                     check_insertions=False,
-                    start_doc_inserter=False,
+                    enable_persistence=False,
                 )
             )
         decorated = [decorated for decorated, not_decorated in times]

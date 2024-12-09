@@ -11,6 +11,7 @@ from time import sleep
 from uuid import uuid4
 from datetime import datetime, timedelta
 
+from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
     Status,
@@ -20,7 +21,7 @@ from flowcept.configs import WEBSERVER_PORT, WEBSERVER_HOST
 from flowcept.flowcept_api.task_query_api import TaskQueryAPI
 from flowcept.flowcept_webserver.app import app, BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
-from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 from flowcept.analytics.analytics_utils import (
     clean_dataframe,
     analyze_correlations_used_vs_generated,
@@ -119,6 +120,7 @@ def gen_mock_data(size=1, with_telemetry=False):
 
         new_doc["started_at"] = int(_start.timestamp())
         new_doc["ended_at"] = int(_end.timestamp())
+        new_doc.pop("timestamp",None)
         new_doc.pop("_id")
         new_docs.append(new_doc)
         new_task_ids.append(new_id)
@@ -143,22 +145,22 @@ class QueryTest(unittest.TestCase):
         super(QueryTest, self).__init__(*args, **kwargs)
         self.logger = FlowceptLogger()
         self.api = TaskQueryAPI()
-        self.db_dao = DocumentDBDao()
+        self.db_dao = DocumentDBDAO.build(create_indices=False)
 
     def gen_n_get_task_ids(
         self, generation_function, size=1, generation_args={}
     ):
         docs, task_ids = generation_function(size=size, **generation_args)
 
-        init_db_count = self.db_dao.count()
-        self.db_dao.insert_many(docs)
+        init_db_count = self.db_dao.count_tasks()
+        self.db_dao.insert_and_update_many_tasks(docs, "task_id")
 
         task_ids_filter = {"task_id": {"$in": task_ids}}
         return task_ids_filter, task_ids, init_db_count
 
     def delete_task_ids_and_assert(self, task_ids, init_db_count):
-        self.db_dao.delete_keys("task_id", task_ids)
-        final_db_count = self.db_dao.count()
+        self.db_dao.delete_task_keys("task_id", task_ids)
+        final_db_count = self.db_dao.count_tasks()
         assert init_db_count == final_db_count
 
     def test_webserver_query(self):
@@ -174,6 +176,7 @@ class QueryTest(unittest.TestCase):
         request_data = {"filter": json.dumps(task_ids_filter)}
         r = requests.post(QueryTest.URL, json=request_data)
         assert r.status_code == 201
+        assert len(r.json()) == len(task_ids)
         assert task_ids[0] == r.json()[0]["task_id"]
         self.delete_task_ids_and_assert(task_ids, init_db_count)
 
@@ -190,14 +193,14 @@ class QueryTest(unittest.TestCase):
     def test_query_api_with_and_without_webserver(self):
         query_api_params = inspect.signature(TaskQueryAPI.query).parameters
         doc_query_api_params = inspect.signature(
-            DocumentDBDao.task_query
+            MongoDBDAO.task_query
         ).parameters
         assert (
             query_api_params == doc_query_api_params
         ), "Function signatures do not match."
 
         query_api_docstring = inspect.getdoc(TaskQueryAPI.query)
-        doc_query_api_docstring = inspect.getdoc(DocumentDBDao.task_query)
+        doc_query_api_docstring = inspect.getdoc(MongoDBDAO.task_query)
 
         assert (
             query_api_docstring.strip() == doc_query_api_docstring.strip()
@@ -224,9 +227,9 @@ class QueryTest(unittest.TestCase):
     def test_aggregation(self):
         docs, task_ids = gen_mock_multi_workflow_data(size=100)
 
-        dao = DocumentDBDao()
-        c0 = dao.count()
-        dao.insert_many(docs)
+        dao = MongoDBDAO()
+        c0 = dao.count_tasks()
+        dao.insert_and_update_many_tasks(docs, indexing_key="task_id")
         res = self.api.query(
             aggregation=[
                 ("max", "used.epochs"),
@@ -275,8 +278,8 @@ class QueryTest(unittest.TestCase):
             if doc.get("max_generated_accuracy") is not None:
                 assert doc["max_generated_accuracy"] > 0
 
-        dao.delete_keys("task_id", task_ids)
-        c1 = dao.count()
+        dao.delete_task_keys("task_id", task_ids)
+        c1 = dao.count_tasks()
         assert c0 == c1
 
     def test_query_df(self):

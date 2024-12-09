@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept import Flowcept, WorkflowObject
+from flowcept.configs import MONGO_ENABLED
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 
@@ -17,6 +18,7 @@ class OurObject:
 
 
 class DBAPITest(unittest.TestCase):
+
     def test_wf_dao(self):
         workflow1_id = str(uuid4())
         wf1 = WorkflowObject()
@@ -54,6 +56,7 @@ class DBAPITest(unittest.TestCase):
         wf_obj = Flowcept.db.get_workflow(wf2_id)
         assert len(wf_obj.machine_info) == 2
 
+    @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_save_blob(self):
         import pickle
 
@@ -63,15 +66,16 @@ class DBAPITest(unittest.TestCase):
         print(obj_id)
 
         obj_docs = Flowcept.db.query(
-            filter={"object_id": obj_id}, type="object"
+            filter={"object_id": obj_id}, collection="objects"
         )
         loaded_obj = pickle.loads(obj_docs[0]["data"])
         assert type(loaded_obj) == OurObject
 
+    @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_dump(self):
         wf_id = str(uuid4())
 
-        c0 = Flowcept.db._dao.count()
+        c0 = Flowcept.db._dao.count_tasks()
 
         for i in range(10):
             t = TaskObject()
@@ -88,8 +92,8 @@ class DBAPITest(unittest.TestCase):
             filter=_filter, output_file="dump_test.json"
         )
 
-        Flowcept.db._dao.delete_with_filter(_filter)
-        c1 = Flowcept.db._dao.count()
+        Flowcept.db._dao.delete_tasks_with_filter(_filter)
+        c1 = Flowcept.db._dao.count_tasks()
         assert c0 == c1
 
     def test_dbapi_singleton(self):

@@ -188,7 +188,7 @@ class ModelTrainer(object):
         #  every layer. Can we do it better?
         with Flowcept(
             bundle_exec_id=workflow_id,
-            start_doc_inserter=False,
+            enable_persistence=False,
         ):
             train_loader, test_loader = ModelTrainer.build_train_test_loader()
             if torch.backends.mps.is_available():

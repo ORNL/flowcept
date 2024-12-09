@@ -2,7 +2,7 @@ import unittest
 from time import sleep
 from uuid import uuid4
 
-from flowcept.configs import MONGO_INSERTION_BUFFER_TIME
+from flowcept.configs import INSERTION_BUFFER_TIME
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import TensorboardInterceptor, Flowcept
@@ -143,7 +143,7 @@ class TestTensorboard(unittest.TestCase):
         with Flowcept(self.interceptor):
             wf_id = self.run_tensorboard_hparam_tuning()
             self.logger.debug("Done training. Sleeping some time...")
-            watch_interval_sec = MONGO_INSERTION_BUFFER_TIME
+            watch_interval_sec = INSERTION_BUFFER_TIME
             # Making sure we'll wait until next watch cycle
             sleep(watch_interval_sec * 20)
 

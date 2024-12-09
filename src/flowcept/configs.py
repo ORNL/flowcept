@@ -24,7 +24,6 @@ if not os.path.exists(SETTINGS_PATH):
 else:
     settings = OmegaConf.load(SETTINGS_PATH)
 
-
 ########################
 #   Log Settings       #
 ########################
@@ -76,32 +75,45 @@ KVDB_PASSWORD = settings["kv_db"].get("password", None)
 KVDB_HOST = os.getenv("KVDB_HOST", settings["kv_db"].get("host", "localhost"))
 KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
 
+DATABASES = settings["databases"]
 
 ######################
 #  MongoDB Settings  #
 ######################
+_mongo_settings = DATABASES.get("mongodb", None)
+MONGO_ENABLED = False
+if _mongo_settings:
+    MONGO_ENABLED = (os.environ.get("MONGO_ENABLED", "false").lower() == "true") or _mongo_settings.get("enabled")
+    MONGO_URI = os.environ.get("MONGO_URI") or _mongo_settings.get("uri")
+    MONGO_HOST = os.environ.get("MONGO_HOST") or _mongo_settings.get("host", "localhost")
+    MONGO_PORT = int(os.environ.get("MONGO_PORT") or _mongo_settings.get("port", 27017))
+    MONGO_DB = _mongo_settings.get("db", PROJECT_NAME)
+    MONGO_CREATE_INDEX = _mongo_settings.get("create_collection_index", True)
 
-MONGO_URI = os.environ.get("MONGO_URI", settings["mongodb"].get("uri", None))
-MONGO_HOST = os.environ.get("MONGO_HOST", settings["mongodb"].get("host", "localhost"))
-MONGO_PORT = int(os.environ.get("MONGO_PORT", settings["mongodb"].get("port", 27017)))
-MONGO_DB = settings["mongodb"].get("db", PROJECT_NAME)
-MONGO_CREATE_INDEX = settings["mongodb"].get("create_collection_index", True)
+######################
+#  LMDB Settings  #
+######################
+_lmdb_settings = DATABASES.get("lmdb", None)
+LMDB_ENABLED = False
+if _lmdb_settings:
+    LMDB_ENABLED = (os.environ.get("LMDB_ENABLED",
+                                    "false").lower() == "true") or _lmdb_settings.get("enabled", False)
 
-MONGO_TASK_COLLECTION = "tasks"
-MONGO_WORKFLOWS_COLLECTION = "workflows"
-
+##########################
+# Buffer Settings        #
+##########################
+_buffer_settings = settings["buffer"]
 # In seconds:
-MONGO_INSERTION_BUFFER_TIME = int(settings["mongodb"].get("insertion_buffer_time_secs", 5))
-MONGO_INSERTION_BUFFER_TIME = random.randint(
-    int(MONGO_INSERTION_BUFFER_TIME * 0.9),
-    int(MONGO_INSERTION_BUFFER_TIME * 1.4),
+INSERTION_BUFFER_TIME = int(_buffer_settings.get("insertion_buffer_time_secs", 5))
+INSERTION_BUFFER_TIME = random.randint(
+    int(INSERTION_BUFFER_TIME * 0.9),
+    int(INSERTION_BUFFER_TIME * 1.4),
 )
 
-MONGO_ADAPTIVE_BUFFER_SIZE = settings["mongodb"].get("adaptive_buffer_size", True)
-MONGO_MAX_BUFFER_SIZE = int(settings["mongodb"].get("max_buffer_size", 50))
-MONGO_MIN_BUFFER_SIZE = max(1, int(settings["mongodb"].get("min_buffer_size", 10)))
-MONGO_REMOVE_EMPTY_FIELDS = settings["mongodb"].get("remove_empty_fields", False)
-
+ADAPTIVE_BUFFER_SIZE = _buffer_settings.get("adaptive_buffer_size", True)
+MAX_BUFFER_SIZE = int(_buffer_settings.get("max_buffer_size", 50))
+MIN_BUFFER_SIZE = max(1, int(_buffer_settings.get("min_buffer_size", 10)))
+REMOVE_EMPTY_FIELDS = _buffer_settings.get("remove_empty_fields", False)
 
 ######################
 # PROJECT SYSTEM SETTINGS #
@@ -113,9 +125,9 @@ PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get("replace_non_json_serializable", True)
 ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
-TELEMETRY_CAPTURE = settings["project"].get("telemetry_capture", None)
-
 REGISTER_WORKFLOW = settings["project"].get("register_workflow", True)
+
+TELEMETRY_CAPTURE = settings.get("telemetry_capture", None)
 
 ##################################
 # GPU TELEMETRY CAPTURE SETTINGS #

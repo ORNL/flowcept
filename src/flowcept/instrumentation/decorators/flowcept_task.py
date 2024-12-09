@@ -80,32 +80,10 @@ def lightweight_flowcept_task(func=None):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # t0 = time()
-            # task_obj["started_at"] = time()
-            # task_obj["type"] = "task"
-
-            # task_obj["task_id"] = t0
-
-            # task_obj["used"] = kwargs
             result = func(*args, **kwargs)
-            # try:
-            #     task_obj["status"] = Status.FINISHED.value
-            # except Exception as e:
-            #     task_obj["status"] = Status.ERROR.value
-            #     result = None
-            #     task_obj["stderr"] = str(e)
-            # task_obj["ended_at"] = time()
-            # generatedKV = task_obj_pb2.GeneratedKV(key="y", val=result["y"])
-            # task_obj = task_obj_pb2.TaskObject(type="task",
-            #                                    workflow_id=kwargs.pop(
-            #                                        "workflow_id"),
-            #                                    activity_id=func.__name__,
-            #                                    y=result["y"]
-            #                                    )
-
             task_dict = dict(
                 type="task",
-                # workflow_id=kwargs.pop("workflow_id", None),
+                #workflow_id=kwargs.pop("workflow_id", None),
                 activity_id=func.__name__,
                 used=kwargs,
                 generated=result,

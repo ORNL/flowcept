@@ -1,7 +1,6 @@
 import logging
 import unittest
 
-import flowcept.commons
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import PROJECT_NAME
 

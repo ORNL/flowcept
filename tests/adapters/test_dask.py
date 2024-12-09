@@ -127,6 +127,7 @@ class TestDask(unittest.TestCase):
         o1 = TestDask.client.submit(
             problem_evaluate, phenome, str(uuid.uuid4())
         )
+        sleep(5)
         print(o1.result())
         assert assert_by_querying_tasks_until(
             {"workflow_id": wf_id},

@@ -7,15 +7,15 @@ project:
   enrich_messages: true
   db_flush_mode: online   # or offline
 
-  telemetry_capture:
-    gpu: ~ # ~ means None. This is a list that should specify which metrics of the GPU that should be monitored
-    cpu: true
-    per_cpu: true
-    process_info: true
-    mem: true
-    disk: true
-    network: true
-    machine_info: true
+telemetry_capture:
+  gpu: ~ # ~ means None. This is a list that should specify which metrics of the GPU that should be monitored
+  cpu: true
+  per_cpu: true
+  process_info: true
+  mem: true
+  disk: true
+  network: true
+  machine_info: true
 
 instrumentation:
   enabled: true
@@ -46,17 +46,6 @@ kv_db:
   host: localhost
   port: 6379
 
-mongodb:
-  host: localhost
-  port: 27017
-  db: flowcept
-  collection: tasks
-  insertion_buffer_time_secs: 5
-  max_buffer_size: 50
-  min_buffer_size: 10
-  remove_empty_fields: false
-  create_collection_index: true
-
 web_server:
   host: 0.0.0.0
   port: 5000
@@ -72,6 +61,25 @@ analytics:
     generated.loss: minimum_first
     generated.accuracy: maximum_first
 
+buffer:
+  adaptive_buffer_size: true
+  insertion_buffer_time_secs: 5
+  max_buffer_size: 50
+  min_buffer_size: 10
+  remove_empty_fields: false
+
+databases:
+
+  lmdb:
+    enabled: false
+    path: flowcept.lmdb
+
+  mongodb:
+    enabled: true
+    host: localhost
+    port: 27017
+    db: flowcept
+    create_collection_index: true
 
 adapters:
   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2. Use an empty dict, {}, if you won't use any adapter.

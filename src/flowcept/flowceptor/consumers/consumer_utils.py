@@ -1,10 +1,14 @@
 """Consumer utilities module."""
-
+from datetime import datetime
+from time import time
 from typing import List, Dict
+
+import pytz
+
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 
 
-def curate_task_msg(task_msg_dict: dict):
+def curate_task_msg(task_msg_dict: dict, convert_times=True):
     """Curate a task message."""
     # Converting any arg to kwarg in the form {"arg1": val1, "arg2: val2}
     for field in TaskObject.get_dict_field_names():
@@ -31,6 +35,21 @@ def curate_task_msg(task_msg_dict: dict):
                 field_val_dict["arg0"] = field_val
             task_msg_dict[field] = field_val_dict
 
+    # Moving 'workflow_id' to the right place if it's in the 'used' field.
+    # This happens because of the @lightweight_flowcept_task
+    if "used" in task_msg_dict and task_msg_dict["used"].get("workflow_id", None):
+        task_msg_dict["workflow_id"] = task_msg_dict["used"].pop("workflow_id")
+
+    if convert_times:
+        has_time_fields = False
+        for time_field in TaskObject.get_time_field_names():
+            if time_field in task_msg_dict:
+                has_time_fields = True
+                task_msg_dict[time_field] = datetime.fromtimestamp(task_msg_dict[time_field], pytz.utc)
+
+        if not has_time_fields:
+            task_msg_dict["registered_at"] = datetime.fromtimestamp(time(), pytz.utc)
+
 
 def remove_empty_fields_from_dict(obj: dict):
     """Remove empty fields from a dictionary recursively."""
@@ -44,7 +63,7 @@ def remove_empty_fields_from_dict(obj: dict):
 
 
 def curate_dict_task_messages(
-    doc_list: List[Dict], indexing_key: str, utc_time_at_insertion: float = 0
+    doc_list: List[Dict], indexing_key: str, utc_time_at_insertion: float = 0, convert_times=True
 ):
     """Remove duplicates.
 
@@ -65,11 +84,11 @@ def curate_dict_task_messages(
     :return:
     """
     indexed_buffer = {}
-    for doc in doc_list:
-        if (len(doc) == 1) and (indexing_key in doc) and (doc[indexing_key] in indexed_buffer):
+    for doc_ref in doc_list:
+        if (len(doc_ref) == 1) and (indexing_key in doc_ref) and (doc_ref[indexing_key] in indexed_buffer):
             # This task_msg does not add any metadata
             continue
-
+        doc = doc_ref.copy()
         # Reformatting the task msg so to append statuses, as updating them was
         # causing inconsistencies in the DB.
         if "status" in doc:
@@ -79,7 +98,7 @@ def curate_dict_task_messages(
         if utc_time_at_insertion > 0:
             doc["utc_time_at_insertion"] = utc_time_at_insertion
 
-        curate_task_msg(doc)
+        curate_task_msg(doc, convert_times)
         indexing_key_value = doc[indexing_key]
 
         if indexing_key_value not in indexed_buffer:
@@ -94,5 +113,6 @@ def curate_dict_task_messages(
                     else:
                         indexed_buffer[indexing_key_value][field] = doc[field]
                 doc.pop(field)
+
         indexed_buffer[indexing_key_value].update(**doc)
     return indexed_buffer

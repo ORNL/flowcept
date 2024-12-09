@@ -5,11 +5,13 @@ import unittest
 from torch import nn
 
 from flowcept import Flowcept
+from flowcept.configs import MONGO_ENABLED, INSTRUMENTATION
 from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer, MyNet
 
 
 class MLDecoratorTests(unittest.TestCase):
 
+    @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_torch_save_n_load(self):
         model = nn.Module()
         model_id = Flowcept.db.save_torch_model(model)
@@ -19,6 +21,11 @@ class MLDecoratorTests(unittest.TestCase):
 
     @staticmethod
     def test_cnn_model_trainer():
+
+        # Disable model mgmt if mongo not enabled
+        if not MONGO_ENABLED:
+            INSTRUMENTATION["torch"]["save_models"] = False
+
         trainer = ModelTrainer()
 
         hp_conf = {
@@ -36,6 +43,9 @@ class MLDecoratorTests(unittest.TestCase):
             conf["workflow_id"] = wf_id
             result = trainer.model_fit(**conf)
             assert len(result)
+
+            if not MONGO_ENABLED:
+                continue
 
             c = conf.copy()
             c.pop("max_epochs")

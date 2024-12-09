@@ -17,7 +17,7 @@ from flowcept.analytics.analytics_utils import (
     analyze_correlations_between,
     find_outliers_zscore,
 )
-from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.query_utils import (
     get_doc_status,
@@ -137,7 +137,7 @@ class TaskQueryAPI(object):
                 raise Exception(r.text)
 
         else:
-            dao = DocumentDBDao(create_index=False)
+            dao = DocumentDBDAO.build(create_index=False)
             docs = dao.task_query(
                 filter,
                 projection,
@@ -159,7 +159,7 @@ class TaskQueryAPI(object):
             return None
         tasks = []
         for sub_wf in sub_wfs:
-            sub_wf_tasks = self.query({"workflow_id": sub_wf.workflow_id})
+            sub_wf_tasks = self.query({"workflow_id": sub_wf["workflow_id"]})
             tasks.extend(sub_wf_tasks)
         return tasks
 

@@ -1,4 +1,4 @@
-name: Unit, integration, and notebook tests with Mongo
+name: Unit, integration, and notebook tests without Mongo
 on:
   push:
   schedule:
@@ -8,6 +8,8 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    env:
+      MONGO_ENABLED: "false"
     timeout-minutes: 40
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
 
@@ -26,14 +28,14 @@ jobs:
         run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
 
       - name: Start docker compose with redis
-        run: make services-mongo
+        run: make services
 
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
       - name: Install default dependencies and run simple test
         run: |
-          pip install .[mongo]
+          pip install .
           python examples/simple_instrumented_script.py | tee output.log
           cat output.log
           grep -q "ERROR" output.log && exit 1
@@ -83,40 +85,9 @@ jobs:
         run: make tests-notebooks
 
       - name: Shut down docker compose
-        run: make services-stop-mongo
+        run: make services-stop
 
       - name: Clean up
         run: |
           make clean
           find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \;
-
-      - name: Start docker compose with kafka
-        run: docker compose -f deployment/compose-kafka.yml up -d
-
-      - name: Wait for one minute
-        run: sleep 60
-
-      - name: Check liveness
-        run: |
-          export MQ_TYPE=kafka
-          export MQ_PORT=9092
-          python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_PORT={MQ_PORT}")'
-          python -c 'from flowcept import Flowcept; assert Flowcept.services_alive()'
-
-      - name: Run tests with kafka
-        run: |
-          export MQ_TYPE=kafka
-          export MQ_PORT=9092
-          make tests
-
-      - name: Stop docker compose with kafka
-        run: docker compose -f deployment/compose-kafka.yml down
-
-      - name: Clean up
-        run: |
-          make clean
-          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
-          docker image prune -a -f
-
-      - name: List large files
-        run: find . -type f -exec du -h {} + | sort -h

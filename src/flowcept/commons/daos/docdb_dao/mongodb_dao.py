@@ -8,61 +8,53 @@ from uuid import uuid4
 import pickle
 import zipfile
 
+import pandas as pd
 from bson import ObjectId
 from bson.json_util import dumps
 from pymongo import MongoClient, UpdateOne
 
+from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.utils import perf_log, get_utc_now_str
-from flowcept.configs import (
-    MONGO_HOST,
-    MONGO_PORT,
-    MONGO_DB,
-    MONGO_TASK_COLLECTION,
-    MONGO_WORKFLOWS_COLLECTION,
-    PERF_LOG,
-    MONGO_URI,
-    MONGO_CREATE_INDEX,
-)
+from flowcept.configs import PERF_LOG, MONGO_CREATE_INDEX
 from flowcept.flowceptor.consumers.consumer_utils import (
     curate_dict_task_messages,
 )
 from time import time
 
 
-class DocumentDBDao(object):
+class MongoDBDAO(DocumentDBDAO):
     """Document class."""
 
-    _instance: "DocumentDBDao" = None
+    _instance: "MongoDBDAO" = None
 
-    def __new__(cls, *args, **kwargs) -> "DocumentDBDao":
-        """Singleton creator for DocumentDBDao."""
-        if cls._instance is None:
-            cls._instance = super(DocumentDBDao, cls).__new__(cls)
-        return cls._instance
+    def _init(self, create_indices=MONGO_CREATE_INDEX):
+        from flowcept.configs import (
+            MONGO_HOST,
+            MONGO_PORT,
+            MONGO_DB,
+            MONGO_URI,
+        )
+        self._initialized = True
 
-    def __init__(self, create_index=MONGO_CREATE_INDEX):
-        if not hasattr(self, "_initialized"):
-            self._initialized = True
+        self.logger = FlowceptLogger()
 
-            self.logger = FlowceptLogger()
+        if MONGO_URI is not None:
+            self._client = MongoClient(MONGO_URI)
+        else:
+            self._client = MongoClient(MONGO_HOST, MONGO_PORT)
+        self._db = self._client[MONGO_DB]
 
-            if MONGO_URI is not None:
-                self._client = MongoClient(MONGO_URI)
-            else:
-                self._client = MongoClient(MONGO_HOST, MONGO_PORT)
-            self._db = self._client[MONGO_DB]
+        self._tasks_collection = self._db["tasks"]
+        self._wfs_collection = self._db["workflows"]
+        self._obj_collection = self._db["objects"]
 
-            self._tasks_collection = self._db[MONGO_TASK_COLLECTION]
-            self._wfs_collection = self._db[MONGO_WORKFLOWS_COLLECTION]
-            self._obj_collection = self._db["objects"]
-
-            if create_index:
-                self._create_indices()
+        if create_indices:
+            self._create_indices()
 
     def _create_indices(self):
         # Creating task collection indices:
@@ -87,83 +79,6 @@ class DocumentDBDao(object):
             self._obj_collection.create_index(WorkflowObject.workflow_id_field(), unique=False)
         if TaskObject.task_id_field() not in existing_indices:
             self._obj_collection.create_index(TaskObject.task_id_field(), unique=False)
-
-    def task_query(
-        self,
-        filter: Dict = None,
-        projection: List[str] = None,
-        limit: int = 0,
-        sort: List[Tuple] = None,
-        aggregation: List[Tuple] = None,
-        remove_json_unserializables=True,
-    ) -> List[Dict]:
-        """Generate a mongo query pipeline.
-
-        Generates a MongoDB query pipeline based on the provided arguments.
-
-        Parameters
-        ----------
-        filter (dict):
-            The filter criteria for the $match stage.
-        projection (list, optional):
-            List of fields to include in the $project stage. Defaults to None.
-        limit (int, optional):
-            The maximum number of documents to return. Defaults to 0 (no limit).
-        sort (list of tuples, optional):
-            List of (field, order) tuples specifying the sorting order. Defaults to None.
-        aggregation (list of tuples, optional):
-            List of (aggregation_operator, field_name) tuples specifying
-            additional aggregation operations. Defaults to None.
-        remove_json_unserializables:
-            Removes fields that are not JSON serializable. Defaults to True
-
-        Returns
-        -------
-        list:
-            A list with the result set.
-
-        Example
-        -------
-        Create a pipeline with a filter, projection, sorting, and aggregation.
-
-        rs = find(
-            filter={"campaign_id": "mycampaign1"},
-            projection=["workflow_id", "started_at", "ended_at"],
-            limit=10,
-            sort=[("workflow_id", ASC), ("end_time", DESC)],
-            aggregation=[("avg", "ended_at"), ("min", "started_at")]
-        )
-        """
-        if aggregation is not None:
-            try:
-                rs = self._pipeline(filter, projection, limit, sort, aggregation)
-            except Exception as e:
-                self.logger.exception(e)
-                return None
-        else:
-            _projection = {}
-            if projection is not None:
-                for proj_field in projection:
-                    _projection[proj_field] = 1
-
-            if remove_json_unserializables:
-                _projection.update({"_id": 0, "timestamp": 0})
-            try:
-                rs = self._tasks_collection.find(
-                    filter=filter,
-                    projection=_projection,
-                    limit=limit,
-                    sort=sort,
-                )
-            except Exception as e:
-                self.logger.exception(e)
-                return None
-        try:
-            lst = list(rs)
-            return lst
-        except Exception as e:
-            self.logger.exception(e)
-            return None
 
     def _pipeline(
         self,
@@ -234,25 +149,16 @@ class DocumentDBDao(object):
             self.logger.exception(e)
             return None
 
-    def insert_one(self, doc: Dict) -> ObjectId:
-        """Insert only one."""
+    def insert_one_task(self, task_dict: Dict) -> ObjectId:
+        """Insert one task."""
         try:
-            r = self._tasks_collection.insert_one(doc)
+            r = self._tasks_collection.insert_one(task_dict)
             return r.inserted_id
         except Exception as e:
             self.logger.exception(e)
             return None
 
-    def insert_many(self, doc_list: List[Dict]) -> List[ObjectId]:
-        """Insert many."""
-        try:
-            r = self._tasks_collection.insert_many(doc_list)
-            return r.inserted_ids
-        except Exception as e:
-            self.logger.exception(e)
-            return None
-
-    def insert_and_update_many(self, indexing_key, doc_list: List[Dict]) -> bool:
+    def insert_and_update_many_tasks(self, doc_list: List[Dict], indexing_key=None) -> bool:
         """Insert and update."""
         try:
             if len(doc_list) == 0:
@@ -281,7 +187,7 @@ class DocumentDBDao(object):
             self.logger.exception(e)
             return False
 
-    def delete_ids(self, ids_list: List[ObjectId]) -> bool:
+    def delete_task_ids(self, ids_list: List[ObjectId]) -> bool:
         """Delete the ids."""
         if type(ids_list) is not list:
             ids_list = [ids_list]
@@ -292,7 +198,7 @@ class DocumentDBDao(object):
             self.logger.exception(e)
             return False
 
-    def delete_keys(self, key_name, keys_list: List[Any]) -> bool:
+    def delete_task_keys(self, key_name, keys_list: List[Any]) -> bool:
         """Delete the keys."""
         if type(keys_list) is not list:
             keys_list = [keys_list]
@@ -303,7 +209,7 @@ class DocumentDBDao(object):
             self.logger.exception(e)
             return False
 
-    def delete_with_filter(self, filter) -> bool:
+    def delete_tasks_with_filter(self, filter) -> bool:
         """Delete with filter."""
         try:
             self._tasks_collection.delete_many(filter)
@@ -312,15 +218,15 @@ class DocumentDBDao(object):
             self.logger.exception(e)
             return False
 
-    def count(self) -> int:
-        """Count it."""
+    def count_tasks(self) -> int:
+        """Count number of docs in tasks collection."""
         try:
             return self._tasks_collection.count_documents({})
         except Exception as e:
             self.logger.exception(e)
             return -1
 
-    def workflow_insert_or_update(self, workflow_obj: WorkflowObject) -> bool:
+    def insert_or_update_workflow(self, workflow_obj: WorkflowObject) -> bool:
         """Insert or update workflow."""
         _dict = workflow_obj.to_dict().copy()
         workflow_id = _dict.pop(WorkflowObject.workflow_id_field(), None)
@@ -360,51 +266,36 @@ class DocumentDBDao(object):
             self.logger.exception(e)
             return False
 
-    def workflow_query(
-        self,
-        filter: Dict = None,
-        projection: List[str] = None,
-        limit: int = 0,
-        sort: List[Tuple] = None,
-        remove_json_unserializables=True,
-    ) -> List[Dict]:
-        """Get the workflow query."""
-        # TODO refactor: reuse code for task_query instead of copy & paste
-        _projection = {}
-        if projection is not None:
-            for proj_field in projection:
-                _projection[proj_field] = 1
 
-        if remove_json_unserializables:
-            _projection.update({"_id": 0, "timestamp": 0})
+    def to_df(self, collection="tasks", filter=None) -> pd.DataFrame:
+        if collection == "tasks":
+            _collection = self._tasks_collection
+        elif collection == "workflows":
+            _collection = self._wfs_collection
+        else:
+            msg = f"Only tasks and workflows "
+            raise Exception(msg + "collections are currently available for this.")
         try:
-            rs = self._wfs_collection.find(
-                filter=filter,
-                projection=_projection,
-                limit=limit,
-                sort=sort,
-            )
-            lst = list(rs)
-            return lst
+            cursor = _collection.find(filter=filter)
+            return pd.DataFrame(cursor)
         except Exception as e:
             self.logger.exception(e)
-            return None
 
     def dump_to_file(
         self,
-        collection_name=MONGO_TASK_COLLECTION,
+        collection_name="tasks",
         filter=None,
         output_file=None,
         export_format="json",
         should_zip=False,
     ):
         """Dump it to file."""
-        if collection_name == MONGO_TASK_COLLECTION:
+        if collection_name == "tasks":
             _collection = self._tasks_collection
-        elif collection_name == MONGO_WORKFLOWS_COLLECTION:
+        elif collection_name == "workflows":
             _collection = self._wfs_collection
         else:
-            msg = f"Only {MONGO_TASK_COLLECTION} and {MONGO_WORKFLOWS_COLLECTION} "
+            msg = f"Only tasks and workflows "
             raise Exception(msg + "collections are currently available for dump.")
 
         if export_format != "json":
@@ -513,11 +404,138 @@ class DocumentDBDao(object):
             self.logger.exception(f"An error occurred: {e}")
             return None
 
-    def get_objects(self, filter):
+    def query(self, collection="tasks", filter=None, projection=None, limit=None, sort=None, aggregation=None, remove_json_unserializables=None):
+        if collection == "tasks":
+            return self.task_query(
+                filter,
+                projection,
+                limit,
+                sort,
+                aggregation,
+                remove_json_unserializables,
+            )
+        elif collection == "workflows":
+            return self.workflow_query(
+                filter, projection, limit, sort, remove_json_unserializables
+            )
+        elif collection == "objects":
+            return self.object_query(filter)
+        else:
+            raise Exception(
+                f"You used type={collection}, but MongoDB only stores tasks, workflows, and objects"
+            )
+
+    def task_query(
+        self,
+        filter: Dict = None,
+        projection: List[str] = None,
+        limit: int = 0,
+        sort: List[Tuple] = None,
+        aggregation: List[Tuple] = None,
+        remove_json_unserializables=True,
+    ) -> List[Dict]:
+        """Generate a mongo query pipeline.
+
+        Generates a MongoDB query pipeline based on the provided arguments.
+
+        Parameters
+        ----------
+        filter (dict):
+            The filter criteria for the $match stage.
+        projection (list, optional):
+            List of fields to include in the $project stage. Defaults to None.
+        limit (int, optional):
+            The maximum number of documents to return. Defaults to 0 (no limit).
+        sort (list of tuples, optional):
+            List of (field, order) tuples specifying the sorting order. Defaults to None.
+        aggregation (list of tuples, optional):
+            List of (aggregation_operator, field_name) tuples specifying
+            additional aggregation operations. Defaults to None.
+        remove_json_unserializables:
+            Removes fields that are not JSON serializable. Defaults to True
+
+        Returns
+        -------
+        list:
+            A list with the result set.
+
+        Example
+        -------
+        Create a pipeline with a filter, projection, sorting, and aggregation.
+
+        rs = find(
+            filter={"campaign_id": "mycampaign1"},
+            projection=["workflow_id", "started_at", "ended_at"],
+            limit=10,
+            sort=[("workflow_id", ASC), ("end_time", DESC)],
+            aggregation=[("avg", "ended_at"), ("min", "started_at")]
+        )
+        """
+        if aggregation is not None:
+            try:
+                rs = self._pipeline(filter, projection, limit, sort, aggregation)
+            except Exception as e:
+                self.logger.exception(e)
+                return None
+        else:
+            _projection = {}
+            if projection is not None:
+                for proj_field in projection:
+                    _projection[proj_field] = 1
+
+            if remove_json_unserializables:
+                _projection.update({"_id": 0, "timestamp": 0})
+            try:
+                rs = self._tasks_collection.find(
+                    filter=filter,
+                    projection=_projection,
+                    limit=limit,
+                    sort=sort,
+                )
+            except Exception as e:
+                self.logger.exception(e)
+                return None
+        try:
+            lst = list(rs)
+            return lst
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def workflow_query(
+        self,
+        filter: Dict = None,
+        projection: List[str] = None,
+        limit: int = 0,
+        sort: List[Tuple] = None,
+        remove_json_unserializables=True,
+    ) -> List[Dict]:
+        """Get the workflow query."""
+        # TODO refactor: reuse code for task_query instead of copy & paste
+        _projection = {}
+        if projection is not None:
+            for proj_field in projection:
+                _projection[proj_field] = 1
+
+        if remove_json_unserializables:
+            _projection.update({"_id": 0, "timestamp": 0})
+        try:
+            rs = self._wfs_collection.find(
+                filter=filter,
+                projection=_projection,
+                limit=limit,
+                sort=sort,
+            )
+            lst = list(rs)
+            return lst
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+    def object_query(self, filter):
         """Get objects."""
         documents = self._obj_collection.find(filter)
         return list(documents)
 
-    def close_client(self):
+    def close(self):
         """Close Mongo client."""
         self._client.close()

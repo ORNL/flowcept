@@ -2,7 +2,6 @@
 
 from typing import Callable
 from threading import Thread, Event
-from flowcept.commons.flowcept_logger import FlowceptLogger
 
 
 class AutoflushBuffer:
@@ -12,11 +11,12 @@ class AutoflushBuffer:
         self,
         max_size,
         flush_interval,
+        logger,
         flush_function: Callable,
-        *flush_function_args,
-        **flush_function_kwargs,
+        flush_function_args=[],
+        flush_function_kwargs={},
     ):
-        self.logger = FlowceptLogger()
+        self.logger = logger
         self._max_size = max_size
         self._flush_interval = flush_interval
         self._buffers = [[], []]

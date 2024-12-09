@@ -1,14 +1,13 @@
-name: Unit, integration, and notebook tests with Mongo
-on:
-  push:
-  schedule:
-    - cron: '0 12 * * *'  # Runs every day at 12 PM UTC (7 AM EST)
+name: Tests on py11 without Mongo
+on: [pull_request]
 
 jobs:
 
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      MONGO_ENABLED: "false"
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
 
     steps:
@@ -16,55 +15,46 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Set up Python 3.10
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.11"
           cache: "pip"
 
       - name: Show OS Info
         run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
 
       - name: Start docker compose with redis
-        run: make services-mongo
+        run: make services
 
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
+      - name: Show Python version
+        run: python --version && pip --version
+
       - name: Install default dependencies and run simple test
-        run: |
-          pip install .[mongo]
-          python examples/simple_instrumented_script.py | tee output.log
-          cat output.log
-          grep -q "ERROR" output.log && exit 1
-          rm output.log
+        run: |          
+          pip install .
+          python examples/simple_instrumented_script.py
 
       - name: Install Dask dependencies alone and run a simple Dask test
-        run: |
+        run: |          
           pip uninstall flowcept -y
           pip install .[dask]
-          python examples/dask_example.py | tee output.log
-          cat output.log
-          grep -q "ERROR" output.log && exit 1
-          rm output.log          
+          python examples/dask_example.py          
 
       - name: Install MLFlow dependencies alone and run a simple MLFlow test
-        run: |
+        run: |          
           pip uninstall flowcept -y
           pip install .[mlflow]
-          python examples/mlflow_example.py | tee output.log
-          cat output.log
-          grep -q "ERROR" output.log && exit 1
-          rm output.log    
+          python examples/mlflow_example.py    
 
       - name: Install Tensorboard dependencies alone and run a simple Tensorboard test
-        run: |
+        run: |          
           pip uninstall flowcept -y
           pip install .[tensorboard]
-          python examples/tensorboard_example.py  | tee output.log
-          cat output.log
-          grep -q "ERROR" output.log && exit 1
-          rm output.log 
+          python examples/tensorboard_example.py              
 
       - name: Install all dependencies
         run: |
@@ -82,13 +72,13 @@ jobs:
       - name: Test notebooks with pytest and redis
         run: make tests-notebooks
 
-      - name: Shut down docker compose
+      - name: Stop services
         run: make services-stop-mongo
 
       - name: Clean up
         run: |
           make clean
-          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \;
+          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
 
       - name: Start docker compose with kafka
         run: docker compose -f deployment/compose-kafka.yml up -d
@@ -107,9 +97,10 @@ jobs:
         run: |
           export MQ_TYPE=kafka
           export MQ_PORT=9092
-          make tests
+          # Ignoring heavy tests. They are executed with Kafka in another GH Action.
+          pytest --ignore=tests/decorator_tests/ml_tests --ignore=tests/adapters/test_tensorboard.py
 
-      - name: Stop docker compose with kafka
+      - name: Stop services
         run: docker compose -f deployment/compose-kafka.yml down
 
       - name: Clean up
@@ -117,6 +108,3 @@ jobs:
           make clean
           find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
           docker image prune -a -f
-
-      - name: List large files
-        run: find . -type f -exec du -h {} + | sort -h

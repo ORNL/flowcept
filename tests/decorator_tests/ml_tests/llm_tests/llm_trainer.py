@@ -282,7 +282,7 @@ def model_train(
     # TODO :base-interceptor-refactor: Can we do it better?
     with Flowcept(
         bundle_exec_id=workflow_id,
-        start_doc_inserter=False,
+        enable_persistence=False,
     ):
         train_data = batchify(train_data, batch_size)
         val_data = batchify(val_data, eval_batch_size)

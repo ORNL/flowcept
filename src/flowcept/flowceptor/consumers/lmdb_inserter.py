@@ -1,12 +1,15 @@
 """Document module."""
 
+from datetime import datetime
 from time import time, sleep
 from threading import Thread, Event, Lock
 from typing import Dict
 from uuid import uuid4
 
-from flowcept.commons.autoflush_buffer import AutoflushBuffer
+import pytz
 
+from flowcept.commons.autoflush_buffer import AutoflushBuffer
+from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
@@ -15,23 +18,18 @@ from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.configs import (
     INSERTION_BUFFER_TIME,
     MAX_BUFFER_SIZE,
-    MIN_BUFFER_SIZE,
-    ADAPTIVE_BUFFER_SIZE,
-    REMOVE_EMPTY_FIELDS,
     JSON_SERIALIZER,
+    REMOVE_EMPTY_FIELDS,
     ENRICH_MESSAGES,
-    MONGO_ENABLED,
-    LMDB_ENABLED
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-
 from flowcept.flowceptor.consumers.consumer_utils import (
     remove_empty_fields_from_dict,
 )
 
 
-class DocumentInserter:
+class LMDBInserter:
     """Document class."""
 
     DECODER = GenericJSONDecoder if JSON_SERIALIZER == "complex" else None
@@ -42,7 +40,7 @@ class DocumentInserter:
         """Remove empty fields from a dictionary recursively."""
         for key, value in list(d.items()):
             if isinstance(value, dict):
-                DocumentInserter.remove_empty_fields(value)
+                LMDBInserter.remove_empty_fields(value)
                 if not value:
                     del d[key]
             elif value in (None, ""):
@@ -57,13 +55,7 @@ class DocumentInserter:
     ):
         self._task_dicts_buffer = list()
         self._mq_dao = MQDao.build(mq_host, mq_port)
-        self._doc_daos = []
-        if MONGO_ENABLED:
-            from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
-            self._doc_daos.append(MongoDBDAO())
-        if LMDB_ENABLED:
-            from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
-            self._doc_daos.append(LMDBDAO())
+        self._doc_dao = LMDBDAO()
         self._previous_time = time()
         self.logger = FlowceptLogger()
         self._main_thread: Thread = None
@@ -74,46 +66,24 @@ class DocumentInserter:
         self.buffer: AutoflushBuffer = AutoflushBuffer(
             max_size=self._curr_max_buffer_size,
             flush_interval=INSERTION_BUFFER_TIME,
-            logger=self.logger,
-            flush_function=DocumentInserter.flush_function,
-            flush_function_kwargs={"logger": self.logger, "doc_daos": self._doc_daos},
-
+            flush_function=LMDBInserter.flush_function,
+            doc_dao=self._doc_dao,
+            logger=self.logger
         )
 
-    def _set_buffer_size(self):
-        if not ADAPTIVE_BUFFER_SIZE:
-            return
-        else:
-            # Adaptive buffer size to increase/decrease depending on the flow
-            # of messages (#messages/unit of time)
-            if len(self._task_dicts_buffer) >= MAX_BUFFER_SIZE:
-                self._curr_max_buffer_size = MAX_BUFFER_SIZE
-            elif len(self._task_dicts_buffer) < self._curr_max_buffer_size:
-                # decrease buffer size by 10%, lower-bounded by 10
-                self._curr_max_buffer_size = max(
-                    MIN_BUFFER_SIZE,
-                    int(self._curr_max_buffer_size * 0.9),
-                )
-            else:
-                # increase buffer size by 10%,
-                # upper-bounded by MONGO_INSERTION_BUFFER_SIZE
-                self._curr_max_buffer_size = max(
-                    MIN_BUFFER_SIZE,
-                    min(
-                        MAX_BUFFER_SIZE,
-                        int(self._curr_max_buffer_size * 1.1),
-                    ),
-                )
-
     @staticmethod
-    def flush_function(buffer, doc_daos, logger):
+    def flush_function(buffer, doc_dao: LMDBDAO, logger=None):
         """Flush it."""
+        if logger is None:
+            logger = FlowceptLogger()
         logger.info(
             f"Current Doc buffer size: {len(buffer)}, " f"Gonna flush {len(buffer)} msgs to DocDB!"
         )
-        for dao in doc_daos:
-            dao.insert_and_update_many_tasks(buffer, TaskObject.task_id_field())
-            logger.debug(f"DocDao={id(dao)}; Flushed {len(buffer)} msgs to DocDB!")  # TODO: add name
+        inserted = doc_dao.insert_many(buffer)
+        if not inserted:
+            logger.warning(f"Could not insert the buffer correctly. " f"Buffer content={buffer}")
+        else:
+            logger.info(f"Flushed {len(buffer)} msgs to LMDB!")
 
     def _handle_task_message(self, message: Dict):
         # if DEBUG_MODE:
@@ -125,6 +95,17 @@ class DocumentInserter:
             wf_id = message.get("used").get("workflow_id", None)
             if wf_id:
                 message["workflow_id"] = wf_id
+
+        has_time_fields = False
+        for time_field in TaskObject.get_time_field_names():
+            if time_field in message:
+                has_time_fields = True
+                break
+                # TODO revisit
+                #message[time_field] = datetime.fromtimestamp(message[time_field], pytz.utc)
+
+        if not has_time_fields:
+            message["registered_at"] = datetime.fromtimestamp(time(), pytz.utc)
 
         if ENRICH_MESSAGES:
             TaskObject.enrich_task_dict(message)
@@ -138,6 +119,11 @@ class DocumentInserter:
             remove_empty_fields_from_dict(message)
 
         self.buffer.append(message)
+        # with self._lock:
+        #     self._task_dicts_buffer.append(message)
+        #     if len(self._task_dicts_buffer) >= self._curr_max_buffer_size:
+        #         self.logger.debug("Docs buffer exceeded, flushing...")
+        #         self._flush()
 
     def _handle_workflow_message(self, message: Dict):
         message.pop("type")
@@ -147,8 +133,8 @@ class DocumentInserter:
         if REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
         wf_obj = WorkflowObject.from_dict(message)
-        for dao in self._doc_daos:
-            dao.insert_or_update_workflow(wf_obj)
+        inserted = self._doc_dao.workflow_insert_or_update(wf_obj)
+        return inserted
 
     def _handle_control_message(self, message):
         self.logger.info(
@@ -176,7 +162,7 @@ class DocumentInserter:
             self.logger.info("Document Inserter is stopping...")
             return "stop"
 
-    def start(self) -> "DocumentInserter":
+    def start(self) -> "LMDBInserter":
         """Start it."""
         self._main_thread = Thread(target=self._start)
         self._main_thread.start()
@@ -241,6 +227,4 @@ class DocumentInserter:
         self._main_thread.join()
         self.logger.info("Document Inserter is stopped.")
 
-        # self.logger.info("Closing DocDB client.")
-        # for dao in self._doc_daos:
-        #     dao.close() If we close here, we can't query the data immediately.
+        self.logger.info("Closing DocDB client.")
