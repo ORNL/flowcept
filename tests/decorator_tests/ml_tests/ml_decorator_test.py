@@ -10,7 +10,6 @@ from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer, MyNet
 
 
 class MLDecoratorTests(unittest.TestCase):
-
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_torch_save_n_load(self):
         model = nn.Module()
@@ -21,7 +20,6 @@ class MLDecoratorTests(unittest.TestCase):
 
     @staticmethod
     def test_cnn_model_trainer():
-
         # Disable model mgmt if mongo not enabled
         if not MONGO_ENABLED:
             INSTRUMENTATION["torch"]["save_models"] = False
@@ -52,9 +50,5 @@ class MLDecoratorTests(unittest.TestCase):
             c.pop("workflow_id")
             loaded_model = MyNet(**c)
 
-            loaded_model = Flowcept.db.load_torch_model(
-                loaded_model, result["object_id"]
-            )
+            loaded_model = Flowcept.db.load_torch_model(loaded_model, result["object_id"])
             assert len(loaded_model(result["test_data"]))
-
-

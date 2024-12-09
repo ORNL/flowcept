@@ -40,9 +40,11 @@ class DBAPI(object):
             if "mongodb" in DATABASES and DATABASES["mongodb"].get("enabled", False):
                 # Currently MongoDB has precedence over LMDB if both are enabled.
                 from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+
                 self._dao = MongoDBDAO(create_indices=False)
             elif "lmdb" in DATABASES and DATABASES["lmdb"].get("enabled", False):
                 from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
+
                 self._dao = LMDBDAO()
             else:
                 raise Exception("There is no database enabled.")
@@ -151,16 +153,11 @@ class DBAPI(object):
         sort=None,
         aggregation=None,
         remove_json_unserializables=True,
-
     ):
         """Query it."""
-        return self._dao.query(collection,
-                filter,
-                projection,
-                limit,
-                sort,
-                aggregation,
-                remove_json_unserializables)
+        return self._dao.query(
+            collection, filter, projection, limit, sort, aggregation, remove_json_unserializables
+        )
 
     def save_torch_model(
         self,

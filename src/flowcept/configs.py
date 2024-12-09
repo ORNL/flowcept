@@ -83,7 +83,9 @@ DATABASES = settings["databases"]
 _mongo_settings = DATABASES.get("mongodb", None)
 MONGO_ENABLED = False
 if _mongo_settings:
-    MONGO_ENABLED = (os.environ.get("MONGO_ENABLED", "false").lower() == "true") or _mongo_settings.get("enabled")
+    MONGO_ENABLED = (
+        os.environ.get("MONGO_ENABLED", "false").lower() == "true"
+    ) or _mongo_settings.get("enabled")
     MONGO_URI = os.environ.get("MONGO_URI") or _mongo_settings.get("uri")
     MONGO_HOST = os.environ.get("MONGO_HOST") or _mongo_settings.get("host", "localhost")
     MONGO_PORT = int(os.environ.get("MONGO_PORT") or _mongo_settings.get("port", 27017))
@@ -96,8 +98,9 @@ if _mongo_settings:
 _lmdb_settings = DATABASES.get("lmdb", None)
 LMDB_ENABLED = False
 if _lmdb_settings:
-    LMDB_ENABLED = (os.environ.get("LMDB_ENABLED",
-                                    "false").lower() == "true") or _lmdb_settings.get("enabled", False)
+    LMDB_ENABLED = (
+        os.environ.get("LMDB_ENABLED", "false").lower() == "true"
+    ) or _lmdb_settings.get("enabled", False)
 
 ##########################
 # Buffer Settings        #

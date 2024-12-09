@@ -4,7 +4,6 @@ from flowcept import (
     Flowcept,
     flowcept_task,
 )
-from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until, get_current_config_values
 from flowcept.configs import DATABASES
@@ -32,7 +31,6 @@ def mult_two_(y):
 
 
 class FlowceptAPITest(unittest.TestCase):
-
     def test_configs(self):
         current_configs = get_current_config_values()
         assert "LOG_FILE_PATH" in current_configs
@@ -54,20 +52,9 @@ class FlowceptAPITest(unittest.TestCase):
 
         print("workflow_id", Flowcept.current_workflow_id)
 
-        print(
-            Flowcept.db.query(
-                filter={"workflow_id": Flowcept.current_workflow_id}
-            )
-        )
+        print(Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id}))
 
-        assert (
-            len(
-                Flowcept.db.query(
-                    filter={"workflow_id": Flowcept.current_workflow_id}
-                )
-            )
-            == 2
-        )
+        assert len(Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})) == 2
         assert (
             len(
                 Flowcept.db.query(

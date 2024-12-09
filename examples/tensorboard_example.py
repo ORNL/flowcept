@@ -83,8 +83,8 @@ def run_tensorboard_hparam_tuning(logdir):
 
     for num_units in HP_NUM_UNITS.domain.values:
         for dropout_rate in (
-                HP_DROPOUT.domain.min_value,
-                HP_DROPOUT.domain.max_value,
+            HP_DROPOUT.domain.min_value,
+            HP_DROPOUT.domain.max_value,
         ):
             for optimizer in HP_OPTIMIZER.domain.values:
                 for batch_size in HP_BATCHSIZES.domain.values:
@@ -138,4 +138,3 @@ if __name__ == "__main__":
     tasks = Flowcept.db.query(filter={"workflow_id": wf_id})
     assert len(tasks) == 16
     print(tasks)
-

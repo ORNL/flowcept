@@ -124,9 +124,7 @@ class TestDask(unittest.TestCase):
             "num_filters": 1,
         }
 
-        o1 = TestDask.client.submit(
-            problem_evaluate, phenome, str(uuid.uuid4())
-        )
+        o1 = TestDask.client.submit(problem_evaluate, phenome, str(uuid.uuid4()))
         sleep(5)
         print(o1.result())
         assert assert_by_querying_tasks_until(
@@ -170,8 +168,7 @@ class TestDask(unittest.TestCase):
             and len(docs[0]["generated"]) > 0,
         )
         assert evaluate_until(
-            lambda: TestDask.consumer.db.get_workflow(workflow_id=wf_id)
-            is not None,
+            lambda: TestDask.consumer.db.get_workflow(workflow_id=wf_id) is not None,
             msg="Checking if workflow object was saved in db",
         )
         print("All conditions met!")
@@ -185,8 +182,7 @@ class TestDask(unittest.TestCase):
         o2_task_id = self.error_task_submission()
         assert assert_by_querying_tasks_until(
             {"task_id": o2_task_id},
-            condition_to_evaluate=lambda docs: "exception"
-            in docs[0]["stderr"],
+            condition_to_evaluate=lambda docs: "exception" in docs[0]["stderr"],
         )
 
     @classmethod

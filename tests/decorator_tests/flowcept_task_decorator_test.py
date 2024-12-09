@@ -99,9 +99,7 @@ def calculate_overheads(decorated, not_decorated):
         "10th_percentile",
         "90th_percentile",
     ]
-    mean_diff = sum(
-        abs(decorated[key] - not_decorated[key]) for key in keys
-    ) / len(keys)
+    mean_diff = sum(abs(decorated[key] - not_decorated[key]) for key in keys) / len(keys)
     overheads = [mean_diff / not_decorated[key] * 100 for key in keys]
     return overheads
 
@@ -140,9 +138,7 @@ def print_system_stats():
     )
 
 
-def simple_decorated_function(
-        max_tasks=10, enable_persistence=True, check_insertions=True
-):
+def simple_decorated_function(max_tasks=10, enable_persistence=True, check_insertions=True):
     workflow_id = str(uuid.uuid4())
     print(workflow_id)
     # TODO :refactor-base-interceptor:
@@ -204,9 +200,7 @@ class DecoratorTests(unittest.TestCase):
         # Using the light decorator, the user has to control it.
         with Flowcept():
             print(Flowcept.current_workflow_id)
-            decorated_static_function(
-                df=pd.DataFrame()
-            )
+            decorated_static_function(df=pd.DataFrame())
             decorated_static_function2(x=1)
             decorated_static_function2(2)
 
@@ -260,9 +254,7 @@ class DecoratorTests(unittest.TestCase):
         print(f"diff_{n} = calculate_diff(decorated_{n}, not_decorated_{n})")
         print(f"'decorated_{n}': diff_{n},")
         print("Mode: " + flowcept.configs.DB_FLUSH_MODE)
-        threshold = (
-            10 if flowcept.configs.DB_FLUSH_MODE == "offline" else 50
-        )  # %
+        threshold = 10 if flowcept.configs.DB_FLUSH_MODE == "offline" else 50  # %
         print("Threshold: ", threshold)
         print("Overheads: " + str(overheads))
         assert all(map(lambda v: v < threshold, overheads))

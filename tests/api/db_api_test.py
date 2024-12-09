@@ -18,7 +18,6 @@ class OurObject:
 
 
 class DBAPITest(unittest.TestCase):
-
     def test_wf_dao(self):
         workflow1_id = str(uuid4())
         wf1 = WorkflowObject()
@@ -65,9 +64,7 @@ class DBAPITest(unittest.TestCase):
         obj_id = Flowcept.db.save_object(object=obj, save_data_in_collection=True)
         print(obj_id)
 
-        obj_docs = Flowcept.db.query(
-            filter={"object_id": obj_id}, collection="objects"
-        )
+        obj_docs = Flowcept.db.query(filter={"object_id": obj_id}, collection="objects")
         loaded_obj = pickle.loads(obj_docs[0]["data"])
         assert type(loaded_obj) == OurObject
 
@@ -88,9 +85,7 @@ class DBAPITest(unittest.TestCase):
             filter=_filter,
         )
         assert Flowcept.db.dump_to_file(filter=_filter, should_zip=True)
-        assert Flowcept.db.dump_to_file(
-            filter=_filter, output_file="dump_test.json"
-        )
+        assert Flowcept.db.dump_to_file(filter=_filter, output_file="dump_test.json")
 
         Flowcept.db._dao.delete_tasks_with_filter(_filter)
         c1 = Flowcept.db._dao.count_tasks()

@@ -29,9 +29,7 @@ def setup_local_dask_cluster(consumer=None, n_workers=1, exec_bundle=None):
     )
 
     if consumer is None or not consumer.is_started:
-        consumer = Flowcept(
-            interceptors="dask", bundle_exec_id=exec_bundle
-        ).start()
+        consumer = Flowcept(interceptors="dask", bundle_exec_id=exec_bundle).start()
 
     cluster = LocalCluster(n_workers=n_workers)
     scheduler = cluster.scheduler

@@ -120,7 +120,7 @@ def gen_mock_data(size=1, with_telemetry=False):
 
         new_doc["started_at"] = int(_start.timestamp())
         new_doc["ended_at"] = int(_end.timestamp())
-        new_doc.pop("timestamp",None)
+        new_doc.pop("timestamp", None)
         new_doc.pop("_id")
         new_docs.append(new_doc)
         new_task_ids.append(new_id)
@@ -147,9 +147,7 @@ class QueryTest(unittest.TestCase):
         self.api = TaskQueryAPI()
         self.db_dao = DocumentDBDAO.build(create_indices=False)
 
-    def gen_n_get_task_ids(
-        self, generation_function, size=1, generation_args={}
-    ):
+    def gen_n_get_task_ids(self, generation_function, size=1, generation_args={}):
         docs, task_ids = generation_function(size=size, **generation_args)
 
         init_db_count = self.db_dao.count_tasks()
@@ -170,9 +168,7 @@ class QueryTest(unittest.TestCase):
         r = requests.post(QueryTest.URL, json=request_data)
         assert r.status_code == 404
 
-        task_ids_filter, task_ids, init_db_count = self.gen_n_get_task_ids(
-            gen_mock_data, size=1
-        )
+        task_ids_filter, task_ids, init_db_count = self.gen_n_get_task_ids(gen_mock_data, size=1)
         request_data = {"filter": json.dumps(task_ids_filter)}
         r = requests.post(QueryTest.URL, json=request_data)
         assert r.status_code == 201
@@ -181,9 +177,7 @@ class QueryTest(unittest.TestCase):
         self.delete_task_ids_and_assert(task_ids, init_db_count)
 
     def test_query_api_with_webserver(self):
-        task_ids_filter, task_ids, init_db_count = self.gen_n_get_task_ids(
-            gen_mock_data, size=1
-        )
+        task_ids_filter, task_ids, init_db_count = self.gen_n_get_task_ids(gen_mock_data, size=1)
         api = TaskQueryAPI(with_webserver=True)
         r = api.query(task_ids_filter)
         assert len(r) > 0
@@ -192,12 +186,8 @@ class QueryTest(unittest.TestCase):
 
     def test_query_api_with_and_without_webserver(self):
         query_api_params = inspect.signature(TaskQueryAPI.query).parameters
-        doc_query_api_params = inspect.signature(
-            MongoDBDAO.task_query
-        ).parameters
-        assert (
-            query_api_params == doc_query_api_params
-        ), "Function signatures do not match."
+        doc_query_api_params = inspect.signature(MongoDBDAO.task_query).parameters
+        assert query_api_params == doc_query_api_params, "Function signatures do not match."
 
         query_api_docstring = inspect.getdoc(TaskQueryAPI.query)
         doc_query_api_docstring = inspect.getdoc(MongoDBDAO.task_query)
@@ -206,9 +196,7 @@ class QueryTest(unittest.TestCase):
             query_api_docstring.strip() == doc_query_api_docstring.strip()
         ), "The docstrings are not equal."
 
-        task_ids_filter, task_ids, init_db_count = self.gen_n_get_task_ids(
-            gen_mock_data, size=1
-        )
+        task_ids_filter, task_ids, init_db_count = self.gen_n_get_task_ids(gen_mock_data, size=1)
 
         api_without = TaskQueryAPI(with_webserver=False)
         res_without = api_without.query(task_ids_filter)
@@ -287,9 +275,7 @@ class QueryTest(unittest.TestCase):
         task_ids_filter, task_ids, init_db_count = self.gen_n_get_task_ids(
             gen_mock_data, size=max_docs
         )
-        res = self.api.df_query(
-            task_ids_filter, remove_json_unserializables=False
-        )
+        res = self.api.df_query(task_ids_filter, remove_json_unserializables=False)
         assert len(res) == max_docs
         self.delete_task_ids_and_assert(task_ids, init_db_count)
 
@@ -417,8 +403,10 @@ class QueryTest(unittest.TestCase):
             size=max_docs,
             generation_args={"with_telemetry": True},
         )
-        best_tasks = self.api.find_interesting_tasks_based_on_correlations_generated_and_telemetry_data(
-            filter=task_ids_filter
+        best_tasks = (
+            self.api.find_interesting_tasks_based_on_correlations_generated_and_telemetry_data(
+                filter=task_ids_filter
+            )
         )
         assert len(best_tasks)
         self.delete_task_ids_and_assert(task_ids, init_db_count)

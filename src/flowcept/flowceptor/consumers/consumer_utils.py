@@ -1,4 +1,5 @@
 """Consumer utilities module."""
+
 from datetime import datetime
 from time import time
 from typing import List, Dict
@@ -45,7 +46,9 @@ def curate_task_msg(task_msg_dict: dict, convert_times=True):
         for time_field in TaskObject.get_time_field_names():
             if time_field in task_msg_dict:
                 has_time_fields = True
-                task_msg_dict[time_field] = datetime.fromtimestamp(task_msg_dict[time_field], pytz.utc)
+                task_msg_dict[time_field] = datetime.fromtimestamp(
+                    task_msg_dict[time_field], pytz.utc
+                )
 
         if not has_time_fields:
             task_msg_dict["registered_at"] = datetime.fromtimestamp(time(), pytz.utc)
@@ -85,7 +88,11 @@ def curate_dict_task_messages(
     """
     indexed_buffer = {}
     for doc_ref in doc_list:
-        if (len(doc_ref) == 1) and (indexing_key in doc_ref) and (doc_ref[indexing_key] in indexed_buffer):
+        if (
+            (len(doc_ref) == 1)
+            and (indexing_key in doc_ref)
+            and (doc_ref[indexing_key] in indexed_buffer)
+        ):
             # This task_msg does not add any metadata
             continue
         doc = doc_ref.copy()

@@ -1,4 +1,5 @@
 """Flowcept package."""
+
 from flowcept.configs import SETTINGS_PATH
 from flowcept.version import __version__
 from flowcept.flowcept_api.flowcept_controller import Flowcept

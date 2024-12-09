@@ -13,7 +13,6 @@ from flowcept.flowceptor.adapters.dask.dask_plugins import (
     FlowceptDaskWorkerAdapter,
 )
 from tests.adapters.dask_test_utils import (
-    setup_local_dask_cluster,
     close_dask,
 )
 

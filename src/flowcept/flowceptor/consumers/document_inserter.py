@@ -21,7 +21,7 @@ from flowcept.configs import (
     JSON_SERIALIZER,
     ENRICH_MESSAGES,
     MONGO_ENABLED,
-    LMDB_ENABLED
+    LMDB_ENABLED,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
@@ -60,9 +60,11 @@ class DocumentInserter:
         self._doc_daos = []
         if MONGO_ENABLED:
             from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+
             self._doc_daos.append(MongoDBDAO())
         if LMDB_ENABLED:
             from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
+
             self._doc_daos.append(LMDBDAO())
         self._previous_time = time()
         self.logger = FlowceptLogger()
@@ -77,7 +79,6 @@ class DocumentInserter:
             logger=self.logger,
             flush_function=DocumentInserter.flush_function,
             flush_function_kwargs={"logger": self.logger, "doc_daos": self._doc_daos},
-
         )
 
     def _set_buffer_size(self):
@@ -113,7 +114,9 @@ class DocumentInserter:
         )
         for dao in doc_daos:
             dao.insert_and_update_many_tasks(buffer, TaskObject.task_id_field())
-            logger.debug(f"DocDao={id(dao)}; Flushed {len(buffer)} msgs to DocDB!")  # TODO: add name
+            logger.debug(
+                f"DocDao={id(dao)}; Flushed {len(buffer)} msgs to DocDB!"
+            )  # TODO: add name
 
     def _handle_task_message(self, message: Dict):
         # if DEBUG_MODE:

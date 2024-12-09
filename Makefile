@@ -24,7 +24,7 @@ checks:
 	ruff format --check src
 
 reformat:
-	ruff check src
+	ruff check src --fix
 	ruff format src
 
 # Remove cache directories and Sphinx build output

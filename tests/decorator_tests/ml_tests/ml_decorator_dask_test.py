@@ -36,9 +36,7 @@ class MLDecoratorDaskTests(unittest.TestCase):
         confs = ModelTrainer.generate_hp_confs(hp_conf)
         hp_conf.update({"n_confs": len(confs)})
         custom_metadata = {"hyperparameter_conf": hp_conf}
-        wf_id = register_dask_workflow(
-            client, custom_metadata=custom_metadata
-        )
+        wf_id = register_dask_workflow(client, custom_metadata=custom_metadata)
         print("Workflow id", wf_id)
         for conf in confs:
             conf["workflow_id"] = wf_id
@@ -57,10 +55,5 @@ class MLDecoratorDaskTests(unittest.TestCase):
         # We are creating one "sub-workflow" for every Model.fit,
         # which requires forwarding on multiple layers
         assert evaluate_until(
-            lambda: len(
-                TaskQueryAPI().get_subworkflows_tasks_from_a_parent_workflow(
-                    wf_id
-                )
-            )
-            > 0
+            lambda: len(TaskQueryAPI().get_subworkflows_tasks_from_a_parent_workflow(wf_id)) > 0
         )

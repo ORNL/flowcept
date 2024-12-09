@@ -36,9 +36,7 @@ class MyNet(nn.Module):
     ):
         super(MyNet, self).__init__()
         print("parent workflow id", parent_workflow_id)
-        self.workflow_id = register_module_as_workflow(
-            self, parent_workflow_id=parent_workflow_id
-        )
+        self.workflow_id = register_module_as_workflow(self, parent_workflow_id=parent_workflow_id)
         self.parent_task_id = parent_task_id
         Conv2d, Dropout, MaxPool2d, ReLU, Softmax, Linear = register_modules(
             [
@@ -144,12 +142,8 @@ class ModelTrainer(object):
             for data, target in test_loader:
                 data, target = data.to(device), target.to(device)
                 output = model(data)
-                test_loss += F.nll_loss(
-                    output.log(), target
-                ).item()  # sum up batch loss
-                pred = output.max(1, keepdim=True)[
-                    1
-                ]  # get the index of the max log-probability
+                test_loss += F.nll_loss(output.log(), target).item()  # sum up batch loss
+                pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
                 correct += pred.eq(target.view_as(pred)).sum().item()
 
         test_loss /= len(test_loader.dataset)
@@ -180,9 +174,7 @@ class ModelTrainer(object):
 
         torch.manual_seed(random_seed)
 
-        print(
-            "Workflow id in model_fit", workflow_id
-        )  # TODO :base-interceptor-refactor:
+        print("Workflow id in model_fit", workflow_id)  # TODO :base-interceptor-refactor:
         #  We are calling the consumer api here (sometimes for the second time)
         #  because we are capturing at two levels: at the model.fit and at
         #  every layer. Can we do it better?
@@ -208,9 +200,7 @@ class ModelTrainer(object):
             test_info = {}
             print("Starting training....")
             for epoch in range(1, max_epochs + 1):
-                ModelTrainer._train(
-                    model, device, train_loader, optimizer, epoch
-                )
+                ModelTrainer._train(model, device, train_loader, optimizer, epoch)
                 test_info = ModelTrainer._test(model, device, test_loader)
             print("Finished training....")
             batch = next(iter(test_loader))
@@ -242,9 +232,9 @@ class ModelTrainer(object):
             last_cv_i1 = i1
             model_fit_conf["conv_in_outs"] = conv_in_outs
             model_fit_conf["conv_kernel_sizes"] = [1] * n_conv_layers
-            model_fit_conf["conv_kernel_sizes"][
-                -1
-            ] = 28  # 28 found after trials and errors. It has to do with the batch_size 128
+            model_fit_conf["conv_kernel_sizes"][-1] = (
+                28  # 28 found after trials and errors. It has to do with the batch_size 128
+            )
             model_fit_conf["conv_pool_sizes"] = [1] * n_conv_layers
 
             for j in range(0, len(hp_conf["n_fc_layers"])):

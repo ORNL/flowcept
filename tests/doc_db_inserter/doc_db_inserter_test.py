@@ -1,8 +1,6 @@
-import os
 import unittest
 from uuid import uuid4
 
-import pytest
 
 from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 from flowcept.configs import MONGO_ENABLED

@@ -10,11 +10,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 
 from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.configs import (
-    MQ_INSTANCES,
-    INSTRUMENTATION_ENABLED,
-    DATABASES, MONGO_ENABLED
-)
+from flowcept.configs import MQ_INSTANCES, INSTRUMENTATION_ENABLED, DATABASES, MONGO_ENABLED
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
@@ -43,7 +39,7 @@ class Flowcept(object):
         workflow_id: str = None,
         workflow_name: str = None,
         workflow_args: str = None,
-        enable_persistence=True
+        enable_persistence=True,
     ):
         """Flowcept controller.
 
@@ -59,7 +55,8 @@ class Flowcept(object):
 
         bundle_exec_id - A way to group interceptors.
 
-        enable_persistence - Whether you want to persist the messages in one of the DBs defined in the `databases` settings.
+        enable_persistence - Whether you want to persist the messages in one of the DBs defined in
+         the `databases` settings.
         """
         self.logger = FlowceptLogger()
         self._enable_persistence = enable_persistence
@@ -133,14 +130,17 @@ class Flowcept(object):
 
     def _init_persistence(self, mq_host=None, mq_port=None):
         from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
+
         for database in DATABASES:
             if DATABASES[database].get("enabled", False):
-                self._db_inserters.append(DocumentInserter(
-                    check_safe_stops=True,
-                    bundle_exec_id=self._bundle_exec_id,
-                    mq_host=mq_host,
-                    mq_port=mq_port
-                ).start())
+                self._db_inserters.append(
+                    DocumentInserter(
+                        check_safe_stops=True,
+                        bundle_exec_id=self._bundle_exec_id,
+                        mq_host=mq_host,
+                        mq_port=mq_port,
+                    ).start()
+                )
 
     def stop(self):
         """Stop it."""

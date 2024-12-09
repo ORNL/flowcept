@@ -28,17 +28,31 @@ from time import time
 
 
 class MongoDBDAO(DocumentDBDAO):
-    """Document class."""
+    """
+    A data access object for MongoDB.
+
+    This class encapsulates common operations for interacting with MongoDB,
+    including querying, inserting, updating, and deleting documents across
+    various collections (`tasks`, `workflows`, `objects`).
+    """
 
     _instance: "MongoDBDAO" = None
 
     def _init(self, create_indices=MONGO_CREATE_INDEX):
+        """
+        Initialize the MongoDBDAO.
+
+        Parameters
+        ----------
+            create_indices (bool): Whether to create MongoDB indices on initialization.
+        """
         from flowcept.configs import (
             MONGO_HOST,
             MONGO_PORT,
             MONGO_DB,
             MONGO_URI,
         )
+
         self._initialized = True
 
         self.logger = FlowceptLogger()
@@ -88,6 +102,21 @@ class MongoDBDAO(DocumentDBDAO):
         sort: List[Tuple] = None,
         aggregation: List[Tuple] = None,
     ):
+        """
+        Generate a MongoDB aggregation pipeline.
+
+        Parameters
+        ----------
+            filter (Dict): Match filter for the `$match` stage.
+            projection (List[str]): Fields to project in the `$project` stage.
+            limit (int): Maximum number of documents to return.
+            sort (List[Tuple[str, int]]): Fields and orders for `$sort`.
+            aggregation (List[Tuple[str, str]]): Aggregation operations and fields for `$group`.
+
+        Returns
+        -------
+            List[Dict]: The result of the pipeline execution.
+        """
         if projection is not None and len(projection) > 1:
             raise Exception(
                 "Sorry, this query API is still limited to at most one "
@@ -150,7 +179,24 @@ class MongoDBDAO(DocumentDBDAO):
             return None
 
     def insert_one_task(self, task_dict: Dict) -> ObjectId:
-        """Insert one task."""
+        """
+        Insert a single task document into the tasks collection.
+
+        Parameters
+        ----------
+        task_dict : dict
+            The task data to be inserted into the tasks collection.
+
+        Returns
+        -------
+        ObjectId
+            The ObjectId of the inserted task document.
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the insertion.
+        """
         try:
             r = self._tasks_collection.insert_one(task_dict)
             return r.inserted_id
@@ -159,7 +205,29 @@ class MongoDBDAO(DocumentDBDAO):
             return None
 
     def insert_and_update_many_tasks(self, doc_list: List[Dict], indexing_key=None) -> bool:
-        """Insert and update."""
+        """
+        Insert and update multiple task documents in the tasks collection.
+
+        This method will curate the provided list of task dictionaries, update existing records
+        with the same indexing key or insert new ones.
+
+        Parameters
+        ----------
+        doc_list : list of dict
+            The list of task data to be inserted or updated.
+        indexing_key : str, optional
+            The key used to index the task documents for upsert operations.
+
+        Returns
+        -------
+        bool
+            True if the operation was successful, False otherwise.
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the bulk insert or update operation.
+        """
         try:
             if len(doc_list) == 0:
                 return False
@@ -188,7 +256,24 @@ class MongoDBDAO(DocumentDBDAO):
             return False
 
     def delete_task_ids(self, ids_list: List[ObjectId]) -> bool:
-        """Delete the ids."""
+        """
+        Delete task documents by their ObjectIds from the tasks collection.
+
+        Parameters
+        ----------
+        ids_list : list of ObjectId
+            The list of ObjectIds of tasks to be deleted.
+
+        Returns
+        -------
+        bool
+            True if the deletion was successful, False otherwise.
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the deletion operation.
+        """
         if type(ids_list) is not list:
             ids_list = [ids_list]
         try:
@@ -199,7 +284,26 @@ class MongoDBDAO(DocumentDBDAO):
             return False
 
     def delete_task_keys(self, key_name, keys_list: List[Any]) -> bool:
-        """Delete the keys."""
+        """
+        Delete task documents based on a specific key and value from the tasks collection.
+
+        Parameters
+        ----------
+        key_name : str
+            The name of the key to be matched for deletion.
+        keys_list : list of any
+            The list of values for the specified key to delete the matching documents.
+
+        Returns
+        -------
+        bool
+            True if the deletion was successful, False otherwise.
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the deletion operation.
+        """
         if type(keys_list) is not list:
             keys_list = [keys_list]
         try:
@@ -210,7 +314,24 @@ class MongoDBDAO(DocumentDBDAO):
             return False
 
     def delete_tasks_with_filter(self, filter) -> bool:
-        """Delete with filter."""
+        """
+        Delete task documents that match the specified filter.
+
+        Parameters
+        ----------
+        filter : dict
+            The filter criteria to match the task documents for deletion.
+
+        Returns
+        -------
+        bool
+            True if the deletion was successful, False otherwise.
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the deletion operation.
+        """
         try:
             self._tasks_collection.delete_many(filter)
             return True
@@ -266,14 +387,33 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
-
     def to_df(self, collection="tasks", filter=None) -> pd.DataFrame:
+        """
+        Convert the contents of a MongoDB collection to a pandas DataFrame.
+
+        Parameters
+        ----------
+        collection : str, optional
+            The name of the MongoDB collection to convert to a DataFrame. Defaults to "tasks".
+        filter : dict, optional
+            The filter criteria to apply when retrieving the documents. Defaults to None.
+
+        Returns
+        -------
+        pd.DataFrame
+            A pandas DataFrame containing the documents from the specified collection.
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the DataFrame conversion or query.
+        """
         if collection == "tasks":
             _collection = self._tasks_collection
         elif collection == "workflows":
             _collection = self._wfs_collection
         else:
-            msg = f"Only tasks and workflows "
+            msg = "Only tasks and workflows "
             raise Exception(msg + "collections are currently available for this.")
         try:
             cursor = _collection.find(filter=filter)
@@ -295,7 +435,7 @@ class MongoDBDAO(DocumentDBDAO):
         elif collection_name == "workflows":
             _collection = self._wfs_collection
         else:
-            msg = f"Only tasks and workflows "
+            msg = "Only tasks and workflows "
             raise Exception(msg + "collections are currently available for dump.")
 
         if export_format != "json":
@@ -404,7 +544,45 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(f"An error occurred: {e}")
             return None
 
-    def query(self, collection="tasks", filter=None, projection=None, limit=None, sort=None, aggregation=None, remove_json_unserializables=None):
+    def query(
+        self,
+        collection="tasks",
+        filter=None,
+        projection=None,
+        limit=None,
+        sort=None,
+        aggregation=None,
+        remove_json_unserializables=None,
+    ):
+        """Query o MongoDB collection with optional filters, projections, sorting, and aggregation.
+
+        Parameters
+        ----------
+        collection : str, optional
+            The name of the collection to query. Defaults to "tasks".
+        filter : dict, optional
+            The filter criteria to match documents. Defaults to None.
+        projection : list of str, optional
+            The fields to include in the results. Defaults to None.
+        limit : int, optional
+            The maximum number of documents to return. Defaults to None (no limit).
+        sort : list of tuples, optional
+            The fields and order to sort the results by. Defaults to None.
+        aggregation : list of tuples, optional
+            The aggregation operators and fields to apply. Defaults to None.
+        remove_json_unserializables : bool, optional
+            If True, removes fields that are not JSON serializable. Defaults to None.
+
+        Returns
+        -------
+        list
+            A list of documents matching the query criteria.
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the query operation.
+        """
         if collection == "tasks":
             return self.task_query(
                 filter,
@@ -415,9 +593,7 @@ class MongoDBDAO(DocumentDBDAO):
                 remove_json_unserializables,
             )
         elif collection == "workflows":
-            return self.workflow_query(
-                filter, projection, limit, sort, remove_json_unserializables
-            )
+            return self.workflow_query(filter, projection, limit, sort, remove_json_unserializables)
         elif collection == "objects":
             return self.object_query(filter)
         else:
@@ -531,6 +707,7 @@ class MongoDBDAO(DocumentDBDAO):
         except Exception as e:
             self.logger.exception(e)
             return None
+
     def object_query(self, filter):
         """Get objects."""
         documents = self._obj_collection.find(filter)

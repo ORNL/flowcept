@@ -1,4 +1,7 @@
-"""lmdb_dao module."""
+"""lmdb_dao module.
+
+This module provides the `LMDBDAO` class for interacting with an LMDB-backed database.
+"""
 from time import time
 from typing import List, Dict
 
@@ -13,19 +16,38 @@ from flowcept.flowceptor.consumers.consumer_utils import curate_dict_task_messag
 
 
 class LMDBDAO(DocumentDBDAO):
-    """Key value DAO class."""
+    """DocumentDBDAO implementation for interacting with LMDB.
+
+    Provides methods for storing and retrieving task and workflow data.
+    """
 
     def _init(self, *args, **kwargs):
+        """Initialize the LMDB environment and open databases."""
         self._open()
 
     def _open(self):
+        """Open LMDB environment and databases."""
         _path = DATABASES.get("lmdb").get("path", "lmdb")
-        self._env = lmdb.open(_path, map_size=10 ** 9, max_dbs=2)
-        self._tasks_db = self._env.open_db(b'tasks')
-        self._workflows_db = self._env.open_db(b'workflows')
+        self._env = lmdb.open(_path, map_size=10**9, max_dbs=2)
+        self._tasks_db = self._env.open_db(b"tasks")
+        self._workflows_db = self._env.open_db(b"workflows")
         self._is_closed = False
 
     def insert_and_update_many_tasks(self, docs: List[Dict], indexing_key=None):
+        """Insert or update multiple task documents in the LMDB database.
+
+        Parameters
+        ----------
+        docs : list of dict
+            A list of task documents to insert or update.
+        indexing_key : str, optional
+            Key used for indexing task messages.
+
+        Returns
+        -------
+        bool
+            True if the operation succeeds, False otherwise.
+        """
         try:
             t0 = 0
             if PERF_LOG:
@@ -41,6 +63,18 @@ class LMDBDAO(DocumentDBDAO):
             return False
 
     def insert_one_task(self, task_dict):
+        """Insert a single task document.
+
+        Parameters
+        ----------
+        task_dict : dict
+            The task document to insert.
+
+        Returns
+        -------
+        bool
+            True if the operation succeeds, False otherwise.
+        """
         try:
             with self._env.begin(write=True, db=self._tasks_db) as txn:
                 k, v = task_dict.get("task_id").encode(), json.dumps(task_dict).encode()
@@ -51,6 +85,18 @@ class LMDBDAO(DocumentDBDAO):
             return False
 
     def insert_or_update_workflow(self, wf_obj: WorkflowObject):
+        """Insert or update a workflow document.
+
+        Parameters
+        ----------
+        wf_obj : WorkflowObject
+            Workflow object to insert or update.
+
+        Returns
+        -------
+        bool
+            True if the operation succeeds, False otherwise.
+        """
         try:
             _dict = wf_obj.to_dict()
             with self._env.begin(write=True, db=self._workflows_db) as txn:
@@ -65,14 +111,19 @@ class LMDBDAO(DocumentDBDAO):
     @staticmethod
     def _match_filter(entry, filter):
         """
-        Checks if an entry matches the filter criteria.
+        Check if an entry matches the filter criteria.
 
-        Args:
-            entry (dict): The data entry to check.
-            filter (dict): The filter criteria.
+        Parameters
+        ----------
+        entry : dict
+            The data entry to check.
+        filter : dict
+            The filter criteria.
 
-        Returns:
-            bool: True if the entry matches the filter, otherwise False.
+        Returns
+        -------
+        bool
+            True if the entry matches the filter, otherwise False.
         """
         if not filter:
             return True
@@ -83,22 +134,54 @@ class LMDBDAO(DocumentDBDAO):
         return True
 
     def to_df(self, collection="tasks", filter=None) -> pd.DataFrame:
-        """
-        Fetches data from LMDB and transforms it into a pandas DataFrame with optional MongoDB-style filtering.
+        """Fetch data from LMDB and return a DataFrame with optional MongoDB-style filtering.
 
         Args:
             collection (str, optional): Collection name. Should be tasks or workflows
             filter (dict, optional): A dictionary representing the filter criteria.
                  Example: {"workflow_id": "123", "status": "completed"}
 
-        Returns:
+        Returns
+        -------
          pd.DataFrame: A DataFrame containing the filtered data.
         """
-        docs = self.query(collection,filter)
+        docs = self.query(collection, filter)
         return pd.DataFrame(docs)
 
-    def query(self, collection="tasks", filter=None, projection=None, limit=None, sort=None, aggregation=None,
-              remove_json_unserializables=None) -> List[Dict]:
+    def query(
+        self,
+        collection="tasks",
+        filter=None,
+        projection=None,
+        limit=None,
+        sort=None,
+        aggregation=None,
+        remove_json_unserializables=None,
+    ) -> List[Dict]:
+        """Query data from LMDB.
+
+        Parameters
+        ----------
+        collection : str, optional
+            Name of the collection ('tasks' or 'workflows'). Default is 'tasks'.
+        filter : dict, optional
+            Filter criteria.
+        projection : dict, optional
+            Fields to include or exclude.
+        limit : int, optional
+            Maximum number of results to return.
+        sort : list, optional
+            Sorting criteria.
+        aggregation : list, optional
+            Aggregation stages.
+        remove_json_unserializables : bool, optional
+            Remove JSON-unserializable fields.
+
+        Returns
+        -------
+        list of dict
+            A list of queried documents.
+        """
         if self._is_closed:
             self._open()
 
@@ -107,7 +190,7 @@ class LMDBDAO(DocumentDBDAO):
         elif collection == "workflows":
             _db = self._workflows_db
         else:
-            msg = f"Only tasks and workflows "
+            msg = "Only tasks and workflows "
             raise Exception(msg + "collections are currently available for this.")
 
         try:
@@ -125,13 +208,91 @@ class LMDBDAO(DocumentDBDAO):
         finally:
             self.close()
 
-    def task_query(self, filter=None, projection=None, limit=None, sort=None, aggregation=None, remove_json_unserializables=None):
-        return self.query(collection="tasks", filter=filter, projection=projection, limit=limit, sort=sort, aggregation=aggregation, remove_json_unserializables=remove_json_unserializables)
+    def task_query(
+        self,
+        filter=None,
+        projection=None,
+        limit=None,
+        sort=None,
+        aggregation=None,
+        remove_json_unserializables=None,
+    ):
+        """Query tasks collection in the LMDB database.
 
-    def workflow_query(self, filter=None, projection=None, limit=None, sort=None, aggregation=None, remove_json_unserializables=None):
-        return self.query(collection="workflows", filter=filter, projection=projection, limit=limit, sort=sort, aggregation=aggregation, remove_json_unserializables=remove_json_unserializables)
+        Parameters
+        ----------
+        filter : dict, optional
+            Filter criteria for the query.
+        projection : dict, optional
+            Fields to include or exclude in the results.
+        limit : int, optional
+            Maximum number of results to return.
+        sort : list of tuple, optional
+            Sorting criteria. Example: [("field", "asc"), ("field", "desc")].
+        aggregation : list, optional
+            Aggregation pipeline stages for advanced queries.
+        remove_json_unserializables : bool, optional
+            Remove JSON-unserializable fields from the results.
+
+        Returns
+        -------
+        list of dict
+            A list of task documents that match the query criteria.
+        """
+        return self.query(
+            collection="tasks",
+            filter=filter,
+            projection=projection,
+            limit=limit,
+            sort=sort,
+            aggregation=aggregation,
+            remove_json_unserializables=remove_json_unserializables,
+        )
+
+    def workflow_query(
+        self,
+        filter=None,
+        projection=None,
+        limit=None,
+        sort=None,
+        aggregation=None,
+        remove_json_unserializables=None,
+    ):
+        """Query workflows collection in the LMDB database.
+
+        Parameters
+        ----------
+        filter : dict, optional
+            Filter criteria for the query.
+        projection : dict, optional
+            Fields to include or exclude in the results.
+        limit : int, optional
+            Maximum number of results to return.
+        sort : list of tuple, optional
+            Sorting criteria. Example: [("field", "asc"), ("field", "desc")].
+        aggregation : list, optional
+            Aggregation pipeline stages for advanced queries.
+        remove_json_unserializables : bool, optional
+            Remove JSON-unserializable fields from the results.
+
+        Returns
+        -------
+        list of dict
+            A list of workflow documents that match the query criteria.
+        """
+        return self.query(
+            collection="workflows",
+            filter=filter,
+            projection=projection,
+            limit=limit,
+            sort=sort,
+            aggregation=aggregation,
+            remove_json_unserializables=remove_json_unserializables,
+        )
 
     def close(self):
+        """Close lmdb."""
+        self.logger.warn("We are not closing this database.")
         return
-        self._env.close()
-        self._is_closed = True
+        # self._env.close()
+        # self._is_closed = True

@@ -36,7 +36,6 @@ if __name__ == "__main__":
     # Start Flowcept's Dask observer
 
     with Flowcept("dask"):  # Optionally: Flowcept("dask").start()
-
         t1 = client.submit(add, 1, 2)
         t2 = client.submit(multiply, 3, 4)
         t3 = client.submit(add, t1.result(), t2.result())
@@ -46,7 +45,7 @@ if __name__ == "__main__":
         assert result == 30
 
         # Closing Dask and Flowcept
-        client.close()   # This is to avoid generating errors
+        client.close()  # This is to avoid generating errors
         cluster.close()  # This calls are needed closeouts to inform of workflow conclusion.
 
     # Optionally: flowcept.stop()

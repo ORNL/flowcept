@@ -39,8 +39,8 @@ class TestFileObserver(unittest.TestCase):
 
     def test_file_observer_callback(self):
         # Modify the file to trigger the callback
-        with open(self.test_file_name, 'a') as f:
-            f.write('File has been modified.')
+        with open(self.test_file_name, "a") as f:
+            f.write("File has been modified.")
             f.flush()
             os.fsync(f.fileno())  # Ensure file system updates
 
@@ -54,9 +54,11 @@ class TestFileObserver(unittest.TestCase):
         self.assertTrue(callback_triggered, "Callback was not triggered upon file modification.")
 
         # Additional assertions to ensure file was actually modified
-        with open(self.test_file_name, 'r') as f:
+        with open(self.test_file_name, "r") as f:
             content = f.read()
-            self.assertIn('File has been modified.', content, "File modification did not occur as expected.")
+            self.assertIn(
+                "File has been modified.", content, "File modification did not occur as expected."
+            )
 
 
 if __name__ == "__main__":

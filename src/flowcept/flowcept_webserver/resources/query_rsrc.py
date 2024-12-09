@@ -1,4 +1,5 @@
 """Query resources."""
+
 from datetime import datetime
 import json
 from flask_restful import Resource, reqparse
