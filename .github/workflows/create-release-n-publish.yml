@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
@@ -21,11 +23,13 @@ jobs:
       - name: Get branch names
         id: branch-name
         uses: tj-actions/branch-names@v6
+
       - name: Update version.py
         run: |
           export PYTHONPATH=$PYTHONPATH:flowcept
           export BRANCH_NAME="${{ steps.branch-name.outputs.current_branch }}"
           python .github/workflows/version_bumper.py
+
       - name: Commit new version
         run: |
           git config --global user.name 'Flowcept CI Bot'
@@ -70,6 +74,7 @@ jobs:
           pip install
           build
           --user
+
       - name: Build a binary wheel and a source tarball
         run: >-
           python -m
@@ -78,6 +83,7 @@ jobs:
           --wheel
           --outdir dist/
           .
+
       - name: Publish distribution to Test PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -91,29 +97,50 @@ jobs:
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
           verbose: true
+
       - name: Wait pypi do its thing
         run: sleep 120
+
       - name: Test pip install
         run: pip install flowcept
+
       - name: Print installed version
         run: pip list | grep flowcept
+
       - name: Test pip install one adapter
         run: pip install flowcept[dask]
+
       - name: Test pip install multiple adapters
         run: pip install flowcept[mlflow,tensorboard]
+
       - name: Install our dependencies
         run: pip install flowcept[all]
+
       - name: Install ml_dev dependencies
         run: pip install flowcept[ml_dev]
+
       - name: Pip list
-        run: pip list      
-      - name: Run Docker Compose
-        run: docker compose -f deployment/compose.yml up -d
+        run: pip list
+
+      - name: Start up services
+        run: make services
+
       - name: Test with pytest
         run: pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
+
       - name: Test notebooks
         run: |
           # export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
           python src/flowcept/flowcept_webserver/app.py &
           sleep 3
           pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
+
+      - name: Stop services
+        run: make services-stop
+
+      - name: Clean up
+        run: |
+          make clean
+          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
+          docker image prune -a -f
+

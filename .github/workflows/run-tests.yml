@@ -13,6 +13,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
@@ -83,6 +85,11 @@ jobs:
       - name: Shut down docker compose
         run: make services-stop
 
+      - name: Clean up
+        run: |
+          make clean
+          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \;
+
       - name: Start docker compose with kafka
         run: docker compose -f deployment/compose-kafka.yml up -d
 
@@ -101,3 +108,15 @@ jobs:
           export MQ_TYPE=kafka
           export MQ_PORT=9092
           make tests
+
+      - name: Stop docker compose with kafka
+        run: docker compose -f deployment/compose-kafka.yml down
+
+      - name: Clean up
+        run: |
+          make clean
+          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
+          docker image prune -a -f
+
+      - name: List large files
+        run: find . -type f -exec du -h {} + | sort -h
