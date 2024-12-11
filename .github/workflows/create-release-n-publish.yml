@@ -22,7 +22,7 @@ jobs:
 
       - name: Get branch names
         id: branch-name
-        uses: tj-actions/branch-names@v6
+        uses: tj-actions/branch-names@v8
 
       - name: Update version.py
         run: |
