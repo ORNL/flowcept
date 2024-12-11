@@ -23,6 +23,7 @@ class DBAPI(object):
         return DocumentDBDAO.get_instance(create_indices=False)
 
     def close(self):
+        """Close DB resources."""
         DBAPI._dao.close()
 
     def insert_or_update_task(self, task: TaskObject):

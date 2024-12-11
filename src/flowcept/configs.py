@@ -1,5 +1,4 @@
 """Configuration module."""
-import logging
 import os
 import socket
 import getpass

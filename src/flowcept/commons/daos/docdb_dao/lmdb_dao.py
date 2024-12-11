@@ -304,14 +304,18 @@ class LMDBDAO(DocumentDBDAO):
             self._is_closed = True
 
     def object_query(self, filter):
+        """Query objects collection."""
         raise NotImplementedError
 
     def dump_to_file(self, collection_name, filter, output_file, export_format, should_zip):
+        """Dump data to file."""
         raise NotImplementedError
 
     def save_object(self, object, object_id, task_id, workflow_id, type, custom_metadata,
                     save_data_in_collection, pickle_):
+        """Save object."""
         raise NotImplementedError
 
     def get_file_data(self, file_id):
+        """Get file data."""
         raise NotImplementedError
