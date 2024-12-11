@@ -31,3 +31,4 @@ class TestLog(unittest.TestCase):
         self.assertIs(_logger, _logger2)
         _logger.v = "test_val"
         self.assertEqual(_logger2.v, "test_val")
+

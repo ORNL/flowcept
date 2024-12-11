@@ -102,7 +102,6 @@ def lightweight_flowcept_task(func=None):
 def flowcept_task(func=None, **decorator_kwargs):
     """Get flowcept task."""
     interceptor = InstrumentationInterceptor.get_instance()
-    logger = FlowceptLogger()
 
     def decorator(func):
         @wraps(func)
@@ -133,7 +132,7 @@ def flowcept_task(func=None, **decorator_kwargs):
                 else:
                     task_obj.generated = args_handler(task_obj, result)
             except Exception as e:
-                logger.exception(e)
+                FlowceptLogger().exception(e)
 
             interceptor.intercept(task_obj.to_dict())
             return result

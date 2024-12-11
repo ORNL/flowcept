@@ -9,8 +9,8 @@ from flowcept.flowceptor.adapters.dask.dask_plugins import (
     register_dask_workflow,
 )
 from tests.adapters.dask_test_utils import (
-    setup_local_dask_cluster,
-    close_dask,
+    start_local_dask_cluster,
+    stop_local_dask_cluster,
 )
 
 from tests.decorator_tests.ml_tests.llm_tests.llm_trainer import (
@@ -94,7 +94,8 @@ class DecoratorDaskLLMTests(unittest.TestCase):
 
         # Automatically registering the Dask workflow
         train_wf_id = str(uuid.uuid4())
-        client, cluster, consumer = setup_local_dask_cluster(exec_bundle=train_wf_id)
+        client, cluster, flowcept = start_local_dask_cluster(exec_bundle=train_wf_id,
+                                                             start_persistence=True)
         register_dask_workflow(client, workflow_id=train_wf_id, used={"dataset_ref": dataset_ref})
 
         print(f"Model_Train_Wf_id={train_wf_id}")
@@ -128,5 +129,4 @@ class DecoratorDaskLLMTests(unittest.TestCase):
         for o in outputs:
             o.result()
 
-        close_dask(client, cluster)
-        consumer.stop()
+        stop_local_dask_cluster(client, cluster, flowcept)

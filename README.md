@@ -45,17 +45,18 @@ Refer to [Contributing](CONTRIBUTING.md) for adding new adapters. Note: The term
 
 `pip install .[all]` in this directory (or `pip install flowcept[all]`) if you want to install all dependencies.
 
-For convenience, this will install all dependencies for all adapters. But it can install dependencies for adapters you will not use. For this reason, you may want to install like this: `pip install .[adapter_key1,adapter_key2]` for the adapters we have implemented, e.g., `pip install .[dask]`.
+For convenience, this will install all dependencies for all adapters. But it can install dependencies for adapters you will not use. For this reason, you may want to install like this: `pip install .[extra_dep1,extra_dep2]` for the adapters we have implemented, e.g., `pip install .[dask]`.
 Currently, the optional dependencies available are:
 
 ```
+pip install flowcept[mongo]         # To install FlowCept with MongoDB
 pip install flowcept[mlflow]        # To install mlflow's adapter.
 pip install flowcept[dask]          # To install dask's adapter.
 pip install flowcept[tensorboard]   # To install tensorboaard's adapter.
 pip install flowcept[kafka]         # To utilize Kafka as the MQ, instead of Redis.
 pip install flowcept[nvidia]        # To capture NVIDIA GPU runtime information.
 pip install flowcept[analytics]     # For extra analytics features.
-pip install flowcept[dev]           # To install dev dependencies.
+pip install flowcept[dev]           # To install FlowCept's developer dependencies.
 ```
 
 You do not need to install any optional dependency to run Flowcept without any adapter, e.g., if you want to use simple instrumentation (see below). In this case, you need to remove the adapter part from the [settings.yaml](resources/settings.yaml) file.

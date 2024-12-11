@@ -2,48 +2,27 @@
 
 This module provides an abstract base class `DocumentDBDAO` for document-based database operations.
 """
-
+from abc import ABC, abstractmethod
 from typing import List, Dict
 
 import pandas as pd
 
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import WorkflowObject
-from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED
 
 
-class DocumentDBDAO(object):
+class DocumentDBDAO(ABC):
     """Abstract class for document database operations.
 
     Provides an interface for interacting with document databases, supporting operations
     such as insertion, updates, queries, and data export.
     """
 
-    _instances = {}
-
-    def __new__(cls, *args, **kwargs) -> "DocumentDBDAO":
-        """Ensure singleton behavior for the `DocumentDBDAO` class.
-
-        Returns
-        -------
-        DocumentDBDAO
-           A singleton instance of the class.
-        """
-        if cls not in cls._instances:
-            instance = super().__new__(cls)
-            cls._instances[cls] = instance
-        return cls._instances[cls]
-
-    def __init__(self, *args, **kwargs):
-        """Initialize the `DocumentDBDAO` class."""
-        if not hasattr(self, "_initialized"):
-            self._initialized = True
-            self.logger = FlowceptLogger()
-            self._init(*args, **kwargs)
+    _instance: "DocumentDBDAO" = None
 
     @staticmethod
-    def build(*args, **kwargs) -> "DocumentDBDAO":
+    def get_instance(*args, **kwargs) -> "DocumentDBDAO":
         """Build a `DocumentDBDAO` instance for querying.
 
         Depending on the configuration, this method creates an instance of
@@ -66,6 +45,16 @@ class DocumentDBDAO(object):
         NotImplementedError
             If neither MongoDB nor LMDB is enabled.
         """
+        if DocumentDBDAO._instance is not None:
+            if hasattr(DocumentDBDAO._instance, "_initialized"):
+                return DocumentDBDAO._instance
+            else:
+                DocumentDBDAO._instance.close()
+                raise Exception("This should not happen. "
+                                         "If instance is not None and Not initialized,"
+                                         " this is an inconsistent state."
+                                         " We are forcefully fixing the state now:")
+
         if MONGO_ENABLED:
             from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 
@@ -73,24 +62,16 @@ class DocumentDBDAO(object):
         elif LMDB_ENABLED:
             from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
 
-            return LMDBDAO(*args, **kwargs)
+            return LMDBDAO()
         else:
             raise NotImplementedError
 
-    def _init(self, *args, **kwargs):
-        """Initialize subclass-specific properties.
+    def close(self):
+        """Close DAO connections and release resources."""
+        del DocumentDBDAO._instance
+        DocumentDBDAO._instance = None
 
-        To be implemented by subclasses.
-
-        Parameters
-        ----------
-        *args : tuple
-            Positional arguments for subclass initialization.
-        **kwargs : dict
-            Keyword arguments for subclass initialization.
-        """
-        raise NotImplementedError
-
+    @abstractmethod
     def insert_and_update_many_tasks(self, docs: List[Dict], indexing_key=None):
         """Insert or update multiple task documents.
 
@@ -108,6 +89,7 @@ class DocumentDBDAO(object):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def insert_or_update_workflow(self, wf_obj: WorkflowObject):
         """Insert or update a workflow object.
 
@@ -123,6 +105,7 @@ class DocumentDBDAO(object):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def insert_one_task(self, task_dict: Dict):
         """Insert a single task document.
 
@@ -138,6 +121,7 @@ class DocumentDBDAO(object):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def to_df(self, collection, filter=None) -> pd.DataFrame:
         """Convert a collection to a pandas DataFrame.
 
@@ -160,6 +144,7 @@ class DocumentDBDAO(object):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def query(
         self, collection, filter, projection, limit, sort, aggregation, remove_json_unserializables
     ):
@@ -189,6 +174,7 @@ class DocumentDBDAO(object):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def task_query(self, filter, projection, limit, sort, aggregation, remove_json_unserializables):
         """Query task documents.
 
@@ -214,6 +200,7 @@ class DocumentDBDAO(object):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def workflow_query(self, filter, projection, limit, sort, remove_json_unserializables):
         """Query workflow documents.
 
@@ -237,6 +224,7 @@ class DocumentDBDAO(object):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def object_query(self, filter):
         """Query objects based on the specified filter.
 
@@ -252,6 +240,7 @@ class DocumentDBDAO(object):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def dump_to_file(self, collection_name, filter, output_file, export_format, should_zip):
         """Export a collection's data to a file.
 
@@ -275,6 +264,7 @@ class DocumentDBDAO(object):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def save_object(
         self,
         object,
@@ -314,16 +304,7 @@ class DocumentDBDAO(object):
         """
         raise NotImplementedError
 
-    def close(self):
-        """Close database connections and release resources.
-
-        Raises
-        ------
-        NotImplementedError
-            This method must be implemented by subclasses.
-        """
-        raise NotImplementedError
-
+    @abstractmethod
     def get_file_data(self, file_id):
         """Retrieve file data by file ID.
 

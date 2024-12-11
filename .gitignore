@@ -12,7 +12,7 @@
 **/*.log*
 **/*.pth
 **/*ipynb_checkpoints*
-**/*flowcept.lmdb
+**/*flowcept_lmdb
 notebooks/tb_*
 notebooks/scheduler_file.json
 test.py

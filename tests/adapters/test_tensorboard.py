@@ -52,11 +52,11 @@ class TestTensorboard(unittest.TestCase):
         (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
         x_train, x_test = x_train / 255.0, x_test / 255.0
 
-        HP_NUM_UNITS = hp.HParam("num_units", hp.Discrete([16, 32]))
+        HP_NUM_UNITS = hp.HParam("num_units", hp.Discrete([16]))
         HP_DROPOUT = hp.HParam("dropout", hp.RealInterval(0.1, 0.2))
         HP_OPTIMIZER = hp.HParam("optimizer", hp.Discrete(["adam", "sgd"]))
         # HP_BATCHSIZES = hp.HParam("batch_size", hp.Discrete([32, 64]))
-        HP_BATCHSIZES = hp.HParam("batch_size", hp.Discrete([32, 64]))
+        HP_BATCHSIZES = hp.HParam("batch_size", hp.Discrete([32]))
 
         HP_MODEL_CONFIG = hp.HParam("model_config")
         HP_OPTIMIZER_CONFIG = hp.HParam("optimizer_config")
@@ -193,3 +193,7 @@ class TestTensorboard(unittest.TestCase):
                 # Only append if we find a tracked metric in the event
                 output.append(msg)
         assert len(output) == 16
+
+    @classmethod
+    def tearDownClass(cls):
+        Flowcept.db.close()

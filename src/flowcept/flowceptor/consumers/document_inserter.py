@@ -1,4 +1,4 @@
-"""Document module."""
+"""Document Inserter module."""
 
 from time import time, sleep
 from threading import Thread, Event, Lock
@@ -215,7 +215,6 @@ class DocumentInserter:
         elif msg_type is None:
             self.logger.warning(f"Message without type???\n {msg_obj}")
             return True
-            # raise Exception("Please inform the message type.")
         else:
             self.logger.error("Unexpected message type")
             return True
@@ -242,8 +241,7 @@ class DocumentInserter:
         self._mq_dao.send_document_inserter_stop()
         self.logger.info(f"Doc Inserter {id(self)} Sent message to stop itself.")
         self._main_thread.join()
+        for dao in self._doc_daos:
+            self.logger.info(f"Closing document_inserter {dao.__class__.__name__} connection.")
+            dao.close()
         self.logger.info("Document Inserter is stopped.")
-
-        # self.logger.info("Closing DocDB client.")
-        # for dao in self._doc_daos:
-        #     dao.close() If we close here, we can't query the data immediately.

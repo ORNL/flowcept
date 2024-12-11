@@ -268,7 +268,7 @@ def model_train(
     # TODO :base-interceptor-refactor: Can we do it better?
     with Flowcept(
         bundle_exec_id=workflow_id,
-        enable_persistence=False,
+        start_persistence=False,
     ):
         train_data = batchify(train_data, batch_size)
         val_data = batchify(val_data, eval_batch_size)
@@ -305,6 +305,7 @@ def model_train(
         for epoch in range(1, epochs + 1):
             print(f"Starting training for epoch {epoch}/{epochs}")
             # Train the model on the training data and calculate the training loss
+
             train_loss = train_epoch(ntokens, model, train_data, criterion, optimizer, batch_size)
 
             # Evaluate the model on the validation data and calculate the validation loss

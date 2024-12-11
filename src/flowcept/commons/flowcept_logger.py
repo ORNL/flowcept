@@ -10,6 +10,9 @@ from flowcept.configs import (
     HOSTNAME,
 )
 
+_fmt = f"[%(name)s][%(levelname)s][{HOSTNAME}][pid=%(process)d]"
+_BASE_FORMAT = _fmt + "[thread=%(thread)d][function=%(funcName)s][%(message)s]"
+
 
 class FlowceptLogger(object):
     """Logger class."""
@@ -18,32 +21,29 @@ class FlowceptLogger(object):
 
     @classmethod
     def _build_logger(cls):
+        # Critical + 1 will disable if user sets something not recognized
+        file_level = logging._nameToLevel.get(LOG_FILE_LEVEL, logging.CRITICAL + 1)
+        stream_level = logging._nameToLevel.get(LOG_STREAM_LEVEL, logging.CRITICAL + 1)
+
         # Create a custom logger
         logger = logging.getLogger(PROJECT_NAME)
         logger.setLevel(logging.DEBUG)
-        # Create handlers
-        stream_handler = logging.StreamHandler()
-        file_handler = logging.FileHandler(LOG_FILE_PATH, mode="a+")
 
-        stream_level = getattr(logging, LOG_STREAM_LEVEL)
-        stream_handler.setLevel(stream_level)
-        file_level = getattr(logging, LOG_FILE_LEVEL)
-        file_handler.setLevel(file_level)
+        if stream_level <= logging.CRITICAL:
+            stream_handler = logging.StreamHandler()
+            stream_handler.setLevel(stream_level)
+            stream_format = logging.Formatter(_BASE_FORMAT)
+            stream_handler.setFormatter(stream_format)
+            logger.addHandler(stream_handler)
 
-        # Create formatters and add it to handlers
-        fmt = f"[%(name)s][%(levelname)s][{HOSTNAME}][pid=%(process)d]"
-        base_format = fmt + "[thread=%(thread)d][function=%(funcName)s][%(message)s]"
-        stream_format = logging.Formatter(base_format)
-        file_format = logging.Formatter(f"[%(asctime)s]{base_format}")
-        stream_handler.setFormatter(stream_format)
-        file_handler.setFormatter(file_format)
-
-        # Add handlers to the logger
-        logger.addHandler(stream_handler)
-        logger.addHandler(file_handler)
+        if file_level <= logging.CRITICAL:
+            file_handler = logging.FileHandler(LOG_FILE_PATH, mode="a+")
+            file_handler.setLevel(file_level)
+            file_format = logging.Formatter(f"[%(asctime)s]{_BASE_FORMAT}")
+            file_handler.setFormatter(file_format)
+            logger.addHandler(file_handler)
 
         logger.debug(f"{PROJECT_NAME}'s base log is set up!")
-
         return logger
 
     def __new__(cls, *args, **kwargs) -> logging.Logger:

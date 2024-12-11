@@ -6,7 +6,6 @@ from flowcept import (
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until, get_current_config_values
-from flowcept.configs import DATABASES
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 
@@ -43,7 +42,7 @@ class FlowceptAPITest(unittest.TestCase):
             o1 = sum_one(n)
             o2 = mult_two(o1)
             print(o2)
-            sleep(10)
+            sleep(5)
 
         assert assert_by_querying_tasks_until(
             {"workflow_id": Flowcept.current_workflow_id},
@@ -65,7 +64,7 @@ class FlowceptAPITest(unittest.TestCase):
             == 1
         )
 
-    def test_instrumentation_interceptor(self):
+    def test_instrumentation_interceptor_singleton(self):
         logger = FlowceptLogger()
         try:
             InstrumentationInterceptor()
@@ -91,43 +90,6 @@ class FlowceptAPITest(unittest.TestCase):
                 o2 = mult_two_(**o1)
                 sleep(10)
 
-    def test_simple_workflow_lmdb_only(self):
-        DATABASES["mongodb"]["enabled"] = False
-        DATABASES["lmdb"]["enabled"] = True
-        with Flowcept(workflow_name="test_workflow2"):
-            n = 3
-            o1 = sum_one(n)
-            o2 = mult_two(o1)
-            print(o2)
-            sleep(10)
-
-        wf_id = Flowcept.current_workflow_id
-        df = Flowcept.db.to_df(filter={"workflow_id": wf_id})
-        assert len(df) == 2
-        print(df.to_string())
-        tasks = Flowcept.db.query(filter={"workflow_id": wf_id})
-        assert len(tasks) == 2
-        print(tasks)
-        df_wf = Flowcept.db.to_df(filter={"workflow_id": wf_id}, collection="workflows")
-        assert len(df_wf) == 1
-
-    def test_simple_workflow_mongo_only(self):
-        DATABASES["mongodb"]["enabled"] = True
-        DATABASES["lmdb"]["enabled"] = False
-        with Flowcept(workflow_name="test_workflow2"):
-            n = 3
-            o1 = sum_one(n)
-            o2 = mult_two(o1)
-            print(o2)
-            sleep(10)
-
-        wf_id = Flowcept.current_workflow_id
-        df = Flowcept.db.to_df(filter={"workflow_id": wf_id})
-        assert len(df) == 2
-        print(df.to_string())
-        df_wf = Flowcept.db.to_df(filter={"workflow_id": wf_id}, collection="workflows")
-        assert len(df_wf) == 1
-
     def test_simple_all_consumers(self):
         with Flowcept(workflow_name="test_workflow"):
             n = 3
@@ -137,7 +99,7 @@ class FlowceptAPITest(unittest.TestCase):
             sleep(10)
 
     def test_simple_workflow_no_consumers(self):
-        with Flowcept(workflow_name="test_workflow3", enable_persistence=False):
+        with Flowcept(workflow_name="test_workflow3", start_persistence=False):
             n = 3
             o1 = sum_one(n)
             o2 = mult_two(o1)

@@ -35,7 +35,7 @@ clean:
 	rm -rf tensorboard_events || true
 	rm -f docs_dump_tasks_* || true
 	rm -f dump_test.json || true
-	find . -type f -name "*flowcept.lmdb*" -exec rm -f {} \; || true
+	find . -type d -name "*flowcept_lmdb*" -exec rm -rf {} \; || true
 	find . -type f -name "*.log" -exec rm -f {} \; || true
 	find . -type f -name "*.pth" -exec rm -f {} \; || true
 	find . -type f -name "mlflow.db" -exec rm -f {} \; || true

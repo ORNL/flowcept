@@ -9,8 +9,8 @@ from flowcept.flowceptor.adapters.dask.dask_plugins import (
 )
 
 from tests.adapters.dask_test_utils import (
-    setup_local_dask_cluster,
-    close_dask,
+    start_local_dask_cluster,
+    stop_local_dask_cluster,
 )
 from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer
 
@@ -22,8 +22,10 @@ class MLDecoratorDaskTests(unittest.TestCase):
 
     def test_model_trains_with_dask(self):
         # wf_id = f"{uuid4()}"
-        client, cluster, consumer = setup_local_dask_cluster(
-            # exec_bundle=wf_id
+        client, cluster, flowcept = start_local_dask_cluster(
+            n_workers=1,
+            # exec_bundle=wf_id,
+            start_persistence=True
         )
         hp_conf = {
             "n_conv_layers": [2, 3, 4],
@@ -49,8 +51,7 @@ class MLDecoratorDaskTests(unittest.TestCase):
             print(r)
             assert "responsible_ai_metadata" in r
 
-        close_dask(client, cluster)
-        consumer.stop()
+        stop_local_dask_cluster(client, cluster, flowcept)
 
         # We are creating one "sub-workflow" for every Model.fit,
         # which requires forwarding on multiple layers

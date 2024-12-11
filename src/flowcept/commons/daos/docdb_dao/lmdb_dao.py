@@ -21,14 +21,21 @@ class LMDBDAO(DocumentDBDAO):
     Provides methods for storing and retrieving task and workflow data.
     """
 
-    def _init(self, *args, **kwargs):
-        """Initialize the LMDB environment and open databases."""
-        self._open()
+    def __new__(cls, *args, **kwargs) -> "LMDBDAO":
+        """Singleton creator for MongoDBDAO."""
+        # Check if an instance already exists
+        if DocumentDBDAO._instance is None:
+            DocumentDBDAO._instance = super(LMDBDAO, cls).__new__(cls)
+        return DocumentDBDAO._instance
+
+    def __init__(self):
+        if not hasattr(self, "_initialized"):
+            self._open()
 
     def _open(self):
         """Open LMDB environment and databases."""
         _path = DATABASES.get("lmdb").get("path", "lmdb")
-        self._env = lmdb.open(_path, map_size=10**9, max_dbs=2)
+        self._env = lmdb.open(_path, map_size=10**12, max_dbs=2)
         self._tasks_db = self._env.open_db(b"tasks")
         self._workflows_db = self._env.open_db(b"workflows")
         self._is_closed = False
@@ -205,8 +212,6 @@ class LMDBDAO(DocumentDBDAO):
         except Exception as e:
             self.logger.exception(e)
             return None
-        finally:
-            self.close()
 
     def task_query(
         self,
@@ -292,7 +297,21 @@ class LMDBDAO(DocumentDBDAO):
 
     def close(self):
         """Close lmdb."""
-        self.logger.warning("We are not closing this database.")
-        return
-        # self._env.close()
-        # self._is_closed = True
+        if getattr(self, "_initialized"):
+            super().close()
+            setattr(self, "_initialized", False)
+            self._env.close()
+            self._is_closed = True
+
+    def object_query(self, filter):
+        raise NotImplementedError
+
+    def dump_to_file(self, collection_name, filter, output_file, export_format, should_zip):
+        raise NotImplementedError
+
+    def save_object(self, object, object_id, task_id, workflow_id, type, custom_metadata,
+                    save_data_in_collection, pickle_):
+        raise NotImplementedError
+
+    def get_file_data(self, file_id):
+        raise NotImplementedError

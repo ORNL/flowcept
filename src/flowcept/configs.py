@@ -1,5 +1,5 @@
 """Configuration module."""
-
+import logging
 import os
 import socket
 import getpass
@@ -34,8 +34,8 @@ if LOG_FILE_PATH == "default":
     LOG_FILE_PATH = f"{PROJECT_NAME}.log"
 
 # Possible values below are the typical python logging levels.
-LOG_FILE_LEVEL = settings["log"].get("log_file_level", "debug").upper()
-LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "debug").upper()
+LOG_FILE_LEVEL = settings["log"].get("log_file_level", "disable").upper()
+LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "disable").upper()
 
 ##########################
 #  Experiment Settings   #

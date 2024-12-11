@@ -13,7 +13,7 @@ from flowcept.flowceptor.adapters.dask.dask_plugins import (
     FlowceptDaskWorkerAdapter,
 )
 from tests.adapters.dask_test_utils import (
-    close_dask,
+    stop_local_dask_cluster,
 )
 
 
@@ -43,7 +43,7 @@ class TestDaskContextMgmt(unittest.TestCase):
             self.logger.debug(o1.result())
             self.logger.debug(o1.key)
 
-            close_dask(client, cluster)
+            stop_local_dask_cluster(client, cluster)
             # stop signal sent to doc inserter must be sent after
             # all other interceptors stopped
 
@@ -51,3 +51,7 @@ class TestDaskContextMgmt(unittest.TestCase):
             {"task_id": o1.key},
             condition_to_evaluate=lambda docs: "ended_at" in docs[0],
         )
+
+    @classmethod
+    def tearDownClass(cls):
+        Flowcept.db.close()

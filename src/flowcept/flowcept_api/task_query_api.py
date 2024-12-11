@@ -17,7 +17,6 @@ from flowcept.analytics.analytics_utils import (
     analyze_correlations_between,
     find_outliers_zscore,
 )
-from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.query_utils import (
     get_doc_status,
@@ -43,7 +42,6 @@ class TaskQueryAPI(object):
     def __new__(cls, *args, **kwargs) -> "TaskQueryAPI":
         """Singleton creator for TaskQueryAPI."""
         if cls._instance is None:
-            # Create a new instance if not
             cls._instance = super(TaskQueryAPI, cls).__new__(cls)
         return cls._instance
 
@@ -137,8 +135,8 @@ class TaskQueryAPI(object):
                 raise Exception(r.text)
 
         else:
-            dao = DocumentDBDAO.build(create_indices=False)
-            docs = dao.task_query(
+            db_api = DBAPI()
+            docs = db_api.task_query(
                 filter,
                 projection,
                 limit,

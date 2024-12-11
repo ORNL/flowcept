@@ -73,6 +73,21 @@ def lightweight_decorated_static_function3(x, workflow_id=None):
     return 3
 
 
+def loop_logger(generator_func):
+    def wrapper(*args, **kwargs):
+        print("Starting the for loop...")
+        for item in generator_func(*args, **kwargs):
+            yield item
+        print("For loop completed.")
+
+    return wrapper
+
+@loop_logger
+def epoch_generator(epochs):
+    for epoch in epochs:
+        yield epoch
+
+
 def compute_statistics(array):
     import numpy as np
 
@@ -142,7 +157,7 @@ def simple_decorated_function(max_tasks=10, enable_persistence=True, check_inser
     workflow_id = str(uuid.uuid4())
     print(workflow_id)
     # TODO :refactor-base-interceptor:
-    consumer = Flowcept(enable_persistence=enable_persistence)
+    consumer = Flowcept(start_persistence=enable_persistence)
     consumer.start()
     t0 = time()
     for i in range(max_tasks):
@@ -258,3 +273,8 @@ class DecoratorTests(unittest.TestCase):
         print("Threshold: ", threshold)
         print("Overheads: " + str(overheads))
         assert all(map(lambda v: v < threshold, overheads))
+
+    def test_generator(self):
+        pass
+
+

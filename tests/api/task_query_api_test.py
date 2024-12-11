@@ -130,7 +130,7 @@ def gen_mock_data(size=1, with_telemetry=False):
 
 
 @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
-class QueryTest(unittest.TestCase):
+class TaskQueryAPITest(unittest.TestCase):
     URL = f"http://{WEBSERVER_HOST}:{WEBSERVER_PORT}{BASE_ROUTE}{TaskQuery.ROUTE}"
 
     @classmethod
@@ -143,10 +143,10 @@ class QueryTest(unittest.TestCase):
         sleep(2)
 
     def __init__(self, *args, **kwargs):
-        super(QueryTest, self).__init__(*args, **kwargs)
+        super(TaskQueryAPITest, self).__init__(*args, **kwargs)
         self.logger = FlowceptLogger()
         self.api = TaskQueryAPI()
-        self.db_dao = DocumentDBDAO.build(create_indices=False)
+        self.db_dao = DocumentDBDAO.get_instance(create_indices=False)
 
     def gen_n_get_task_ids(self, generation_function, size=1, generation_args={}):
         docs, task_ids = generation_function(size=size, **generation_args)
@@ -166,12 +166,12 @@ class QueryTest(unittest.TestCase):
         _filter = {"task_id": "1234"}
         request_data = {"filter": json.dumps(_filter)}
 
-        r = requests.post(QueryTest.URL, json=request_data)
+        r = requests.post(TaskQueryAPITest.URL, json=request_data)
         assert r.status_code == 404
 
         task_ids_filter, task_ids, init_db_count = self.gen_n_get_task_ids(gen_mock_data, size=1)
         request_data = {"filter": json.dumps(task_ids_filter)}
-        r = requests.post(QueryTest.URL, json=request_data)
+        r = requests.post(TaskQueryAPITest.URL, json=request_data)
         assert r.status_code == 201
         assert len(r.json()) == len(task_ids)
         assert task_ids[0] == r.json()[0]["task_id"]

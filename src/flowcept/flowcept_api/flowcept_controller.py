@@ -38,7 +38,7 @@ class Flowcept(object):
         workflow_id: str = None,
         workflow_name: str = None,
         workflow_args: str = None,
-        enable_persistence=True,
+        start_persistence=True,
     ):
         """Flowcept controller.
 
@@ -58,7 +58,7 @@ class Flowcept(object):
          the `databases` settings.
         """
         self.logger = FlowceptLogger()
-        self._enable_persistence = enable_persistence
+        self._enable_persistence = start_persistence
         self._db_inserters: List = []  # TODO: typing
         if bundle_exec_id is None:
             self._bundle_exec_id = id(self)
