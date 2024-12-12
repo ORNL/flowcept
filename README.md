@@ -12,7 +12,7 @@ Other capabilities include:
 
 - Automatic multi-workflow provenance data capture;
 - Data observability, enabling minimal intrusion to user workflows;
-- Explicit user workflow instrumentation, if this is preferred over data observability;
+- Explicit user workflow instrumentation, if this is preferred over implicit data observability;
 - ML data capture in various levels of details: workflow, model fitting or evaluation task, epoch iteration, layer forwarding;
 - ML model management;
 - Adapter-based, loosely-coupled system architecture, making it easy to plug and play with different data processing systems and backend database (e.g., MongoDB) or MQ services (e.g., Redis, Kafka);
@@ -128,10 +128,10 @@ print(Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id}))
 
 ## Data Persistence
 
-FlowCept uses an ephemeral message queue (MQ) with a pub/sub system to manage captured data. For optional data persistence, you can choose between:
+FlowCept uses an ephemeral message queue (MQ) with a pub/sub system to flush observed data. For optional data persistence, you can choose between:
 
-- LMDB (default): A lightweight, file-based database requiring no external services (but note it might require `gcc`). Ideal for simple tests or cases needing basic data persistence without query capabilities. Data stored in LMDB can be loaded into tools like Pandas for complex analysis. FlowCept's database API provides methods to export data in LMDB into Pandas DataFrames.
-- MongoDB: A robust, service-based database with advanced query capabilities. Required to use FlowCept's Query API (i.e., `flowcept.Flowcept.db`) to run more complex queries and other features like ML model management. To use MongoDB, initialize the service with `make services-mongo`.
+- [LMDB](https://lmdb.readthedocs.io/) (default): A lightweight, file-based database requiring no external services (but note it might require `gcc`). Ideal for simple tests or cases needing basic data persistence without query capabilities. Data stored in LMDB can be loaded into tools like Pandas for complex analysis. FlowCept's database API provides methods to export data in LMDB into Pandas DataFrames.
+- [MongoDB](https://www.mongodb.com/): A robust, service-based database with advanced query capabilities. Required to use FlowCept's Query API (i.e., `flowcept.Flowcept.db`) to run more complex queries and other features like ML model management or runtime queries (i.e., query while writing). To use MongoDB, initialize the service with `make services-mongo`.
 
 You can use both of them, meaning that the data pruducers will write data into both, none of them, or each of them. All is customizable in the settings file.
 
