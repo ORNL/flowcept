@@ -34,28 +34,8 @@ jobs:
       - name: Show Python version
         run: python --version && pip --version
 
-      - name: Install default dependencies and run simple test
-        run: |          
-          pip install .[mongo]
-          python examples/simple_instrumented_script.py
-
-      - name: Install Dask dependencies alone and run a simple Dask test
-        run: |          
-          pip uninstall flowcept -y
-          pip install .[dask]
-          python examples/dask_example.py          
-
-      - name: Install MLFlow dependencies alone and run a simple MLFlow test
-        run: |          
-          pip uninstall flowcept -y
-          pip install .[mlflow]
-          python examples/mlflow_example.py    
-
-      - name: Install Tensorboard dependencies alone and run a simple Tensorboard test
-        run: |          
-          pip uninstall flowcept -y
-          pip install .[tensorboard]
-          python examples/tensorboard_example.py              
+      - name: Test examples
+        run: bash .github/workflows/run_examples.sh examples true # with mongo
 
       - name: Install all dependencies
         run: |

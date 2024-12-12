@@ -1,4 +1,4 @@
-from dask.distributed import Client, LocalCluster
+from distributed import Client, LocalCluster
 from distributed import Status
 
 from flowcept import Flowcept

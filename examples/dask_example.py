@@ -1,5 +1,5 @@
 # Make sure you run `pip install flowcept[dask]` first.
-from dask.distributed import Client, LocalCluster
+from distributed import Client, LocalCluster
 
 from flowcept import Flowcept, FlowceptDaskSchedulerAdapter, FlowceptDaskWorkerAdapter
 from flowcept.flowceptor.adapters.dask.dask_plugins import register_dask_workflow
@@ -52,19 +52,16 @@ if __name__ == "__main__":
 
     # Querying Flowcept's database about this run
     print(f"t1_key={t1.key}")
-    print("Getting first task only:")
+    # Getting first task only:
     task1 = Flowcept.db.query(filter={"task_id": t1.key})[0]
     assert task1["workflow_id"] == wf_id
-    # print(task1)
-    print("\n\n")
-    print("Getting all tasks from this workflow:")
+    # Getting all tasks from this workflow:
     all_tasks = Flowcept.db.query(filter={"workflow_id": wf_id})
     assert len(all_tasks) == 4
     assert all(t.get("finished") is True for t in all_tasks)
     assert all_tasks[-1]["generated"]["arg0"] == 30, "Checking if the last result was saved."
     # print(all_tasks)
-    print("\n\n")
-    print("Getting workflow info:")
+    # Getting workflow info
     wf_info = Flowcept.db.query(filter={"workflow_id": wf_id}, collection="workflows")[0]
     assert wf_info["workflow_id"] == wf_id
     # print(wf_info)

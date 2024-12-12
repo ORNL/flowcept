@@ -34,49 +34,11 @@ jobs:
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
-      - name: Install basic deps
-        run:  pip install .
-
-      - name: Check dbs utilization
-        run: python -c "from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED; print('MONGO?', MONGO_ENABLED); print('LMDB?', LMDB_ENABLED)"
-
-      - name: Run simple test
-        run: |
-          python examples/simple_instrumented_script.py | tee output.log
-          cat output.log
-          grep -q "ERROR" output.log && exit 1
-          rm output.log
-
-      - name: Install Dask dependencies alone and run a simple Dask test
-        run: |
-          pip uninstall flowcept -y
-          pip install .[dask]
-          python examples/dask_example.py | tee output.log
-          cat output.log
-          grep -q "ERROR" output.log && exit 1
-          rm output.log          
-
-      - name: Install MLFlow dependencies alone and run a simple MLFlow test
-        run: |
-          pip uninstall flowcept -y
-          pip install .[mlflow]
-          python examples/mlflow_example.py | tee output.log
-          cat output.log
-          grep -q "ERROR" output.log && exit 1
-          rm output.log    
-
-      - name: Install Tensorboard dependencies alone and run a simple Tensorboard test
-        run: |
-          pip uninstall flowcept -y
-          pip install .[tensorboard]
-          python examples/tensorboard_example.py  | tee output.log
-          cat output.log
-          grep -q "ERROR" output.log && exit 1
-          rm output.log 
+      - name: Test examples
+        run: bash .github/workflows/run_examples.sh examples false # with mongo
 
       - name: Install all dependencies
         run: |
-          python -m pip install --upgrade pip
           python -m pip install .[all]
           python -m pip install .[ml_dev]
 
