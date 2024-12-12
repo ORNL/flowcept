@@ -13,9 +13,9 @@ dependencies = [
     "pandas",
     "psutil",
     "py-cpuinfo",
-    "pymongo",
     "redis",
-    "requests"
+    "requests",
+    "lmdb"
 ]
 authors = [{name = "Oak Ridge National Laboratory"}]
 description = "Capture and query workflow provenance data using data observability"
@@ -55,6 +55,7 @@ GitHub = "https://github.com/ORNL/flowcept"
 
 [project.optional-dependencies]
 analytics = ["seaborn", "plotly", "scipy"]
+mongo = ["pymongo"]
 dask = ["tomli", "dask[distributed]<=2024.10.0"]
 docs = ["sphinx", "furo"]
 kafka = ["confluent-kafka"]
@@ -80,6 +81,7 @@ ml_dev = [
     "nltk"
 ]
 all = [
+    "flowcept[mongo]",
     "flowcept[analytics]",
     "flowcept[dask]",
     "flowcept[kafka]",

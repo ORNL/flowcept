@@ -3,8 +3,7 @@
 from flowcept.configs import SETTINGS_PATH
 from flowcept.version import __version__
 from flowcept.flowcept_api.flowcept_controller import Flowcept
-from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
-
+from flowcept.instrumentation.decorators.flowcept_task import flowcept_task, flowcept_loop
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
@@ -57,6 +56,7 @@ __all__ = [
     "TaskQueryAPI",
     "WorkflowObject",
     "flowcept_task",
+    "flowcept_loop",
     "Flowcept",
     "__version__",
     "SETTINGS_PATH",

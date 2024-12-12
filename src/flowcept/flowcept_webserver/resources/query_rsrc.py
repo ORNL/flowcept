@@ -1,9 +1,11 @@
 """Query resources."""
 
+from datetime import datetime
 import json
 from flask_restful import Resource, reqparse
 
-from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+from flowcept.commons.utils import datetime_to_str
 
 
 class TaskQuery(Resource):
@@ -28,8 +30,14 @@ class TaskQuery(Resource):
             except Exception as e:
                 return f"Could not parse {arg} argument: {e}", 400
 
-        dao = DocumentDBDao()
+        dao = MongoDBDAO()
         docs = dao.task_query(**doc_args)
+
+        # Deal with non-serializable datetimes that may come from the databas
+        for doc in docs:
+            for key, value in doc.items():
+                if isinstance(value, datetime):
+                    doc[key] = datetime_to_str(value)
 
         if docs is not None and len(docs):
             return docs, 201

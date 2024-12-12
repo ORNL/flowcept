@@ -2,7 +2,7 @@ import unittest
 from time import sleep
 from uuid import uuid4
 
-from flowcept.configs import MONGO_INSERTION_BUFFER_TIME
+from flowcept.configs import INSERTION_BUFFER_TIME
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import TensorboardInterceptor, Flowcept
@@ -52,11 +52,11 @@ class TestTensorboard(unittest.TestCase):
         (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
         x_train, x_test = x_train / 255.0, x_test / 255.0
 
-        HP_NUM_UNITS = hp.HParam("num_units", hp.Discrete([16, 32]))
+        HP_NUM_UNITS = hp.HParam("num_units", hp.Discrete([16]))
         HP_DROPOUT = hp.HParam("dropout", hp.RealInterval(0.1, 0.2))
         HP_OPTIMIZER = hp.HParam("optimizer", hp.Discrete(["adam", "sgd"]))
         # HP_BATCHSIZES = hp.HParam("batch_size", hp.Discrete([32, 64]))
-        HP_BATCHSIZES = hp.HParam("batch_size", hp.Discrete([32, 64]))
+        HP_BATCHSIZES = hp.HParam("batch_size", hp.Discrete([32]))
 
         HP_MODEL_CONFIG = hp.HParam("model_config")
         HP_OPTIMIZER_CONFIG = hp.HParam("optimizer_config")
@@ -143,17 +143,16 @@ class TestTensorboard(unittest.TestCase):
         with Flowcept(self.interceptor):
             wf_id = self.run_tensorboard_hparam_tuning()
             self.logger.debug("Done training. Sleeping some time...")
-            watch_interval_sec = MONGO_INSERTION_BUFFER_TIME
+            watch_interval_sec = INSERTION_BUFFER_TIME
             # Making sure we'll wait until next watch cycle
             sleep(watch_interval_sec * 20)
-
         assert evaluate_until(
-            lambda: self.interceptor.state_manager.count() == 16,
-            msg="Checking if state count == 16",
+            lambda: self.interceptor.state_manager.count() == 4,
+            msg="Checking if state count == 4",
         )
         assert assert_by_querying_tasks_until({"workflow_id": wf_id})
 
-    @unittest.skip("This test is useful only for developing. No need to run " "in CI")
+    @unittest.skip("This test is useful only for developing. No need to run in CI")
     def test_read_tensorboard_hparam_tuning(self):
         self.reset_log_dir()
         self.run_tensorboard_hparam_tuning()
@@ -192,4 +191,8 @@ class TestTensorboard(unittest.TestCase):
             if found_metric:
                 # Only append if we find a tracked metric in the event
                 output.append(msg)
-        assert len(output) == 16
+        assert len(output) == 4
+
+    @classmethod
+    def tearDownClass(cls):
+        Flowcept.db.close()

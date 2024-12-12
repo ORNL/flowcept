@@ -1,4 +1,4 @@
-name: Tests inside a Container
+name: (With Mongo) Tests inside a Container
 on: [pull_request]
 
 jobs:
@@ -20,9 +20,18 @@ jobs:
         run: make build
 
       - name: Start dependent services (Mongo and Redis)
-        run: make services
+        run: make services-mongo
 
       - name: Run tests in container
+        run: make tests-in-container-mongo
+
+      - name: Stop services
+        run: make services-stop-mongo
+
+      - name: Start dependent services (Redis, no Mongo)
+        run: make services
+
+      - name: Run tests in container without mongo
         run: make tests-in-container
 
       - name: Stop services

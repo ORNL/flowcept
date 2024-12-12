@@ -1,13 +1,18 @@
-name: All tests on Kafka MQ
+name: (With Mongo) Tests on Kafka MQ
 on:
   pull_request:
     branches: [ "dev", "main" ]
     types: [opened, synchronize, reopened]
+#on:
+#  push:
 
 jobs:
 
   build:
     runs-on: ubuntu-latest
+    env:
+      MONGO_ENABLED: true
+      LMDB_ENABLED: false
     timeout-minutes: 40
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
 
@@ -22,17 +27,22 @@ jobs:
           python-version: "3.10"
           cache: "pip"
 
-      - name: Install package and dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install .[all]
-          python -m pip install .[ml_dev]
-
       - name: Run docker compose
         run: docker compose -f deployment/compose-kafka.yml up -d
 
-      - name: Wait for one minute
-        run: sleep 60
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Show Python version
+        run: python --version && pip --version
+
+      - name: Test examples
+        run: bash .github/workflows/run_examples.sh examples true # with mongo
+
+      - name: Install all dependencies
+        run: |
+          python -m pip install .[all]
+          python -m pip install .[ml_dev]
 
       - name: Check liveness
         run: |
@@ -45,7 +55,7 @@ jobs:
         run: |
           export MQ_TYPE=kafka
           export MQ_PORT=9092
-          pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
+          make tests
 
       - name: Test notebooks
         run: pytest --ignore=notebooks/zambeze.ipynb --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb

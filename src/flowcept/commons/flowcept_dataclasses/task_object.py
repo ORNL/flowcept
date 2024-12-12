@@ -54,6 +54,7 @@ class TaskObject:
     telemetry_at_end: Telemetry = None
     workflow_name: AnyStr = None
     workflow_id: AnyStr = None
+    parent_task_id: AnyStr = None
     activity_id: AnyStr = None
     status: Status = None
     stdout: Union[AnyStr, Dict] = None

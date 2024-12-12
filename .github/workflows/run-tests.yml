@@ -1,4 +1,4 @@
-name: Unit, integration, and notebook tests
+name: (With Mongo) Unit, integration, and notebook tests
 on:
   push:
   schedule:
@@ -8,7 +8,10 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    env:
+      MONGO_ENABLED: true
+      LMDB_ENABLED: false
+    timeout-minutes: 60
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
 
     steps:
@@ -26,49 +29,16 @@ jobs:
         run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
 
       - name: Start docker compose with redis
-        run: make services
+        run: make services-mongo
 
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
-      - name: Install default dependencies and run simple test
-        run: |
-          pip install .
-          python examples/simple_instrumented_script.py | tee output.log
-          cat output.log
-          grep -q "ERROR" output.log && exit 1
-          rm output.log
-
-      - name: Install Dask dependencies alone and run a simple Dask test
-        run: |
-          pip uninstall flowcept -y
-          pip install .[dask]
-          python examples/dask_example.py | tee output.log
-          cat output.log
-          grep -q "ERROR" output.log && exit 1
-          rm output.log          
-
-      - name: Install MLFlow dependencies alone and run a simple MLFlow test
-        run: |
-          pip uninstall flowcept -y
-          pip install .[mlflow]
-          python examples/mlflow_example.py | tee output.log
-          cat output.log
-          grep -q "ERROR" output.log && exit 1
-          rm output.log    
-
-      - name: Install Tensorboard dependencies alone and run a simple Tensorboard test
-        run: |
-          pip uninstall flowcept -y
-          pip install .[tensorboard]
-          python examples/tensorboard_example.py  | tee output.log
-          cat output.log
-          grep -q "ERROR" output.log && exit 1
-          rm output.log 
+      - name: Test examples
+        run: bash .github/workflows/run_examples.sh examples true # with mongo
 
       - name: Install all dependencies
         run: |
-          python -m pip install --upgrade pip
           python -m pip install .[all]
           python -m pip install .[ml_dev]
 
@@ -83,7 +53,7 @@ jobs:
         run: make tests-notebooks
 
       - name: Shut down docker compose
-        run: make services-stop
+        run: make services-stop-mongo
 
       - name: Clean up
         run: |

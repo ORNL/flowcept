@@ -9,8 +9,8 @@ from flowcept.flowceptor.adapters.dask.dask_plugins import (
     register_dask_workflow,
 )
 from tests.adapters.dask_test_utils import (
-    setup_local_dask_cluster,
-    close_dask,
+    start_local_dask_cluster,
+    stop_local_dask_cluster,
 )
 
 from tests.decorator_tests.ml_tests.llm_tests.llm_trainer import (
@@ -49,14 +49,9 @@ def generate_configs(params):
             elif isinstance(init_value, list) and all(
                 isinstance(v, (int, float)) for v in init_value
             ):
-                interpolated_values = _interpolate_values(
-                    init_value[0], end_value[0], step_value
-                )
+                interpolated_values = _interpolate_values(init_value[0], end_value[0], step_value)
                 param_values.append(
-                    [
-                        (val, val + init_value[1] - init_value[0])
-                        for val in interpolated_values
-                    ]
+                    [(val, val + init_value[1] - init_value[0]) for val in interpolated_values]
                 )
 
         elif isinstance(param_data, list):
@@ -84,7 +79,9 @@ class DecoratorDaskLLMTests(unittest.TestCase):
         dataset_prep_wf.workflow_id = f"prep_wikitext_tokenizer_{tokenizer}"
         dataset_prep_wf.used = {"tokenizer": tokenizer}
         ntokens, train_data, val_data, test_data = get_wiki_text(tokenizer)
-        dataset_ref = f"{dataset_prep_wf.workflow_id}_{id(train_data)}_{id(val_data)}_{id(test_data)}"
+        dataset_ref = (
+            f"{dataset_prep_wf.workflow_id}_{id(train_data)}_{id(val_data)}_{id(test_data)}"
+        )
         dataset_prep_wf.generated = {
             "ntokens": ntokens,
             "dataset_ref": dataset_ref,
@@ -97,12 +94,9 @@ class DecoratorDaskLLMTests(unittest.TestCase):
 
         # Automatically registering the Dask workflow
         train_wf_id = str(uuid.uuid4())
-        client, cluster, consumer = setup_local_dask_cluster(
-            exec_bundle=train_wf_id
-        )
-        register_dask_workflow(
-            client, workflow_id=train_wf_id, used={"dataset_ref": dataset_ref}
-        )
+        client, cluster, flowcept = start_local_dask_cluster(exec_bundle=train_wf_id,
+                                                             start_persistence=True)
+        register_dask_workflow(client, workflow_id=train_wf_id, used={"dataset_ref": dataset_ref})
 
         print(f"Model_Train_Wf_id={train_wf_id}")
         exp_param_settings = {
@@ -135,5 +129,4 @@ class DecoratorDaskLLMTests(unittest.TestCase):
         for o in outputs:
             o.result()
 
-        close_dask(client, cluster)
-        consumer.stop()
+        stop_local_dask_cluster(client, cluster, flowcept)

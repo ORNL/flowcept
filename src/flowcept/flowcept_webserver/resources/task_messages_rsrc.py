@@ -3,7 +3,7 @@
 from flask import jsonify, request
 from flask_restful import Resource
 
-from flowcept.commons.daos.document_db_dao import DocumentDBDao
+from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 
 
 class TaskMessages(Resource):
@@ -19,7 +19,7 @@ class TaskMessages(Resource):
         if task_id is not None:
             filter = {"task_id": task_id}
 
-        dao = DocumentDBDao()
+        dao = MongoDBDAO()
         docs = dao.task_query(filter)
         if len(docs):
             return jsonify(docs), 201

@@ -15,7 +15,7 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.instrumentation.decorators.flowcept_task import (
     flowcept_task,
-    lightweight_flowcept_task,
+    lightweight_flowcept_task, flowcept_loop,
 )
 
 
@@ -43,8 +43,13 @@ TIME_TO_SLEEP = calc_time_to_sleep()
 
 
 @flowcept_task
-def decorated_static_function(df: pd.DataFrame, workflow_id=None):
-    return {"decorated_static_function": 2}
+def decorated_static_function2(x):
+    return {"y": 2}
+
+
+@flowcept_task
+def decorated_static_function(df: pd.DataFrame):
+    return 2
 
 
 @lightweight_flowcept_task
@@ -59,12 +64,12 @@ def not_decorated_func(x: int, workflow_id: str = None):
 
 
 @lightweight_flowcept_task
-def decorated_static_function2(workflow_id=None):
+def lightweight_decorated_static_function2(workflow_id=None):
     return [2]
 
 
 @lightweight_flowcept_task
-def decorated_static_function3(x, workflow_id=None):
+def lightweight_decorated_static_function3(x, workflow_id=None):
     return 3
 
 
@@ -94,9 +99,7 @@ def calculate_overheads(decorated, not_decorated):
         "10th_percentile",
         "90th_percentile",
     ]
-    mean_diff = sum(
-        abs(decorated[key] - not_decorated[key]) for key in keys
-    ) / len(keys)
+    mean_diff = sum(abs(decorated[key] - not_decorated[key]) for key in keys) / len(keys)
     overheads = [mean_diff / not_decorated[key] * 100 for key in keys]
     return overheads
 
@@ -135,13 +138,11 @@ def print_system_stats():
     )
 
 
-def simple_decorated_function(
-        max_tasks=10, start_doc_inserter=True, check_insertions=True
-):
+def simple_decorated_function(max_tasks=10, enable_persistence=True, check_insertions=True):
     workflow_id = str(uuid.uuid4())
     print(workflow_id)
     # TODO :refactor-base-interceptor:
-    consumer = Flowcept(start_doc_inserter=start_doc_inserter)
+    consumer = Flowcept(start_persistence=enable_persistence)
     consumer.start()
     t0 = time()
     for i in range(max_tasks):
@@ -173,25 +174,40 @@ def simple_decorated_function(
 
 class DecoratorTests(unittest.TestCase):
     @lightweight_flowcept_task
-    def decorated_function_with_self(self, x, workflow_id=None):
+    def lightweight_decorated_function_with_self(self, x, workflow_id=None):
         sleep(x)
         return {"y": 2}
 
-    def test_decorated_function(self):
+    def test_lightweight_decorated_function(self):
         workflow_id = str(uuid.uuid4())
-        # TODO :refactor-base-interceptor:
-        with Flowcept():
-            self.decorated_function_with_self(x=0.1, workflow_id=workflow_id)
-            decorated_static_function(
-                df=pd.DataFrame(), workflow_id=workflow_id
-            )
-            decorated_static_function2(workflow_id=workflow_id)
-            decorated_static_function3(x=0.1, workflow_id=workflow_id)
         print(workflow_id)
+        with Flowcept():
+            self.lightweight_decorated_function_with_self(x=0.1, workflow_id=workflow_id)
+            lightweight_decorated_static_function2(workflow_id=workflow_id)
+            lightweight_decorated_static_function3(x=0.1, workflow_id=workflow_id)
 
+        sleep(3)
         assert assert_by_querying_tasks_until(
             filter={"workflow_id": workflow_id},
-            condition_to_evaluate=lambda docs: len(docs) == 4,
+            condition_to_evaluate=lambda docs: len(docs) == 3,
+            max_time=60,
+            max_trials=60,
+        )
+
+    def test_decorated_function(self):
+        # Compare this with the test_lightweight_decorated_function;
+        # Here, Flowcept manages the workflow_id for the user;
+        # Using the light decorator, the user has to control it.
+        with Flowcept():
+            print(Flowcept.current_workflow_id)
+            decorated_static_function(df=pd.DataFrame())
+            decorated_static_function2(x=1)
+            decorated_static_function2(2)
+
+        sleep(3)
+        assert assert_by_querying_tasks_until(
+            filter={"workflow_id": Flowcept.current_workflow_id},
+            condition_to_evaluate=lambda docs: len(docs) == 3,
             max_time=60,
             max_trials=60,
         )
@@ -218,7 +234,7 @@ class DecoratorTests(unittest.TestCase):
                 simple_decorated_function(
                     max_tasks=10,  # 100000,
                     check_insertions=False,
-                    start_doc_inserter=False,
+                    enable_persistence=False,
                 )
             )
         decorated = [decorated for decorated, not_decorated in times]
@@ -238,9 +254,30 @@ class DecoratorTests(unittest.TestCase):
         print(f"diff_{n} = calculate_diff(decorated_{n}, not_decorated_{n})")
         print(f"'decorated_{n}': diff_{n},")
         print("Mode: " + flowcept.configs.DB_FLUSH_MODE)
-        threshold = (
-            10 if flowcept.configs.DB_FLUSH_MODE == "offline" else 50
-        )  # %
+        threshold = 10 if flowcept.configs.DB_FLUSH_MODE == "offline" else 50  # %
         print("Threshold: ", threshold)
         print("Overheads: " + str(overheads))
         assert all(map(lambda v: v < threshold, overheads))
+
+    def test_flowcept_loop_generator(self):
+        epochs = range(1, 3)
+        with Flowcept():
+            for _ in flowcept_loop(items=epochs, loop_name="epochs", item_name='epoch'):
+                sleep(0.05)
+
+        docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
+        assert len(docs) == 3  # 1 (parent_task) + 2 (sub_tasks)
+
+        iteration_tasks = []
+        whole_loop_task = None
+        for d in docs:
+            if d["activity_id"] == "epochs":
+                whole_loop_task = d
+            else:
+                iteration_tasks.append(d)
+        assert len(iteration_tasks) == 2
+        assert all(t["parent_task_id"] == whole_loop_task["task_id"] for t in iteration_tasks)
+
+
+
+

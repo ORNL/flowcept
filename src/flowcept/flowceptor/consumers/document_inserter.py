@@ -1,31 +1,31 @@
-"""Document module."""
+"""Document Inserter module."""
 
-from datetime import datetime
 from time import time, sleep
 from threading import Thread, Event, Lock
 from typing import Dict
 from uuid import uuid4
 
-import pytz
+from flowcept.commons.autoflush_buffer import AutoflushBuffer
 
-from flowcept.commons.daos.autoflush_buffer import AutoflushBuffer
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 from flowcept.commons.utils import GenericJSONDecoder
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.configs import (
-    MONGO_INSERTION_BUFFER_TIME,
-    MONGO_MAX_BUFFER_SIZE,
-    MONGO_MIN_BUFFER_SIZE,
-    MONGO_ADAPTIVE_BUFFER_SIZE,
+    INSERTION_BUFFER_TIME,
+    MAX_BUFFER_SIZE,
+    MIN_BUFFER_SIZE,
+    ADAPTIVE_BUFFER_SIZE,
+    REMOVE_EMPTY_FIELDS,
     JSON_SERIALIZER,
-    MONGO_REMOVE_EMPTY_FIELDS,
     ENRICH_MESSAGES,
+    MONGO_ENABLED,
+    LMDB_ENABLED,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.commons.daos.document_db_dao import DocumentDBDao
+
 from flowcept.flowceptor.consumers.consumer_utils import (
     remove_empty_fields_from_dict,
 )
@@ -57,59 +57,66 @@ class DocumentInserter:
     ):
         self._task_dicts_buffer = list()
         self._mq_dao = MQDao.build(mq_host, mq_port)
-        self._doc_dao = DocumentDBDao()
+        self._doc_daos = []
+        if MONGO_ENABLED:
+            from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+
+            self._doc_daos.append(MongoDBDAO())
+        if LMDB_ENABLED:
+            from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
+
+            self._doc_daos.append(LMDBDAO())
         self._previous_time = time()
         self.logger = FlowceptLogger()
         self._main_thread: Thread = None
-        self._curr_max_buffer_size = MONGO_MAX_BUFFER_SIZE
+        self._curr_max_buffer_size = MAX_BUFFER_SIZE
         self._lock = Lock()
         self._bundle_exec_id = bundle_exec_id
         self.check_safe_stops = check_safe_stops
         self.buffer: AutoflushBuffer = AutoflushBuffer(
             max_size=self._curr_max_buffer_size,
-            flush_interval=MONGO_INSERTION_BUFFER_TIME,
+            flush_interval=INSERTION_BUFFER_TIME,
+            logger=self.logger,
             flush_function=DocumentInserter.flush_function,
-            doc_dao=self._doc_dao,
+            flush_function_kwargs={"logger": self.logger, "doc_daos": self._doc_daos},
         )
 
     def _set_buffer_size(self):
-        if not MONGO_ADAPTIVE_BUFFER_SIZE:
+        if not ADAPTIVE_BUFFER_SIZE:
             return
         else:
             # Adaptive buffer size to increase/decrease depending on the flow
             # of messages (#messages/unit of time)
-            if len(self._task_dicts_buffer) >= MONGO_MAX_BUFFER_SIZE:
-                self._curr_max_buffer_size = MONGO_MAX_BUFFER_SIZE
+            if len(self._task_dicts_buffer) >= MAX_BUFFER_SIZE:
+                self._curr_max_buffer_size = MAX_BUFFER_SIZE
             elif len(self._task_dicts_buffer) < self._curr_max_buffer_size:
                 # decrease buffer size by 10%, lower-bounded by 10
                 self._curr_max_buffer_size = max(
-                    MONGO_MIN_BUFFER_SIZE,
+                    MIN_BUFFER_SIZE,
                     int(self._curr_max_buffer_size * 0.9),
                 )
             else:
                 # increase buffer size by 10%,
                 # upper-bounded by MONGO_INSERTION_BUFFER_SIZE
                 self._curr_max_buffer_size = max(
-                    MONGO_MIN_BUFFER_SIZE,
+                    MIN_BUFFER_SIZE,
                     min(
-                        MONGO_MAX_BUFFER_SIZE,
+                        MAX_BUFFER_SIZE,
                         int(self._curr_max_buffer_size * 1.1),
                     ),
                 )
 
     @staticmethod
-    def flush_function(buffer, doc_dao, logger=None):
+    def flush_function(buffer, doc_daos, logger):
         """Flush it."""
-        if logger is None:
-            logger = FlowceptLogger()
         logger.info(
             f"Current Doc buffer size: {len(buffer)}, " f"Gonna flush {len(buffer)} msgs to DocDB!"
         )
-        inserted = doc_dao.insert_and_update_many(TaskObject.task_id_field(), buffer)
-        if not inserted:
-            logger.warning(f"Could not insert the buffer correctly. " f"Buffer content={buffer}")
-        else:
-            logger.info(f"Flushed {len(buffer)} msgs to DocDB!")
+        for dao in doc_daos:
+            dao.insert_and_update_many_tasks(buffer, TaskObject.task_id_field())
+            logger.debug(
+                f"DocDao={id(dao)}; Flushed {len(buffer)} msgs to DocDB!"
+            )  # TODO: add name
 
     def _handle_task_message(self, message: Dict):
         # if DEBUG_MODE:
@@ -122,15 +129,6 @@ class DocumentInserter:
             if wf_id:
                 message["workflow_id"] = wf_id
 
-        has_time_fields = False
-        for time_field in TaskObject.get_time_field_names():
-            if time_field in message:
-                has_time_fields = True
-                message[time_field] = datetime.fromtimestamp(message[time_field], pytz.utc)
-
-        if not has_time_fields:
-            message["registered_at"] = datetime.fromtimestamp(time(), pytz.utc)
-
         if ENRICH_MESSAGES:
             TaskObject.enrich_task_dict(message)
 
@@ -139,26 +137,21 @@ class DocumentInserter:
         self.logger.debug(
             f"Received following msg in DocInserter:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
         )
-        if MONGO_REMOVE_EMPTY_FIELDS:
+        if REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
 
         self.buffer.append(message)
-        # with self._lock:
-        #     self._task_dicts_buffer.append(message)
-        #     if len(self._task_dicts_buffer) >= self._curr_max_buffer_size:
-        #         self.logger.debug("Docs buffer exceeded, flushing...")
-        #         self._flush()
 
     def _handle_workflow_message(self, message: Dict):
         message.pop("type")
         self.logger.debug(
             f"Received following msg in DocInserter:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
         )
-        if MONGO_REMOVE_EMPTY_FIELDS:
+        if REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
         wf_obj = WorkflowObject.from_dict(message)
-        inserted = self._doc_dao.workflow_insert_or_update(wf_obj)
-        return inserted
+        for dao in self._doc_daos:
+            dao.insert_or_update_workflow(wf_obj)
 
     def _handle_control_message(self, message):
         self.logger.info(
@@ -222,7 +215,6 @@ class DocumentInserter:
         elif msg_type is None:
             self.logger.warning(f"Message without type???\n {msg_obj}")
             return True
-            # raise Exception("Please inform the message type.")
         else:
             self.logger.error("Unexpected message type")
             return True
@@ -249,6 +241,7 @@ class DocumentInserter:
         self._mq_dao.send_document_inserter_stop()
         self.logger.info(f"Doc Inserter {id(self)} Sent message to stop itself.")
         self._main_thread.join()
+        for dao in self._doc_daos:
+            self.logger.info(f"Closing document_inserter {dao.__class__.__name__} connection.")
+            dao.close()
         self.logger.info("Document Inserter is stopped.")
-
-        self.logger.info("Closing DocDB client.")

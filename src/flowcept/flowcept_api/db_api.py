@@ -1,13 +1,12 @@
 """DB API module."""
 
 import uuid
-from typing import List
+from typing import List, Dict
 
+from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
-from flowcept.configs import MONGO_TASK_COLLECTION
-from flowcept.commons.daos.document_db_dao import DocumentDBDao
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
@@ -15,72 +14,78 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 class DBAPI(object):
     """DB API class."""
 
-    _instance: "DBAPI" = None
+    # TODO: consider making all methods static
+    def __init__(self):
+        self.logger = FlowceptLogger()
 
-    def __new__(cls, *args, **kwargs) -> "DBAPI":
-        """Singleton creator for DBAPI."""
-        # Check if an instance already exists
-        if cls._instance is None:
-            # Create a new instance if not
-            cls._instance = super(DBAPI, cls).__new__(cls)
-        return cls._instance
+    @classmethod
+    @property
+    def _dao(cls) -> DocumentDBDAO:
+        return DocumentDBDAO.get_instance(create_indices=False)
 
-    def __init__(
-        self,
-        with_webserver=False,
-    ):
-        if not hasattr(self, "_initialized"):
-            self._initialized = True
-            self.logger = FlowceptLogger()
-            self.with_webserver = with_webserver
-            if self.with_webserver:
-                raise NotImplementedError("We did not implement webserver API for this yet.")
-
-            self._dao = DocumentDBDao(create_index=False)
+    def close(self):
+        """Close DB resources."""
+        DBAPI._dao.close()
 
     def insert_or_update_task(self, task: TaskObject):
         """Insert or update task."""
-        self._dao.insert_one(task.to_dict())
+        return DBAPI._dao.insert_one_task(task.to_dict())
 
     def insert_or_update_workflow(self, workflow_obj: WorkflowObject) -> WorkflowObject:
         """Insert or update workflow."""
         if workflow_obj.workflow_id is None:
             workflow_obj.workflow_id = str(uuid.uuid4())
-        ret = self._dao.workflow_insert_or_update(workflow_obj)
+        ret = DBAPI._dao.insert_or_update_workflow(workflow_obj)
         if not ret:
             self.logger.error("Sorry, couldn't update or insert workflow.")
             return None
         else:
             return workflow_obj
 
-    def get_workflow(self, workflow_id) -> WorkflowObject:
-        """Get the workflow."""
+    def get_workflow_object(self, workflow_id) -> WorkflowObject:
+        """Get the workflow from its id."""
         wfobs = self.workflow_query(filter={WorkflowObject.workflow_id_field(): workflow_id})
         if wfobs is None or len(wfobs) == 0:
             self.logger.error("Could not retrieve workflow with that filter.")
             return None
         else:
-            return wfobs[0]
+            return WorkflowObject.from_dict(wfobs[0])
 
-    def workflow_query(self, filter) -> List[WorkflowObject]:
-        """Get workflow query."""
-        results = self._dao.workflow_query(filter=filter)
+    def workflow_query(self, filter) -> List[Dict]:
+        """Query the workflows collection."""
+        results = self.query(collection="workflows", filter=filter)
         if results is None:
-            self.logger.error("Could not retrieve workflow with that filter.")
+            self.logger.error("Could not retrieve workflows with that filter.")
             return None
-        if len(results):
-            try:
-                lst = []
-                for wf_dict in results:
-                    lst.append(WorkflowObject.from_dict(wf_dict))
-                return lst
-            except Exception as e:
-                self.logger.exception(e)
-                return None
+        return results
+
+    def task_query(
+        self,
+        filter: Dict,
+        projection=None,
+        limit=0,
+        sort=None,
+        aggregation=None,
+        remove_json_unserializables=True,
+    ) -> List[Dict]:
+        """Query the tasks collection."""
+        results = self.query(
+            collection="tasks",
+            filter=filter,
+            projection=projection,
+            limit=limit,
+            sort=sort,
+            aggregation=aggregation,
+            remove_json_unserializables=remove_json_unserializables,
+        )
+        if results is None:
+            self.logger.error("Could not retrieve tasks with that filter.")
+            return None
+        return results
 
     def dump_to_file(
         self,
-        collection_name=MONGO_TASK_COLLECTION,
+        collection_name="tasks",
         filter=None,
         output_file=None,
         export_format="json",
@@ -93,7 +98,7 @@ class DBAPI(object):
             )
             return False
         try:
-            self._dao.dump_to_file(
+            DBAPI._dao.dump_to_file(
                 collection_name,
                 filter,
                 output_file,
@@ -117,7 +122,7 @@ class DBAPI(object):
         pickle=False,
     ):
         """Save the object."""
-        return self._dao.save_object(
+        return DBAPI._dao.save_object(
             object,
             object_id,
             task_id,
@@ -128,6 +133,10 @@ class DBAPI(object):
             pickle_=pickle,
         )
 
+    def to_df(self, collection="tasks", filter=None):
+        """Return a dataframe given the filter."""
+        return DBAPI._dao.to_df(collection, filter)
+
     def query(
         self,
         filter=None,
@@ -136,28 +145,12 @@ class DBAPI(object):
         sort=None,
         aggregation=None,
         remove_json_unserializables=True,
-        type="task",
+        collection="tasks",
     ):
         """Query it."""
-        if type == "task":
-            return self._dao.task_query(
-                filter,
-                projection,
-                limit,
-                sort,
-                aggregation,
-                remove_json_unserializables,
-            )
-        elif type == "workflow":
-            return self._dao.workflow_query(
-                filter, projection, limit, sort, remove_json_unserializables
-            )
-        elif type == "object":
-            return self._dao.get_objects(filter)
-        else:
-            raise Exception(
-                f"You used type={type}, but we only have " f"collections for task and workflow."
-            )
+        return DBAPI._dao.query(
+            filter, projection, limit, sort, aggregation, remove_json_unserializables, collection
+        )
 
     def save_torch_model(
         self,
@@ -168,7 +161,7 @@ class DBAPI(object):
     ) -> str:
         """Save model.
 
-        Save the PyTorch model's state_dict to a MongoDB collection as binary data.
+        Save the PyTorch model state_dict to a MongoDB collection as binary data.
 
         Args:
             model (torch.nn.Module): The PyTorch model to be saved.
@@ -211,13 +204,13 @@ class DBAPI(object):
         import torch
         import io
 
-        doc = self.query({"object_id": object_id}, type="object")[0]
+        doc = self.query(collection="objects", filter={"object_id": object_id})[0]
 
         if "data" in doc:
             binary_data = doc["data"]
         else:
             file_id = doc["grid_fs_file_id"]
-            binary_data = self._dao.get_file_data(file_id)
+            binary_data = DBAPI._dao.get_file_data(file_id)
 
         buffer = io.BytesIO(binary_data)
         state_dict = torch.load(buffer, weights_only=True)

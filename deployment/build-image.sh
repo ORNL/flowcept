@@ -24,7 +24,7 @@ fi
 echo "Miniconda image built successfully."
 # Step 4: Build the flowcept image with both 'latest' and versioned tags
 echo "Building flowcept image with latest and version tags..."
-docker build -t flowcept:latest -f deployment/Dockerfile .
+docker build --no-cache -t flowcept:latest -f deployment/Dockerfile .
 
 # Check if the flowcept build succeeded
 if [ $? -eq 0 ]; then
