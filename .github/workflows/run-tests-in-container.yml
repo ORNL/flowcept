@@ -28,12 +28,6 @@ jobs:
       - name: Stop services
         run: make services-stop-mongo
 
-      - name: Clean up
-        run: |
-          make clean
-          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
-          docker image prune -a -f
-
       - name: Start dependent services (Redis, no Mongo)
         run: make services
 
@@ -43,7 +37,7 @@ jobs:
       - name: Stop services
         run: make services-stop
 
-      - name: Clean up again
+      - name: Clean up
         run: |
           make clean
           find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
