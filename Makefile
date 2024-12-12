@@ -1,19 +1,22 @@
 # Show help, place this first so it runs with just `make`
 help:
 	@printf "\nCommands:\n"
-	@printf "\033[32mbuild\033[0m           	build the Docker image\n"
-	@printf "\033[32mrun\033[0m             	run the Docker container\n"
-	@printf "\033[32mliveness\033[0m        	check if the services are alive\n"
-	@printf "\033[32mservices\033[0m        	run services using Docker\n"
-	@printf "\033[32mservices-stop\033[0m   	stop the running Docker services\n"
-	@printf "\033[32mtests\033[0m           	run unit tests with pytest\n"
-	@printf "\033[32mtests-in-container\033[0m 	run unit tests with pytest inside Flowcept's container\n"
-	@printf "\033[32mtests-all\033[0m       	run all unit tests with pytest, including very long-running ones\n"
-	@printf "\033[32mtests-notebooks\033[0m 	tests the notebooks, using pytest\n"
-	@printf "\033[32mclean\033[0m           	remove cache directories and Sphinx build output\n"
-	@printf "\033[32mdocs\033[0m            	build HTML documentation using Sphinx\n"
-	@printf "\033[32mchecks\033[0m          	run ruff linter and formatter checks\n"
-	@printf "\033[32mreformat\033[0m        	run ruff linter and formatter\n"
+	@printf "\033[32mbuild\033[0m                     build the Docker image\n"
+	@printf "\033[32mrun\033[0m                       run the Docker container\n"
+	@printf "\033[32mliveness\033[0m                  check if the services are alive\n"
+	@printf "\033[32mservices\033[0m                  run services using Docker\n"
+	@printf "\033[32mservices-stop\033[0m             stop the running Docker services\n"
+	@printf "\033[32mservices-mongo\033[0m            run services with MongoDB using Docker\n"
+	@printf "\033[32mservices-stop-mongo\033[0m       stop MongoDB services and remove attached volumes\n"
+	@printf "\033[32mtests\033[0m                     run unit tests with pytest\n"
+	@printf "\033[32mtests-in-container\033[0m        run unit tests with pytest inside Flowcept's container\n"
+	@printf "\033[32mtests-in-container-mongo\033[0m  run unit tests inside container with MongoDB\n"
+	@printf "\033[32mtests-all\033[0m                 run all unit tests with pytest, including long-running ones\n"
+	@printf "\033[32mtests-notebooks\033[0m           test the notebooks using pytest\n"
+	@printf "\033[32mclean\033[0m                     remove cache directories and Sphinx build output\n"
+	@printf "\033[32mdocs\033[0m                      build HTML documentation using Sphinx\n"
+	@printf "\033[32mchecks\033[0m                    run ruff linter and formatter checks\n"
+	@printf "\033[32mreformat\033[0m                  run ruff linter and formatter\n"
 
 # Run linter and formatter checks using ruff
 checks:
@@ -21,7 +24,7 @@ checks:
 	ruff format --check src
 
 reformat:
-	ruff check src
+	ruff check src --fix
 	ruff format src
 
 # Remove cache directories and Sphinx build output
@@ -32,6 +35,7 @@ clean:
 	rm -rf tensorboard_events || true
 	rm -f docs_dump_tasks_* || true
 	rm -f dump_test.json || true
+	find . -type d -name "*flowcept_lmdb*" -exec rm -rf {} \; || true
 	find . -type f -name "*.log" -exec rm -f {} \; || true
 	find . -type f -name "*.pth" -exec rm -f {} \; || true
 	find . -type f -name "mlflow.db" -exec rm -f {} \; || true
@@ -54,6 +58,13 @@ services:
 services-stop:
 	docker compose --file deployment/compose.yml down --volumes
 
+# Run services using Docker
+services-mongo:
+	docker compose --file deployment/compose-mongo.yml up --detach
+
+services-stop-mongo:
+	docker compose --file deployment/compose-mongo.yml down --volumes
+
 # Build a new Docker image for Flowcept
 build:
 	bash deployment/build-image.sh
@@ -61,8 +72,14 @@ build:
 run:
 	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_HOST=flowcept_mongo --network flowcept_default -it flowcept
 
+tests-in-container-mongo:
+	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_HOST=flowcept_mongo -e MONGO_ENABLED=true -e LMDB_ENABLED=false --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest --ignore=tests/decorator_tests/ml_tests
+
 tests-in-container:
-	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_HOST=flowcept_mongo --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest --ignore=tests/decorator_tests/ml_tests
+	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_ENABLED=false -e LMDB_ENABLED=true --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest --ignore=tests/decorator_tests/ml_tests
+
+tests-in-container-kafka:
+	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=kafka -e MONGO_HOST=flowcept_mongo  -e MQ_PORT=29092 -e MQ_TYPE=kafka -e MONGO_ENABLED=true -e LMDB_ENABLED=false --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest --ignore=tests/decorator_tests/ml_tests
 
 # This command can be removed once we have our CLI
 liveness:

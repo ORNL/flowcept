@@ -1,10 +1,10 @@
-from dask.distributed import Client, LocalCluster
+from distributed import Client, LocalCluster
 from distributed import Status
 
 from flowcept import Flowcept
 
 
-def close_dask(client, cluster):
+def stop_local_dask_cluster(client, cluster, flowcept=None):
     """
     We must close dask so that the Dask plugins at the workers and scheduler will send the stop signal, which is required for flowcept to stop gracefully (otherwise it will run forever waiting for this stop signal).
     The tricky part was to find the correct order of closures for dask, that's why I created this [very simple] method, which might be reused in other tests.
@@ -20,24 +20,30 @@ def close_dask(client, cluster):
 
     assert cluster.status == Status.closed
     assert client.status == "closed"
+    print("Dask closed.")
+    if flowcept:
+        print("Now closing flowcept consumer.")
+        flowcept.stop()
+        print("Flowcept consumer closed.")
 
 
-def setup_local_dask_cluster(consumer=None, n_workers=1, exec_bundle=None):
-    from flowcept import (
-        FlowceptDaskSchedulerAdapter,
-        FlowceptDaskWorkerAdapter,
-    )
-
-    if consumer is None or not consumer.is_started:
-        consumer = Flowcept(
-            interceptors="dask", bundle_exec_id=exec_bundle
-        ).start()
-
+def start_local_dask_cluster(n_workers=1, exec_bundle=None, start_persistence=False):
     cluster = LocalCluster(n_workers=n_workers)
     scheduler = cluster.scheduler
     client = Client(scheduler.address)
 
-    scheduler.add_plugin(FlowceptDaskSchedulerAdapter(scheduler))
-    client.register_plugin(FlowceptDaskWorkerAdapter())
+    if start_persistence:
+        from flowcept import (
+            FlowceptDaskSchedulerAdapter,
+            FlowceptDaskWorkerAdapter,
+        )
 
-    return client, cluster, consumer
+        scheduler.add_plugin(FlowceptDaskSchedulerAdapter(scheduler))
+        client.register_plugin(FlowceptDaskWorkerAdapter())
+
+        flowcept = Flowcept(interceptors="dask", bundle_exec_id=exec_bundle).start()
+
+        return client, cluster, flowcept
+    else:
+        return client, cluster
+

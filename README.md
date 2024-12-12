@@ -6,18 +6,16 @@
 
 # FlowCept
 
-FlowCept is a runtime data integration system that enables any data processing system to capture and query workflow provenance with minimal or no code changes. It integrates data across workflows, providing insights into complex, large-scale, and heterogeneous data in federated environments. It has additional features if there are Machine Learning (ML) workflows involved. 
-
-FlowCept is designed for scenarios where multiple workflows generate critical data requiring integrated analysis. These workflows may use diverse tools (e.g., provenance capture, databases, performance profiling, ML frameworks) or run on different data processing systems. FlowCept’s key capability is to seamlessly integrate data using observability, creating a unified data view at runtime for end-to-end analysis and monitoring.
+FlowCept is a runtime data integration system that captures and queries workflow provenance with minimal or no code changes. It unifies data across diverse workflows and tools, enabling integrated analysis and insights, especially in federated environments. Designed for scenarios involving critical data from multiple workflows, FlowCept seamlessly integrates data at runtime, providing a unified view for end-to-end monitoring and analysis and enhanced support for Machine Learning (ML) workflows.
 
 Other capabilities include:
 
 - Automatic multi-workflow provenance data capture;
 - Data observability, enabling minimal intrusion to user workflows;
-- Explicit user workflow instrumentation, if this is preferred over data observability;
+- Explicit user workflow instrumentation, if this is preferred over implicit data observability;
 - ML data capture in various levels of details: workflow, model fitting or evaluation task, epoch iteration, layer forwarding;
 - ML model management;
-- Adapter-based system architecture, making it easy to plug and play with different data processing systems and backend database (e.g., MongoDB) or MQ services (e.g., Redis, Kafka);
+- Adapter-based, loosely-coupled system architecture, making it easy to plug and play with different data processing systems and backend database (e.g., MongoDB) or MQ services (e.g., Redis, Kafka);
 - Low-overhead focused system architecture, to avoid adding performance overhead particularly to workloads that run on HPC machines;
 - Telemetry data capture (e.g., CPU, GPU, Memory consumption) linked to the application dataflow;
 - Highly customizable to multiple use cases, enabling easy toggle between settings (e.g., with/without provenance capture; with/without telemetry and which telemetry type to capture; which adapters or backend services to run with); 
@@ -47,28 +45,27 @@ Refer to [Contributing](CONTRIBUTING.md) for adding new adapters. Note: The term
 
 `pip install .[all]` in this directory (or `pip install flowcept[all]`) if you want to install all dependencies.
 
-For convenience, this will install all dependencies for all adapters. But it can install dependencies for adapters you will not use. For this reason, you may want to install like this: `pip install .[adapter_key1,adapter_key2]` for the adapters we have implemented, e.g., `pip install .[dask]`.
+For convenience, this will install all dependencies for all adapters. But it can install dependencies for adapters you will not use. For this reason, you may want to install like this: `pip install .[extra_dep1,extra_dep2]` for the adapters we have implemented, e.g., `pip install .[dask]`.
 Currently, the optional dependencies available are:
 
 ```
+pip install flowcept[mongo]         # To install FlowCept with MongoDB
 pip install flowcept[mlflow]        # To install mlflow's adapter.
 pip install flowcept[dask]          # To install dask's adapter.
 pip install flowcept[tensorboard]   # To install tensorboaard's adapter.
 pip install flowcept[kafka]         # To utilize Kafka as the MQ, instead of Redis.
 pip install flowcept[nvidia]        # To capture NVIDIA GPU runtime information.
 pip install flowcept[analytics]     # For extra analytics features.
-pip install flowcept[dev]           # To install dev dependencies.
+pip install flowcept[dev]           # To install FlowCept's developer dependencies.
 ```
 
 You do not need to install any optional dependency to run Flowcept without any adapter, e.g., if you want to use simple instrumentation (see below). In this case, you need to remove the adapter part from the [settings.yaml](resources/settings.yaml) file.
  
-2. Start the Database and MQ System:
+2. Start the MQ System:
 
-To use FlowCept, one needs to start a database and a MQ system. Currently, FlowCept supports MongoDB as its database and it supports both Redis and Kafka as the MQ system.
+To use FlowCept, one needs to start a MQ system `$> make services`. This will start up Redis but see other options in the [deployment](deployment) directory and see [Data Persistence](#data-persistence) notes below.
 
-For convenience, the default needed services can be started using a [docker-compose file](deployment/compose.yml) deployment file. You can start them using `$> docker-compose -f deployment/compose.yml up`.
-
-3. Optionally, define custom settings (e.g., routes and ports) accordingly in a settings.yaml file. There is a sample file [here](resources/sample_settings.yaml), which can be used as basis. Then, set an environment var `FLOWCEPT_SETTINGS_PATH` with the absolute path to the yaml file. If you do not follow this step, the default values defined [here](resources/sample_settings.yaml) will be used.
+3. Optionally, define custom settings (e.g., routes and ports) accordingly in a settings.yaml file. There is a sample file [here](resources/sample_settings.yaml), which can be used as basis. Then, set an environment variable `FLOWCEPT_SETTINGS_PATH` with the absolute path to the yaml file. If you do not follow this step, the default values defined [here](resources/sample_settings.yaml) will be used.
 
 4. See the [Jupyter Notebooks](notebooks) and [Examples directory](examples) for utilization examples.
 
@@ -128,6 +125,21 @@ with Flowcept(workflow_name='test_workflow'):
 
 print(Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id}))
 ```
+
+## Data Persistence
+
+FlowCept uses an ephemeral message queue (MQ) with a pub/sub system to flush observed data. For optional data persistence, you can choose between:
+
+- [LMDB](https://lmdb.readthedocs.io/) (default): A lightweight, file-based database requiring no external services (but note it might require `gcc`). Ideal for simple tests or cases needing basic data persistence without query capabilities. Data stored in LMDB can be loaded into tools like Pandas for complex analysis. FlowCept's database API provides methods to export data in LMDB into Pandas DataFrames.
+- [MongoDB](https://www.mongodb.com/): A robust, service-based database with advanced query capabilities. Required to use FlowCept's Query API (i.e., `flowcept.Flowcept.db`) to run more complex queries and other features like ML model management or runtime queries (i.e., query while writing). To use MongoDB, initialize the service with `make services-mongo`.
+
+You can use both of them, meaning that the data pruducers will write data into both, none of them, or each of them. All is customizable in the settings file.
+
+If data persistence is disabled, captured data is sent to the MQ without any default consumer subscribing to persist it. In this case, querying the data requires creating a custom consumer to subscribe to the MQ.
+
+However, for querying, FlowCept Database API uses only one at a time. If both are enabled in the settings file, MongoDB will be used. If none is enable, an error is thrown. 
+
+Data stored in MongoDB and LMDB are interchangeable. You can switch between them by transferring data from one to the other as needed.
 
 ## Performance Tuning for Performance Evaluation
 

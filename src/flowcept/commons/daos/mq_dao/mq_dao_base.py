@@ -7,7 +7,7 @@ import msgpack
 from redis import Redis
 
 import flowcept.commons
-from flowcept.commons.daos.autoflush_buffer import AutoflushBuffer
+from flowcept.commons.autoflush_buffer import AutoflushBuffer
 
 from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
 
@@ -128,6 +128,7 @@ class MQDao(ABC):
             self.buffer = AutoflushBuffer(
                 max_size=MQ_BUFFER_SIZE,
                 flush_interval=MQ_INSERTION_BUFFER_TIME,
+                logger=self.logger,
                 flush_function=self.bulk_publish,
             )
             self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
