@@ -14,8 +14,8 @@ from datetime import datetime, timedelta
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
-    Status,
 )
+from flowcept.commons.vocabulary import Status
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import WEBSERVER_PORT, WEBSERVER_HOST, MONGO_ENABLED
 from flowcept.flowcept_api.task_query_api import TaskQueryAPI

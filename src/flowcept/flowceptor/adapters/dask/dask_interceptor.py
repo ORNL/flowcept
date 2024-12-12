@@ -5,8 +5,8 @@ import inspect
 from flowcept import WorkflowObject
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
-    Status,
 )
+from flowcept.commons.vocabulary import Status
 from flowcept.flowceptor.adapters.base_interceptor import (
     BaseInterceptor,
 )
