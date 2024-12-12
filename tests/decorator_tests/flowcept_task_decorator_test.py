@@ -15,7 +15,7 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.instrumentation.decorators.flowcept_task import (
     flowcept_task,
-    lightweight_flowcept_task,
+    lightweight_flowcept_task, flowcept_loop,
 )
 
 
@@ -71,21 +71,6 @@ def lightweight_decorated_static_function2(workflow_id=None):
 @lightweight_flowcept_task
 def lightweight_decorated_static_function3(x, workflow_id=None):
     return 3
-
-
-def loop_logger(generator_func):
-    def wrapper(*args, **kwargs):
-        print("Starting the for loop...")
-        for item in generator_func(*args, **kwargs):
-            yield item
-        print("For loop completed.")
-
-    return wrapper
-
-@loop_logger
-def epoch_generator(epochs):
-    for epoch in epochs:
-        yield epoch
 
 
 def compute_statistics(array):
@@ -274,7 +259,19 @@ class DecoratorTests(unittest.TestCase):
         print("Overheads: " + str(overheads))
         assert all(map(lambda v: v < threshold, overheads))
 
-    def test_generator(self):
-        pass
+    def test_flowcept_loop_generator(self):
+        epochs = range(1, 3)
+        with Flowcept():
+            for _ in flowcept_loop(items=epochs, loop_name="epochs", item_name='epoch'):
+                sleep(0.05)
+
+        docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
+        assert len(docs) == 3  # 1 (parent_task) + 2 (sub_tasks)
+        first_task = docs[0]
+        assert first_task["activity_id"] == "epochs"
+        sub_tasks = docs[1:]
+        assert all(t["parent_task_id"] == first_task["task_id"] for t in sub_tasks)
+
+
 
 

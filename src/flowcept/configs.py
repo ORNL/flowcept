@@ -1,4 +1,5 @@
 """Configuration module."""
+
 import os
 import socket
 import getpass
@@ -83,7 +84,7 @@ _mongo_settings = DATABASES.get("mongodb", None)
 MONGO_ENABLED = False
 if _mongo_settings:
     if "MONGO_ENABLED" in os.environ:
-        MONGO_ENABLED = (os.environ.get("MONGO_ENABLED").lower() == "true")
+        MONGO_ENABLED = os.environ.get("MONGO_ENABLED").lower() == "true"
     else:
         MONGO_ENABLED = _mongo_settings.get("enabled", False)
     MONGO_URI = os.environ.get("MONGO_URI") or _mongo_settings.get("uri")
@@ -99,7 +100,7 @@ _lmdb_settings = DATABASES.get("lmdb", None)
 LMDB_ENABLED = False
 if _lmdb_settings:
     if "LMDB_ENABLED" in os.environ:
-        LMDB_ENABLED = (os.environ.get("LMDB_ENABLED").lower() == "true")
+        LMDB_ENABLED = os.environ.get("LMDB_ENABLED").lower() == "true"
     else:
         LMDB_ENABLED = _lmdb_settings.get("enabled", False)
 

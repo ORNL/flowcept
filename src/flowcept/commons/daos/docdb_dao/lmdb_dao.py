@@ -2,6 +2,7 @@
 
 This module provides the `LMDBDAO` class for interacting with an LMDB-backed database.
 """
+
 from time import time
 from typing import List, Dict
 
@@ -158,20 +159,18 @@ class LMDBDAO(DocumentDBDAO):
 
     def query(
         self,
-        collection="tasks",
         filter=None,
         projection=None,
         limit=None,
         sort=None,
         aggregation=None,
         remove_json_unserializables=None,
+        collection="tasks",
     ) -> List[Dict]:
         """Query data from LMDB.
 
         Parameters
         ----------
-        collection : str, optional
-            Name of the collection ('tasks' or 'workflows'). Default is 'tasks'.
         filter : dict, optional
             Filter criteria.
         projection : dict, optional
@@ -184,6 +183,8 @@ class LMDBDAO(DocumentDBDAO):
             Aggregation stages.
         remove_json_unserializables : bool, optional
             Remove JSON-unserializable fields.
+        collection : str, optional
+            Name of the collection ('tasks' or 'workflows'). Default is 'tasks'.
 
         Returns
         -------
@@ -312,8 +313,17 @@ class LMDBDAO(DocumentDBDAO):
         """Dump data to file."""
         raise NotImplementedError
 
-    def save_object(self, object, object_id, task_id, workflow_id, type, custom_metadata,
-                    save_data_in_collection, pickle_):
+    def save_object(
+        self,
+        object,
+        object_id,
+        task_id,
+        workflow_id,
+        type,
+        custom_metadata,
+        save_data_in_collection,
+        pickle_,
+    ):
         """Save object."""
         raise NotImplementedError
 

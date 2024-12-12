@@ -43,10 +43,7 @@ class MongoDBDAO(DocumentDBDAO):
             DocumentDBDAO._instance = super(MongoDBDAO, cls).__new__(cls)
         return DocumentDBDAO._instance
 
-    def __init__(
-        self,
-        create_indices=MONGO_CREATE_INDEX
-    ):
+    def __init__(self, create_indices=MONGO_CREATE_INDEX):
         if not hasattr(self, "_initialized"):
             from flowcept.configs import (
                 MONGO_HOST,
@@ -54,6 +51,7 @@ class MongoDBDAO(DocumentDBDAO):
                 MONGO_DB,
                 MONGO_URI,
             )
+
             self._initialized = True
             self.logger = FlowceptLogger()
 
@@ -548,20 +546,18 @@ class MongoDBDAO(DocumentDBDAO):
 
     def query(
         self,
-        collection="tasks",
         filter=None,
         projection=None,
         limit=None,
         sort=None,
         aggregation=None,
         remove_json_unserializables=None,
+        collection="tasks",
     ):
         """Query o MongoDB collection with optional filters, projections, sorting, and aggregation.
 
         Parameters
         ----------
-        collection : str, optional
-            The name of the collection to query. Defaults to "tasks".
         filter : dict, optional
             The filter criteria to match documents. Defaults to None.
         projection : list of str, optional
@@ -574,6 +570,8 @@ class MongoDBDAO(DocumentDBDAO):
             The aggregation operators and fields to apply. Defaults to None.
         remove_json_unserializables : bool, optional
             If True, removes fields that are not JSON serializable. Defaults to None.
+        collection : str, optional
+            The name of the collection to query. Defaults to "tasks".
 
         Returns
         -------

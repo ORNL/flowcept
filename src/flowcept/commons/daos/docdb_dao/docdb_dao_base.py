@@ -2,6 +2,7 @@
 
 This module provides an abstract base class `DocumentDBDAO` for document-based database operations.
 """
+
 from abc import ABC, abstractmethod
 from typing import List, Dict
 
@@ -50,10 +51,12 @@ class DocumentDBDAO(ABC):
                 return DocumentDBDAO._instance
             else:
                 DocumentDBDAO._instance.close()
-                raise Exception("This should not happen. "
-                                         "If instance is not None and Not initialized,"
-                                         " this is an inconsistent state."
-                                         " We are forcefully fixing the state now:")
+                raise Exception(
+                    "This should not happen. "
+                    "If instance is not None and Not initialized,"
+                    " this is an inconsistent state."
+                    " We are forcefully fixing the state now:"
+                )
 
         if MONGO_ENABLED:
             from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
@@ -146,7 +149,7 @@ class DocumentDBDAO(ABC):
 
     @abstractmethod
     def query(
-        self, collection, filter, projection, limit, sort, aggregation, remove_json_unserializables
+        self, filter, projection, limit, sort, aggregation, remove_json_unserializables, collection
     ):
         """Query a collection.
 

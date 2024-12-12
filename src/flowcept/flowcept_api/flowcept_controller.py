@@ -186,6 +186,7 @@ class Flowcept(object):
             return False
         if MONGO_ENABLED:
             from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+
             if not MongoDBDAO(create_indices=False).liveness_test():
                 logger.error("DocDB Not Ready!")
                 return False

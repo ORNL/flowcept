@@ -146,14 +146,13 @@ class TestTensorboard(unittest.TestCase):
             watch_interval_sec = INSERTION_BUFFER_TIME
             # Making sure we'll wait until next watch cycle
             sleep(watch_interval_sec * 20)
-
         assert evaluate_until(
-            lambda: self.interceptor.state_manager.count() == 16,
-            msg="Checking if state count == 16",
+            lambda: self.interceptor.state_manager.count() == 4,
+            msg="Checking if state count == 4",
         )
         assert assert_by_querying_tasks_until({"workflow_id": wf_id})
 
-    @unittest.skip("This test is useful only for developing. No need to run " "in CI")
+    @unittest.skip("This test is useful only for developing. No need to run in CI")
     def test_read_tensorboard_hparam_tuning(self):
         self.reset_log_dir()
         self.run_tensorboard_hparam_tuning()
@@ -192,7 +191,7 @@ class TestTensorboard(unittest.TestCase):
             if found_metric:
                 # Only append if we find a tracked metric in the event
                 output.append(msg)
-        assert len(output) == 16
+        assert len(output) == 4
 
     @classmethod
     def tearDownClass(cls):

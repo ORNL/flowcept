@@ -75,13 +75,14 @@ def assert_by_querying_tasks_until(
 ):
     """Assert by query."""
     from flowcept import Flowcept
+
     logger = FlowceptLogger()
     start_time = time()
     trials = 0
     exception = None
 
     while (time() - start_time) < max_time and trials < max_trials:
-        docs = Flowcept.db.query(collection="tasks", filter=filter)
+        docs = Flowcept.db.query(filter=filter, collection="tasks")
         if condition_to_evaluate is None:
             if docs is not None and len(docs):
                 logger.debug("Query conditions have been met! :D")

@@ -17,6 +17,7 @@ class DBAPI(object):
     # TODO: consider making all methods static
     def __init__(self):
         self.logger = FlowceptLogger()
+
     @classmethod
     @property
     def _dao(cls) -> DocumentDBDAO:
@@ -58,21 +59,25 @@ class DBAPI(object):
             return None
         return results
 
-    def task_query(self,
+    def task_query(
+        self,
         filter: Dict,
         projection=None,
         limit=0,
         sort=None,
         aggregation=None,
-        remove_json_unserializables=True) -> List[Dict]:
+        remove_json_unserializables=True,
+    ) -> List[Dict]:
         """Query the tasks collection."""
-        results = self.query(collection="tasks", filter=filter,
-                             projection=projection,
-                             limit=limit,
-                             sort=sort,
-                             aggregation=aggregation,
-                             remove_json_unserializables=remove_json_unserializables,
-                             )
+        results = self.query(
+            collection="tasks",
+            filter=filter,
+            projection=projection,
+            limit=limit,
+            sort=sort,
+            aggregation=aggregation,
+            remove_json_unserializables=remove_json_unserializables,
+        )
         if results is None:
             self.logger.error("Could not retrieve tasks with that filter.")
             return None
@@ -134,17 +139,17 @@ class DBAPI(object):
 
     def query(
         self,
-        collection="tasks",
         filter=None,
         projection=None,
         limit=0,
         sort=None,
         aggregation=None,
         remove_json_unserializables=True,
+        collection="tasks",
     ):
         """Query it."""
         return DBAPI._dao.query(
-            collection, filter, projection, limit, sort, aggregation, remove_json_unserializables
+            filter, projection, limit, sort, aggregation, remove_json_unserializables, collection
         )
 
     def save_torch_model(

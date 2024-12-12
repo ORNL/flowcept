@@ -102,6 +102,7 @@ def lightweight_flowcept_task(func=None):
 def flowcept_task(func=None, **decorator_kwargs):
     """Get flowcept task."""
     interceptor = InstrumentationInterceptor.get_instance()
+    logger = FlowceptLogger()
 
     def decorator(func):
         @wraps(func)
@@ -132,7 +133,7 @@ def flowcept_task(func=None, **decorator_kwargs):
                 else:
                     task_obj.generated = args_handler(task_obj, result)
             except Exception as e:
-                FlowceptLogger().exception(e)
+                logger.exception(e)
 
             interceptor.intercept(task_obj.to_dict())
             return result
@@ -143,3 +144,46 @@ def flowcept_task(func=None, **decorator_kwargs):
         return decorator
     else:
         return decorator(func)
+
+
+def _flowcept_loop_task(generator_func):
+    interceptor = InstrumentationInterceptor.get_instance()
+
+    def wrapper(*args, **kwargs):
+        whole_loop_obj = TaskObject()
+        whole_loop_obj.started_at = time()
+        whole_loop_obj.task_id = str(whole_loop_obj.started_at)
+        whole_loop_obj.activity_id = kwargs.pop("loop_name", "loop")
+        whole_loop_obj.workflow_id = kwargs.pop("workflow_id", Flowcept.current_workflow_id)
+        item_name = kwargs.pop("item_name", "item")
+
+        i = 0
+        for item in generator_func(*args, **kwargs):
+            iteration_obj = TaskObject()
+            iteration_obj.activity_id = whole_loop_obj.activity_id + "_iteration"
+            iteration_obj.parent_task_id = whole_loop_obj.task_id
+            iteration_obj.workflow_id = whole_loop_obj.workflow_id
+            iteration_obj.started_at = time()
+            iteration_obj.used = {"i": i}
+            iteration_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
+            if type(item) in {int, float, str}:
+                iteration_obj.used[item_name] = item
+            else:
+                iteration_obj.used[item_name] = id(item)
+            iteration_obj.task_id = str(iteration_obj.started_at)
+            yield item
+            iteration_obj.ended_at = time()
+            iteration_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
+            iteration_obj.status = Status.FINISHED
+            interceptor.intercept(iteration_obj.to_dict())
+            i += 1
+        interceptor.intercept(whole_loop_obj.to_dict())
+
+    return wrapper
+
+
+@_flowcept_loop_task
+def flowcept_loop(items, loop_name=None, item_name=None, workflow_id=None, *args, **kwargs):
+    """Instrumentation facility to help you capture loops."""
+    for item in items:
+        yield item
