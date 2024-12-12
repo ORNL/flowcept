@@ -1,4 +1,4 @@
-name: Tests on py11 without Mongo
+name: (Without Mongo) Tests on py11
 on: [pull_request]
 
 jobs:

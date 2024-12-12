@@ -267,10 +267,16 @@ class DecoratorTests(unittest.TestCase):
 
         docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
         assert len(docs) == 3  # 1 (parent_task) + 2 (sub_tasks)
-        first_task = docs[0]
-        assert first_task["activity_id"] == "epochs"
-        sub_tasks = docs[1:]
-        assert all(t["parent_task_id"] == first_task["task_id"] for t in sub_tasks)
+
+        iteration_tasks = []
+        whole_loop_task = None
+        for d in docs:
+            if d["activity_id"] == "epochs":
+                whole_loop_task = d
+            else:
+                iteration_tasks.append(d)
+        assert len(iteration_tasks) == 2
+        assert all(t["parent_task_id"] == whole_loop_task["task_id"] for t in iteration_tasks)
 
 
 

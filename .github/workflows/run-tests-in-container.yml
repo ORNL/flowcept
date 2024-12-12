@@ -1,4 +1,4 @@
-name: Tests inside a Container
+name: (With Mongo) Tests inside a Container
 on: [pull_request]
 
 jobs:
