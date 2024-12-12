@@ -16,4 +16,6 @@ with Flowcept():
     o1 = sum_one(n)
     o2 = mult_two(o1)
     print(o2)
-print(Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id}))
+docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
+print(len(docs))
+

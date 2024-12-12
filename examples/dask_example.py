@@ -55,16 +55,16 @@ if __name__ == "__main__":
     print("Getting first task only:")
     task1 = Flowcept.db.query(filter={"task_id": t1.key})[0]
     assert task1["workflow_id"] == wf_id
-    print(task1)
+    # print(task1)
     print("\n\n")
     print("Getting all tasks from this workflow:")
     all_tasks = Flowcept.db.query(filter={"workflow_id": wf_id})
     assert len(all_tasks) == 4
     assert all(t.get("finished") is True for t in all_tasks)
     assert all_tasks[-1]["generated"]["arg0"] == 30, "Checking if the last result was saved."
-    print(all_tasks)
+    # print(all_tasks)
     print("\n\n")
     print("Getting workflow info:")
     wf_info = Flowcept.db.query(filter={"workflow_id": wf_id}, collection="workflows")[0]
     assert wf_info["workflow_id"] == wf_id
-    print(wf_info)
+    # print(wf_info)

@@ -35,4 +35,4 @@ if __name__ == "__main__":
     run_data = interceptor.dao.get_run_data(run_id)
     task = Flowcept.db.query(filter={"task_id": run.info.run_uuid})[0]
     assert task["status"] == "FINISHED"
-    print(task)
+    # print(task)

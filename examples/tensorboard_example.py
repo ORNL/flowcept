@@ -137,4 +137,4 @@ if __name__ == "__main__":
 
     tasks = Flowcept.db.query(filter={"workflow_id": wf_id})
     assert len(tasks) == 16
-    print(tasks)
+    print(len(tasks))
