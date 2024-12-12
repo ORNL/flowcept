@@ -39,6 +39,11 @@ jobs:
       - name: Test examples
         run: bash .github/workflows/run_examples.sh examples true # with mongo
 
+      - name: Install all dependencies
+        run: |
+          python -m pip install .[all]
+          python -m pip install .[ml_dev]
+
       - name: Check liveness
         run: |
           export MQ_TYPE=kafka
