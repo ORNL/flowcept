@@ -146,20 +146,21 @@ class TaskQueryAPITest(unittest.TestCase):
         super(TaskQueryAPITest, self).__init__(*args, **kwargs)
         self.logger = FlowceptLogger()
         self.api = TaskQueryAPI()
-        self.db_dao = DocumentDBDAO.get_instance(create_indices=False)
 
     def gen_n_get_task_ids(self, generation_function, size=1, generation_args={}):
         docs, task_ids = generation_function(size=size, **generation_args)
 
-        init_db_count = self.db_dao.count_tasks()
-        self.db_dao.insert_and_update_many_tasks(docs, "task_id")
+        dao = DocumentDBDAO.get_instance(create_indices=False)
+        init_db_count = dao.count_tasks()
+        dao.insert_and_update_many_tasks(docs, "task_id")
 
         task_ids_filter = {"task_id": {"$in": task_ids}}
         return task_ids_filter, task_ids, init_db_count
 
     def delete_task_ids_and_assert(self, task_ids, init_db_count):
-        self.db_dao.delete_task_keys("task_id", task_ids)
-        final_db_count = self.db_dao.count_tasks()
+        dao = DocumentDBDAO.get_instance(create_indices=False)
+        dao.delete_task_keys("task_id", task_ids)
+        final_db_count = dao.count_tasks()
         assert init_db_count == final_db_count
 
     def test_webserver_query(self):

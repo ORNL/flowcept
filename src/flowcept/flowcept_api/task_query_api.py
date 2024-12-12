@@ -12,6 +12,7 @@ import requests
 
 from bson.objectid import ObjectId
 
+from flowcept import Flowcept
 from flowcept.analytics.analytics_utils import (
     clean_dataframe as clean_df,
     analyze_correlations_between,
@@ -23,7 +24,6 @@ from flowcept.commons.query_utils import (
     to_datetime,
     calculate_telemetry_diff_for_docs,
 )
-from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.configs import WEBSERVER_HOST, WEBSERVER_PORT, ANALYTICS
 from flowcept.flowcept_webserver.app import BASE_ROUTE
 from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
@@ -135,7 +135,7 @@ class TaskQueryAPI(object):
                 raise Exception(r.text)
 
         else:
-            db_api = DBAPI()
+            db_api = Flowcept.db
             docs = db_api.task_query(
                 filter,
                 projection,
@@ -151,7 +151,7 @@ class TaskQueryAPI(object):
 
     def get_subworkflows_tasks_from_a_parent_workflow(self, parent_workflow_id: str) -> List[Dict]:
         """Get subworkflows."""
-        db_api = DBAPI()
+        db_api = Flowcept.db
         sub_wfs = db_api.workflow_query({"parent_workflow_id": parent_workflow_id})
         if not sub_wfs:
             return None

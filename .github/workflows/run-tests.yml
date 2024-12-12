@@ -44,7 +44,7 @@ jobs:
         run: |
           python examples/simple_instrumented_script.py | tee output.log
           cat output.log
-          grep -q "ERROR" output.log && exit 1
+          grep -iq "error" output.log && exit 1
           rm output.log
  
 
@@ -54,7 +54,7 @@ jobs:
           pip install .[dask]
           python examples/dask_example.py | tee output.log
           cat output.log
-          grep -q "ERROR" output.log && exit 1
+          grep -iq "error" output.log && exit 1
           rm output.log          
 
       - name: Install MLFlow dependencies alone and run a simple MLFlow test
@@ -63,7 +63,7 @@ jobs:
           pip install .[mlflow]
           python examples/mlflow_example.py | tee output.log
           cat output.log
-          grep -q "ERROR" output.log && exit 1
+          grep -iq "error" output.log && exit 1
           rm output.log    
 
       - name: Install Tensorboard dependencies alone and run a simple Tensorboard test
@@ -72,7 +72,7 @@ jobs:
           pip install .[tensorboard]
           python examples/tensorboard_example.py  | tee output.log
           cat output.log
-          grep -q "ERROR" output.log && exit 1
+          grep -iq "error" output.log && exit 1
           rm output.log 
 
       - name: Install all dependencies

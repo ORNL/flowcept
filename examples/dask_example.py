@@ -65,6 +65,6 @@ if __name__ == "__main__":
     print(all_tasks)
     print("\n\n")
     print("Getting workflow info:")
-    wf_info = Flowcept.db.query(filter={"workflow_id": wf_id}, type="workflow")[0]
+    wf_info = Flowcept.db.query(filter={"workflow_id": wf_id}, collection="workflows")[0]
     assert wf_info["workflow_id"] == wf_id
     print(wf_info)
