@@ -213,7 +213,7 @@ class DocumentInserter:
             self._handle_workflow_message(msg_obj)
             return True
         elif msg_type is None:
-            self.logger.warning(f"Message without type???\n {msg_obj}")
+            self.logger.error(f"Message without type??? --> {msg_obj}")
             return True
         else:
             self.logger.error("Unexpected message type")

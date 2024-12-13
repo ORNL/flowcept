@@ -2,11 +2,10 @@
 
 from time import time
 from functools import wraps
-from flowcept import Flowcept
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
-    Status,
 )
+from flowcept.commons.vocabulary import Status
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 from flowcept.commons.utils import replace_non_serializable
@@ -14,6 +13,7 @@ from flowcept.configs import (
     REPLACE_NON_JSON_SERIALIZABLE,
     INSTRUMENTATION_ENABLED,
 )
+from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 
@@ -35,7 +35,8 @@ def default_args_handler(task_message: TaskObject, *args, **kwargs):
 
 def telemetry_flowcept_task(func=None):
     """Get telemetry task."""
-    interceptor = InstrumentationInterceptor.get_instance()
+    if INSTRUMENTATION_ENABLED:
+        interceptor = InstrumentationInterceptor.get_instance()
 
     def decorator(func):
         @wraps(func)
@@ -44,14 +45,14 @@ def telemetry_flowcept_task(func=None):
             task_obj["type"] = "task"
             task_obj["started_at"] = time()
             task_obj["activity_id"] = func.__qualname__
-            task_obj["task_id"] = str(id(task_obj))
-            task_obj["workflow_id"] = kwargs.pop("workflow_id")
+            task_obj["task_id"] = str(task_obj["started_at"])
+            task_obj["workflow_id"] = kwargs.pop("workflow_id", Flowcept.current_workflow_id)
             task_obj["used"] = kwargs
             tel = interceptor.telemetry_capture.capture()
             if tel is not None:
                 task_obj["telemetry_at_start"] = tel.to_dict()
             try:
-                result = func(*args, **kwargs)
+                result = func(task_id=task_obj["task_id"], *args, **kwargs)
                 task_obj["status"] = Status.FINISHED.value
             except Exception as e:
                 task_obj["status"] = Status.ERROR.value
@@ -75,7 +76,8 @@ def telemetry_flowcept_task(func=None):
 
 def lightweight_flowcept_task(func=None):
     """Get lightweight task."""
-    interceptor = InstrumentationInterceptor.get_instance()
+    if INSTRUMENTATION_ENABLED:
+        interceptor = InstrumentationInterceptor.get_instance()
 
     def decorator(func):
         @wraps(func)
@@ -101,8 +103,9 @@ def lightweight_flowcept_task(func=None):
 
 def flowcept_task(func=None, **decorator_kwargs):
     """Get flowcept task."""
-    interceptor = InstrumentationInterceptor.get_instance()
-    logger = FlowceptLogger()
+    if INSTRUMENTATION_ENABLED:
+        interceptor = InstrumentationInterceptor.get_instance()
+        logger = FlowceptLogger()
 
     def decorator(func):
         @wraps(func)
@@ -144,46 +147,3 @@ def flowcept_task(func=None, **decorator_kwargs):
         return decorator
     else:
         return decorator(func)
-
-
-def _flowcept_loop_task(generator_func):
-    interceptor = InstrumentationInterceptor.get_instance()
-
-    def wrapper(*args, **kwargs):
-        whole_loop_obj = TaskObject()
-        whole_loop_obj.started_at = time()
-        whole_loop_obj.task_id = str(whole_loop_obj.started_at)
-        whole_loop_obj.activity_id = kwargs.pop("loop_name", "loop")
-        whole_loop_obj.workflow_id = kwargs.pop("workflow_id", Flowcept.current_workflow_id)
-        item_name = kwargs.pop("item_name", "item")
-
-        i = 0
-        for item in generator_func(*args, **kwargs):
-            iteration_obj = TaskObject()
-            iteration_obj.activity_id = whole_loop_obj.activity_id + "_iteration"
-            iteration_obj.parent_task_id = whole_loop_obj.task_id
-            iteration_obj.workflow_id = whole_loop_obj.workflow_id
-            iteration_obj.started_at = time()
-            iteration_obj.used = {"i": i}
-            iteration_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
-            if type(item) in {int, float, str}:
-                iteration_obj.used[item_name] = item
-            else:
-                iteration_obj.used[item_name] = id(item)
-            iteration_obj.task_id = str(iteration_obj.started_at)
-            yield item
-            iteration_obj.ended_at = time()
-            iteration_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
-            iteration_obj.status = Status.FINISHED
-            interceptor.intercept(iteration_obj.to_dict())
-            i += 1
-        interceptor.intercept(whole_loop_obj.to_dict())
-
-    return wrapper
-
-
-@_flowcept_loop_task
-def flowcept_loop(items, loop_name=None, item_name=None, workflow_id=None, *args, **kwargs):
-    """Instrumentation facility to help you capture loops."""
-    for item in items:
-        yield item

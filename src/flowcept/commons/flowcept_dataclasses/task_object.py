@@ -1,11 +1,11 @@
 """Task object module."""
 
-from enum import Enum
 from typing import Dict, AnyStr, Any, Union, List
 import msgpack
 
 import flowcept
 from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
+from flowcept.commons.vocabulary import Status
 from flowcept.configs import (
     HOSTNAME,
     PRIVATE_IP,
@@ -14,25 +14,6 @@ from flowcept.configs import (
     NODE_NAME,
     CAMPAIGN_ID,
 )
-
-
-class Status(str, Enum):
-    """Status class.
-
-    Inheriting from str here for JSON serialization.
-    """
-
-    SUBMITTED = "SUBMITTED"
-    WAITING = "WAITING"
-    RUNNING = "RUNNING"
-    FINISHED = "FINISHED"
-    ERROR = "ERROR"
-    UNKNOWN = "UNKNOWN"
-
-    @staticmethod
-    def get_finished_statuses():
-        """Get finished status."""
-        return [Status.FINISHED, Status.ERROR]
 
 
 class TaskObject:

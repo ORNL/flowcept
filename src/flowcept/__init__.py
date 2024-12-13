@@ -2,14 +2,33 @@
 
 from flowcept.configs import SETTINGS_PATH
 from flowcept.version import __version__
-from flowcept.flowcept_api.flowcept_controller import Flowcept
-from flowcept.instrumentation.decorators.flowcept_task import flowcept_task, flowcept_loop
+
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 
 
 def __getattr__(name):
+    if name == "Flowcept":
+        from flowcept.flowcept_api.flowcept_controller import Flowcept
+
+        return Flowcept
+
+    elif name == "flowcept_task":
+        from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
+
+        return flowcept_task
+
+    elif name == "FlowceptLoop":
+        from flowcept.instrumentation.decorators.flowcept_loop import FlowceptLoop
+
+        return FlowceptLoop
+
+    elif name == "telemetry_flowcept_task":
+        from flowcept.instrumentation.decorators.flowcept_task import telemetry_flowcept_task
+
+        return telemetry_flowcept_task
+
     if name == "MLFlowInterceptor":
         from flowcept.flowceptor.adapters.mlflow.mlflow_interceptor import (
             MLFlowInterceptor,
@@ -54,10 +73,11 @@ __all__ = [
     "TensorboardInterceptor",
     "ZambezeInterceptor",
     "TaskQueryAPI",
-    "WorkflowObject",
     "flowcept_task",
-    "flowcept_loop",
+    "FlowceptLoop",
+    "telemetry_flowcept_task",
     "Flowcept",
+    "WorkflowObject",
     "__version__",
     "SETTINGS_PATH",
 ]

@@ -13,7 +13,7 @@ import numpy as np
 from flowcept import configs
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import PERF_LOG
-from flowcept.commons.flowcept_dataclasses.task_object import Status
+from flowcept.commons.vocabulary import Status
 
 
 def get_utc_now() -> float:

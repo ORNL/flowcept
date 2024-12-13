@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 import torch
+from torch.utils.data import Subset, DataLoader
 from torchvision import datasets, transforms
 from torch import nn, optim
 from torch.nn import functional as F
@@ -88,28 +89,30 @@ class MyNet(nn.Module):
 
 class ModelTrainer(object):
     @staticmethod
-    def build_train_test_loader(batch_size=128, random_seed=0):
+    def build_train_test_loader(batch_size=128, random_seed=0, debug=True, subset_size=1000):
         torch.manual_seed(random_seed)
-        train_loader = torch.utils.data.DataLoader(
-            datasets.MNIST(
-                "mnist_data",
-                train=True,
-                download=True,
-                transform=transforms.Compose([transforms.ToTensor()]),
-            ),
-            batch_size=batch_size,
-            shuffle=True,
+
+        # Load the full MNIST dataset
+        train_dataset = datasets.MNIST(
+            "mnist_data",
+            train=True,
+            download=True,
+            transform=transforms.Compose([transforms.ToTensor()]),
+        )
+        test_dataset = datasets.MNIST(
+            "mnist_data",
+            train=False,
+            transform=transforms.Compose([transforms.ToTensor()]),
         )
 
-        test_loader = torch.utils.data.DataLoader(
-            datasets.MNIST(
-                "mnist_data",
-                train=False,
-                transform=transforms.Compose([transforms.ToTensor()]),
-            ),
-            batch_size=batch_size,
-            shuffle=True,
-        )
+        if debug:
+            # Create smaller subsets for debugging
+            train_dataset = Subset(train_dataset, range(subset_size))
+            test_dataset = Subset(test_dataset, range(subset_size))
+
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
         return train_loader, test_loader
 
     @staticmethod

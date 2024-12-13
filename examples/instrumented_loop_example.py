@@ -1,12 +1,18 @@
+import random
 from time import sleep
 
-from flowcept import Flowcept, flowcept_loop
+from flowcept import Flowcept, FlowceptLoop
 
-epochs = range(1, 3)
+iterations = 3
+
 with Flowcept():
-    for _ in flowcept_loop(items=epochs, loop_name="epochs", item_name='epoch'):
+    loop = FlowceptLoop(iterations)
+    for item in loop:
+        loss = random.random()
         sleep(0.05)
+        print(item, loss)
+        # The following is optional, in case you want to capture values generated inside the loop.
+        loop.end_iter({"item": item, "loss": loss})
 
 docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
-print(len(docs))
-assert len(docs) == 3  # 1 (parent_task) + 2 (sub_tasks)
+assert len(docs) == iterations + 1  # The whole loop itself is a task

@@ -7,15 +7,16 @@ import pandas as pd
 from time import time, sleep
 
 import flowcept.instrumentation.decorators
-from flowcept import Flowcept
+from flowcept import Flowcept, FlowceptLoop
 
 import unittest
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
+from flowcept.commons.vocabulary import Status
 from flowcept.instrumentation.decorators.flowcept_task import (
     flowcept_task,
-    lightweight_flowcept_task, flowcept_loop,
+    lightweight_flowcept_task,
 )
 
 
@@ -259,25 +260,74 @@ class DecoratorTests(unittest.TestCase):
         print("Overheads: " + str(overheads))
         assert all(map(lambda v: v < threshold, overheads))
 
-    def test_flowcept_loop_generator(self):
-        epochs = range(1, 3)
-        with Flowcept():
-            for _ in flowcept_loop(items=epochs, loop_name="epochs", item_name='epoch'):
-                sleep(0.05)
+    def test_flowcept_loop_types(self):
 
+        with Flowcept():
+            items = range(3)
+            loop = FlowceptLoop(items=items)
+            for _ in loop:
+                pass
         docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
-        assert len(docs) == 3  # 1 (parent_task) + 2 (sub_tasks)
+        assert len(docs) == len(items) + 1
+
+        with Flowcept():
+            items = [10, 20, 30]
+            loop = FlowceptLoop(items=items)
+            for _ in loop:
+                pass
+        docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
+        assert len(docs) == len(items) + 1
+
+        with Flowcept():
+            items = "abcd"
+            loop = FlowceptLoop(items=items)
+            for _ in loop:
+                pass
+        docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
+        assert len(docs) == len(items) + 1
+
+        with Flowcept():
+            items = np.array([0.5, 1.0, 1.5])
+            loop = FlowceptLoop(items=items, loop_name="our_loop")
+            for _ in loop:
+                loop.end_iter({"a": 1})
+        docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id, "activity_id": "our_loop_iteration"})
+        assert len(docs) == len(items)
+        assert all(d["generated"]["a"] == 1 for d in docs)
+
+    def test_flowcept_loop_generator(self):
+        number_of_epochs = 3
+        epochs = range(0, number_of_epochs)
+        with Flowcept():
+            loop = FlowceptLoop(items=epochs, loop_name="epochs", item_name="epoch")
+            for e in loop:
+                sleep(0.05)
+                loss = random.random()
+                print(e, loss)
+                loop.end_iter({"loss": loss})
+        docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
+        assert len(docs) == number_of_epochs+1  # 1 (parent_task) + #epochs (sub_tasks)
 
         iteration_tasks = []
         whole_loop_task = None
         for d in docs:
             if d["activity_id"] == "epochs":
                 whole_loop_task = d
+                assert whole_loop_task["ended_at"] is not None
+                assert whole_loop_task["status"] == Status.FINISHED.value
             else:
+                assert d["started_at"] is not None
+                assert d["used"]["i"] >= 0
+                assert d["generated"]["loss"] > 0
                 iteration_tasks.append(d)
-        assert len(iteration_tasks) == 2
-        assert all(t["parent_task_id"] == whole_loop_task["task_id"] for t in iteration_tasks)
 
-
+        assert len(iteration_tasks) == number_of_epochs
+        sorted_iteration_tasks = sorted(iteration_tasks, key=lambda x: x['used']['i'])
+        for i in range(len(sorted_iteration_tasks)):
+            t = sorted_iteration_tasks[i]
+            assert t["used"]["i"] == i
+            assert t["used"]["epoch"] == i
+            assert t["status"] == Status.FINISHED.value
+            assert t["parent_task_id"] == whole_loop_task["task_id"]
 
 

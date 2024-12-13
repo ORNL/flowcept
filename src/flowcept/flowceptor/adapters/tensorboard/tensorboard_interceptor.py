@@ -8,8 +8,8 @@ from watchdog.observers.polling import PollingObserver
 
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
-    Status,
 )
+from flowcept.commons.vocabulary import Status
 from flowcept.commons.utils import get_utc_now
 from flowcept.flowceptor.adapters.interceptor_state_manager import (
     InterceptorStateManager,
