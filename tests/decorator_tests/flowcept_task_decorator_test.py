@@ -260,6 +260,41 @@ class DecoratorTests(unittest.TestCase):
         print("Overheads: " + str(overheads))
         assert all(map(lambda v: v < threshold, overheads))
 
+    def test_flowcept_loop_types(self):
+
+        with Flowcept():
+            items = range(3)
+            loop = FlowceptLoop(items=items)
+            for _ in loop:
+                pass
+        docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
+        assert len(docs) == len(items) + 1
+
+        with Flowcept():
+            items = [10, 20, 30]
+            loop = FlowceptLoop(items=items)
+            for _ in loop:
+                pass
+        docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
+        assert len(docs) == len(items) + 1
+
+        with Flowcept():
+            items = "abcd"
+            loop = FlowceptLoop(items=items)
+            for _ in loop:
+                pass
+        docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
+        assert len(docs) == len(items) + 1
+
+        with Flowcept():
+            items = np.array([0.5, 1.0, 1.5])
+            loop = FlowceptLoop(items=items, loop_name="our_loop")
+            for _ in loop:
+                loop.end_iter({"a": 1})
+        docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id, "activity_id": "our_loop_iteration"})
+        assert len(docs) == len(items)
+        assert all(d["generated"]["a"] == 1 for d in docs)
+
     def test_flowcept_loop_generator(self):
         number_of_epochs = 3
         epochs = range(0, number_of_epochs)
@@ -294,3 +329,5 @@ class DecoratorTests(unittest.TestCase):
             assert t["used"]["epoch"] == i
             assert t["status"] == Status.FINISHED.value
             assert t["parent_task_id"] == whole_loop_task["task_id"]
+
+

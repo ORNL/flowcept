@@ -1,4 +1,5 @@
 """Task module."""
+
 from time import time
 from functools import wraps
 from flowcept.commons.flowcept_dataclasses.task_object import (

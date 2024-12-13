@@ -1,4 +1,5 @@
 """Vocab module."""
+
 from enum import Enum
 
 

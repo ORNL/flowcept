@@ -11,18 +11,22 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 def __getattr__(name):
     if name == "Flowcept":
         from flowcept.flowcept_api.flowcept_controller import Flowcept
+
         return Flowcept
 
     elif name == "flowcept_task":
         from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
+
         return flowcept_task
 
     elif name == "FlowceptLoop":
         from flowcept.instrumentation.decorators.flowcept_loop import FlowceptLoop
+
         return FlowceptLoop
 
     elif name == "telemetry_flowcept_task":
         from flowcept.instrumentation.decorators.flowcept_task import telemetry_flowcept_task
+
         return telemetry_flowcept_task
 
     if name == "MLFlowInterceptor":
