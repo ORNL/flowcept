@@ -13,6 +13,7 @@ import unittest
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
+from flowcept.commons.vocabulary import Status
 from flowcept.instrumentation.decorators.flowcept_task import (
     flowcept_task,
     lightweight_flowcept_task,
@@ -268,7 +269,7 @@ class DecoratorTests(unittest.TestCase):
                 sleep(0.05)
                 loss = random.random()
                 print(e, loss)
-                loop.end_iter({"loss":loss})
+                loop.end_iter({"loss": loss})
         docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
         assert len(docs) == number_of_epochs+1  # 1 (parent_task) + #epochs (sub_tasks)
 
@@ -277,13 +278,19 @@ class DecoratorTests(unittest.TestCase):
         for d in docs:
             if d["activity_id"] == "epochs":
                 whole_loop_task = d
+                assert whole_loop_task["ended_at"] is not None
+                assert whole_loop_task["status"] == Status.FINISHED.value
             else:
+                assert d["started_at"] is not None
                 assert d["used"]["i"] >= 0
                 assert d["generated"]["loss"] > 0
                 iteration_tasks.append(d)
+
         assert len(iteration_tasks) == number_of_epochs
-        assert all(t["parent_task_id"] == whole_loop_task["task_id"] for t in iteration_tasks)
-
-
-
-
+        sorted_iteration_tasks = sorted(iteration_tasks, key=lambda x: x['used']['i'])
+        for i in range(len(sorted_iteration_tasks)):
+            t = sorted_iteration_tasks[i]
+            assert t["used"]["i"] == i
+            assert t["used"]["epoch"] == i
+            assert t["status"] == Status.FINISHED.value
+            assert t["parent_task_id"] == whole_loop_task["task_id"]

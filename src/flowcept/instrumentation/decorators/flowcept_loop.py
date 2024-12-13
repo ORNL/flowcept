@@ -32,11 +32,12 @@ class FlowceptLoop:
         self._parent_task_id = parent_task_id
         self._workflow_id = workflow_id or Flowcept.current_workflow_id or str(uuid.uuid4())
 
+
     def __iter__(self):
         return self
 
     def _capture_begin_loop(self):
-        self.logger.debug(f"Registering loop init.")
+        self.logger.debug("Registering loop init.")
         self.whole_loop_task = {
             "started_at": (started_at := time()),
             "task_id": str(started_at),
@@ -50,7 +51,7 @@ class FlowceptLoop:
     def _capture_end_loop(self):
         self.logger.debug("Registering the end of the loop.")
         self.whole_loop_task["status"] = Status.FINISHED.value
-        self.whole_loop_task["ended_at"] = self._current_iteration_task["ended_at"]
+        self.whole_loop_task["ended_at"] = time()#self._current_iteration_task["ended_at"]
         self._interceptor.intercept(self.whole_loop_task)
 
     def __next__(self):
@@ -73,6 +74,7 @@ class FlowceptLoop:
                 },
                 "parent_task_id": self.whole_loop_task["task_id"],
                 "started_at": time(),
+                "telemetry_at_start": self._interceptor.telemetry_capture.capture().to_dict(),
                 "type": "task"
             }
         return item
@@ -80,7 +82,8 @@ class FlowceptLoop:
     def end_iter(self, value: typing.Dict):
         self.logger.debug(f"Registering the end of the {self._next_counter - 1}th iteration.")
         self._current_iteration_task["generated"] = value
-        self._current_iteration_task["ended_at"] = time()
+        #self._current_iteration_task["ended_at"] = time()
+        #self._current_iteration_task["telemetry_at_end"] = self._interceptor.telemetry_capture.capture().to_dict(),
         self._current_iteration_task["status"] = Status.FINISHED.value
         self._interceptor.intercept(self._current_iteration_task)
 

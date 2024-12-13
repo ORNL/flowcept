@@ -1,6 +1,5 @@
 """Task object module."""
 
-from enum import Enum
 from typing import Dict, AnyStr, Any, Union, List
 import msgpack
 

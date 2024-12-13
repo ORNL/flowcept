@@ -102,7 +102,6 @@ def lightweight_flowcept_task(func=None):
 
 def flowcept_task(func=None, **decorator_kwargs):
     """Get flowcept task."""
-
     if INSTRUMENTATION_ENABLED:
         interceptor = InstrumentationInterceptor.get_instance()
         logger = FlowceptLogger()
