@@ -52,7 +52,7 @@ def telemetry_flowcept_task(func=None):
             if tel is not None:
                 task_obj["telemetry_at_start"] = tel.to_dict()
             try:
-                result = func(task_id=task_obj["task_id"], *args, **kwargs)
+                result = func(*args, **kwargs)
                 task_obj["status"] = Status.FINISHED.value
             except Exception as e:
                 task_obj["status"] = Status.ERROR.value
