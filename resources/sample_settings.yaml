@@ -7,6 +7,11 @@ project:
   enrich_messages: true
   db_flush_mode: online   # or offline
 
+log:
+  log_path: "default"
+  log_file_level: error # use 'disable' to disable logs
+  log_stream_level: error
+
 telemetry_capture:
   gpu: ~ # ~ means None. This is a list that should specify which metrics of the GPU that should be monitored
   cpu: true
@@ -22,11 +27,6 @@ instrumentation:
   torch:
     mode: telemetry_and_tensor_inspection   # tensor_inspection, telemetry, telemetry_and_tensor_inspection, full, ~
     save_models: True
-
-log:
-  log_path: "default"
-  log_file_level: error # use 'disable' to disable logs
-  log_stream_level: error
 
 experiment:
   user: root
