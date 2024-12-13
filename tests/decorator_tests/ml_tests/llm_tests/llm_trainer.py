@@ -10,7 +10,6 @@ from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from datasets import load_dataset
 
-import flowcept
 from flowcept import Flowcept
 from flowcept.configs import N_GPUS
 
@@ -106,9 +105,7 @@ class TransformerModel(nn.Module):
         custom_metadata: dict = None,
     ):
         super(TransformerModel, self).__init__()
-        self.workflow_id = register_module_as_workflow(
-            self, parent_workflow_id, custom_metadata
-        )
+        self.workflow_id = register_module_as_workflow(self, parent_workflow_id, custom_metadata)
         self.parent_task_id = parent_task_id
         (
             TransformerEncoderLayer,
@@ -136,9 +133,7 @@ class TransformerModel(nn.Module):
             workflow_id=self.workflow_id,
             parent_task_id=parent_task_id,
         )
-        encoder_layers = TransformerEncoderLayer(
-            d_model, nhead, d_hid, dropout
-        )
+        encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.encoder = Embedding(ntoken, d_model)
         self.d_model = d_model
@@ -148,11 +143,7 @@ class TransformerModel(nn.Module):
     def _generate_square_subsequent_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
         ## Change all the zeros to negative infinity and all the ones to zeros as follows:
-        mask = (
-            mask.float()
-            .masked_fill(mask == 0, float("-inf"))
-            .masked_fill(mask == 1, float(0.0))
-        )
+        mask = mask.float().masked_fill(mask == 0, float("-inf")).masked_fill(mask == 1, float(0.0))
         return mask
 
     # @flowcept_task(args_handler=torch_args_handler)
@@ -194,10 +185,7 @@ class PositionalEncoding(nn.Module):
 
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(
-            torch.arange(0, d_model, 2).float()
-            * (-math.log(10000.0) / d_model)
-        )
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0).transpose(0, 1)
@@ -220,9 +208,7 @@ def train_epoch(ntokens, model, train_data, criterion, optimizer, bptt=35):
             train_data, i, bptt
         )  # Get the input data and targets for the current mini-batch
         optimizer.zero_grad()  # Reset the gradients to zero before the next backward pass
-        output = model(
-            data
-        )  # Forward pass: compute the output of the model given the input data
+        output = model(data)  # Forward pass: compute the output of the model given the input data
 
         loss = criterion(
             output.view(-1, ntokens), targets
@@ -282,7 +268,7 @@ def model_train(
     # TODO :base-interceptor-refactor: Can we do it better?
     with Flowcept(
         bundle_exec_id=workflow_id,
-        start_doc_inserter=False,
+        start_persistence=False,
     ):
         train_data = batchify(train_data, batch_size)
         val_data = batchify(val_data, eval_batch_size)
@@ -312,28 +298,21 @@ def model_train(
         ).to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(), lr=lr)
-        best_val_loss = float(
-            "inf"
-        )  # Initialize the best validation loss to infinity
+        best_val_loss = float("inf")  # Initialize the best validation loss to infinity
         # best_m = None
         # Iterate through the epochs
         t0 = time()
         for epoch in range(1, epochs + 1):
             print(f"Starting training for epoch {epoch}/{epochs}")
             # Train the model on the training data and calculate the training loss
-            train_loss = train_epoch(
-                ntokens, model, train_data, criterion, optimizer, batch_size
-            )
+
+            train_loss = train_epoch(ntokens, model, train_data, criterion, optimizer, batch_size)
 
             # Evaluate the model on the validation data and calculate the validation loss
-            val_loss = evaluate(
-                ntokens, model, val_data, criterion, eval_batch_size
-            )
+            val_loss = evaluate(ntokens, model, val_data, criterion, eval_batch_size)
 
             # Print the training and validation losses for the current epoch
-            print(
-                f"Epoch: {epoch}, Train loss: {train_loss:.2f}, Validation loss: {val_loss:.2f}"
-            )
+            print(f"Epoch: {epoch}, Train loss: {train_loss:.2f}, Validation loss: {val_loss:.2f}")
 
             # If the validation loss has improved, save the model's state
             if val_loss < best_val_loss:
@@ -365,9 +344,7 @@ def model_train(
 
         print("Evaluating")
         # Evaluate the best model on the test dataset
-        test_loss = evaluate(
-            ntokens, best_m, test_data, criterion, eval_batch_size
-        )
+        test_loss = evaluate(ntokens, best_m, test_data, criterion, eval_batch_size)
         print(f"Test loss: {test_loss:.2f}")
         with open("time.txt", "w") as f:
             f.write(str(t1 - t0))

@@ -11,9 +11,7 @@ old_patch_str = split_version[2]
 re_found = re.findall(r"(\d+)(.*)", old_patch_str)[0]
 old_patch_number = re_found[0]
 
-new_patch_str = old_patch_str.replace(
-    old_patch_number, str(int(old_patch_number) + 1)
-)
+new_patch_str = old_patch_str.replace(old_patch_number, str(int(old_patch_number) + 1))
 
 split_version[2] = new_patch_str
 new_version = ".".join(split_version)

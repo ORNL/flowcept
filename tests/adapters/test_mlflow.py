@@ -108,6 +108,10 @@ class TestMLFlow(unittest.TestCase):
                 max_time=120,
             )
 
+    @classmethod
+    def tearDownClass(cls):
+        Flowcept.db.close()
+
 
 if __name__ == "__main__":
     unittest.main()

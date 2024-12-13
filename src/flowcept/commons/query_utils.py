@@ -6,7 +6,7 @@ from typing import List, Dict
 
 import pandas as pd
 
-from flowcept.commons.flowcept_dataclasses.task_object import Status
+from flowcept.commons.vocabulary import Status
 
 
 def get_doc_status(row):

@@ -7,15 +7,20 @@ project:
   enrich_messages: true
   db_flush_mode: online   # or offline
 
-  telemetry_capture:
-    gpu: ~ # ~ means None. This is a list that should specify which metrics of the GPU that should be monitored
-    cpu: true
-    per_cpu: true
-    process_info: true
-    mem: true
-    disk: true
-    network: true
-    machine_info: true
+log:
+  log_path: "default"
+  log_file_level: error # use 'disable' to disable logs
+  log_stream_level: error
+
+telemetry_capture:
+  gpu: ~ # ~ means None. This is a list that should specify which metrics of the GPU that should be monitored
+  cpu: true
+  per_cpu: true
+  process_info: true
+  mem: true
+  disk: true
+  network: true
+  machine_info: true
 
 instrumentation:
   enabled: true
@@ -23,17 +28,12 @@ instrumentation:
     mode: telemetry_and_tensor_inspection   # tensor_inspection, telemetry, telemetry_and_tensor_inspection, full, ~
     save_models: True
 
-log:
-  log_path: "default"
-  log_file_level: error
-  log_stream_level: error
-
 experiment:
   user: root
   campaign_id: super_campaign
 
 mq:
-  type: redis  # or kafka; if kafka, please adjust the port
+  type: redis  # or kafka; Please adjust the port (kafka's default is 9092; redis is 6379)
   host: localhost
   # instances: ["localhost:6379"] # We can have multiple redis instances being accessed by the consumers but each interceptor will currently access one single redis.
   port: 6379
@@ -45,17 +45,6 @@ mq:
 kv_db:
   host: localhost
   port: 6379
-
-mongodb:
-  host: localhost
-  port: 27017
-  db: flowcept
-  collection: tasks
-  insertion_buffer_time_secs: 5
-  max_buffer_size: 50
-  min_buffer_size: 10
-  remove_empty_fields: false
-  create_collection_index: true
 
 web_server:
   host: 0.0.0.0
@@ -72,6 +61,25 @@ analytics:
     generated.loss: minimum_first
     generated.accuracy: maximum_first
 
+buffer:
+  adaptive_buffer_size: true
+  insertion_buffer_time_secs: 5
+  max_buffer_size: 50
+  min_buffer_size: 10
+  remove_empty_fields: false
+
+databases:
+
+  lmdb:
+    enabled: true
+    path: flowcept_lmdb
+
+  mongodb:
+    enabled: false
+    host: localhost
+    port: 27017
+    db: flowcept
+    create_collection_index: true
 
 adapters:
   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2. Use an empty dict, {}, if you won't use any adapter.

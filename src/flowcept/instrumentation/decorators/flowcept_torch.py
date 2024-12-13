@@ -2,9 +2,7 @@
 
 from time import time
 from functools import wraps
-from flowcept.commons.flowcept_dataclasses.task_object import (
-    Status,
-)
+from flowcept.commons.vocabulary import Status
 from typing import List, Dict
 import uuid
 

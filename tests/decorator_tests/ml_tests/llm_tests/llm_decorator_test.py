@@ -54,9 +54,7 @@ class LLMDecoratorTests(unittest.TestCase):
         )
         result = model_train(**conf)
         assert result
-        print(
-            LLMDecoratorTests.debug_model_profiler(conf, ntokens, test_data)
-        )
+        print(LLMDecoratorTests.debug_model_profiler(conf, ntokens, test_data))
 
     @staticmethod
     @model_profiler()

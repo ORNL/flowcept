@@ -2,11 +2,10 @@
 
 from time import time
 from functools import wraps
-from flowcept import Flowcept
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
-    Status,
 )
+from flowcept.commons.vocabulary import Status
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 from flowcept.commons.utils import replace_non_serializable
@@ -14,6 +13,7 @@ from flowcept.configs import (
     REPLACE_NON_JSON_SERIALIZABLE,
     INSTRUMENTATION_ENABLED,
 )
+from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 
@@ -35,7 +35,8 @@ def default_args_handler(task_message: TaskObject, *args, **kwargs):
 
 def telemetry_flowcept_task(func=None):
     """Get telemetry task."""
-    interceptor = InstrumentationInterceptor.get_instance()
+    if INSTRUMENTATION_ENABLED:
+        interceptor = InstrumentationInterceptor.get_instance()
 
     def decorator(func):
         @wraps(func)
@@ -44,14 +45,14 @@ def telemetry_flowcept_task(func=None):
             task_obj["type"] = "task"
             task_obj["started_at"] = time()
             task_obj["activity_id"] = func.__qualname__
-            task_obj["task_id"] = str(id(task_obj))
-            task_obj["workflow_id"] = kwargs.pop("workflow_id")
+            task_obj["task_id"] = str(task_obj["started_at"])
+            task_obj["workflow_id"] = kwargs.pop("workflow_id", Flowcept.current_workflow_id)
             task_obj["used"] = kwargs
             tel = interceptor.telemetry_capture.capture()
             if tel is not None:
                 task_obj["telemetry_at_start"] = tel.to_dict()
             try:
-                result = func(*args, **kwargs)
+                result = func(task_id=task_obj["task_id"], *args, **kwargs)
                 task_obj["status"] = Status.FINISHED.value
             except Exception as e:
                 task_obj["status"] = Status.ERROR.value
@@ -75,34 +76,13 @@ def telemetry_flowcept_task(func=None):
 
 def lightweight_flowcept_task(func=None):
     """Get lightweight task."""
-    interceptor = InstrumentationInterceptor.get_instance()
+    if INSTRUMENTATION_ENABLED:
+        interceptor = InstrumentationInterceptor.get_instance()
 
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # t0 = time()
-            # task_obj["started_at"] = time()
-            # task_obj["type"] = "task"
-
-            # task_obj["task_id"] = t0
-
-            # task_obj["used"] = kwargs
             result = func(*args, **kwargs)
-            # try:
-            #     task_obj["status"] = Status.FINISHED.value
-            # except Exception as e:
-            #     task_obj["status"] = Status.ERROR.value
-            #     result = None
-            #     task_obj["stderr"] = str(e)
-            # task_obj["ended_at"] = time()
-            # generatedKV = task_obj_pb2.GeneratedKV(key="y", val=result["y"])
-            # task_obj = task_obj_pb2.TaskObject(type="task",
-            #                                    workflow_id=kwargs.pop(
-            #                                        "workflow_id"),
-            #                                    activity_id=func.__name__,
-            #                                    y=result["y"]
-            #                                    )
-
             task_dict = dict(
                 type="task",
                 # workflow_id=kwargs.pop("workflow_id", None),
@@ -123,8 +103,9 @@ def lightweight_flowcept_task(func=None):
 
 def flowcept_task(func=None, **decorator_kwargs):
     """Get flowcept task."""
-    interceptor = InstrumentationInterceptor.get_instance()
-    logger = FlowceptLogger()
+    if INSTRUMENTATION_ENABLED:
+        interceptor = InstrumentationInterceptor.get_instance()
+        logger = FlowceptLogger()
 
     def decorator(func):
         @wraps(func)

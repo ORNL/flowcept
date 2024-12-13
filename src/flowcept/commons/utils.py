@@ -13,7 +13,7 @@ import numpy as np
 from flowcept import configs
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import PERF_LOG
-from flowcept.commons.flowcept_dataclasses.task_object import Status
+from flowcept.commons.vocabulary import Status
 
 
 def get_utc_now() -> float:
@@ -27,6 +27,12 @@ def get_utc_now_str() -> str:
     format_string = "%Y-%m-%dT%H:%M:%S.%f"
     now = datetime.utcnow()
     return now.strftime(format_string)
+
+
+def datetime_to_str(dt: datetime) -> str:
+    """Format a datetime object to a string in ISO-like format."""
+    format_string = "%Y-%m-%dT%H:%M:%S.%f"
+    return dt.strftime(format_string)
 
 
 def get_utc_minutes_ago(minutes_ago=1):
@@ -64,19 +70,19 @@ def get_status_from_str(status_str: str) -> Status:
 def assert_by_querying_tasks_until(
     filter,
     condition_to_evaluate: Callable = None,
-    max_trials=30,
+    max_trials=10,
     max_time=60,
 ):
     """Assert by query."""
-    from flowcept.flowcept_api.task_query_api import TaskQueryAPI
+    from flowcept import Flowcept
 
     logger = FlowceptLogger()
-    query_api = TaskQueryAPI()
     start_time = time()
     trials = 0
+    exception = None
 
     while (time() - start_time) < max_time and trials < max_trials:
-        docs = query_api.query(filter)
+        docs = Flowcept.db.query(filter=filter, collection="tasks")
         if condition_to_evaluate is None:
             if docs is not None and len(docs):
                 logger.debug("Query conditions have been met! :D")
@@ -86,13 +92,18 @@ def assert_by_querying_tasks_until(
                 if condition_to_evaluate(docs):
                     logger.debug("Query conditions have been met! :D")
                     return True
-            except Exception:
+            except Exception as e:
+                exception = e
                 pass
 
         trials += 1
         logger.debug(f"Task Query condition not yet met. Trials={trials}/{max_trials}.")
         sleep(1)
-    logger.debug("We couldn't meet the query conditions after all trials or timeout! :(")
+
+    logger.error("We couldn't meet the query conditions after all trials or timeout! :(")
+    if exception is not None:
+        logger.error("Last exception:")
+        logger.exception(exception)
     return False
 
 

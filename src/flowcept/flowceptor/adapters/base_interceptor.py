@@ -1,4 +1,4 @@
-"""Base module."""
+"""Base Interceptor module."""
 
 from abc import abstractmethod
 from time import time
@@ -59,7 +59,7 @@ class BaseInterceptor(object):
         self._mq_dao.stop(self._interceptor_instance_id, self._bundle_exec_id)
 
     def observe(self, *args, **kwargs):
-        """Oberve data.
+        """Observe data.
 
         This method implements data observability over a data channel (e.g., a
         file, a DBMS, an MQ)
@@ -102,20 +102,3 @@ class BaseInterceptor(object):
     def intercept(self, obj_msg):
         """Intercept it."""
         self._mq_dao.buffer.append(obj_msg)
-
-    # def intercept_appends_only(self, obj_msg):
-    #     self._mq_dao.buffer.append(obj_msg)
-    #
-    # def intercept_appends_with_checks(self, obj_msg):
-    #     # self._mq_dao._lock.acquire()
-    #     # self._mq_dao.buffer.append(obj_msg)
-    #     self._mq_dao.buffer.append(obj_msg)
-    #     # if len(self._mq_dao.buffer) >= REDIS_BUFFER_SIZE:
-    #     #     self.logger.critical("Redis buffer exceeded, flushing...")
-    #     #     self._mq_dao.flush()
-    #     # self._mq_dao._lock.release()
-
-    # def intercept(self, obj_msg: Dict):
-    #     pass
-    #     #self._mq_dao._buffer.append(obj_msg)
-    #     #self._mq_dao.publish(obj_msg)
