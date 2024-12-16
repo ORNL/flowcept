@@ -67,6 +67,8 @@ class Flowcept(object):
         self.enabled = True
         self.is_started = False
         if isinstance(interceptors, str):
+            # This happens when the interceptor.starter is at the data system (e.g., dask)
+            # because they don't have an explicit interceptor. They emit by themselves
             self._interceptors = None
         else:
             if interceptors is None:

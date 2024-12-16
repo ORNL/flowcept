@@ -2,6 +2,7 @@
 
 from abc import abstractmethod
 from time import time
+from typing import Dict
 from uuid import uuid4
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
@@ -99,6 +100,6 @@ class BaseInterceptor(object):
         self.intercept(workflow_obj.to_dict())
         return wf_id
 
-    def intercept(self, obj_msg):
+    def intercept(self, obj_msg: Dict):
         """Intercept it."""
         self._mq_dao.buffer.append(obj_msg)

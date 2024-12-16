@@ -83,6 +83,12 @@ class DBAPI(object):
             return None
         return results
 
+    def get_tasks_recursive(self, *args, **kwargs):
+        try:
+            return DBAPI._dao.get_tasks_recursive(*args, **kwargs)
+        except Exception as e:
+            pass
+
     def dump_to_file(
         self,
         collection_name="tasks",
@@ -216,4 +222,4 @@ class DBAPI(object):
         state_dict = torch.load(buffer, weights_only=True)
         model.load_state_dict(state_dict)
 
-        return model
+        return model, doc

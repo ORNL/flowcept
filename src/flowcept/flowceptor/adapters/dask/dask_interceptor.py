@@ -15,8 +15,9 @@ from flowcept.configs import (
     TELEMETRY_CAPTURE,
     REPLACE_NON_JSON_SERIALIZABLE,
     REGISTER_WORKFLOW,
-    ENRICH_MESSAGES,
+    ENRICH_MESSAGES, INSTRUMENTATION,
 )
+from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 
 def get_run_spec_data(task_msg: TaskObject, run_spec):
@@ -172,9 +173,14 @@ class DaskWorkerInterceptor(BaseInterceptor):
         self._worker = worker
         super().__init__(self._plugin_key)
         # TODO: :refactor: This is just to avoid the auto-generation of
-        # workflow id, which doesnt make sense in Dask case..
+        # workflow id, which doesnt make sense in Dask case.
         self._generated_workflow_id = True
         super().start(bundle_exec_id=self._worker.scheduler.address)
+
+        instrumentation = INSTRUMENTATION.get("enabled", False)
+        if instrumentation:
+            InstrumentationInterceptor.get_instance().start(bundle_exec_id="instrumentation"+self._worker.scheduler.address)
+
         # Note that both scheduler and worker get the exact same input.
         # Worker does not resolve intermediate inputs, just like the scheduler.
         # But careful: we are only able to capture inputs in client.map on

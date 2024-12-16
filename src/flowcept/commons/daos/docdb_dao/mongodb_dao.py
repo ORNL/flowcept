@@ -20,6 +20,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.utils import perf_log, get_utc_now_str
+from flowcept.commons.vocabulary import Status
 from flowcept.configs import PERF_LOG, MONGO_CREATE_INDEX
 from flowcept.flowceptor.consumers.consumer_utils import (
     curate_dict_task_messages,
@@ -672,8 +673,10 @@ class MongoDBDAO(DocumentDBDAO):
                 self.logger.exception(e)
                 return None
         try:
-            lst = list(rs)
-            return lst
+            return [
+                {**r, "status": Status.FINISHED.value} if "finished" in r else r
+                for r in rs
+            ]
         except Exception as e:
             self.logger.exception(e)
             return None
@@ -723,3 +726,27 @@ class MongoDBDAO(DocumentDBDAO):
             super().close()
             setattr(self, "_initialized", False)
             self._client.close()
+
+
+    def get_tasks_recursive(self, workflow_id):
+        try:
+            result = []
+            parent_tasks = self._tasks_collection.find({"workflow_id": workflow_id}, projection={"_id": 0})
+            for parent_task in parent_tasks:
+                result.append(parent_task)
+                self._get_children_tasks_recursive(parent_task["task_id"], result)
+            return result
+        except Exception as e:
+            raise Exception(e) # TODO
+
+    def _get_children_tasks_recursive(self, parent_task_id, result):
+        # Query for tasks with the current parent_task_id
+        tasks = list(self._tasks_collection.find({"parent_task_id": parent_task_id}, projection={"_id": 0}))
+
+        # Add these tasks to the result list
+        result.extend(tasks)
+
+        # Now, for each child task, recursively find its own children
+        for task in tasks:
+            task_id = task["task_id"]
+            self._get_children_tasks_recursive(task_id, result)

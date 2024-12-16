@@ -5,77 +5,33 @@ import sys
 import uuid
 from functools import wraps
 from time import time, sleep
+from types import MethodType
 
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from distributed import LocalCluster, Client
+from torch.nn import Embedding, Linear, TransformerEncoder, TransformerEncoderLayer, Dropout
 from torch.utils.data import Subset
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from datasets import load_dataset
 
-from flowcept import Flowcept, telemetry_flowcept_task
 from flowcept.commons.vocabulary import Status
 from flowcept.configs import N_GPUS, MONGO_ENABLED, INSTRUMENTATION
+from flowcept.flowcept_api.flowcept_controller import Flowcept
+from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskSchedulerAdapter, \
+    FlowceptDaskWorkerAdapter, register_dask_workflow
+from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
+from flowcept.instrumentation.decorators.flowcept_loop import FlowceptLoop
 
 from flowcept.instrumentation.decorators.flowcept_torch import (
-    register_modules,
-    register_module_as_workflow,
-    torch_task,
+    flowcept_torch,
 )
 from flowcept.instrumentation.decorators.responsible_ai import model_profiler
 
-CAPTURE_LAYERS = INSTRUMENTATION.get("torch").get("mode") is not None
-
-def custom_flowcept_task(func=None):
-
-    from flowcept.commons.vocabulary import Status
-    from flowcept.configs import INSTRUMENTATION_ENABLED
-    from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
-
-    if INSTRUMENTATION_ENABLED:
-        interceptor = InstrumentationInterceptor.get_instance()
-
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            task_obj = {
-                "type": "task",
-                "started_at": (started_time:=time()),
-                "activity_id": func.__qualname__,
-                "task_id": str(started_time),
-                "workflow_id": kwargs.pop("workflow_id", Flowcept.current_workflow_id)
-            }
-            used_args = kwargs.copy()
-            used_args.pop("train_data", None)
-            used_args.pop("val_data", None)
-            used_args.pop("test_data", None)
-            task_obj["used"] = used_args
-            tel = interceptor.telemetry_capture.capture()
-            if tel is not None:
-                task_obj["telemetry_at_start"] = tel.to_dict()
-            try:
-                result = func(workflow_id=task_obj["workflow_id"], task_id=task_obj["task_id"],
-                              *args, **kwargs)
-                task_obj["status"] = Status.FINISHED.value
-            except Exception as e:
-                task_obj["status"] = Status.ERROR.value
-                result = None
-                task_obj["stderr"] = str(e)
-            # task_obj["ended_at"] = time()
-            tel = interceptor.telemetry_capture.capture()
-            if tel is not None:
-                task_obj["telemetry_at_end"] = tel.to_dict()
-            task_obj["generated"] = result
-            interceptor.intercept(task_obj)
-            return result
-
-        return wrapper
-
-    if func is None:
-        return decorator
-    else:
-        return decorator(func)
+TORCH_CAPTURE = INSTRUMENTATION.get("torch").get("what")
 
 
 # Define a function to batchify the data
@@ -122,7 +78,7 @@ def get_wiki_text(
     train_dataset = dataset["train"]
     validation_dataset = dataset["validation"]
 
-    if subset_size > 0:
+    if subset_size is not None and subset_size > 0:
         test_dataset = Subset(test_dataset, range(subset_size))
         train_dataset = Subset(train_dataset, range(subset_size))
         validation_dataset = Subset(validation_dataset, range(subset_size))
@@ -155,48 +111,47 @@ def get_wiki_text(
     return ntokens, train_data, val_data, test_data
 
 
-# Define the TransformerModel class
+@flowcept_torch
 class TransformerModel(nn.Module):
+
     def __init__(
         self,
-        ntoken,
-        d_model,
+        ntokens,
+        emsize,
         nhead,
-        d_hid,
+        nhid,
         nlayers,
         dropout=0.5,
         pos_encoding_max_len=5000,
-        parent_task_id=None,
+        parent_task_id=None,   # These arguments seem unused but are used in the wrapper
         parent_workflow_id=None,
         custom_metadata: dict = None,
+        get_profile: bool = False,
+        save_workflow: bool = True,
+        *args,
+        **kwargs
     ):
-        super(TransformerModel, self).__init__()
-        self.parent_task_id = parent_task_id
-        TransformerEncoderLayer, TransformerEncoder, Embedding, Linear, PositionalEncoding_ = self.get_modules(parent_workflow_id, custom_metadata)
+        super().__init__(*args, **kwargs)
         self.model_type = "Transformer"
         self.src_mask = None
-        self.pos_encoder = PositionalEncoding_(
-            d_model,
+        self.pos_encoder = PositionalEncoding(
+            emsize,
             dropout,
             max_len=pos_encoding_max_len,
-            workflow_id=self.workflow_id,
-            parent_task_id=parent_task_id,
         )
-        encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout)
+        encoder_layers = TransformerEncoderLayer(emsize, nhead, nhid, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        self.encoder = Embedding(ntoken, d_model)
-        self.d_model = d_model
-        self.decoder = Linear(d_model, ntoken)
+        self.encoder = Embedding(ntokens, emsize)
+        self.decoder = Linear(emsize, ntokens)
+        self.d_model = emsize
 
-    ##Generate a mask for the input sequence
+    # ##Generate a mask for the input sequence
     def _generate_square_subsequent_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
         ## Change all the zeros to negative infinity and all the ones to zeros as follows:
         mask = mask.float().masked_fill(mask == 0, float("-inf")).masked_fill(mask == 1, float(0.0))
         return mask
 
-    # @flowcept_task(args_handler=torch_args_handler)
-    @torch_task()
     def forward(self, src):
         if self.src_mask is None or self.src_mask.size(0) != len(src):
             device = src.device
@@ -209,79 +164,28 @@ class TransformerModel(nn.Module):
         output = self.decoder(output)
         return output
 
-    def get_modules(self, parent_workflow_id=None, custom_metadata=None):
-        if CAPTURE_LAYERS:
-            self.workflow_id = register_module_as_workflow(self, parent_workflow_id, custom_metadata)
-            (
-                TransformerEncoderLayer,
-                TransformerEncoder,
-                Embedding,
-                Linear,
-                PositionalEncoding_,
-            ) = register_modules(
-                modules=[
-                    nn.TransformerEncoderLayer,
-                    nn.TransformerEncoder,
-                    nn.Embedding,
-                    nn.Linear,
-                    PositionalEncoding,
-                ],
-                workflow_id=self.workflow_id,
-                parent_task_id=self.parent_task_id,
-            )
-        else:
-            self.workflow_id = None
-            TransformerEncoderLayer = nn.TransformerEncoderLayer
-            TransformerEncoder = nn.TransformerEncoder
-            Embedding = nn.Embedding
-            Linear = nn.Linear
-            PositionalEncoding_ = PositionalEncoding
-        return TransformerEncoderLayer, TransformerEncoder, Embedding, Linear, PositionalEncoding_
-
 # Define the PositionalEncoding class
 class PositionalEncoding(nn.Module):
     def __init__(
         self,
-        d_model,
+        emsize,
         dropout=0.1,
         max_len=5000,
-        workflow_id=None,
-        parent_task_id=None,
     ):
         super(PositionalEncoding, self).__init__()
-        self.workflow_id = workflow_id
-        self.parent_task_id = parent_task_id
-
-        Dropout = self.get_modules()
         self.dropout = Dropout(p=dropout)
 
-        pe = torch.zeros(max_len, d_model)
+        pe = torch.zeros(max_len, emsize)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        div_term = torch.exp(torch.arange(0, emsize, 2).float() * (-math.log(10000.0) / emsize))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer("pe", pe)
 
-    # @flowcept_task(args_handler=torch_args_handler)
-    @torch_task()
     def forward(self, x):
         x = x + self.pe[: x.size(0), :]
         return self.dropout(x)
-
-    def get_modules(self):
-        if CAPTURE_LAYERS:
-            Dropout = register_modules(
-                [
-                    nn.Dropout,
-                ],
-                workflow_id=self.workflow_id,
-                parent_task_id=self.parent_task_id,
-            )
-        else:
-            Dropout = nn.Dropout
-        return Dropout
-
 
 def train_epoch(ntokens, model, train_data, criterion, optimizer, bptt=35):
     model.train()  # Set the model to training mode
@@ -327,8 +231,6 @@ def evaluate(ntokens, model, data_source, criterion, bptt=35):
     return total_loss / (i + 1)  # Return the average loss per mini-batch
 
 
-@custom_flowcept_task
-@model_profiler()
 def model_train(
     ntokens,
     train_data,
@@ -344,10 +246,16 @@ def model_train(
     dropout,
     lr,
     pos_encoding_max_len,
-    task_id=None,  # The wrapper will inject this value
-    workflow_id=None  # The wrapper will inject this value
+    workflow_id=None,
+    *args,
+    **kwargs
 ):
-    torch.manual_seed(0)
+    try:
+        from distributed.worker import thread_state
+        main_task_id = thread_state.key if hasattr(thread_state, "key") else None
+    except:
+        main_task_id = None
+    torch.manual_seed(0)  # TODO: parametrize and save it
     #from distributed.worker import thread_state
     #dask_task_id = thread_state.key if hasattr(thread_state, "key") else None
     train_data = batchify(train_data, batch_size)
@@ -369,33 +277,37 @@ def model_train(
         nlayers,
         dropout,
         pos_encoding_max_len,
-        parent_task_id=task_id,
         parent_workflow_id=workflow_id,
+        get_profile=True,
         custom_metadata={"model_step": "train", "cuda_visible": N_GPUS},
     ).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     best_val_loss = float("inf")  # Initialize the best validation loss to infinity
-    # best_m = None
     # Iterate through the epochs
     t0 = time()
-    for epoch in range(1, epochs + 1):
+
+    epochs_loop = FlowceptLoop(range(1, epochs + 1), "epochs_loop", "epoch", parent_task_id=main_task_id)
+    for epoch in epochs_loop:
         print(f"Starting training for epoch {epoch}/{epochs}")
         # Train the model on the training data and calculate the training loss
-
+        model.set_parent_task_id(epochs_loop.current_iteration_task.get("task_id", None))
         train_loss = train_epoch(ntokens, model, train_data, criterion, optimizer, batch_size)
 
         # Evaluate the model on the validation data and calculate the validation loss
         val_loss = evaluate(ntokens, model, val_data, criterion, eval_batch_size)
 
         # Print the training and validation losses for the current epoch
-        print(f"Epoch: {epoch}, Train loss: {train_loss:.2f}, Validation loss: {val_loss:.2f}")
+        print(f"Epoch: {epoch}, Train loss: {train_loss:.2f}, Validation loss: {val_loss:.2f}") # TODO revisit loop because var epoch here is none?
 
         # If the validation loss has improved, save the model's state
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            # best_m = model
             torch.save(model.state_dict(), "transformer_wikitext2.pth")
+
+            best_obj_id = Flowcept.db.save_torch_model(model, task_id=epochs_loop.current_iteration_task.get("task_id", None), workflow_id=workflow_id, custom_metadata={"best_val_loss": best_val_loss})
+
+        epochs_loop.end_iter({"train_loss": train_loss, "val_loss": val_loss})
 
     print("Finished training")
     t1 = time()
@@ -409,31 +321,29 @@ def model_train(
         nlayers,
         dropout,
         parent_workflow_id=workflow_id,
-        parent_task_id=task_id,
         custom_metadata={
             "model_step": "test",
             "cuda_visible": N_GPUS,
         },
+        parent_task_id=main_task_id
     ).to(device)
-    print("Loading model")
+    print("Loading model") # TODO: load from db
     torch_loaded = torch.load("transformer_wikitext2.pth")
     best_m.load_state_dict(torch_loaded)
-
+    #best_m.update_parent_task_id(task_id)
     print("Evaluating")
     # Evaluate the best model on the test dataset
     test_loss = evaluate(ntokens, best_m, test_data, criterion, eval_batch_size)
     print(f"Test loss: {test_loss:.2f}")
     with open("time.txt", "w") as f:
         f.write(str(t1 - t0))
-
     return {
         "test_loss": test_loss,
         "train_loss": train_loss,
         "val_loss": val_loss,
         "training_time": t1 - t0,
-        "model": model,
+        "best_obj_id": best_obj_id
     }
-
 
 if __name__ == "__main__":
 
@@ -441,6 +351,9 @@ if __name__ == "__main__":
         print("This test is only available if Mongo is enabled.")
         sys.exit(0)
 
+    subset_size = None
+    EPOCHS = 1
+    tokenizer_type = "basic_english"
     conf = {
         "batch_size": 20,
         "eval_batch_size": 10,
@@ -449,64 +362,149 @@ if __name__ == "__main__":
         "nlayers": 2,  # 2
         "nhead": 2,
         "dropout": 0.2,
-        "epochs": 1,
+        "epochs": EPOCHS,
         "lr": 0.1,
         "pos_encoding_max_len": 5000,
     }
-    ntokens, train_data, val_data, test_data = get_wiki_text(subset_size=100)
+
+    ntokens, train_data, val_data, test_data = get_wiki_text(tokenizer_type=tokenizer_type, subset_size=subset_size)
+    conf["ntokens"] = ntokens
+    conf_prov = conf.copy()
+    conf_prov["tokenizer_type"] = tokenizer_type
+    conf_prov["subset_size"] = subset_size
     conf.update({
-        "ntokens": ntokens,
         "train_data": train_data,
         "val_data": val_data,
         "test_data": test_data,
     })
+
     confs = []
     confs.append(conf)
     MAX_RUNS = 1
-    with Flowcept():
-        for conf in confs[:MAX_RUNS]: # Edit here to enable more runs
-            result = model_train(**conf)
-            print(result)
-        sleep(5)
-    print(Flowcept.current_workflow_id)
 
+    cluster = LocalCluster(n_workers=1)
+    scheduler = cluster.scheduler
+    client = Client(scheduler.address)
 
-    # So far, this works as follows:
+    client.forward_logging()
 
-    # Workflows:
-        # Main workflow ->
-        #           Module Layer Forward Train Workflow
-        #           Module Layer Forward Test Workflow
+    # Registering Flowcept's worker and scheduler adapters
+    scheduler.add_plugin(FlowceptDaskSchedulerAdapter(scheduler))
+    client.register_plugin(FlowceptDaskWorkerAdapter())
 
-    # Tasks:
-        # Main model_train task ->
-            # Module tasks
+    # Registering a Dask workflow in Flowcept's database
+    main_wf_id = register_dask_workflow(client, used=conf_prov)
+    print(f"workflow_id={main_wf_id}")
 
-    model_train_tasks = Flowcept.db.query({"workflow_id": Flowcept.current_workflow_id})
+    # Start Flowcept's Dask observer
+    with Flowcept("dask") as f:
+        for conf in confs[:MAX_RUNS]:  # Edit here to enable more runs
+            conf["workflow_id"] = main_wf_id
+            t = client.submit(model_train, **conf)
+            print(t.result())
+
+        print("Done main loop. Closing dask...")
+        client.close()  # This is to avoid generating errors
+        cluster.close()  # These calls are needed closeouts to inform of workflow conclusion.
+        print("Closed Dask. Closing Flowcept...")
+
+    print("Closed.")
+    print("Now running all asserts...")
+    """
+    So far, this works as follows:
+    Workflows:
+        Main workflow ->
+          Module Layer Forward Train Workflow
+          Module Layer Forward Test Workflow
+
+    Tasks:
+        Main workflow . Main model_train task ->
+            Main workflow . Epochs Whole Loop
+                Main workflow . Loop Iteration Task
+                    Module Layer Forward Train Workflow . Parent module forward tasks
+                        Module Layer Forward Train Workflow . Children modules forward
+            Module Layer Forward Test Workflow . Parent module forward tasks
+                Module Layer Forward Test Workflow . Children modules forward tasks
+    """
+    workflows_data = []
+    main_wf = Flowcept.db.query({"workflow_id": main_wf_id}, collection="workflows")[0]
+    assert main_wf["used"]["subset_size"] == subset_size
+    workflows_data.append(main_wf)
+    n_tasks_expected = 0
+    model_train_tasks = Flowcept.db.query({"workflow_id": main_wf_id, "activity_id": "model_train"})
     assert len(model_train_tasks) == MAX_RUNS
     for t in model_train_tasks:
+        n_tasks_expected += 1
         assert t["status"] == Status.FINISHED.value
 
-        if CAPTURE_LAYERS:
-            layer_forward_wfs = Flowcept.db.query(
-                {"parent_workflow_id": Flowcept.current_workflow_id},
-                collection="workflows")
-            assert len(layer_forward_wfs) == 2
+        whole_loop = Flowcept.db.query({"parent_task_id": t["task_id"], "custom_metadata.subtype": "whole_loop"})[0]
+        assert whole_loop["status"] == Status.FINISHED.value
+        n_tasks_expected += 1
+        iteration_tasks = Flowcept.db.query({"parent_task_id": whole_loop["task_id"], "activity_id": "epochs_loop_iteration"})
+        assert len(iteration_tasks) == EPOCHS # number of epochs
 
-            for wf in layer_forward_wfs:
-                wf_id = wf["workflow_id"]
-                model_layers = Flowcept.db.query({"workflow_id": wf_id})
-                assert len(model_layers)
-                print(f"Number of model layer forwards for {wf['custom_metadata']['model_step']}={len(model_layers)}")
-                for m in model_layers:
-                    assert m["parent_task_id"] == t["task_id"]
-                    assert m["used"]
-                    assert m["generated"]
+        iteration_ids = set()
+        for iteration_task in iteration_tasks:
+            n_tasks_expected += 1
+            iteration_ids.add(iteration_task["task_id"])
+            assert iteration_task["status"] == Status.FINISHED.value
 
+        if "parent" in TORCH_CAPTURE:
 
-        # train_model_layers = Flowcept.db.query({
-        #     "parent_workflow_id": Flowcept.current_workflow_id,
-        #     "parent_task_id": t["task_id"],
-        # })
-        # assert len(train_model_layers)
-        # print()
+            parent_module_wfs = Flowcept.db.query({"parent_workflow_id": main_wf_id}, collection="workflows")
+            assert len(parent_module_wfs) == 2 # train and test
+
+            for parent_module_wf in parent_module_wfs:
+                workflows_data.append(parent_module_wf)
+                parent_module_wf_id = parent_module_wf["workflow_id"]
+
+                parent_forwards = Flowcept.db.query({"workflow_id": parent_module_wf_id, "activity_id": "TransformerModel"})
+
+                assert len(parent_forwards)
+
+                for parent_forward in parent_forwards:
+                    n_tasks_expected += 1
+                    assert parent_forward["workflow_id"] == parent_module_wf_id
+                    assert parent_forward["used"]
+                    assert parent_forward["generated"]
+                    assert parent_forward["status"] == Status.FINISHED.value
+                    if parent_module_wf['custom_metadata']['model_step'] == 'test':
+                        assert parent_forward["parent_task_id"] == t["task_id"]
+                    elif parent_module_wf['custom_metadata']['model_step'] == 'train':
+                        assert parent_module_wf["custom_metadata"]["model_profile"]
+                        assert parent_forward["parent_task_id"] in iteration_ids # TODO: improve to test exact value
+
+                    if "children" in TORCH_CAPTURE:
+                        children_forwards = Flowcept.db.query({"parent_task_id": parent_forward["task_id"]})
+                        assert len(children_forwards) == 4 # there are four children submodules
+                        for child_forward in children_forwards:
+                            n_tasks_expected += 1
+                            assert child_forward["status"] == Status.FINISHED.value
+                            assert child_forward["workflow_id"] == parent_module_wf_id
+
+        # TODO: The wrapper is conflicting with the init arguments, that's why we need to copy & remove extra args. Needs to debug to improve.
+        model_args = t["used"].copy()
+        model_args.pop("batch_size", None)
+        model_args.pop("eval_batch_size", None)
+        model_args.pop("epochs", None)
+        model_args.pop("lr", None)
+        model_args.pop("train_data", None)
+        model_args.pop("test_data", None)
+        model_args.pop("val_data", None)
+
+        loaded_model = TransformerModel(**model_args, save_workflow=False)
+
+        loaded_model, doc = Flowcept.db.load_torch_model(loaded_model, t["generated"]["best_obj_id"])
+        print("Best model in this configs", doc)
+
+    print("Exporting data to JSON on disk.")
+    tasks_data = Flowcept.db.get_tasks_recursive(main_wf_id)
+    assert len(tasks_data) == n_tasks_expected
+    assert len(workflows_data)
+
+    df_tasks = pd.DataFrame(tasks_data)
+    df_workflows = pd.DataFrame(workflows_data)
+    df_tasks.to_json("tasks.json", orient="records", lines=True)
+    df_workflows.to_json("workflows.json", orient="records", lines=True)
+    print("Alright! Congrats.")
+

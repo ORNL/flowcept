@@ -6,10 +6,12 @@ from dask.distributed import WorkerPlugin, SchedulerPlugin
 from distributed import Client
 
 from flowcept import WorkflowObject
+from flowcept.configs import INSTRUMENTATION
 from flowcept.flowceptor.adapters.dask.dask_interceptor import (
     DaskSchedulerInterceptor,
     DaskWorkerInterceptor,
 )
+from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 
 def _set_workflow_on_scheduler(
@@ -43,6 +45,7 @@ def register_dask_workflow(
     used: dict = None,
 ):
     """Register the workflow."""
+    # TODO: consider moving this to inside Flowcept controller
     workflow_id = workflow_id or str(uuid4())
     dask_client.run_on_scheduler(
         _set_workflow_on_scheduler,
@@ -90,3 +93,7 @@ class FlowceptDaskWorkerAdapter(WorkerPlugin):
         """Tear it down."""
         self.interceptor.logger.debug("Going to close worker!")
         self.interceptor.stop()
+
+        instrumentation = INSTRUMENTATION.get("enabled", False)
+        if instrumentation:
+            InstrumentationInterceptor.get_instance().stop()
