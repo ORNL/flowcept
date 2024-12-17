@@ -69,32 +69,6 @@ def generate_configs(params):
     return result
 
 
-
-
-# def dataprep_workflow(tokenizer_type="basic_english", subset_size=None, campaign_id=None):
-#     from flowcept import WorkflowObject
-#     config = {
-#         "subset_size": subset_size,
-#         "tokenizer": tokenizer_type
-#     }
-#     dataset_prep_wf = WorkflowObject()
-#     dataset_prep_wf.used = config
-#     dataset_prep_wf.campaign_id = campaign_id
-#     dataset_prep_wf.name = "generate_wikitext_dataset"
-#     ntokens, train_data, val_data, test_data = get_wiki_text_dataset(tokenizer_type=tokenizer_type,
-#                                                                      subset_size=subset_size)
-#     dataset_prep_wf.generated = {
-#         "ntokens": ntokens,
-#         "dataset_ref": get_dataset_ref(campaign_id, train_data, val_data, test_data),
-#         "train_data_shape": list(train_data.shape),
-#         "val_data_shape": list(val_data.shape),
-#         "test_data_shape": list(test_data.shape),
-#     }
-#     Flowcept.db.insert_or_update_workflow(dataset_prep_wf)
-#     print(dataset_prep_wf)
-#     return dataset_prep_wf.workflow_id, ntokens, train_data, val_data, test_data
-
-
 def search_workflow(ntokens, input_data_dir, dataset_ref, exp_param_settings, max_runs, campaign_id=None):
     cluster = LocalCluster(n_workers=1)
     scheduler = cluster.scheduler

@@ -77,7 +77,7 @@ echo "Using examples directory: $EXAMPLES_DIR"
 echo "With Mongo? ${WITH_MONGO}"
 
 # Define the test cases
-tests=("instrumented_simple" "instrumented_loop" "dask" "mlflow" "tensorboard" "llm_complex/llm_search")
+tests=("instrumented_simple" "instrumented_loop" "dask" "mlflow" "tensorboard" "llm_complex/llm_main")
 
 # Iterate over the tests and run them
 for test_ in "${tests[@]}"; do
