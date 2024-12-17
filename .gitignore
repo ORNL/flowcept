@@ -21,4 +21,4 @@ time.txt
 tmp/
 deployment/data
 **/*output_data*
-
+examples/llm_complex/input_data

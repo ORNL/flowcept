@@ -9,7 +9,8 @@ import pandas as pd
 import torch
 from distributed import LocalCluster, Client
 
-from examples.llm_complex.llm_model import model_train, get_wiki_text, TransformerModel
+from examples.llm_complex.llm_dataprep import dataprep_workflow
+from examples.llm_complex.llm_model import model_train, TransformerModel
 
 from flowcept.configs import MONGO_ENABLED, INSTRUMENTATION
 from flowcept import Flowcept
@@ -68,37 +69,33 @@ def generate_configs(params):
     return result
 
 
-def get_dataset_ref(campaign_id, train_data, val_data, test_data):
-    dataset_ref = f"{campaign_id}_train_shape_{train_data.shape}_val_shape_{val_data.shape}_test_shape_{test_data.shape}"
-    return dataset_ref
 
 
-def dataprep_workflow(tokenizer_type="basic_english", subset_size=None, campaign_id=None):
-    from flowcept import WorkflowObject
-    config = {
-        "subset_size": subset_size,
-        "tokenizer": tokenizer_type
-    }
-    dataset_prep_wf = WorkflowObject()
-    dataset_prep_wf.used = config
-    dataset_prep_wf.campaign_id = campaign_id
-    dataset_prep_wf.name = "generate_wikitext_dataset"
-    ntokens, train_data, val_data, test_data = get_wiki_text(tokenizer_type=tokenizer_type,
-                                                             subset_size=subset_size)
-    dataset_prep_wf.generated = {
-        "ntokens": ntokens,
-        "dataset_ref": get_dataset_ref(campaign_id, train_data, val_data, test_data),
-        "train_data_shape": list(train_data.shape),
-        "val_data_shape": list(val_data.shape),
-        "test_data_shape": list(test_data.shape),
-    }
-    Flowcept.db.insert_or_update_workflow(dataset_prep_wf)
-    print(dataset_prep_wf)
-    return dataset_prep_wf.workflow_id, ntokens, train_data, val_data, test_data
+# def dataprep_workflow(tokenizer_type="basic_english", subset_size=None, campaign_id=None):
+#     from flowcept import WorkflowObject
+#     config = {
+#         "subset_size": subset_size,
+#         "tokenizer": tokenizer_type
+#     }
+#     dataset_prep_wf = WorkflowObject()
+#     dataset_prep_wf.used = config
+#     dataset_prep_wf.campaign_id = campaign_id
+#     dataset_prep_wf.name = "generate_wikitext_dataset"
+#     ntokens, train_data, val_data, test_data = get_wiki_text_dataset(tokenizer_type=tokenizer_type,
+#                                                                      subset_size=subset_size)
+#     dataset_prep_wf.generated = {
+#         "ntokens": ntokens,
+#         "dataset_ref": get_dataset_ref(campaign_id, train_data, val_data, test_data),
+#         "train_data_shape": list(train_data.shape),
+#         "val_data_shape": list(val_data.shape),
+#         "test_data_shape": list(test_data.shape),
+#     }
+#     Flowcept.db.insert_or_update_workflow(dataset_prep_wf)
+#     print(dataset_prep_wf)
+#     return dataset_prep_wf.workflow_id, ntokens, train_data, val_data, test_data
 
 
-def search_workflow(ntokens, train_data, val_data, test_data, exp_param_settings, max_runs, campaign_id=None):
-    get_dataset_ref(campaign_id, train_data, val_data, test_data)
+def search_workflow(ntokens, input_data_dir, dataset_ref, exp_param_settings, max_runs, campaign_id=None):
     cluster = LocalCluster(n_workers=1)
     scheduler = cluster.scheduler
     client = Client(scheduler.address)
@@ -106,9 +103,9 @@ def search_workflow(ntokens, train_data, val_data, test_data, exp_param_settings
     # Registering Flowcept's worker and scheduler adapters
     scheduler.add_plugin(FlowceptDaskSchedulerAdapter(scheduler))
     client.register_plugin(FlowceptDaskWorkerAdapter())
-    dataset_ref = get_dataset_ref(campaign_id, train_data, val_data, test_data)
     exp_param_settings["dataset_ref"] = dataset_ref
     exp_param_settings["max_runs"] = max_runs
+    exp_param_settings["input_data_dir"] = input_data_dir
     # Registering a Dask workflow in Flowcept's database
     search_wf_id = register_dask_workflow(client, used=exp_param_settings,
                                           workflow_name="model_search",
@@ -117,8 +114,7 @@ def search_workflow(ntokens, train_data, val_data, test_data, exp_param_settings
 
     configs = generate_configs(exp_param_settings)
     configs = [
-        {**c, "ntokens": ntokens, "train_data": train_data, "val_data": val_data,
-         "test_data": test_data, "workflow_id": search_wf_id, "campaign_id": campaign_id}
+        {**c, "ntokens": ntokens, "input_data_dir": input_data_dir, "workflow_id": search_wf_id, "campaign_id": campaign_id}
         for c in configs
     ]
     # Start Flowcept's Dask observer
@@ -139,7 +135,7 @@ def main():
 
     _campaign_id = str(uuid.uuid4())
     print(f"Campaign id={_campaign_id}")
-
+    input_data_dir = "input_data"
     tokenizer_type = "basic_english"
     subset_size = 10
     max_runs = 1
@@ -156,12 +152,13 @@ def main():
         "pos_encoding_max_len": [5000],
     }
 
-    _dataprep_wf_id, ntokens, train_data, val_data, test_data = dataprep_workflow(
+    _dataprep_wf_id, dataset_ref, ntokens = dataprep_workflow(
+        data_dir="input_data",
         campaign_id=_campaign_id,
         tokenizer_type=tokenizer_type,
         subset_size=subset_size)
 
-    _search_wf_id = search_workflow(ntokens, train_data, val_data, test_data, exp_param_settings, max_runs, campaign_id=_campaign_id)
+    _search_wf_id = search_workflow(ntokens, input_data_dir, dataset_ref, exp_param_settings, max_runs, campaign_id=_campaign_id)
 
     return _campaign_id, _dataprep_wf_id, _search_wf_id
 
@@ -271,9 +268,8 @@ def run_asserts_and_exports(campaign_id, output_dir="output_data"):
     model_args.pop("eval_batch_size", None)
     model_args.pop("epochs", None)
     model_args.pop("lr", None)
-    model_args.pop("train_data", None)
-    model_args.pop("test_data", None)
-    model_args.pop("val_data", None)
+    model_args.pop("input_data_dir", None)
+
     loaded_model = TransformerModel(**model_args, save_workflow=False)
     doc = Flowcept.db.load_torch_model(loaded_model, best_model_obj_id)
     print(doc)

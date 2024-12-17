@@ -4,6 +4,7 @@ from flowcept import TaskQueryAPI
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import evaluate_until
+from flowcept.configs import MONGO_ENABLED
 from flowcept.flowceptor.adapters.dask.dask_plugins import (
     register_dask_workflow,
 )
@@ -20,6 +21,7 @@ class MLDecoratorDaskTests(unittest.TestCase):
         super(MLDecoratorDaskTests, self).__init__(*args, **kwargs)
         self.logger = FlowceptLogger()
 
+    @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_model_trains_with_dask(self):
         # wf_id = f"{uuid4()}"
         client, cluster, flowcept = start_local_dask_cluster(

@@ -1,6 +1,7 @@
 # The code in this file is based on:
 # https://blog.paperspace.com/build-a-language-model-using-pytorch/
 import math
+import os
 from time import time
 
 import torch
@@ -12,6 +13,7 @@ from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from datasets import load_dataset
 
+from examples.llm_complex.llm_dataprep import get_wiki_text_dataset
 from flowcept import Flowcept, FlowceptLoop, flowcept_torch
 from flowcept.configs import N_GPUS
 
@@ -24,23 +26,23 @@ def batchify(data, bsz):
     return data
 
 
-# Define a function to yield tokens from the dataset
-def yield_tokens(tokenizer, data_iter):
-    for item in data_iter:
-        if len(item["text"]):
-            yield tokenizer(item["text"])
-
-
-# Define a function to process the raw text and convert it to tensors
-def data_process(tokenizer, vocab, raw_text_iter):
-    data = [
-        torch.tensor(
-            [vocab[token] for token in tokenizer(item["text"])],
-            dtype=torch.long,
-        )
-        for item in raw_text_iter
-    ]
-    return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
+# # Define a function to yield tokens from the dataset
+# def yield_tokens(tokenizer, data_iter):
+#     for item in data_iter:
+#         if len(item["text"]):
+#             yield tokenizer(item["text"])
+#
+#
+# # Define a function to process the raw text and convert it to tensors
+# def data_process(tokenizer, vocab, raw_text_iter):
+#     data = [
+#         torch.tensor(
+#             [vocab[token] for token in tokenizer(item["text"])],
+#             dtype=torch.long,
+#         )
+#         for item in raw_text_iter
+#     ]
+#     return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
 
 
 def get_batch(source, i, bptt=35):
@@ -50,47 +52,47 @@ def get_batch(source, i, bptt=35):
     return data, target
 
 
-def get_wiki_text(
-    tokenizer_type="basic_english", # spacy, moses, toktok, revtok, subword
-    subset_size=None
-):
-    # Load the WikiText2 dataset
-    dataset = load_dataset("wikitext", "wikitext-2-v1")
-    test_dataset = dataset["test"]
-    train_dataset = dataset["train"]
-    validation_dataset = dataset["validation"]
-
-    if subset_size is not None and subset_size > 0:
-        test_dataset = Subset(test_dataset, range(subset_size))
-        train_dataset = Subset(train_dataset, range(subset_size))
-        validation_dataset = Subset(validation_dataset, range(subset_size))
-
-    # Build the vocabulary from the training dataset
-    tokenizer = get_tokenizer(tokenizer_type)
-    vocab = build_vocab_from_iterator(yield_tokens(tokenizer, train_dataset))
-    vocab.set_default_index(vocab["<unk>"])
-    ntokens = len(vocab)
-
-    # Process the train, validation, and test datasets
-    train_data = data_process(tokenizer, vocab, train_dataset)
-    val_data = data_process(tokenizer, vocab, validation_dataset)
-    test_data = data_process(tokenizer, vocab, test_dataset)
-
-    device = torch.device("cpu")
-    if torch.cuda.is_available():
-        device = torch.device("gpu")
-    elif torch.backends.mps.is_available():
-        device = torch.device("mps")
-
-    if device.type != 'cpu':
-        train_data = train_data.to(device)
-        val_data = val_data.to(device)
-        test_data = test_data.to(device)
-
-    print("Train data", train_data.shape)
-    print("Validation data", val_data.shape)
-    print("Test data", test_data.shape)
-    return ntokens, train_data, val_data, test_data
+# def get_wiki_text(
+#     tokenizer_type="basic_english", # spacy, moses, toktok, revtok, subword
+#     subset_size=None
+# ):
+#     # Load the WikiText2 dataset
+#     dataset = load_dataset("wikitext", "wikitext-2-v1")
+#     test_dataset = dataset["test"]
+#     train_dataset = dataset["train"]
+#     validation_dataset = dataset["validation"]
+#
+#     if subset_size is not None and subset_size > 0:
+#         test_dataset = Subset(test_dataset, range(subset_size))
+#         train_dataset = Subset(train_dataset, range(subset_size))
+#         validation_dataset = Subset(validation_dataset, range(subset_size))
+#
+#     # Build the vocabulary from the training dataset
+#     tokenizer = get_tokenizer(tokenizer_type)
+#     vocab = build_vocab_from_iterator(yield_tokens(tokenizer, train_dataset))
+#     vocab.set_default_index(vocab["<unk>"])
+#     ntokens = len(vocab)
+#
+#     # Process the train, validation, and test datasets
+#     train_data = data_process(tokenizer, vocab, train_dataset)
+#     val_data = data_process(tokenizer, vocab, validation_dataset)
+#     test_data = data_process(tokenizer, vocab, test_dataset)
+#
+#     device = torch.device("cpu")
+#     if torch.cuda.is_available():
+#         device = torch.device("gpu")
+#     elif torch.backends.mps.is_available():
+#         device = torch.device("mps")
+#
+#     if device.type != 'cpu':
+#         train_data = train_data.to(device)
+#         val_data = val_data.to(device)
+#         test_data = test_data.to(device)
+#
+#     print("Train data", train_data.shape)
+#     print("Validation data", val_data.shape)
+#     print("Test data", test_data.shape)
+#     return ntokens, train_data, val_data, test_data
 
 
 @flowcept_torch
@@ -214,11 +216,11 @@ def evaluate(ntokens, model, data_source, criterion, bptt=35):
     return total_loss / (i + 1)  # Return the average loss per mini-batch
 
 
+
+
 def model_train(
     ntokens,
-    train_data,
-    val_data,
-    test_data,
+    input_data_dir,
     batch_size,
     eval_batch_size,
     epochs,
@@ -240,8 +242,9 @@ def model_train(
     except:
         main_task_id = None
     torch.manual_seed(0)  # TODO: parametrize and save it
-    #from distributed.worker import thread_state
-    #dask_task_id = thread_state.key if hasattr(thread_state, "key") else None
+
+    train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load = get_wiki_text_dataset(input_data_dir)
+
     train_data = batchify(train_data, batch_size)
     val_data = batchify(val_data, eval_batch_size)
     test_data = batchify(test_data, eval_batch_size)
