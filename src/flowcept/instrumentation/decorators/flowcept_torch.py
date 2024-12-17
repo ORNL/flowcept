@@ -18,18 +18,87 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 from flowcept.configs import (
     REGISTER_WORKFLOW,
     INSTRUMENTATION,
-    TELEMETRY_CAPTURE, REPLACE_NON_JSON_SERIALIZABLE,
+    TELEMETRY_CAPTURE,
+    REPLACE_NON_JSON_SERIALIZABLE,
 )
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 
-
 def flowcept_torch(cls):
+    """
+    A wrapper function that instruments PyTorch modules for workflow monitoring.
 
+    This decorator wraps a PyTorch module class to enable instrumentation of its `forward` method.
+    The wrapper captures telemetry, tensor inspection, and profiling data during forward passes,
+    allowing integration with monitoring tools like Flowcept.
+
+    Parameters
+    ----------
+    cls : class
+        A PyTorch module class (inherits from `torch.nn.Module`) to be wrapped.
+
+    Returns
+    -------
+    class
+        A wrapped version of the input PyTorch module class with instrumentation enabled.
+
+    Optional Constructor Arguments
+    ------------------------------
+    get_profile : bool, optional
+        If set to `True`, enables capturing the module's profile, such as the number of parameters,
+        maximum tensor width, and inner modules. Default is `False`.
+    custom_metadata : dict, optional
+        A dictionary containing custom metadata to associate with the workflow. This metadata
+        can include additional user-defined information to help with task identification and
+        tracking.
+    parent_task_id : str, optional
+        The task ID of the parent task. It is used to establish a parent-child relationship
+        between tasks during the forward execution of the module.
+    parent_workflow_id : str, optional
+        The workflow ID of the parent workflow. It is used to associate the current module's
+        workflow with its parent workflow, allowing hierarchical workflow tracking.
+    campaign_id : str, optional
+        A user-defined campaign ID to group multiple workflows under a common identifier,
+        useful for organizing and monitoring tasks that belong to the same experiment or campaign.
+    save_workflow : bool, optional
+        If set to `True` (default), the workflow is registered and sent to the interceptor.
+        If set to `False`, the workflow registration step is skipped.
+
+    Notes
+    -----
+    - The wrapper can intercept both parent and child modules' forward calls based on configuration.
+    - The instrumentation can operate in various modes such as lightweight, telemetry,
+      tensor inspection, or combined telemetry and tensor inspection.
+    - Workflow and task metadata, such as execution start/end times, tensor usage, and
+      profiling details, are collected and sent for monitoring.
+    - The behavior is controlled by a global configuration (`INSTRUMENTATION`) that
+      specifies what to instrument and how.
+
+    Examples
+    --------
+    >>> import torch
+    >>> import torch.nn as nn
+    >>> @flowcept_torch
+    >>> class MyModel(nn.Module):
+    ...     def __init__(self, get_profile=True, parent_task_id="task123"):
+    ...         super().__init__()
+    ...         self.fc = nn.Linear(10, 1)
+    ...
+    ...     def forward(self, x):
+    ...         return self.fc(x)
+    ...
+    >>> model = MyModel()
+    >>> x = torch.randn(1, 10)
+    >>> output = model(x)
+
+    In the example above:
+    - The `forward` method of `MyModel` and its children (if enabled) will be instrumented.
+    - Workflow and task information, including `parent_task_id` and profiling details, will be
+      recorded and sent to the configured interceptor.
+    """
 
     class TorchModuleWrapper(cls):
-
         _original_children_forward_functions: Dict = {}
         interceptor: BaseInterceptor = None
 
@@ -54,7 +123,9 @@ def flowcept_torch(cls):
                 for name, child in self.named_children():
                     if hasattr(child, "forward"):
                         child.__dict__["_parent_module"] = self
-                        TorchModuleWrapper._original_children_forward_functions[child.__class__] = child.__class__.forward
+                        TorchModuleWrapper._original_children_forward_functions[child.__class__] = (
+                            child.__class__.forward
+                        )
                         child.forward = MethodType(child_forward_func, child)
 
             TorchModuleWrapper.interceptor = InstrumentationInterceptor.get_instance()
@@ -64,14 +135,15 @@ def flowcept_torch(cls):
 
             self._should_get_profile = kwargs.get("get_profile", False)
             self._custom_metadata = kwargs.get("custom_metadata", None)
-            self._parent_task_id = kwargs.get("parent_task_id", None) # to be used by forward layers
+            self._parent_task_id = kwargs.get(
+                "parent_task_id", None
+            )  # to be used by forward layers
             self._parent_workflow_id = kwargs.get("parent_workflow_id", None)
             self._campaign_id = kwargs.get("campaign_id", None)
             if kwargs.get("save_workflow", True):
                 self._workflow_id = self._register_as_workflow()
 
-        def get_profile(self):
-
+        def _get_profile(self):
             nparams = 0
             max_width = -1
             for p in self.parameters():
@@ -96,6 +168,23 @@ def flowcept_torch(cls):
             return this_result
 
         def set_parent_task_id(self, parent_task_id):
+            """
+            Set the parent task ID for the current module.
+
+            This method assigns the given task ID as the parent task ID for the current module.
+            The parent task ID is used to establish a hierarchical relationship between tasks
+            during workflow instrumentation.
+
+            Parameters
+            ----------
+            parent_task_id : str
+                The task ID of the parent task to associate with the current module.
+
+            Notes
+            -----
+            The parent task ID is used to track dependencies and relationships between tasks
+            when capturing telemetry or workflow execution data.
+            """
             self._parent_task_id = parent_task_id
 
         def _our_parent_forward(self, *args, **kwargs):
@@ -108,9 +197,9 @@ def flowcept_torch(cls):
                 "activity_id": self._module_name,
                 "used": _inspect_torch_tensor(args[0]),
                 "parent_task_id": self._parent_task_id,
-                #"custom_metadata": {"subtype": "parent_forward"},
+                # "custom_metadata": {"subtype": "parent_forward"},
                 "type": "task",
-                "status": "FINISHED" #it's ok. if an error happens, it will break before sending it
+                "status": "FINISHED",  # it's ok. if an error happens, it will break before sending it
             }
             y = super().forward(*args, **kwargs)
             forward_task["generated"] = _inspect_torch_tensor(y)
@@ -134,7 +223,7 @@ def flowcept_torch(cls):
             _custom_metadata["workflow_type"] = "TorchModule"
 
             if self._should_get_profile:
-                profile = self.get_profile()
+                profile = self._get_profile()
                 _custom_metadata["model_profile"] = profile
 
             workflow_obj.custom_metadata = _custom_metadata
@@ -211,7 +300,6 @@ def flowcept_torch(cls):
                 if k == "forward" or callable(v):
                     continue
                 elif isinstance(v, torch.Tensor):
-
                     used[k] = _inspect_torch_tensor(v)
                 else:
                     used[k] = v
@@ -219,8 +307,9 @@ def flowcept_torch(cls):
 
     def _run_forward(self, *args, **kwargs):
         started_at = time()
-        result = TorchModuleWrapper._original_children_forward_functions[self.__class__](self, *args,
-                                                                                         **kwargs)
+        result = TorchModuleWrapper._original_children_forward_functions[self.__class__](
+            self, *args, **kwargs
+        )
         task_dict = dict(
             type="task",
             started_at=started_at,
@@ -262,6 +351,3 @@ def flowcept_torch(cls):
         return result
 
     return TorchModuleWrapper
-
-
-

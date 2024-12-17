@@ -60,7 +60,7 @@ def register_dask_workflow(
             "custom_metadata": custom_metadata,
             "used": used,
             "workflow_name": workflow_name,
-            "campaign_id": campaign_id
+            "campaign_id": campaign_id,
         },
     )
     return workflow_id

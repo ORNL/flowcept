@@ -309,10 +309,12 @@ class LMDBDAO(DocumentDBDAO):
         """Query objects collection."""
         raise NotImplementedError
 
-    def get_tasks_recursive(self, workflow_id):
-       raise NotImplementedError
+    def get_tasks_recursive(self, workflow_id, max_depth=999):
+        """Get_tasks_recursive in LMDB."""
+        raise NotImplementedError
 
-    def dump_tasks_to_file_recursive(self, workflow_id):
+    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet", max_depth=999):
+        """Dump_tasks_to_file_recursive in LMDB."""
         raise NotImplementedError
 
     def dump_to_file(self, collection, filter, output_file, export_format, should_zip):

@@ -1,4 +1,5 @@
 """Document DB interaction module."""
+
 import os
 from typing import List, Dict, Tuple, Any
 import io
@@ -683,10 +684,7 @@ class MongoDBDAO(DocumentDBDAO):
                 self.logger.exception(e)
                 return None
         try:
-            return [
-                {**r, "status": Status.FINISHED.value} if "finished" in r else r
-                for r in rs
-            ]
+            return [{**r, "status": Status.FINISHED.value} if "finished" in r else r for r in rs]
         except Exception as e:
             self.logger.exception(e)
             return None
@@ -737,10 +735,13 @@ class MongoDBDAO(DocumentDBDAO):
             setattr(self, "_initialized", False)
             self._client.close()
 
-    def get_tasks_recursive(self, workflow_id):
+    def get_tasks_recursive(self, workflow_id, max_depth=999):
+        """Get_tasks_recursive in MongoDB."""
         try:
             result = []
-            parent_tasks = self._tasks_collection.find({"workflow_id": workflow_id}, projection={"_id": 0})
+            parent_tasks = self._tasks_collection.find(
+                {"workflow_id": workflow_id}, projection={"_id": 0}
+            )
             for parent_task in parent_tasks:
                 result.append(parent_task)
                 self._get_children_tasks_iterative(parent_task["task_id"], result)
@@ -748,7 +749,8 @@ class MongoDBDAO(DocumentDBDAO):
         except Exception as e:
             raise Exception(e)
 
-    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet"):
+    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet", max_depth=999):
+        """Dump_tasks_to_file_recursive in MongoDB."""
         try:
             tasks = self.get_tasks_recursive(workflow_id)
 
@@ -787,15 +789,20 @@ class MongoDBDAO(DocumentDBDAO):
         except Exception as e:
             self.logger.exception(e)
             raise e
-    def _get_children_tasks_iterative(self, parent_task_id, result, max_iter=9999): # todo revist
+
+    def _get_children_tasks_iterative(self, parent_task_id, result, max_depth=999):
         stack = [parent_task_id]  # Use a stack to manage tasks to process
         i = 0
-        while stack and i < max_iter:
+        while stack and i < max_depth:
             # Pop the next parent task id
             current_parent_id = stack.pop()
 
             # Query for tasks with the current parent_task_id
-            tasks = list(self._tasks_collection.find({"parent_task_id": current_parent_id}, projection={"_id": 0}))
+            tasks = list(
+                self._tasks_collection.find(
+                    {"parent_task_id": current_parent_id}, projection={"_id": 0}
+                )
+            )
 
             # Add these tasks to the result list
             result.extend(tasks)

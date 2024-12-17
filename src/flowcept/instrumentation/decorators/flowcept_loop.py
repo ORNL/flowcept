@@ -54,7 +54,6 @@ class FlowceptLoop:
         parent_task_id=None,
         workflow_id=None,
     ):
-
         if hasattr(items, "__len__"):
             self._iterator = iter(items)
             self._max = len(items)
@@ -103,7 +102,7 @@ class FlowceptLoop:
             "type": "task",
             "activity_id": self._loop_name,
             "workflow_id": self._workflow_id,
-            "custom_metadata": {"subtype": "whole_loop"}
+            "custom_metadata": {"subtype": "whole_loop"},
         }
         if self._parent_task_id:
             self.whole_loop_task["parent_task_id"] = self._parent_task_id
@@ -113,7 +112,7 @@ class FlowceptLoop:
     def _end_loop(self):
         self._capture_iteration_bounds()
         self.logger.debug("Capturing loop end.")
-        #self._end_iteration_task(self._last_iteration_task)
+        # self._end_iteration_task(self._last_iteration_task)
         self.whole_loop_task["status"] = Status.FINISHED.value
         self.whole_loop_task["ended_at"] = time()
         self._interceptor.intercept(self.whole_loop_task)

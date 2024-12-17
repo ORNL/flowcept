@@ -268,11 +268,70 @@ class DocumentDBDAO(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_tasks_recursive(self, workflow_id):
+    def get_tasks_recursive(self, workflow_id, max_depth=999):
+        """
+        Retrieve all tasks recursively for a given workflow ID.
+
+        This method fetches a workflow's root task and all its child tasks recursively
+        using the data access object (DAO). The recursion depth can be controlled
+        using the `max_depth` parameter to prevent excessive recursion.
+
+        Parameters
+        ----------
+        workflow_id : str
+            The ID of the workflow for which tasks need to be retrieved.
+        max_depth : int, optional
+            The maximum depth to traverse in the task hierarchy (default is 999).
+            Helps avoid excessive recursion for workflows with deeply nested tasks.
+
+        Returns
+        -------
+        list of dict
+            A list of tasks represented as dictionaries, including parent and child tasks
+            up to the specified recursion depth.
+
+        Raises
+        ------
+        Exception
+            If an error occurs during retrieval, it is logged and re-raised.
+
+        Notes
+        -----
+        This method delegates the operation to the DAO implementation.
+        """
         raise NotImplementedError
 
     @abstractmethod
-    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet"):
+    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet", max_depth=999):
+        """
+        Dump tasks recursively for a given workflow ID to a file.
+
+        This method retrieves all tasks (parent and children) for the given workflow ID
+        up to a specified recursion depth and saves them to a file in Parquet format.
+
+        Parameters
+        ----------
+        workflow_id : str
+            The ID of the workflow for which tasks need to be retrieved and saved.
+        output_file : str, optional
+            The name of the output file to save tasks (default is "tasks.parquet").
+        max_depth : int, optional
+            The maximum depth to traverse in the task hierarchy (default is 999).
+            Helps avoid excessive recursion for workflows with deeply nested tasks.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the file dump operation, it is logged and re-raised.
+
+        Notes
+        -----
+        The method delegates the task retrieval and saving operation to the DAO implementation.
+        """
         raise NotImplementedError
 
     @abstractmethod
