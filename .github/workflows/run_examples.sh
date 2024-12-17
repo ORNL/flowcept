@@ -48,6 +48,8 @@ run_test() {
     echo "Installing tensorboard"
     pip install .[tensorboard] > /dev/null 2>&1
   elif [[ "$test_type" =~ "llm_complex" ]]; then
+    echo "Installing dev dependencies"
+    pip install .[ml_dev]
     echo "Defining python path for llm_complex..."
     export PYTHONPATH=$PYTHONPATH:${EXAMPLES_DIR}/llm_complex
     echo $PYTHONPATH
