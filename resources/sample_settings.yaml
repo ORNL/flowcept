@@ -52,7 +52,7 @@ web_server:
   port: 5000
 
 sys_metadata:
-  environment_id: "frontier"
+  environment_id: "laptop"
 
 extra_metadata:
   place_holder: ""

@@ -10,10 +10,9 @@ import torch
 from distributed import LocalCluster, Client
 
 from examples.llm_complex.llm_model import model_train, get_wiki_text, TransformerModel
-from flowcept import WorkflowObject
-from flowcept.commons.vocabulary import Status
+
 from flowcept.configs import MONGO_ENABLED, INSTRUMENTATION
-from flowcept.flowcept_api.flowcept_controller import Flowcept
+from flowcept import Flowcept
 from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskSchedulerAdapter, \
     FlowceptDaskWorkerAdapter, register_dask_workflow
 
@@ -75,6 +74,7 @@ def get_dataset_ref(campaign_id, train_data, val_data, test_data):
 
 
 def dataprep_workflow(tokenizer_type="basic_english", subset_size=None, campaign_id=None):
+    from flowcept import WorkflowObject
     config = {
         "subset_size": subset_size,
         "tokenizer": tokenizer_type
@@ -137,10 +137,6 @@ def search_workflow(ntokens, train_data, val_data, test_data, exp_param_settings
 
 def main():
 
-    if not MONGO_ENABLED:
-        print("This test is only available if Mongo is enabled.")
-        sys.exit(0)
-
     _campaign_id = str(uuid.uuid4())
     print(f"Campaign id={_campaign_id}")
 
@@ -171,6 +167,7 @@ def main():
 
 
 def run_asserts_and_exports(campaign_id, output_dir="output_data"):
+    from flowcept.commons.vocabulary import Status
     print("Now running all asserts...")
     """
     So far, this works as follows:
@@ -299,6 +296,10 @@ def run_asserts_and_exports(campaign_id, output_dir="output_data"):
 
 
 if __name__ == "__main__":
+
+    if not MONGO_ENABLED:
+        print("This test is only available if Mongo is enabled.")
+        sys.exit(0)
 
     campaign_id, dataprep_wf_id, model_search_wf_id = main()
     run_asserts_and_exports(campaign_id)

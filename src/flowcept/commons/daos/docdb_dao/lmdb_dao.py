@@ -22,17 +22,17 @@ class LMDBDAO(DocumentDBDAO):
     Provides methods for storing and retrieving task and workflow data.
     """
 
-    def __new__(cls, *args, **kwargs) -> "LMDBDAO":
-        """Singleton creator for MongoDBDAO."""
-        # Check if an instance already exists
-        if DocumentDBDAO._instance is None:
-            DocumentDBDAO._instance = super(LMDBDAO, cls).__new__(cls)
-        return DocumentDBDAO._instance
+    # def __new__(cls, *args, **kwargs) -> "LMDBDAO":
+    #     """Singleton creator for LMDBDAO."""
+    #     # Check if an instance already exists
+    #     if DocumentDBDAO._instance is None:
+    #         DocumentDBDAO._instance = super(LMDBDAO, cls).__new__(cls)
+    #     return DocumentDBDAO._instance
 
     def __init__(self):
-        if not hasattr(self, "_initialized"):
-            self._initialized = True
-            self._open()
+        #if not hasattr(self, "_initialized"):
+        self._initialized = True
+        self._open()
 
     def _open(self):
         """Open LMDB environment and databases."""

@@ -12,7 +12,6 @@ import zipfile
 import pandas as pd
 import pyarrow.parquet as pq
 import pyarrow as pa
-import pymongo
 
 from bson import ObjectId
 from bson.json_util import dumps
@@ -42,39 +41,37 @@ class MongoDBDAO(DocumentDBDAO):
     various collections (`tasks`, `workflows`, `objects`).
     """
 
-    pymongo.ASCENDING
-
-    def __new__(cls, *args, **kwargs) -> "MongoDBDAO":
-        """Singleton creator for MongoDBDAO."""
-        # Check if an instance already exists
-        if DocumentDBDAO._instance is None:
-            DocumentDBDAO._instance = super(MongoDBDAO, cls).__new__(cls)
-        return DocumentDBDAO._instance
+    # def __new__(cls, *args, **kwargs) -> "MongoDBDAO":
+    #     """Singleton creator for MongoDBDAO."""
+    #     # Check if an instance already exists
+    #     if DocumentDBDAO._instance is None:
+    #         DocumentDBDAO._instance = super(MongoDBDAO, cls).__new__(cls)
+    #     return DocumentDBDAO._instance
 
     def __init__(self, create_indices=MONGO_CREATE_INDEX):
-        if not hasattr(self, "_initialized"):
-            from flowcept.configs import (
-                MONGO_HOST,
-                MONGO_PORT,
-                MONGO_DB,
-                MONGO_URI,
-            )
+        #if not hasattr(self, "_initialized"):
+        from flowcept.configs import (
+            MONGO_HOST,
+            MONGO_PORT,
+            MONGO_DB,
+            MONGO_URI,
+        )
 
-            self._initialized = True
-            self.logger = FlowceptLogger()
+        self._initialized = True
+        self.logger = FlowceptLogger()
 
-            if MONGO_URI is not None:
-                self._client = MongoClient(MONGO_URI)
-            else:
-                self._client = MongoClient(MONGO_HOST, MONGO_PORT)
-            self._db = self._client[MONGO_DB]
+        if MONGO_URI is not None:
+            self._client = MongoClient(MONGO_URI)
+        else:
+            self._client = MongoClient(MONGO_HOST, MONGO_PORT)
+        self._db = self._client[MONGO_DB]
 
-            self._tasks_collection = self._db["tasks"]
-            self._wfs_collection = self._db["workflows"]
-            self._obj_collection = self._db["objects"]
+        self._tasks_collection = self._db["tasks"]
+        self._wfs_collection = self._db["workflows"]
+        self._obj_collection = self._db["objects"]
 
-            if create_indices:
-                self._create_indices()
+        if create_indices:
+            self._create_indices()
 
     def _create_indices(self):
         # Creating task collection indices:

@@ -12,7 +12,7 @@ from flowcept import (
 
 import threading
 
-from flowcept.instrumentation.decorators.flowcept_torch import flowcept_torch
+from flowcept import flowcept_torch
 
 thread_state = threading.local()
 

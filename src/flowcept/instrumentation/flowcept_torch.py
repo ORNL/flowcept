@@ -199,7 +199,8 @@ def flowcept_torch(cls):
                 "parent_task_id": self._parent_task_id,
                 # "custom_metadata": {"subtype": "parent_forward"},
                 "type": "task",
-                "status": "FINISHED",  # it's ok. if an error happens, it will break before sending it
+                # Following is ok. if an error happens, it will break before sending it
+                "status": "FINISHED",
             }
             y = super().forward(*args, **kwargs)
             forward_task["generated"] = _inspect_torch_tensor(y)

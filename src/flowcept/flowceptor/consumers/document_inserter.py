@@ -110,17 +110,16 @@ class DocumentInserter:
     def flush_function(buffer, doc_daos, logger):
         """Flush it."""
         logger.info(
-            f"Current Doc buffer size: {len(buffer)}, " f"Gonna flush {len(buffer)} msgs to DocDB!"
+            f"Current Doc buffer size: {len(buffer)}, " f"Gonna flush {len(buffer)} msgs to DocDBs!"
         )
         for dao in doc_daos:
             dao.insert_and_update_many_tasks(buffer, TaskObject.task_id_field())
             logger.debug(
-                f"DocDao={id(dao)}; Flushed {len(buffer)} msgs to DocDB!"
+                f"DocDao={id(dao)},DocDaoClass={dao.__class__.__name__};"
+                f" Flushed {len(buffer)} msgs to this DocDB!"
             )  # TODO: add name
 
     def _handle_task_message(self, message: Dict):
-        # if DEBUG_MODE:
-        #     message["debug"] = True
         if "task_id" not in message:
             message["task_id"] = str(uuid4())
 
@@ -135,7 +134,7 @@ class DocumentInserter:
         message.pop("type")
 
         self.logger.debug(
-            f"Received following msg in DocInserter:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
+            f"Received following Task msg in DocInserter:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
         )
         if REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
@@ -145,7 +144,7 @@ class DocumentInserter:
     def _handle_workflow_message(self, message: Dict):
         message.pop("type")
         self.logger.debug(
-            f"Received following msg in DocInserter:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
+            f"Received following Workflow msg in DocInserter: \n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
         )
         if REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)

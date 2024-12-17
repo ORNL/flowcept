@@ -12,13 +12,9 @@ from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from datasets import load_dataset
 
+from flowcept import Flowcept, FlowceptLoop, flowcept_torch
 from flowcept.configs import N_GPUS
-from flowcept.flowcept_api.flowcept_controller import Flowcept
-from flowcept.instrumentation.decorators.flowcept_loop import FlowceptLoop
 
-from flowcept.instrumentation.decorators.flowcept_torch import (
-    flowcept_torch,
-)
 
 # Define a function to batchify the data
 def batchify(data, bsz):
@@ -292,7 +288,12 @@ def model_train(
         # If the validation loss has improved, save the model's state
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_obj_id = Flowcept.db.save_torch_model(model, task_id=epochs_loop.current_iteration_task.get("task_id", None), workflow_id=workflow_id, custom_metadata={"best_val_loss": best_val_loss})
+            best_obj_id = Flowcept.db.save_torch_model(
+                model,
+                task_id=epochs_loop.current_iteration_task.get("task_id", None),
+                workflow_id=workflow_id,
+                custom_metadata={"best_val_loss": best_val_loss}
+            )
 
         epochs_loop.end_iter({"train_loss": train_loss, "val_loss": val_loss})
 

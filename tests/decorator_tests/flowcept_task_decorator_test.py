@@ -6,17 +6,15 @@ import random
 import pandas as pd
 from time import time, sleep
 
-import flowcept.instrumentation.decorators
 from flowcept import Flowcept
-
+import flowcept
 import unittest
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.commons.vocabulary import Status
-from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
-from flowcept.instrumentation.decorators.flowcept_loop import FlowceptLoop
-from flowcept.instrumentation.decorators.flowcept_task import (
+from flowcept.instrumentation.flowcept_loop import FlowceptLoop
+from flowcept.instrumentation.flowcept_task import (
     flowcept_task,
     lightweight_flowcept_task,
 )
@@ -189,13 +187,16 @@ class DecoratorTests(unittest.TestCase):
             lightweight_decorated_static_function2(workflow_id=workflow_id)
             lightweight_decorated_static_function3(x=0.1, workflow_id=workflow_id)
 
-        sleep(3)
+        sleep(1)
         assert assert_by_querying_tasks_until(
             filter={"workflow_id": workflow_id},
             condition_to_evaluate=lambda docs: len(docs) == 3,
             max_time=60,
-            max_trials=60,
+            max_trials=30,
         )
+        tasks = Flowcept.db.query({"workflow_id": workflow_id})
+        for t in tasks:
+            assert t["task_id"]
 
     def test_decorated_function(self):
         # Compare this with the test_lightweight_decorated_function;
@@ -379,7 +380,6 @@ class DecoratorTests(unittest.TestCase):
         epochs = range(0, number_of_epochs)
         with Flowcept():
             loop = FlowceptLoop(items=epochs, loop_name="epochs", item_name="epoch")
-            loop._interceptor = InstrumentationInterceptor.get_instance().start(id(self))
             for e in loop:
                 sleep(0.05)
                 loss = random.random()

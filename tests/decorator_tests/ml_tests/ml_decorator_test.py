@@ -1,11 +1,9 @@
-import uuid
-
 import unittest
 
 from torch import nn
 
 from flowcept import Flowcept
-from flowcept.configs import MONGO_ENABLED, INSTRUMENTATION
+from flowcept.configs import MONGO_ENABLED
 from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer, MyNet
 
 

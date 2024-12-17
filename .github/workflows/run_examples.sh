@@ -28,7 +28,7 @@ run_test() {
   test_type="$1"
   with_mongo="$2"
   echo "Test type=${test_type}"
-  echo "Running $test_path"
+  echo "Starting $test_path"
 
   pip uninstall flowcept -y > /dev/null 2>&1 || true  # Ignore errors during uninstall
 
@@ -48,21 +48,23 @@ run_test() {
     echo "Installing tensorboard"
     pip install .[tensorboard] > /dev/null 2>&1
   elif [[ "$test_type" =~ "llm_complex" ]]; then
-    echo "Installing dev dependencies"
+    echo "Installing ml_dev dependencies"
     pip install .[ml_dev]
     echo "Defining python path for llm_complex..."
     export PYTHONPATH=$PYTHONPATH:${EXAMPLES_DIR}/llm_complex
     echo $PYTHONPATH
   fi
 
-  # Run the test and capture output
+  echo "Running $test_path ..."
   python "$test_path" | tee output.log
-
+  echo "Ok, ran $test_path."
   # Check for errors in the output
   if grep -iq "error" output.log; then
     echo "Test failed! See output.log for details."
     exit 1
   fi
+
+  echo "Great, no errors to run $test_path."
 
   # Clean up the log file
   rm output.log
