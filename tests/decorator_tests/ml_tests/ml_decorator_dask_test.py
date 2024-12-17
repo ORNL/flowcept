@@ -49,7 +49,6 @@ class MLDecoratorDaskTests(unittest.TestCase):
         for o in outputs:
             r = o.result()
             print(r)
-            assert "responsible_ai_metadata" in r
 
         stop_local_dask_cluster(client, cluster, flowcept)
 

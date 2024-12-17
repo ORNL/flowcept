@@ -219,7 +219,7 @@ def flowcept_torch(cls):
             workflow_obj.name = cls.__name__
             workflow_obj.campaign_id = self._campaign_id
             workflow_obj.parent_workflow_id = self._parent_workflow_id
-            _custom_metadata = self._custom_metadata
+            _custom_metadata = self._custom_metadata or {}
             _custom_metadata["workflow_type"] = "TorchModule"
 
             if self._should_get_profile:

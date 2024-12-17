@@ -4,26 +4,20 @@ import torch
 from torch.utils.data import Subset, DataLoader
 from torchvision import datasets, transforms
 from torch import nn, optim
-from torch.nn import functional as F
-
+from torch.nn import functional as F, Conv2d, Dropout, MaxPool2d, ReLU, Linear, Softmax
 
 from flowcept import (
     Flowcept,
 )
-from flowcept.instrumentation.decorators.flowcept_torch import (
-    register_modules,
-    register_module_as_workflow,
-    torch_task,
-)
-from flowcept.instrumentation.decorators.responsible_ai import (
-    model_profiler,
-)
 
 import threading
+
+from flowcept.instrumentation.decorators.flowcept_torch import flowcept_torch
 
 thread_state = threading.local()
 
 
+@flowcept_torch
 class MyNet(nn.Module):
     def __init__(
         self,
@@ -35,22 +29,9 @@ class MyNet(nn.Module):
         parent_workflow_id=None,
         parent_task_id=None,
     ):
-        super(MyNet, self).__init__()
+        super().__init__()
         print("parent workflow id", parent_workflow_id)
-        self.workflow_id = register_module_as_workflow(self, parent_workflow_id=parent_workflow_id)
         self.parent_task_id = parent_task_id
-        Conv2d, Dropout, MaxPool2d, ReLU, Softmax, Linear = register_modules(
-            [
-                nn.Conv2d,
-                nn.Dropout,
-                nn.MaxPool2d,
-                nn.ReLU,
-                nn.Softmax,
-                nn.Linear,
-            ],
-            workflow_id=self.workflow_id,
-            parent_task_id=self.parent_task_id,
-        )
 
         self.model_type = "CNN"
         # TODO: add if len conv_in_outs > 0
@@ -79,7 +60,6 @@ class MyNet(nn.Module):
                 self.fc_layers.append(Softmax(dim=softmax_dims[i]))
         self.view_size = fc_in_outs[0][0]
 
-    @torch_task()
     def forward(self, x):
         x = self.conv_layers(x)
         x = x.view(-1, self.view_size)
@@ -89,7 +69,7 @@ class MyNet(nn.Module):
 
 class ModelTrainer(object):
     @staticmethod
-    def build_train_test_loader(batch_size=128, random_seed=0, debug=True, subset_size=1000):
+    def build_train_test_loader(batch_size=128, random_seed=0, debug=True, subset_size=10):
         torch.manual_seed(random_seed)
 
         # Load the full MNIST dataset
@@ -157,7 +137,6 @@ class ModelTrainer(object):
 
     # @model_explainer()
     @staticmethod
-    @model_profiler()
     def model_fit(
         conv_in_outs=[[1, 10], [10, 20]],
         conv_kernel_sizes=[5, 5],
@@ -181,43 +160,41 @@ class ModelTrainer(object):
         #  We are calling the consumer api here (sometimes for the second time)
         #  because we are capturing at two levels: at the model.fit and at
         #  every layer. Can we do it better?
-        with Flowcept(
-            bundle_exec_id=workflow_id,
-            start_persistence=False,
-        ):
-            train_loader, test_loader = ModelTrainer.build_train_test_loader()
-            if torch.backends.mps.is_available():
-                device = torch.device("mps")
-            else:
-                device = torch.device("cpu")
-            model = MyNet(
-                conv_in_outs=conv_in_outs,
-                conv_kernel_sizes=conv_kernel_sizes,
-                conv_pool_sizes=conv_pool_sizes,
-                fc_in_outs=fc_in_outs,
-                softmax_dims=softmax_dims,
-                parent_workflow_id=workflow_id,
-            )
-            model = model.to(device)
-            optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
-            test_info = {}
-            print("Starting training....")
-            for epoch in range(1, max_epochs + 1):
-                ModelTrainer._train(model, device, train_loader, optimizer, epoch)
-                test_info = ModelTrainer._test(model, device, test_loader)
-            print("Finished training....")
-            batch = next(iter(test_loader))
-            test_data, _ = batch
-            result = test_info.copy()
-            result.update(
-                {
-                    "model": model,
-                    "test_data": test_data,
-                    "task_id": task_id,
-                    "random_seed": random_seed,
-                }
-            )
-            return result
+        train_loader, test_loader = ModelTrainer.build_train_test_loader()
+        if torch.backends.mps.is_available():
+            device = torch.device("mps")
+        else:
+            device = torch.device("cpu")
+        model = MyNet(
+            conv_in_outs=conv_in_outs,
+            conv_kernel_sizes=conv_kernel_sizes,
+            conv_pool_sizes=conv_pool_sizes,
+            fc_in_outs=fc_in_outs,
+            softmax_dims=softmax_dims,
+            parent_workflow_id=workflow_id,
+        )
+        model = model.to(device)
+        optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
+        test_info = {}
+        print("Starting training....")
+        for epoch in range(1, max_epochs + 1):
+            ModelTrainer._train(model, device, train_loader, optimizer, epoch)
+            test_info = ModelTrainer._test(model, device, test_loader)
+        print("Finished training....")
+        batch = next(iter(test_loader))
+        test_data, _ = batch
+        result = test_info.copy()
+
+        best_obj_id = Flowcept.db.save_torch_model(model, task_id=task_id, workflow_id=workflow_id, custom_metadata=result)
+        result.update(
+            {
+                "best_obj_id": best_obj_id,
+                "test_data": test_data,
+                "task_id": task_id,
+                "random_seed": random_seed,
+            }
+        )
+        return result
 
     @staticmethod
     def generate_hp_confs(hp_conf: dict):

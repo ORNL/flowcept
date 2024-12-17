@@ -4,6 +4,24 @@
 set -e
 set -o pipefail
 
+# Display usage/help message
+usage() {
+  echo -e "\nUsage: $0 <examples_dir> <with_mongo>\n"
+  echo "Arguments:"
+  echo "  examples_dir   Path to the examples directory (Mandatory)"
+  echo "  with_mongo     Boolean flag (true/false) indicating whether to include MongoDB support (Mandatory)"
+  echo -e "\nExample:"
+  echo "  $0 examples true"
+  echo "  $0 examples false"
+  exit 1
+}
+
+# Check if the required arguments are provided
+if [[ -z "$1" || -z "$2" ]]; then
+  echo "Error: Missing mandatory arguments!"
+  usage
+fi
+
 # Function to run tests with common steps
 run_test() {
   test_path="${EXAMPLES_DIR}/${1}_example.py"
@@ -29,6 +47,10 @@ run_test() {
   elif [[ "$test_type" =~ "tensorboard" ]]; then
     echo "Installing tensorboard"
     pip install .[tensorboard] > /dev/null 2>&1
+  elif [[ "$test_type" =~ "llm_complex" ]]; then
+    echo "Defining python path for llm_complex..."
+    export PYTHONPATH=$PYTHONPATH:${EXAMPLES_DIR}/llm_complex
+    echo $PYTHONPATH
   fi
 
   # Run the test and capture output
@@ -51,7 +73,7 @@ echo "Using examples directory: $EXAMPLES_DIR"
 echo "With Mongo? ${WITH_MONGO}"
 
 # Define the test cases
-tests=("instrumented_simple" "instrumented_loop" "dask" "mlflow" "tensorboard")
+tests=("instrumented_simple" "instrumented_loop" "dask" "mlflow" "tensorboard" "llm_complex/llm_search")
 
 # Iterate over the tests and run them
 for test_ in "${tests[@]}"; do
