@@ -18,6 +18,8 @@ def _set_workflow_on_scheduler(
     dask_scheduler=None,
     workflow_id=None,
     custom_metadata: dict = None,
+    campaign_id: str = None,
+    workflow_name: str = None,
     used: dict = None,
 ):
     custom_metadata = custom_metadata or {}
@@ -35,12 +37,16 @@ def _set_workflow_on_scheduler(
     )
     wf_obj.custom_metadata = custom_metadata
     wf_obj.used = used
+    wf_obj.campaign_id = campaign_id
+    wf_obj.name = workflow_name
     setattr(dask_scheduler, "current_workflow", wf_obj)
 
 
 def register_dask_workflow(
     dask_client: Client,
     workflow_id=None,
+    campaign_id=None,
+    workflow_name=None,
     custom_metadata: dict = None,
     used: dict = None,
 ):
@@ -53,6 +59,8 @@ def register_dask_workflow(
             "workflow_id": workflow_id,
             "custom_metadata": custom_metadata,
             "used": used,
+            "workflow_name": workflow_name,
+            "campaign_id": campaign_id
         },
     )
     return workflow_id

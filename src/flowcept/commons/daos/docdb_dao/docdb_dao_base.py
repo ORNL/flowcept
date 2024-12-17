@@ -268,6 +268,14 @@ class DocumentDBDAO(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_tasks_recursive(self, workflow_id):
+        raise NotImplementedError
+
+    @abstractmethod
+    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet"):
+        raise NotImplementedError
+
+    @abstractmethod
     def save_object(
         self,
         object,

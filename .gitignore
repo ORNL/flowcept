@@ -20,3 +20,4 @@ test.py
 time.txt
 tmp/
 deployment/data
+examples/llm_complex/output_data

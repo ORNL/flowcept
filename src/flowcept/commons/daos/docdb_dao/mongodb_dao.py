@@ -1,5 +1,5 @@
 """Document DB interaction module."""
-
+import os
 from typing import List, Dict, Tuple, Any
 import io
 import json
@@ -9,6 +9,10 @@ import pickle
 import zipfile
 
 import pandas as pd
+import pyarrow.parquet as pq
+import pyarrow as pa
+import pymongo
+
 from bson import ObjectId
 from bson.json_util import dumps
 from pymongo import MongoClient, UpdateOne
@@ -36,6 +40,8 @@ class MongoDBDAO(DocumentDBDAO):
     including querying, inserting, updating, and deleting documents across
     various collections (`tasks`, `workflows`, `objects`).
     """
+
+    pymongo.ASCENDING
 
     def __new__(cls, *args, **kwargs) -> "MongoDBDAO":
         """Singleton creator for MongoDBDAO."""
@@ -76,11 +82,15 @@ class MongoDBDAO(DocumentDBDAO):
             self._tasks_collection.create_index(TaskObject.task_id_field(), unique=True)
         if TaskObject.workflow_id_field() not in existing_indices:
             self._tasks_collection.create_index(TaskObject.workflow_id_field())
+        if "parent_task_id" not in existing_indices:
+            self._tasks_collection.create_index("parent_task_id")
 
         # Creating workflow collection indices:
         existing_indices = [list(x["key"].keys())[0] for x in self._wfs_collection.list_indexes()]
         if WorkflowObject.workflow_id_field() not in existing_indices:
             self._wfs_collection.create_index(WorkflowObject.workflow_id_field(), unique=True)
+        if "parent_workflow_id" not in existing_indices:
+            self._wfs_collection.create_index("parent_workflow_id")
 
         # Creating objects collection indices:
         existing_indices = [list(x["key"].keys())[0] for x in self._obj_collection.list_indexes()]
@@ -424,16 +434,16 @@ class MongoDBDAO(DocumentDBDAO):
 
     def dump_to_file(
         self,
-        collection_name="tasks",
+        collection="tasks",
         filter=None,
         output_file=None,
         export_format="json",
         should_zip=False,
     ):
         """Dump it to file."""
-        if collection_name == "tasks":
+        if collection == "tasks":
             _collection = self._tasks_collection
-        elif collection_name == "workflows":
+        elif collection == "workflows":
             _collection = self._wfs_collection
         else:
             msg = "Only tasks and workflows "
@@ -443,7 +453,7 @@ class MongoDBDAO(DocumentDBDAO):
             raise Exception("Sorry, only JSON is currently supported.")
 
         if output_file is None:
-            output_file = f"docs_dump_{collection_name}_{get_utc_now_str()}"
+            output_file = f"docs_dump_{collection}_{get_utc_now_str()}"
             output_file += ".zip" if should_zip else ".json"
 
         try:
@@ -727,26 +737,69 @@ class MongoDBDAO(DocumentDBDAO):
             setattr(self, "_initialized", False)
             self._client.close()
 
-
     def get_tasks_recursive(self, workflow_id):
         try:
             result = []
             parent_tasks = self._tasks_collection.find({"workflow_id": workflow_id}, projection={"_id": 0})
             for parent_task in parent_tasks:
                 result.append(parent_task)
-                self._get_children_tasks_recursive(parent_task["task_id"], result)
+                self._get_children_tasks_iterative(parent_task["task_id"], result)
             return result
         except Exception as e:
-            raise Exception(e) # TODO
+            raise Exception(e)
 
-    def _get_children_tasks_recursive(self, parent_task_id, result):
-        # Query for tasks with the current parent_task_id
-        tasks = list(self._tasks_collection.find({"parent_task_id": parent_task_id}, projection={"_id": 0}))
+    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet"):
+        try:
+            tasks = self.get_tasks_recursive(workflow_id)
 
-        # Add these tasks to the result list
-        result.extend(tasks)
+            chunk_size = 100_000
+            output_dir = "temp_chunks"
+            os.makedirs(output_dir, exist_ok=True)
+            # Write chunks to temporary Parquet files
+            chunk = []
+            file_count = 0
+            for idx, record in enumerate(tasks):
+                chunk.append(record)
+                if (idx + 1) % chunk_size == 0:
+                    df = pd.DataFrame(chunk)
+                    table = pa.Table.from_pandas(df)
+                    pq.write_table(table, f"{output_dir}/chunk_{file_count}.parquet")
+                    file_count += 1
+                    chunk = []  # Clear the chunk
 
-        # Now, for each child task, recursively find its own children
-        for task in tasks:
-            task_id = task["task_id"]
-            self._get_children_tasks_recursive(task_id, result)
+            # Write remaining rows
+            if chunk:
+                df = pd.DataFrame(chunk)
+                table = pa.Table.from_pandas(df)
+                pq.write_table(table, f"{output_dir}/chunk_{file_count}.parquet")
+
+            # Merge all chunked files into a single Parquet file
+            chunk_files = [f"{output_dir}/chunk_{i}.parquet" for i in range(file_count + 1)]
+            tables = [pq.read_table(f) for f in chunk_files]
+            merged_table = pa.concat_tables(tables)
+            pq.write_table(merged_table, output_file)
+
+            # Cleanup temporary files
+            for f in chunk_files:
+                os.remove(f)
+            os.rmdir(output_dir)
+
+        except Exception as e:
+            self.logger.exception(e)
+            raise e
+    def _get_children_tasks_iterative(self, parent_task_id, result, max_iter=9999): # todo revist
+        stack = [parent_task_id]  # Use a stack to manage tasks to process
+        i = 0
+        while stack and i < max_iter:
+            # Pop the next parent task id
+            current_parent_id = stack.pop()
+
+            # Query for tasks with the current parent_task_id
+            tasks = list(self._tasks_collection.find({"parent_task_id": current_parent_id}, projection={"_id": 0}))
+
+            # Add these tasks to the result list
+            result.extend(tasks)
+
+            # Add the task ids of these tasks to the stack
+            stack.extend(task["task_id"] for task in tasks)
+            i += 1

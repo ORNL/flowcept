@@ -25,7 +25,8 @@ telemetry_capture:
 instrumentation:
   enabled: true
   torch:
-    mode: telemetry_and_tensor_inspection   # tensor_inspection, telemetry, telemetry_and_tensor_inspection, full, ~
+    what: parent_and_children # parent_only, parent_and_children, ~
+    children_mode: lightweight   # lightweight, tensor_inspection, telemetry, telemetry_and_tensor_inspection
     save_models: True
 
 experiment:
@@ -75,7 +76,7 @@ databases:
     path: flowcept_lmdb
 
   mongodb:
-    enabled: false
+    enabled: true
     host: localhost
     port: 27017
     db: flowcept

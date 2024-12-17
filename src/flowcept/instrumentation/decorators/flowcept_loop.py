@@ -93,7 +93,7 @@ class FlowceptLoop:
         return self._max
 
     def __next__(self):
-        self._next_func()
+        return self._next_func()
 
     def _begin_loop(self):
         self.logger.debug("Capturing loop init.")

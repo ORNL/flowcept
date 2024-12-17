@@ -14,6 +14,9 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 class DBAPI(object):
     """DB API class."""
 
+    ASCENDING = 1
+    DESCENDING = -1
+
     # TODO: consider making all methods static
     def __init__(self):
         self.logger = FlowceptLogger()
@@ -83,15 +86,23 @@ class DBAPI(object):
             return None
         return results
 
-    def get_tasks_recursive(self, *args, **kwargs):
+    def get_tasks_recursive(self, workflow_id):
         try:
-            return DBAPI._dao.get_tasks_recursive(*args, **kwargs)
+            return DBAPI._dao.get_tasks_recursive(workflow_id)
         except Exception as e:
-            pass
+            self.logger.exception(e)
+            raise e
+
+    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet"):
+        try:
+            return DBAPI._dao.dump_tasks_to_file_recursive(workflow_id, output_file)
+        except Exception as e:
+            self.logger.exception(e)
+            raise e
 
     def dump_to_file(
         self,
-        collection_name="tasks",
+        collection="tasks",
         filter=None,
         output_file=None,
         export_format="json",
@@ -105,7 +116,7 @@ class DBAPI(object):
             return False
         try:
             DBAPI._dao.dump_to_file(
-                collection_name,
+                collection,
                 filter,
                 output_file,
                 export_format,
@@ -222,4 +233,4 @@ class DBAPI(object):
         state_dict = torch.load(buffer, weights_only=True)
         model.load_state_dict(state_dict)
 
-        return model, doc
+        return doc

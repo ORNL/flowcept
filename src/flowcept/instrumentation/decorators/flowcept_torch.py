@@ -6,7 +6,7 @@ from types import MethodType
 import numpy as np
 
 from flowcept.commons.utils import replace_non_serializable
-from typing import List, Dict
+from typing import Dict
 import uuid
 
 import torch
@@ -66,7 +66,7 @@ def flowcept_torch(cls):
             self._custom_metadata = kwargs.get("custom_metadata", None)
             self._parent_task_id = kwargs.get("parent_task_id", None) # to be used by forward layers
             self._parent_workflow_id = kwargs.get("parent_workflow_id", None)
-
+            self._campaign_id = kwargs.get("campaign_id", None)
             if kwargs.get("save_workflow", True):
                 self._workflow_id = self._register_as_workflow()
 
@@ -128,7 +128,7 @@ def flowcept_torch(cls):
             if not REGISTER_WORKFLOW:
                 return workflow_obj.workflow_id
             workflow_obj.name = cls.__name__
-
+            workflow_obj.campaign_id = self._campaign_id
             workflow_obj.parent_workflow_id = self._parent_workflow_id
             _custom_metadata = self._custom_metadata
             _custom_metadata["workflow_type"] = "TorchModule"

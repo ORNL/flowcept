@@ -309,7 +309,13 @@ class LMDBDAO(DocumentDBDAO):
         """Query objects collection."""
         raise NotImplementedError
 
-    def dump_to_file(self, collection_name, filter, output_file, export_format, should_zip):
+    def get_tasks_recursive(self, workflow_id):
+       raise NotImplementedError
+
+    def dump_tasks_to_file_recursive(self, workflow_id):
+        raise NotImplementedError
+
+    def dump_to_file(self, collection, filter, output_file, export_format, should_zip):
         """Dump data to file."""
         raise NotImplementedError
 

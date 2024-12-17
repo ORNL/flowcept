@@ -1,6 +1,8 @@
 import unittest
 from uuid import uuid4
 
+import pandas as pd
+
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept import Flowcept, WorkflowObject
 from flowcept.configs import MONGO_ENABLED
@@ -94,3 +96,35 @@ class DBAPITest(unittest.TestCase):
         Flowcept.db._dao.delete_tasks_with_filter(_filter)
         c1 = Flowcept.db._dao.count_tasks()
         assert c0 == c1
+
+
+    def test_dump_recursive(self):
+        workflow_id = "06f7a51e-c700-4a7e-96ec-f16319f77599"
+        print("Retrieving the data")
+        tasks_data = Flowcept.db.get_tasks_recursive(workflow_id)
+        print("Writing parquet file")
+        # Define the chunk size
+        chunk_size = 100_000
+
+        # Output file path
+        output_file = "output2.parquet"
+
+        # Process and write in chunks
+        first_chunk = True
+        chunk = []
+        for idx, record in enumerate(tasks_data):
+            chunk.append(record)
+            if (idx + 1) % chunk_size == 0:
+                print(f"writing at {idx}")
+                df = pd.DataFrame(chunk)
+                df.to_parquet(output_file, index=False, engine="pyarrow", compression="snappy",
+                              mode="a" if not first_chunk else "w")
+                first_chunk = False
+                chunk = []  # Clear the chunk
+
+        # Handle remaining rows
+        if chunk:
+            df = pd.DataFrame(chunk)
+            df.to_parquet(output_file, index=False, engine="pyarrow", compression="snappy",
+                          mode="a")
+
