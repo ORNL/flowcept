@@ -104,6 +104,10 @@ if _lmdb_settings:
     else:
         LMDB_ENABLED = _lmdb_settings.get("enabled", False)
 
+if not LMDB_ENABLED and not MONGO_ENABLED:
+    # At least one of these variables need to be enabled.
+    LMDB_ENABLED = True
+
 ##########################
 # Buffer Settings        #
 ##########################

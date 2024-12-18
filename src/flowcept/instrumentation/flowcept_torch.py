@@ -142,7 +142,9 @@ def flowcept_torch(cls):
             self._parent_task_id = kwargs.get(
                 "parent_task_id", get_current_context_task_id()
             )  # to be used by forward layers
-            self._parent_workflow_id = kwargs.get("parent_workflow_id", Flowcept.current_workflow_id)
+            self._parent_workflow_id = kwargs.get(
+                "parent_workflow_id", Flowcept.current_workflow_id
+            )
             self._campaign_id = kwargs.get("campaign_id", Flowcept.campaign_id)
             if kwargs.get("save_workflow", True):
                 self._workflow_id = self._register_as_workflow()

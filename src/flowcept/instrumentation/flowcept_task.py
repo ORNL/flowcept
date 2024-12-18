@@ -1,4 +1,5 @@
 """Task module."""
+
 import threading
 from time import time
 from functools import wraps
@@ -17,6 +18,7 @@ from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 _thread_local = threading.local()
+
 
 # TODO: :code-reorg: consider moving it to utils and reusing it in dask interceptor
 def default_args_handler(task_message: TaskObject, *args, **kwargs):
@@ -157,4 +159,4 @@ def flowcept_task(func=None, **decorator_kwargs):
 
 def get_current_context_task_id():
     """Retrieve the current task object from thread-local storage."""
-    return getattr(_thread_local, '_flowcept_current_context_task_id', None)
+    return getattr(_thread_local, "_flowcept_current_context_task_id", None)

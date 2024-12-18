@@ -67,7 +67,7 @@ class DocumentDBDAO(ABC):
 
             DocumentDBDAO._instance = LMDBDAO()
         else:
-            raise NotImplementedError
+            raise Exception("All dbs are disabled. You can't use this.")
         # TODO: revise, this below may be better in subclasses
         DocumentDBDAO._instance._initialized = True
         return DocumentDBDAO._instance
