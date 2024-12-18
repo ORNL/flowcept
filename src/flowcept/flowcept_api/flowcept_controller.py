@@ -131,12 +131,15 @@ class Flowcept(object):
 
     def _init_persistence(self, mq_host=None, mq_port=None):
         from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
-        self._db_inserters.append(DocumentInserter(
+
+        self._db_inserters.append(
+            DocumentInserter(
                 check_safe_stops=True,
                 bundle_exec_id=self._bundle_exec_id,
                 mq_host=mq_host,
                 mq_port=mq_port,
-        ).start())
+            ).start()
+        )
 
     def stop(self):
         """Stop it."""

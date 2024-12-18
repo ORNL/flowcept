@@ -60,15 +60,18 @@ class DocumentDBDAO(ABC):
 
         if MONGO_ENABLED:
             from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+
             DocumentDBDAO._instance = MongoDBDAO(*args, **kwargs)
         elif LMDB_ENABLED:
             from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
+
             DocumentDBDAO._instance = LMDBDAO()
         else:
             raise NotImplementedError
         # TODO: revise, this below may be better in subclasses
         DocumentDBDAO._instance._initialized = True
         return DocumentDBDAO._instance
+
     def close(self):
         """Close DAO connections and release resources."""
         del DocumentDBDAO._instance

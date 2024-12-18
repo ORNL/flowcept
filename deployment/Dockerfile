@@ -22,6 +22,6 @@ RUN conda create -n flowcept python=3.11.10 -y \
 
 # The following command is an overkill and will install many things you might not need. Please modify this Dockerfile in case you do not need to install "all" dependencies.
 RUN conda run -n flowcept pip install -e .[all]
-RUN conda run -n flowcept pip install -e .[ml_all]
+RUN conda run -n flowcept pip install -e .[ml_dev]
 
 CMD ["bash"]

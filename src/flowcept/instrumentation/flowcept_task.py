@@ -86,7 +86,7 @@ def lightweight_flowcept_task(func=None):
             task_dict = dict(
                 type="task",
                 # User must explicitly set workflow_id in kwargs to reduce overhead finding for it
-                #workflow_id=kwargs.pop("workflow_id", None),
+                # workflow_id=kwargs.pop("workflow_id", None),
                 activity_id=func.__name__,
                 used=kwargs,
                 generated=result,

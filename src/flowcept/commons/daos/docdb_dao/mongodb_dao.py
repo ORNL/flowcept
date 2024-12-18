@@ -49,7 +49,7 @@ class MongoDBDAO(DocumentDBDAO):
     #     return DocumentDBDAO._instance
 
     def __init__(self, create_indices=MONGO_CREATE_INDEX):
-        #if not hasattr(self, "_initialized"):
+        # if not hasattr(self, "_initialized"):
         from flowcept.configs import (
             MONGO_HOST,
             MONGO_PORT,

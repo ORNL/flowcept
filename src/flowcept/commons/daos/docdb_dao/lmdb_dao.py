@@ -30,7 +30,7 @@ class LMDBDAO(DocumentDBDAO):
     #     return DocumentDBDAO._instance
 
     def __init__(self):
-        #if not hasattr(self, "_initialized"):
+        # if not hasattr(self, "_initialized"):
         self._initialized = True
         self._open()
 
