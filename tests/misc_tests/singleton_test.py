@@ -5,6 +5,7 @@ from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
 from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.configs import MONGO_ENABLED
 from flowcept.flowcept_api.db_api import DBAPI
 
 
@@ -29,6 +30,7 @@ class TestSingleton(unittest.TestCase):
         #assert Flowcept.db._dao == dao
         #assert id(Flowcept.db._dao) == id(dao)
 
+    @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_mongo_dao_singleton(self):
         doc_dao1 = MongoDBDAO()
         doc_dao2 = MongoDBDAO()
