@@ -165,6 +165,8 @@ def replace_non_serializable(obj):
             return [replace_non_serializable(item) for item in obj]
         else:
             return obj
+    elif hasattr(obj, "__dict__"):
+        return obj.__dict__
     else:
         # Replace non-serializable values with id()
         return f"{obj.__class__.__name__}_instance_id_{id(obj)}"
