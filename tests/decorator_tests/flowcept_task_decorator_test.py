@@ -54,23 +54,23 @@ def decorated_static_function(df: pd.DataFrame):
 
 
 @lightweight_flowcept_task
-def decorated_all_serializable(x: int, workflow_id: str = None):
+def decorated_all_serializable(x: int):
     sleep(TIME_TO_SLEEP)
     return {"yy": 33}
 
 
-def not_decorated_func(x: int, workflow_id: str = None):
+def not_decorated_func(x: int):
     sleep(TIME_TO_SLEEP)
     return {"yy": 33}
 
 
 @lightweight_flowcept_task
-def lightweight_decorated_static_function2(workflow_id=None):
+def lightweight_decorated_static_function2():
     return [2]
 
 
 @lightweight_flowcept_task
-def lightweight_decorated_static_function3(x, workflow_id=None):
+def lightweight_decorated_static_function3(x):
     return 3
 
 
@@ -140,24 +140,21 @@ def print_system_stats():
 
 
 def simple_decorated_function(max_tasks=10, enable_persistence=True, check_insertions=True):
-    workflow_id = str(uuid.uuid4())
-    print(workflow_id)
     # TODO :refactor-base-interceptor:
     consumer = Flowcept(start_persistence=enable_persistence)
     consumer.start()
     t0 = time()
     for i in range(max_tasks):
-        decorated_all_serializable(x=i, workflow_id=workflow_id)
+        decorated_all_serializable(x=i)
     t1 = time()
     print("Decorated:")
     print_system_stats()
     consumer.stop()
     decorated = t1 - t0
-    print(workflow_id)
 
     if check_insertions:
         assert assert_by_querying_tasks_until(
-            filter={"workflow_id": workflow_id},
+            filter={"workflow_id": Flowcept.current_workflow_id},
             condition_to_evaluate=lambda docs: len(docs) == max_tasks,
             max_time=60,
             max_trials=60,
@@ -165,7 +162,7 @@ def simple_decorated_function(max_tasks=10, enable_persistence=True, check_inser
 
     t0 = time()
     for i in range(max_tasks):
-        not_decorated_func(x=i, workflow_id=workflow_id)
+        not_decorated_func(x=i)
     t1 = time()
     print("Not Decorated:")
     print_system_stats()
@@ -175,26 +172,24 @@ def simple_decorated_function(max_tasks=10, enable_persistence=True, check_inser
 
 class DecoratorTests(unittest.TestCase):
     @lightweight_flowcept_task
-    def lightweight_decorated_function_with_self(self, x, workflow_id=None):
+    def lightweight_decorated_function_with_self(self, x):
         sleep(x)
         return {"y": 2}
 
     def test_lightweight_decorated_function(self):
-        workflow_id = str(uuid.uuid4())
-        print(workflow_id)
         with Flowcept():
-            self.lightweight_decorated_function_with_self(x=0.1, workflow_id=workflow_id)
-            lightweight_decorated_static_function2(workflow_id=workflow_id)
-            lightweight_decorated_static_function3(x=0.1, workflow_id=workflow_id)
+            self.lightweight_decorated_function_with_self(x=0.1)
+            lightweight_decorated_static_function2()
+            lightweight_decorated_static_function3(x=0.1)
 
         sleep(1)
         assert assert_by_querying_tasks_until(
-            filter={"workflow_id": workflow_id},
+            filter={"workflow_id": Flowcept.current_workflow_id},
             condition_to_evaluate=lambda docs: len(docs) == 3,
             max_time=60,
             max_trials=30,
         )
-        tasks = Flowcept.db.query({"workflow_id": workflow_id})
+        tasks = Flowcept.db.query({"workflow_id": Flowcept.current_workflow_id})
         for t in tasks:
             assert t["task_id"]
 
@@ -303,9 +298,7 @@ class DecoratorTests(unittest.TestCase):
             epochs_loop = FlowceptLoop(items=range(1, 2), loop_name="epochs_loop",
                                        item_name="epoch")
             for _ in epochs_loop:
-                print("ini")
                 sleep(0.5)
-                print("end")
                 epochs_loop.end_iter({"a": 1})
         docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
         assert len(docs) == 1 + 1
@@ -410,5 +403,3 @@ class DecoratorTests(unittest.TestCase):
             assert t["used"]["epoch"] == i
             assert t["status"] == Status.FINISHED.value
             assert t["parent_task_id"] == whole_loop_task["task_id"]
-
-

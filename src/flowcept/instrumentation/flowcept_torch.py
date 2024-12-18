@@ -21,8 +21,10 @@ from flowcept.configs import (
     TELEMETRY_CAPTURE,
     REPLACE_NON_JSON_SERIALIZABLE,
 )
+from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
+from flowcept.instrumentation.flowcept_task import get_current_context_task_id
 
 
 def flowcept_torch(cls):
@@ -67,6 +69,8 @@ def flowcept_torch(cls):
 
     Notes
     -----
+    - If you use Optional Constructor Arguments, make sure you either specify them in your Module
+      constructor signature or simply use **kwargs in the signature.
     - The wrapper can intercept both parent and child modules' forward calls based on configuration.
     - The instrumentation can operate in various modes such as lightweight, telemetry,
       tensor inspection, or combined telemetry and tensor inspection.
@@ -81,7 +85,7 @@ def flowcept_torch(cls):
     >>> import torch.nn as nn
     >>> @flowcept_torch
     >>> class MyModel(nn.Module):
-    ...     def __init__(self, get_profile=True, parent_task_id="task123"):
+    ...     def __init__(self, get_profile=True, **kwargs):
     ...         super().__init__()
     ...         self.fc = nn.Linear(10, 1)
     ...
@@ -136,10 +140,10 @@ def flowcept_torch(cls):
             self._should_get_profile = kwargs.get("get_profile", False)
             self._custom_metadata = kwargs.get("custom_metadata", None)
             self._parent_task_id = kwargs.get(
-                "parent_task_id", None
+                "parent_task_id", get_current_context_task_id()
             )  # to be used by forward layers
-            self._parent_workflow_id = kwargs.get("parent_workflow_id", None)
-            self._campaign_id = kwargs.get("campaign_id", None)
+            self._parent_workflow_id = kwargs.get("parent_workflow_id", Flowcept.current_workflow_id)
+            self._campaign_id = kwargs.get("campaign_id", Flowcept.campaign_id)
             if kwargs.get("save_workflow", True):
                 self._workflow_id = self._register_as_workflow()
 

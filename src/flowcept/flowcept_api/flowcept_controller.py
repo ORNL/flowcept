@@ -22,6 +22,7 @@ class Flowcept(object):
 
     _db: DBAPI = None
     current_workflow_id = None
+    campaign_id = None
 
     @classmethod
     @property
@@ -35,6 +36,7 @@ class Flowcept(object):
         self,
         interceptors: Union[BaseInterceptor, List[BaseInterceptor], str] = None,
         bundle_exec_id=None,
+        campaign_id: str = None,
         workflow_id: str = None,
         workflow_name: str = None,
         workflow_args: str = None,
@@ -81,6 +83,7 @@ class Flowcept(object):
             self._interceptors: List[BaseInterceptor] = interceptors
 
         self.current_workflow_id = workflow_id
+        self.campaign_id = campaign_id
         self.workflow_name = workflow_name
         self.workflow_args = workflow_args
 
@@ -104,7 +107,10 @@ class Flowcept(object):
                 if interceptor.kind == "instrumentation":
                     wf_obj = WorkflowObject()
                     wf_obj.workflow_id = self.current_workflow_id or str(uuid4())
-                    Flowcept.current_workflow_id = self.current_workflow_id = wf_obj.workflow_id
+                    wf_obj.campaign_id = self.campaign_id or str(uuid4())
+
+                    Flowcept.current_workflow_id = wf_obj.workflow_id
+                    Flowcept.campaign_id = wf_obj.campaign_id
 
                     if self.workflow_name:
                         wf_obj.name = self.workflow_name

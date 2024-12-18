@@ -1,4 +1,4 @@
-# The code in this file is based on:
+# The code in example file is based on:
 # https://blog.paperspace.com/build-a-language-model-using-pytorch/
 import itertools
 import os

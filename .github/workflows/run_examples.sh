@@ -47,6 +47,9 @@ run_test() {
   elif [[ "$test_type" =~ "tensorboard" ]]; then
     echo "Installing tensorboard"
     pip install .[tensorboard] > /dev/null 2>&1
+  elif [[ "$test_type" =~ "tensorboard" ]]; then
+    echo "Installing ml_dev dependencies"
+    pip install .[ml_dev] > /dev/null 2>&1
   elif [[ "$test_type" =~ "llm_complex" ]]; then
     echo "Installing ml_dev dependencies"
     pip install .[ml_dev]
@@ -77,7 +80,7 @@ echo "Using examples directory: $EXAMPLES_DIR"
 echo "With Mongo? ${WITH_MONGO}"
 
 # Define the test cases
-tests=("instrumented_simple" "instrumented_loop" "dask" "mlflow" "tensorboard" "llm_complex/llm_main")
+tests=("instrumented_simple" "instrumented_loop" "dask" "mlflow" "tensorboard" "single_layer_perceptron" "llm_complex/llm_main")
 
 # Iterate over the tests and run them
 for test_ in "${tests[@]}"; do
