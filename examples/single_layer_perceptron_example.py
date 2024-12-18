@@ -105,11 +105,10 @@ if __name__ == "__main__":
         elif wf["name"] == "SingleLayerPerceptron":
             module_forward_wf = wf
 
-    print(train_wf)
+    # print(train_wf)
     train_wf_task = Flowcept.db.query({"workflow_id": train_wf["workflow_id"]})
     print(train_wf_task)
-    print("\n")
-    print(module_forward_wf)
+    # print(module_forward_wf)
 
     module_tasks = Flowcept.db.query({"workflow_id": module_forward_wf["workflow_id"]})
     module_tasks_df = pd.DataFrame(module_tasks)
