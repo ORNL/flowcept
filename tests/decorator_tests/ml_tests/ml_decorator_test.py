@@ -1,11 +1,9 @@
-import uuid
-
 import unittest
 
 from torch import nn
 
 from flowcept import Flowcept
-from flowcept.configs import MONGO_ENABLED, INSTRUMENTATION
+from flowcept.configs import MONGO_ENABLED
 from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer, MyNet
 
 
@@ -15,14 +13,15 @@ class MLDecoratorTests(unittest.TestCase):
         model = nn.Module()
         model_id = Flowcept.db.save_torch_model(model)
         new_model = nn.Module()
-        loaded_model = Flowcept.db.load_torch_model(model=new_model, object_id=model_id)
-        assert model.state_dict() == loaded_model.state_dict()
+        doc = Flowcept.db.load_torch_model(model=new_model, object_id=model_id)
+        print(doc)
+        assert model.state_dict() == new_model.state_dict()
 
     @staticmethod
     def test_cnn_model_trainer():
         # Disable model mgmt if mongo not enabled
         if not MONGO_ENABLED:
-            INSTRUMENTATION["torch"]["save_models"] = False
+            return
 
         trainer = ModelTrainer()
 
@@ -35,20 +34,19 @@ class MLDecoratorTests(unittest.TestCase):
             "max_epochs": [1],
         }
         confs = ModelTrainer.generate_hp_confs(hp_conf)
-        wf_id = str(uuid.uuid4())
-        print("Parent workflow_id:" + wf_id)
-        for conf in confs[:1]:
-            conf["workflow_id"] = wf_id
-            result = trainer.model_fit(**conf)
-            assert len(result)
+        with Flowcept():
+            print("Parent workflow_id:" + Flowcept.current_workflow_id)
+            for conf in confs[:1]:
+                conf["workflow_id"] = Flowcept.current_workflow_id
+                result = trainer.model_fit(**conf)
+                assert len(result)
 
-            if not MONGO_ENABLED:
-                continue
+                c = conf.copy()
+                c.pop("max_epochs")
+                c.pop("workflow_id")
+                loaded_model = MyNet(**c)
 
-            c = conf.copy()
-            c.pop("max_epochs")
-            c.pop("workflow_id")
-            loaded_model = MyNet(**c)
-
-            loaded_model = Flowcept.db.load_torch_model(loaded_model, result["object_id"])
+            model_doc = Flowcept.db.load_torch_model(loaded_model, result["best_obj_id"])
+            print(model_doc)
             assert len(loaded_model(result["test_data"]))
+

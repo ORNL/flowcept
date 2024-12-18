@@ -1,6 +1,8 @@
 import unittest
 from uuid import uuid4
 
+import pandas as pd
+
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept import Flowcept, WorkflowObject
 from flowcept.configs import MONGO_ENABLED
@@ -94,3 +96,4 @@ class DBAPITest(unittest.TestCase):
         Flowcept.db._dao.delete_tasks_with_filter(_filter)
         c1 = Flowcept.db._dao.count_tasks()
         assert c0 == c1
+

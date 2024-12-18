@@ -14,6 +14,9 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 class DBAPI(object):
     """DB API class."""
 
+    ASCENDING = 1
+    DESCENDING = -1
+
     # TODO: consider making all methods static
     def __init__(self):
         self.logger = FlowceptLogger()
@@ -83,9 +86,82 @@ class DBAPI(object):
             return None
         return results
 
+    def get_tasks_recursive(self, workflow_id, max_depth=999):
+        """
+        Retrieve all tasks recursively for a given workflow ID.
+
+        This method fetches a workflow's root task and all its child tasks recursively
+        using the data access object (DAO). The recursion depth can be controlled
+        using the `max_depth` parameter to prevent excessive recursion.
+
+        Parameters
+        ----------
+        workflow_id : str
+            The ID of the workflow for which tasks need to be retrieved.
+        max_depth : int, optional
+            The maximum depth to traverse in the task hierarchy (default is 999).
+            Helps avoid excessive recursion for workflows with deeply nested tasks.
+
+        Returns
+        -------
+        list of dict
+            A list of tasks represented as dictionaries, including parent and child tasks
+            up to the specified recursion depth.
+
+        Raises
+        ------
+        Exception
+            If an error occurs during retrieval, it is logged and re-raised.
+
+        Notes
+        -----
+        This method delegates the operation to the DAO implementation.
+        """
+        try:
+            return DBAPI._dao.get_tasks_recursive(workflow_id, max_depth)
+        except Exception as e:
+            self.logger.exception(e)
+            raise e
+
+    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet", max_depth=999):
+        """
+        Dump tasks recursively for a given workflow ID to a file.
+
+        This method retrieves all tasks (parent and children) for the given workflow ID
+        up to a specified recursion depth and saves them to a file in Parquet format.
+
+        Parameters
+        ----------
+        workflow_id : str
+            The ID of the workflow for which tasks need to be retrieved and saved.
+        output_file : str, optional
+            The name of the output file to save tasks (default is "tasks.parquet").
+        max_depth : int, optional
+            The maximum depth to traverse in the task hierarchy (default is 999).
+            Helps avoid excessive recursion for workflows with deeply nested tasks.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the file dump operation, it is logged and re-raised.
+
+        Notes
+        -----
+        The method delegates the task retrieval and saving operation to the DAO implementation.
+        """
+        try:
+            return DBAPI._dao.dump_tasks_to_file_recursive(workflow_id, output_file, max_depth)
+        except Exception as e:
+            self.logger.exception(e)
+            raise e
+
     def dump_to_file(
         self,
-        collection_name="tasks",
+        collection="tasks",
         filter=None,
         output_file=None,
         export_format="json",
@@ -99,7 +175,7 @@ class DBAPI(object):
             return False
         try:
             DBAPI._dao.dump_to_file(
-                collection_name,
+                collection,
                 filter,
                 output_file,
                 export_format,
@@ -216,4 +292,4 @@ class DBAPI(object):
         state_dict = torch.load(buffer, weights_only=True)
         model.load_state_dict(state_dict)
 
-        return model
+        return doc

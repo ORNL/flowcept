@@ -52,6 +52,13 @@ class TestTensorboard(unittest.TestCase):
         (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
         x_train, x_test = x_train / 255.0, x_test / 255.0
 
+        # Reduce the dataset size for faster debugging
+        DEBUG_SAMPLES_TRAIN = 100  # Number of training samples to keep
+        DEBUG_SAMPLES_TEST = 20  # Number of test samples to keep
+
+        x_train, y_train = x_train[:DEBUG_SAMPLES_TRAIN], y_train[:DEBUG_SAMPLES_TRAIN]
+        x_test, y_test = x_test[:DEBUG_SAMPLES_TEST], y_test[:DEBUG_SAMPLES_TEST]
+
         HP_NUM_UNITS = hp.HParam("num_units", hp.Discrete([16]))
         HP_DROPOUT = hp.HParam("dropout", hp.RealInterval(0.1, 0.2))
         HP_OPTIMIZER = hp.HParam("optimizer", hp.Discrete(["adam", "sgd"]))

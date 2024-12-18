@@ -18,4 +18,5 @@ with Flowcept():
     print(o2)
 docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
 print(len(docs))
+assert len(docs) == 2
 

@@ -52,6 +52,15 @@ class TaskObject:
     dependencies: List = None
     dependents: List = None
 
+    _DEFAULT_ENRICH_VALUES = {
+        "campaign_id": CAMPAIGN_ID,
+        "node_name": NODE_NAME,
+        "login_name": LOGIN_NAME,
+        "public_ip": PUBLIC_IP,
+        "private_ip": PRIVATE_IP,
+        "hostname": HOSTNAME,
+    }
+
     @staticmethod
     def get_time_field_names():
         """Get the time field."""
@@ -135,15 +144,7 @@ class TaskObject:
     @staticmethod
     def enrich_task_dict(task_dict: dict):
         """Enrich the task."""
-        attributes = {
-            "campaign_id": CAMPAIGN_ID,
-            "node_name": NODE_NAME,
-            "login_name": LOGIN_NAME,
-            "public_ip": PUBLIC_IP,
-            "private_ip": PRIVATE_IP,
-            "hostname": HOSTNAME,
-        }
-        for key, fallback_value in attributes.items():
+        for key, fallback_value in TaskObject._DEFAULT_ENRICH_VALUES.items():
             if (key not in task_dict or task_dict[key] is None) and fallback_value is not None:
                 task_dict[key] = fallback_value
 

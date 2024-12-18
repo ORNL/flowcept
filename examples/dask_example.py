@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
         # Closing Dask and Flowcept
         client.close()  # This is to avoid generating errors
-        cluster.close()  # This calls are needed closeouts to inform of workflow conclusion.
+        cluster.close()  # This call is needed closeout to inform of workflow conclusion.
 
     # Optionally: flowcept.stop()
 

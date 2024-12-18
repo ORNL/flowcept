@@ -11,6 +11,7 @@ help:
 	@printf "\033[32mtests\033[0m                     run unit tests with pytest\n"
 	@printf "\033[32mtests-in-container\033[0m        run unit tests with pytest inside Flowcept's container\n"
 	@printf "\033[32mtests-in-container-mongo\033[0m  run unit tests inside container with MongoDB\n"
+	@printf "\033[32mtests-in-container-kafka\033[0m  run unit tests inside container with Kafka and MongoDB\n"
 	@printf "\033[32mtests-all\033[0m                 run all unit tests with pytest, including long-running ones\n"
 	@printf "\033[32mtests-notebooks\033[0m           test the notebooks using pytest\n"
 	@printf "\033[32mclean\033[0m                     remove cache directories and Sphinx build output\n"
@@ -43,6 +44,7 @@ clean:
 	find . -type d -name "mlruns" -exec rm -rf {} \; 2>/dev/null || true
 	find . -type d -name "__pycache__" -exec rm -rf {} \;  2>/dev/null || true
 	find . -type d -name "*tfevents*" -exec rm -rf {} \;  2>/dev/null || true
+	find . -type d -name "*output_data*" -exec rm -rf {} \;  2>/dev/null || true
 	# sphinx-build -M clean docs docs/_build This needs to be fixed.
 
 # Build the HTML documentation using Sphinx
@@ -88,7 +90,7 @@ liveness:
 # Run unit tests using pytest
 .PHONY: tests
 tests:
-	pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
+	pytest
 
 .PHONY: tests-notebooks
 tests-notebooks:

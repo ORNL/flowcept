@@ -22,17 +22,17 @@ class LMDBDAO(DocumentDBDAO):
     Provides methods for storing and retrieving task and workflow data.
     """
 
-    def __new__(cls, *args, **kwargs) -> "LMDBDAO":
-        """Singleton creator for MongoDBDAO."""
-        # Check if an instance already exists
-        if DocumentDBDAO._instance is None:
-            DocumentDBDAO._instance = super(LMDBDAO, cls).__new__(cls)
-        return DocumentDBDAO._instance
+    # def __new__(cls, *args, **kwargs) -> "LMDBDAO":
+    #     """Singleton creator for LMDBDAO."""
+    #     # Check if an instance already exists
+    #     if DocumentDBDAO._instance is None:
+    #         DocumentDBDAO._instance = super(LMDBDAO, cls).__new__(cls)
+    #     return DocumentDBDAO._instance
 
     def __init__(self):
-        if not hasattr(self, "_initialized"):
-            self._initialized = True
-            self._open()
+        # if not hasattr(self, "_initialized"):
+        self._initialized = True
+        self._open()
 
     def _open(self):
         """Open LMDB environment and databases."""
@@ -309,7 +309,15 @@ class LMDBDAO(DocumentDBDAO):
         """Query objects collection."""
         raise NotImplementedError
 
-    def dump_to_file(self, collection_name, filter, output_file, export_format, should_zip):
+    def get_tasks_recursive(self, workflow_id, max_depth=999):
+        """Get_tasks_recursive in LMDB."""
+        raise NotImplementedError
+
+    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet", max_depth=999):
+        """Dump_tasks_to_file_recursive in LMDB."""
+        raise NotImplementedError
+
+    def dump_to_file(self, collection, filter, output_file, export_format, should_zip):
         """Dump data to file."""
         raise NotImplementedError
 

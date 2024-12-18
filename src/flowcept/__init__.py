@@ -15,17 +15,22 @@ def __getattr__(name):
         return Flowcept
 
     elif name == "flowcept_task":
-        from flowcept.instrumentation.decorators.flowcept_task import flowcept_task
+        from flowcept.instrumentation.flowcept_task import flowcept_task
 
         return flowcept_task
 
+    elif name == "flowcept_torch":
+        from flowcept.instrumentation.flowcept_torch import flowcept_torch
+
+        return flowcept_torch
+
     elif name == "FlowceptLoop":
-        from flowcept.instrumentation.decorators.flowcept_loop import FlowceptLoop
+        from flowcept.instrumentation.flowcept_loop import FlowceptLoop
 
         return FlowceptLoop
 
     elif name == "telemetry_flowcept_task":
-        from flowcept.instrumentation.decorators.flowcept_task import telemetry_flowcept_task
+        from flowcept.instrumentation.flowcept_task import telemetry_flowcept_task
 
         return telemetry_flowcept_task
 
@@ -77,6 +82,7 @@ __all__ = [
     "FlowceptLoop",
     "telemetry_flowcept_task",
     "Flowcept",
+    "flowcept_torch",
     "WorkflowObject",
     "__version__",
     "SETTINGS_PATH",

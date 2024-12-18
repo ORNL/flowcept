@@ -15,7 +15,8 @@ dependencies = [
     "py-cpuinfo",
     "redis",
     "requests",
-    "lmdb"
+    "lmdb",
+    "pyarrow"
 ]
 authors = [{name = "Oak Ridge National Laboratory"}]
 description = "Capture and query workflow provenance data using data observability"

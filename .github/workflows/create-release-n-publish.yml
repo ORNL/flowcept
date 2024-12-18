@@ -121,7 +121,7 @@ jobs:
         run: make services
 
       - name: Test with pytest
-        run: pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
+        run: pytest
 
       - name: Test notebooks
         run: |
