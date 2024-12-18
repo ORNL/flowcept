@@ -1,5 +1,6 @@
 """Task module."""
 
+import threading
 from time import time
 from functools import wraps
 from flowcept.commons.flowcept_dataclasses.task_object import (
@@ -16,6 +17,8 @@ from flowcept.configs import (
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
+_thread_local = threading.local()
+
 
 # TODO: :code-reorg: consider moving it to utils and reusing it in dask interceptor
 def default_args_handler(task_message: TaskObject, *args, **kwargs):
@@ -25,9 +28,11 @@ def default_args_handler(task_message: TaskObject, *args, **kwargs):
         for i in range(len(args)):
             args_handled[f"arg_{i}"] = args[i]
     if kwargs is not None and len(kwargs):
-        task_message.workflow_id = task_message.workflow_id or kwargs.pop("workflow_id", None)
+        task_message.workflow_id = kwargs.pop("workflow_id", None)
+        task_message.campaign_id = kwargs.pop("campaign_id", None)
         args_handled.update(kwargs)
     task_message.workflow_id = task_message.workflow_id or Flowcept.current_workflow_id
+    task_message.campaign_id = task_message.campaign_id or Flowcept.campaign_id
     if REPLACE_NON_JSON_SERIALIZABLE:
         args_handled = replace_non_serializable(args_handled)
     return args_handled
@@ -46,13 +51,14 @@ def telemetry_flowcept_task(func=None):
             task_obj["started_at"] = time()
             task_obj["activity_id"] = func.__qualname__
             task_obj["task_id"] = str(task_obj["started_at"])
+            _thread_local._flowcept_current_context_task_id = task_obj["task_id"]
             task_obj["workflow_id"] = kwargs.pop("workflow_id", Flowcept.current_workflow_id)
             task_obj["used"] = kwargs
             tel = interceptor.telemetry_capture.capture()
             if tel is not None:
                 task_obj["telemetry_at_start"] = tel.to_dict()
             try:
-                result = func(task_id=task_obj["task_id"], *args, **kwargs)
+                result = func(*args, **kwargs)
                 task_obj["status"] = Status.FINISHED.value
             except Exception as e:
                 task_obj["status"] = Status.ERROR.value
@@ -85,7 +91,7 @@ def lightweight_flowcept_task(func=None):
             result = func(*args, **kwargs)
             task_dict = dict(
                 type="task",
-                # workflow_id=kwargs.pop("workflow_id", None),
+                workflow_id=Flowcept.current_workflow_id,
                 activity_id=func.__name__,
                 used=kwargs,
                 generated=result,
@@ -120,6 +126,7 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.used = args_handler(task_obj, *args, **kwargs)
             task_obj.started_at = time()
             task_obj.task_id = str(task_obj.started_at)
+            _thread_local._flowcept_current_context_task_id = task_obj.task_id
             task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
             try:
                 result = func(*args, **kwargs)
@@ -127,6 +134,7 @@ def flowcept_task(func=None, **decorator_kwargs):
             except Exception as e:
                 task_obj.status = Status.ERROR
                 result = None
+                logger.exception(e)
                 task_obj.stderr = str(e)
             task_obj.ended_at = time()
             task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
@@ -147,3 +155,8 @@ def flowcept_task(func=None, **decorator_kwargs):
         return decorator
     else:
         return decorator(func)
+
+
+def get_current_context_task_id():
+    """Retrieve the current task object from thread-local storage."""
+    return getattr(_thread_local, "_flowcept_current_context_task_id", None)

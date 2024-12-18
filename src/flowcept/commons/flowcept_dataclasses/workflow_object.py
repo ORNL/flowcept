@@ -36,7 +36,6 @@ class WorkflowObject:
     environment_id: str = None
     sys_name: str = None
     extra_metadata: str = None
-    # parent_task_id: str = None
     used: Dict = None
     generated: Dict = None
 

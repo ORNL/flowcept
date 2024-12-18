@@ -1,4 +1,4 @@
-name: (Without Mongo) Unit, integration, and notebook tests
+name: (Without Mongo) Simple Tests
 on:
   push:
   schedule:
@@ -35,7 +35,7 @@ jobs:
         run: python -m pip install --upgrade pip
 
       - name: Test examples
-        run: bash .github/workflows/run_examples.sh examples false # with mongo
+        run: bash .github/workflows/run_examples.sh examples false # without mongo
 
       - name: Install all dependencies
         run: |
@@ -46,8 +46,7 @@ jobs:
         run: pip list
 
       - name: Test with pytest and redis
-        run: |
-          make tests
+        run: make tests
 
       - name: Test notebooks with pytest and redis
         run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb" --ignore="notebooks/analytics.ipynb"

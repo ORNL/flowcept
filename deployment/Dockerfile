@@ -20,7 +20,7 @@ RUN export FLOWCEPT_SETTINGS_PATH=$(realpath resources/sample_settings.yaml) \
 RUN conda create -n flowcept python=3.11.10 -y \
     && echo "conda activate flowcept" >> ~/.bashrc
 
-# The following command is an overkill and will install many things you might not need. Please see pyproject.toml and modify deployment/Dockerfile in case you do not need to install "all" dependencies.
+# The following command is an overkill and will install many things you might not need. Please modify this Dockerfile in case you do not need to install "all" dependencies.
 RUN conda run -n flowcept pip install -e .[all]
 
 CMD ["bash"]
