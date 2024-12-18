@@ -47,7 +47,7 @@ run_test() {
   elif [[ "$test_type" =~ "tensorboard" ]]; then
     echo "Installing tensorboard"
     pip install .[tensorboard] > /dev/null 2>&1
-  elif [[ "$test_type" =~ "tensorboard" ]]; then
+  elif [[ "$test_type" =~ "single_layer_perceptron" ]]; then
     echo "Installing ml_dev dependencies"
     pip install .[ml_dev] > /dev/null 2>&1
   elif [[ "$test_type" =~ "llm_complex" ]]; then

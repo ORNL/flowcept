@@ -37,7 +37,9 @@ def calc_time_to_sleep() -> float:
     )
     l.append(d)
     t1 = time()
-    return (t1 - t0) * 1.1
+    sleep_time = (t1 - t0) * 1.1
+    print("Sleep time", sleep_time)
+    return sleep_time
 
 
 TIME_TO_SLEEP = calc_time_to_sleep()
@@ -173,7 +175,7 @@ def simple_decorated_function(max_tasks=10, enable_persistence=True, check_inser
 class DecoratorTests(unittest.TestCase):
     @lightweight_flowcept_task
     def lightweight_decorated_function_with_self(self, x):
-        sleep(x)
+        sleep(TIME_TO_SLEEP)
         return {"y": 2}
 
     def test_lightweight_decorated_function(self):
@@ -203,7 +205,7 @@ class DecoratorTests(unittest.TestCase):
             decorated_static_function2(x=1)
             decorated_static_function2(2)
 
-        sleep(3)
+        sleep(1)
         assert assert_by_querying_tasks_until(
             filter={"workflow_id": Flowcept.current_workflow_id},
             condition_to_evaluate=lambda docs: len(docs) == 3,
@@ -298,7 +300,7 @@ class DecoratorTests(unittest.TestCase):
             epochs_loop = FlowceptLoop(items=range(1, 2), loop_name="epochs_loop",
                                        item_name="epoch")
             for _ in epochs_loop:
-                sleep(0.5)
+                sleep(TIME_TO_SLEEP)
                 epochs_loop.end_iter({"a": 1})
         docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
         assert len(docs) == 1 + 1
@@ -314,9 +316,7 @@ class DecoratorTests(unittest.TestCase):
             epochs_loop = FlowceptLoop(items=range(2), loop_name="epochs_loop",
                                        item_name="epoch")
             for _ in epochs_loop:
-                print("ini")
-                sleep(0.1)
-                print("end")
+                sleep(TIME_TO_SLEEP)
                 epochs_loop.end_iter({"a": 1})
         docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
         assert all(d["status"] == "FINISHED" for d in docs)
@@ -337,9 +337,7 @@ class DecoratorTests(unittest.TestCase):
             epochs_loop = FlowceptLoop(items=3, loop_name="epochs_loop",
                                        item_name="epoch")
             for _ in epochs_loop:
-                print("ini")
-                sleep(0.1)
-                print("end")
+                sleep(TIME_TO_SLEEP)
                 epochs_loop.end_iter({"a": 1})
         docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
         assert all(d["status"] == "FINISHED" for d in docs)
@@ -360,9 +358,7 @@ class DecoratorTests(unittest.TestCase):
             epochs_loop = FlowceptLoop(items=[], loop_name="epochs_loop",
                                        item_name="epoch")
             for _ in epochs_loop:
-                print("ini")
-                sleep(0.1)
-                print("end")
+                sleep(TIME_TO_SLEEP)
                 epochs_loop.end_iter({"a": 1})
         docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
         assert len(docs) == 0
@@ -374,7 +370,7 @@ class DecoratorTests(unittest.TestCase):
         with Flowcept():
             loop = FlowceptLoop(items=epochs, loop_name="epochs", item_name="epoch")
             for e in loop:
-                sleep(0.05)
+                sleep(TIME_TO_SLEEP)
                 loss = random.random()
                 print(e, loss)
                 loop.end_iter({"loss": loss})
