@@ -107,6 +107,15 @@ def lightweight_flowcept_task(func=None):
         return decorator(func)
 
 
+# def flowcept_task_switch(mode=None):
+#     if mode is None:
+#         return flowcept_task
+#     elif mode == "disable":
+#         return lambda _: _
+#     else:
+#         raise NotImplementedError
+
+
 def flowcept_task(func=None, **decorator_kwargs):
     """Get flowcept task."""
     if INSTRUMENTATION_ENABLED:

@@ -12,7 +12,7 @@ import pandas as pd
 
 from flowcept import WorkflowObject
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
-from flowcept.configs import PERF_LOG, DATABASES
+from flowcept.configs import PERF_LOG, LMDB_SETTINGS
 from flowcept.flowceptor.consumers.consumer_utils import curate_dict_task_messages
 
 
@@ -36,7 +36,7 @@ class LMDBDAO(DocumentDBDAO):
 
     def _open(self):
         """Open LMDB environment and databases."""
-        _path = DATABASES.get("lmdb").get("path", "lmdb")
+        _path = LMDB_SETTINGS.get("path", "flowcept_lmdb")
         self._env = lmdb.open(_path, map_size=10**12, max_dbs=2)
         self._tasks_db = self._env.open_db(b"tasks")
         self._workflows_db = self._env.open_db(b"workflows")

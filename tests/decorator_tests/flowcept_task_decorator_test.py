@@ -6,18 +6,19 @@ from unittest.mock import patch
 import pandas as pd
 from time import time, sleep
 
-from flowcept import Flowcept
-import flowcept
 import unittest
 
+import flowcept
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.commons.vocabulary import Status
-from flowcept.instrumentation.flowcept_loop import FlowceptLoop
-from flowcept.instrumentation.flowcept_task import (
-    flowcept_task,
-    lightweight_flowcept_task,
-)
+from flowcept import FlowceptTask, FlowceptLoop, Flowcept, lightweight_flowcept_task, flowcept_task
+# from flowcept.instrumentation.flowcept_loop import FlowceptLoop
+# from flowcept.instrumentation.flowcept_task import (
+#     flowcept_task,
+#     lightweight_flowcept_task,
+# )
+# from flowcept.instrumentation.task_capture import FlowceptTask
 
 
 def calc_time_to_sleep() -> float:
@@ -429,3 +430,26 @@ class DecoratorTests(unittest.TestCase):
             assert t["used"]["epoch"] == i
             assert t["status"] == Status.FINISHED.value
             assert t["parent_task_id"] == whole_loop_task["task_id"]
+
+    def test_task_capture(self):
+
+        with Flowcept():
+            used_args = {"a": 1}
+            with FlowceptTask(used=used_args) as t:
+                t.end(generated={"b": 2})
+
+        task = Flowcept.db.get_tasks_from_current_workflow()[0]
+        assert task["used"]["a"] == 1
+        assert task["generated"]["b"] == 2
+        assert task["status"] == Status.FINISHED.value
+
+        with Flowcept():
+            used_args = {"a": 1}
+            with FlowceptTask(used=used_args):
+                pass
+
+        task = Flowcept.db.get_tasks_from_current_workflow()[0]
+        assert task["used"]["a"] == 1
+        assert task["status"] == Status.FINISHED.value
+        assert "generated" not in task
+
