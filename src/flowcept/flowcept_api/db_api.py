@@ -62,6 +62,14 @@ class DBAPI(object):
             return None
         return results
 
+    def get_tasks_from_current_workflow(self):
+        """
+        Get the tasks of the current workflow in the Flowcept instance.
+        """
+        from flowcept.flowcept_api.flowcept_controller import Flowcept
+
+        return self.task_query(filter={"workflow_id": Flowcept.current_workflow_id})
+
     def task_query(
         self,
         filter: Dict,

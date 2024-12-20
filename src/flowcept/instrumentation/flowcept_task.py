@@ -3,6 +3,7 @@
 import threading
 from time import time
 from functools import wraps
+import argparse
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
 )
@@ -21,18 +22,17 @@ _thread_local = threading.local()
 
 
 # TODO: :code-reorg: consider moving it to utils and reusing it in dask interceptor
-def default_args_handler(task_message: TaskObject, *args, **kwargs):
+def default_args_handler(*args, **kwargs):
     """Get default arguments."""
     args_handled = {}
     if args is not None and len(args):
+        if isinstance(args[0], argparse.Namespace):
+            args_handled.update(args[0].__dict__)
+            args = args[1:]
         for i in range(len(args)):
             args_handled[f"arg_{i}"] = args[i]
     if kwargs is not None and len(kwargs):
-        task_message.workflow_id = kwargs.pop("workflow_id", None)
-        task_message.campaign_id = kwargs.pop("campaign_id", None)
         args_handled.update(kwargs)
-    task_message.workflow_id = task_message.workflow_id or Flowcept.current_workflow_id
-    task_message.campaign_id = task_message.campaign_id or Flowcept.campaign_id
     if REPLACE_NON_JSON_SERIALIZABLE:
         args_handled = replace_non_serializable(args_handled)
     return args_handled
@@ -123,7 +123,10 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj = TaskObject()
 
             task_obj.activity_id = func.__name__
-            task_obj.used = args_handler(task_obj, *args, **kwargs)
+            handled_args = args_handler(*args, **kwargs)
+            task_obj.workflow_id = handled_args.pop("workflow_id", Flowcept.current_workflow_id)
+            task_obj.campaign_id = handled_args.pop("campaign_id", Flowcept.campaign_id)
+            task_obj.used = handled_args
             task_obj.started_at = time()
             task_obj.task_id = str(task_obj.started_at)
             _thread_local._flowcept_current_context_task_id = task_obj.task_id
@@ -139,10 +142,11 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.ended_at = time()
             task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
             try:
-                if isinstance(result, dict):
-                    task_obj.generated = args_handler(task_obj, **result)
-                else:
-                    task_obj.generated = args_handler(task_obj, result)
+                if result is not None:
+                    if isinstance(result, dict):
+                        task_obj.generated = args_handler(task_obj, **result)
+                    else:
+                        task_obj.generated = args_handler(task_obj, result)
             except Exception as e:
                 logger.exception(e)
 
