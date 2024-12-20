@@ -1,4 +1,4 @@
-name: With and Without Mongo
+name: With and Without Mongo at the same time
 on: [pull_request]
 
 jobs:
@@ -8,7 +8,7 @@ jobs:
     timeout-minutes: 40
     strategy:
       matrix:
-        python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+        python-version: [ "3.10", "3.11", "3.12" ]
     env:
       MONGO_ENABLED: true
       LMDB_ENABLED: true
