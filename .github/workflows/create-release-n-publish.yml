@@ -8,6 +8,9 @@ jobs:
   build:
     name: Create Release and Publish
     runs-on: ubuntu-latest
+    env:
+      MONGO_ENABLED: false
+      LMDB_ENABLED: true
     timeout-minutes: 60
     steps:
       - name: Checkout code
