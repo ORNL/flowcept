@@ -2,7 +2,7 @@
 
 from typing import Dict, AnyStr, List
 import msgpack
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, DictConfig
 
 from flowcept.version import __version__
 from flowcept.commons.utils import get_utc_now
@@ -70,7 +70,9 @@ class WorkflowObject:
     def enrich(self, adapter_key=None):
         """Enrich it."""
         self.utc_timestamp = get_utc_now()
-        self.flowcept_settings = OmegaConf.to_container(settings)
+        self.flowcept_settings = (
+            OmegaConf.to_container(settings) if isinstance(settings, DictConfig) else settings
+        )
 
         if adapter_key is not None:
             # TODO :base-interceptor-refactor: :code-reorg: :usability:
@@ -90,7 +92,12 @@ class WorkflowObject:
             self.sys_name = SYS_NAME
 
         if self.extra_metadata is None and EXTRA_METADATA is not None:
-            self.extra_metadata = OmegaConf.to_container(EXTRA_METADATA)
+            _extra_metadata = (
+                OmegaConf.to_container(EXTRA_METADATA)
+                if isinstance(EXTRA_METADATA, DictConfig)
+                else EXTRA_METADATA
+            )
+            self.extra_metadata = _extra_metadata
 
         if self.flowcept_version is None:
             self.flowcept_version = __version__

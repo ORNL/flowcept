@@ -3,26 +3,46 @@
 import os
 import socket
 import getpass
-
-from omegaconf import OmegaConf
 import random
 
+
+PROJECT_NAME = "flowcept"
+USE_DEFAULT = os.getenv("FLOWCEPT_USE_DEFAULT", "False").lower() == "true"
 ########################
 #   Project Settings   #
 ########################
 
-PROJECT_NAME = os.getenv("PROJECT_NAME", "flowcept")
-_SETTINGS_DIR = os.path.expanduser(f"~/.{PROJECT_NAME}")
-SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", f"{_SETTINGS_DIR}/settings.yaml")
-
-if not os.path.exists(SETTINGS_PATH):
-    SETTINGS_PATH = None
-    from importlib import resources
-
-    with resources.files("resources").joinpath("sample_settings.yaml").open("r") as f:
-        settings = OmegaConf.load(f)
+if USE_DEFAULT:
+    settings = {
+        "log": {},
+        "project": {},
+        "telemetry_capture": {},
+        "instrumentation": {},
+        "experiment": {},
+        "mq": {},
+        "kv_db": {},
+        "web_server": {},
+        "sys_metadata": {},
+        "extra_metadata": {},
+        "analytics": {},
+        "buffer": {},
+        "databases": {},
+        "adapters": {},
+    }
 else:
-    settings = OmegaConf.load(SETTINGS_PATH)
+    from omegaconf import OmegaConf
+
+    _SETTINGS_DIR = os.path.expanduser(f"~/.{PROJECT_NAME}")
+    SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", f"{_SETTINGS_DIR}/settings.yaml")
+
+    if not os.path.exists(SETTINGS_PATH):
+        SETTINGS_PATH = None
+        from importlib import resources
+
+        with resources.files("resources").joinpath("sample_settings.yaml").open("r") as f:
+            settings = OmegaConf.load(f)
+    else:
+        settings = OmegaConf.load(SETTINGS_PATH)
 
 ########################
 #   Log Settings       #
@@ -96,13 +116,13 @@ if _mongo_settings:
 ######################
 #  LMDB Settings  #
 ######################
-_lmdb_settings = DATABASES.get("lmdb", None)
+LMDB_SETTINGS = DATABASES.get("lmdb", {})
 LMDB_ENABLED = False
-if _lmdb_settings:
+if LMDB_SETTINGS:
     if "LMDB_ENABLED" in os.environ:
         LMDB_ENABLED = os.environ.get("LMDB_ENABLED").lower() == "true"
     else:
-        LMDB_ENABLED = _lmdb_settings.get("enabled", False)
+        LMDB_ENABLED = LMDB_SETTINGS.get("enabled", False)
 
 if not LMDB_ENABLED and not MONGO_ENABLED:
     # At least one of these variables need to be enabled.
@@ -261,7 +281,7 @@ ANALYTICS = settings.get("analytics", None)
 ####################
 
 INSTRUMENTATION = settings.get("instrumentation", {})
-INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", False)
+INSTRUMENTATION_ENABLED = True  # INSTRUMENTATION.get("enabled", False)
 
 ####################
 # Enabled ADAPTERS #

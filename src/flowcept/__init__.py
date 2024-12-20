@@ -1,6 +1,5 @@
 """Flowcept package."""
 
-from flowcept.configs import SETTINGS_PATH
 from flowcept.version import __version__
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
@@ -19,6 +18,11 @@ def __getattr__(name):
 
         return flowcept_task
 
+    elif name == "FlowceptTask":
+        from flowcept.instrumentation.task_capture import FlowceptTask
+
+        return FlowceptTask
+
     elif name == "flowcept_torch":
         from flowcept.instrumentation.flowcept_torch import flowcept_torch
 
@@ -33,6 +37,11 @@ def __getattr__(name):
         from flowcept.instrumentation.flowcept_task import telemetry_flowcept_task
 
         return telemetry_flowcept_task
+
+    elif name == "lightweight_flowcept_task":
+        from flowcept.instrumentation.flowcept_task import lightweight_flowcept_task
+
+        return lightweight_flowcept_task
 
     if name == "MLFlowInterceptor":
         from flowcept.flowceptor.adapters.mlflow.mlflow_interceptor import (
@@ -58,12 +67,10 @@ def __getattr__(name):
         )
 
         return TensorboardInterceptor
-    elif name == "ZambezeInterceptor":
-        from flowcept.flowceptor.adapters.zambeze.zambeze_interceptor import (
-            ZambezeInterceptor,
-        )
+    elif name == "SETTINGS_PATH":
+        from configs import SETTINGS_PATH
 
-        return ZambezeInterceptor
+        return SETTINGS_PATH
     elif name == "TaskQueryAPI":
         from flowcept.flowcept_api.task_query_api import TaskQueryAPI
 
@@ -80,7 +87,9 @@ __all__ = [
     "TaskQueryAPI",
     "flowcept_task",
     "FlowceptLoop",
+    "FlowceptTask",
     "telemetry_flowcept_task",
+    "lightweight_flowcept_task",
     "Flowcept",
     "flowcept_torch",
     "WorkflowObject",
