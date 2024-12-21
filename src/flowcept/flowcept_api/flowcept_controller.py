@@ -41,6 +41,7 @@ class Flowcept(object):
         workflow_name: str = None,
         workflow_args: str = None,
         start_persistence=True,
+        save_workflow=True,
     ):
         """Flowcept controller.
 
@@ -58,6 +59,7 @@ class Flowcept(object):
 
         start_persistence - Whether you want to persist the messages in one of the DBs defined in
          the `databases` settings.
+         save_workflow - Whether you want to send a workflow object message.
         """
         self.logger = FlowceptLogger()
         self._enable_persistence = start_persistence
@@ -82,6 +84,7 @@ class Flowcept(object):
                 interceptors = [interceptors]
             self._interceptors: List[BaseInterceptor] = interceptors
 
+        self._save_workflow = save_workflow
         self.current_workflow_id = workflow_id
         self.campaign_id = campaign_id
         self.workflow_name = workflow_name
@@ -105,18 +108,17 @@ class Flowcept(object):
                 self.logger.debug(f"...Flowceptor {key} started ok!")
 
                 if interceptor.kind == "instrumentation":
-                    wf_obj = WorkflowObject()
-                    wf_obj.workflow_id = self.current_workflow_id or str(uuid4())
-                    wf_obj.campaign_id = self.campaign_id or str(uuid4())
-
-                    Flowcept.current_workflow_id = wf_obj.workflow_id
-                    Flowcept.campaign_id = wf_obj.campaign_id
-
-                    if self.workflow_name:
-                        wf_obj.name = self.workflow_name
-                    if self.workflow_args:
-                        wf_obj.used = self.workflow_args
-                    interceptor.send_workflow_message(wf_obj)
+                    Flowcept.current_workflow_id = self.current_workflow_id or str(uuid4())
+                    Flowcept.campaign_id = self.campaign_id or str(uuid4())
+                    if self._save_workflow:
+                        wf_obj = WorkflowObject()
+                        wf_obj.workflow_id = Flowcept.current_workflow_id
+                        wf_obj.campaign_id = Flowcept.campaign_id
+                        if self.workflow_name:
+                            wf_obj.name = self.workflow_name
+                        if self.workflow_args:
+                            wf_obj.used = self.workflow_args
+                        interceptor.send_workflow_message(wf_obj)
                 else:
                     Flowcept.current_workflow_id = None
 

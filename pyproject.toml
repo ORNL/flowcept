@@ -101,7 +101,7 @@ line-length = 100
 
 [tool.ruff.lint]
 extend-select = ["E501", "D"]
-ignore = ["D200", "D212", "D105", "D401"]
+ignore = ["D200", "D212", "D105", "D401", "D205", "D100"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

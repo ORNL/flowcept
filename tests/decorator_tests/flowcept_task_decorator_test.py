@@ -2,22 +2,23 @@ import numpy as np
 import psutil
 import uuid
 import random
-
+from unittest.mock import patch
 import pandas as pd
 from time import time, sleep
 
-from flowcept import Flowcept
-import flowcept
 import unittest
 
+import flowcept
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.commons.vocabulary import Status
-from flowcept.instrumentation.flowcept_loop import FlowceptLoop
-from flowcept.instrumentation.flowcept_task import (
-    flowcept_task,
-    lightweight_flowcept_task,
-)
+from flowcept import FlowceptTask, FlowceptLoop, Flowcept, lightweight_flowcept_task, flowcept_task
+# from flowcept.instrumentation.flowcept_loop import FlowceptLoop
+# from flowcept.instrumentation.flowcept_task import (
+#     flowcept_task,
+#     lightweight_flowcept_task,
+# )
+# from flowcept.instrumentation.task_capture import FlowceptTask
 
 
 def calc_time_to_sleep() -> float:
@@ -74,6 +75,19 @@ def lightweight_decorated_static_function2():
 @lightweight_flowcept_task
 def lightweight_decorated_static_function3(x):
     return 3
+
+
+def parse_args():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--a", type=int, required=True, help="An integer argument")
+    parser.add_argument("--b", type=str, required=True, help="A string argument")
+    return parser.parse_known_args()
+
+
+@flowcept_task
+def process_arguments_task(known_args, unknown_args):
+    print(known_args, unknown_args)
 
 
 def compute_statistics(array):
@@ -213,6 +227,23 @@ class DecoratorTests(unittest.TestCase):
             max_trials=60,
         )
 
+    @patch("sys.argv", ["script_name", "--a", "123", "--b", "abc", "--unknown_arg", "unk", "['a']"])
+    def test_argparse(self):
+        known_args, unknown_args = parse_args()
+        self.assertEqual(known_args.a, 123)
+        self.assertEqual(known_args.b, "abc")
+
+        with Flowcept():
+            print(Flowcept.current_workflow_id)
+            process_arguments_task(known_args, unknown_args)
+
+        task = Flowcept.db.get_tasks_from_current_workflow()[0]
+        assert task["status"] == Status.FINISHED.value
+        assert task["used"]["a"] == 123
+        assert task["used"]["b"] == "abc"
+        assert task["used"]["arg_0"] == ['--unknown_arg', 'unk', "['a']"]
+
+
     def test_online_offline(self):
         flowcept.configs.DB_FLUSH_MODE = "offline"
         # flowcept.instrumentation.decorators.instrumentation_interceptor = (
@@ -291,7 +322,8 @@ class DecoratorTests(unittest.TestCase):
             loop = FlowceptLoop(items=items, loop_name="our_loop")
             for _ in loop:
                 loop.end_iter({"a": 1})
-        docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id, "activity_id": "our_loop_iteration"})
+        docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id,
+                                         "activity_id": "our_loop_iteration"})
         assert len(docs) == len(items)
         assert all(d["generated"]["a"] == 1 for d in docs)
 
@@ -363,7 +395,6 @@ class DecoratorTests(unittest.TestCase):
         docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
         assert len(docs) == 0
 
-
     def test_flowcept_loop_generator(self):
         number_of_epochs = 1
         epochs = range(0, number_of_epochs)
@@ -376,7 +407,7 @@ class DecoratorTests(unittest.TestCase):
                 loop.end_iter({"loss": loss})
 
         docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
-        assert len(docs) == number_of_epochs+1  # 1 (parent_task) + #epochs (sub_tasks)
+        assert len(docs) == number_of_epochs + 1  # 1 (parent_task) + #epochs (sub_tasks)
 
         iteration_tasks = []
         whole_loop_task = None
@@ -399,3 +430,26 @@ class DecoratorTests(unittest.TestCase):
             assert t["used"]["epoch"] == i
             assert t["status"] == Status.FINISHED.value
             assert t["parent_task_id"] == whole_loop_task["task_id"]
+
+    def test_task_capture(self):
+
+        with Flowcept():
+            used_args = {"a": 1}
+            with FlowceptTask(used=used_args) as t:
+                t.end(generated={"b": 2})
+
+        task = Flowcept.db.get_tasks_from_current_workflow()[0]
+        assert task["used"]["a"] == 1
+        assert task["generated"]["b"] == 2
+        assert task["status"] == Status.FINISHED.value
+
+        with Flowcept():
+            used_args = {"a": 1}
+            with FlowceptTask(used=used_args):
+                pass
+
+        task = Flowcept.db.get_tasks_from_current_workflow()[0]
+        assert task["used"]["a"] == 1
+        assert task["status"] == Status.FINISHED.value
+        assert "generated" not in task
+
