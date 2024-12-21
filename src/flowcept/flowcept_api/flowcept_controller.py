@@ -9,6 +9,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 )
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
+from flowcept.commons.utils import ClassProperty
 from flowcept.configs import MQ_INSTANCES, INSTRUMENTATION_ENABLED, MONGO_ENABLED
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
@@ -24,8 +25,7 @@ class Flowcept(object):
     current_workflow_id = None
     campaign_id = None
 
-    @classmethod
-    @property
+    @ClassProperty
     def db(cls) -> DBAPI:
         """Property to expose the DBAPI. This also assures the DBAPI init will be called once."""
         if cls._db is None:
