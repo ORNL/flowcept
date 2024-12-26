@@ -62,7 +62,6 @@ docs = ["sphinx", "furo"]
 kafka = ["confluent-kafka"]
 mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog"]
 nvidia = ["nvidia-ml-py"]
-responsibleai = ["torch"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
 dev = [
     "jupyterlab",
@@ -87,8 +86,6 @@ all = [
     "flowcept[dask]",
     "flowcept[kafka]",
     "flowcept[mlflow]",
-    "flowcept[nvidia]",
-    "flowcept[responsibleai]",
     "flowcept[tensorboard]",
     "flowcept[dev]",
 ]

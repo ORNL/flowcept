@@ -157,7 +157,7 @@ class GenericJSONEncoder(json.JSONEncoder):
 
 
 def replace_non_serializable(obj):
-    """Replace it."""
+    """Replace non-serializable items in an object."""
     if isinstance(obj, (int, float, bool, str, list, tuple, dict, type(None))):
         if isinstance(obj, dict):
             return {key: replace_non_serializable(value) for key, value in obj.items()}

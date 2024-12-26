@@ -10,7 +10,6 @@ from flowcept.configs import (
     settings,
     FLOWCEPT_USER,
     SYS_NAME,
-    CAMPAIGN_ID,
     EXTRA_METADATA,
     ENVIRONMENT_ID,
 )
@@ -81,9 +80,6 @@ class WorkflowObject:
 
         if self.user is None:
             self.user = FLOWCEPT_USER
-
-        if self.campaign_id is None:
-            self.campaign_id = CAMPAIGN_ID
 
         if self.environment_id is None and ENVIRONMENT_ID is not None:
             self.environment_id = ENVIRONMENT_ID

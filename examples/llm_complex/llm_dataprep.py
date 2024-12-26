@@ -8,6 +8,14 @@ from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from datasets import load_dataset
 
+from flowcept.commons.utils import replace_non_serializable
+
+def batchify(data, bsz):
+    nbatch = data.size(0) // bsz
+    data = data.narrow(0, 0, nbatch * bsz)
+    data = data.view(bsz, -1).t().contiguous()
+    return data
+
 
 # Define a function to yield tokens from the dataset
 def yield_tokens(tokenizer, data_iter):
@@ -18,26 +26,34 @@ def yield_tokens(tokenizer, data_iter):
 
 # Define a function to process the raw text and convert it to tensors
 def data_process(tokenizer, vocab, raw_text_iter):
-    data = [
-        torch.tensor(
-            [vocab[token] for token in tokenizer(item["text"])],
-            dtype=torch.long,
-        )
-        for item in raw_text_iter
-    ]
-    return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
+    i = 0
+    data = []
+    for item in raw_text_iter:
+        tokens = tokenizer(item["text"])
+        indices = []
+        for token in tokens:
+            indices.append(vocab[token])
+        tensor = torch.tensor(indices, dtype=torch.long)
+        data.append(tensor)
+        i += 1
+    tensor_return = torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
+    return tensor_return
 
 
 def get_dataset_ref(campaign_id, train_data, val_data, test_data):
-    dataset_ref = f"{campaign_id}_train_shape_{train_data.shape}_val_shape_{val_data.shape}_test_shape_{test_data.shape}"
+    dataset_ref = f"{campaign_id}_train_shape_{list(train_data.shape)}_val_shape_{list(val_data.shape)}_test_shape_{list(test_data.shape)}"
     return dataset_ref
 
-def get_wiki_text_dataset(data_dir):
+
+def get_wiki_text_dataset(data_dir, batch_size, eval_batch_size):
     # Load the WikiText2 dataset
     t0 = time()
     train_data = torch.load(os.path.join(data_dir, "train_data.tensor"))
     val_data = torch.load(os.path.join(data_dir, "val_data.tensor"))
     test_data = torch.load(os.path.join(data_dir, "test_data.tensor"))
+    train_prov = train_data.provenance
+    val_prov = val_data.provenance
+    test_prov = test_data.provenance
     t1 = time()
     t_disk_load = t1 - t0
 
@@ -54,9 +70,18 @@ def get_wiki_text_dataset(data_dir):
         train_data = train_data.to(device)
         val_data = val_data.to(device)
         test_data = test_data.to(device)
+
+
         t_gpu_load = time() - t2
     except:
         raise Exception("Couldn't send data to device")
+
+    train_data = batchify(train_data, batch_size)
+    val_data = batchify(val_data, eval_batch_size)
+    test_data = batchify(test_data, eval_batch_size)
+    setattr(train_data, "provenance", train_prov)
+    setattr(val_data, "provenance", val_prov)
+    setattr(test_data, "provenance", test_prov)
 
     print("Train data", train_data.shape)
     print("Validation data", val_data.shape)
@@ -70,11 +95,12 @@ def get_wiki_text_dataset(data_dir):
         t_gpu_load,
     )
 
-def save_workflow(ntokens, train_data, val_data, test_data, dataset_ref, subset_size=None, tokenizer_type=None, campaign_id=None):
+def save_workflow(ntokens, train_data, val_data, test_data, dataset_ref, dataset_info, subset_size=None, tokenizer_type=None, campaign_id=None):
     from flowcept import WorkflowObject, Flowcept
     config = {
         "subset_size": subset_size,
-        "tokenizer_type": tokenizer_type
+        "tokenizer_type": tokenizer_type,
+        "dataset_info": dataset_info
     }
     dataset_prep_wf = WorkflowObject()
     dataset_prep_wf.used = config
@@ -108,7 +134,11 @@ def dataprep_workflow(data_dir="input_data",
     test_dataset = dataset["test"]
     train_dataset = dataset["train"]
     validation_dataset = dataset["validation"]
-
+    dataset_info = {
+        "train": replace_non_serializable(train_dataset.info.__dict__),
+        "val": replace_non_serializable(validation_dataset.info.__dict__),
+        "test": replace_non_serializable(test_dataset.info.__dict__)
+    }
     if subset_size is not None and subset_size > 0:
         test_dataset = Subset(test_dataset, range(subset_size))
         train_dataset = Subset(train_dataset, range(subset_size))
@@ -124,6 +154,9 @@ def dataprep_workflow(data_dir="input_data",
     train_data = data_process(tokenizer, vocab, train_dataset)
     val_data = data_process(tokenizer, vocab, validation_dataset)
     test_data = data_process(tokenizer, vocab, test_dataset)
+    setattr(train_data, "provenance", "train")
+    setattr(val_data, "provenance", "val")
+    setattr(test_data, "provenance", "test")
 
     train_data_path = os.path.join(data_dir, "train_data.tensor")
     val_data_path = os.path.join(data_dir, "val_data.tensor")
@@ -143,7 +176,9 @@ def dataprep_workflow(data_dir="input_data",
     assert all(val_data == val_data_loaded)
     assert all(test_data == test_data_loaded)
 
+    # TODO: save batchified here
+
     dataset_ref = get_dataset_ref(campaign_id, train_data, val_data, test_data)
-    wf_id = save_workflow(ntokens, train_data, val_data, test_data, dataset_ref, subset_size=subset_size, tokenizer_type=tokenizer_type, campaign_id=campaign_id)
+    wf_id = save_workflow(ntokens, train_data, val_data, test_data, dataset_ref, dataset_info, subset_size=subset_size, tokenizer_type=tokenizer_type, campaign_id=campaign_id)
     return wf_id, dataset_ref, ntokens
 

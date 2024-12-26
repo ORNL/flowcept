@@ -18,81 +18,11 @@ from flowcept import Flowcept, FlowceptLoop, flowcept_torch
 from flowcept.configs import N_GPUS
 
 
-# Define a function to batchify the data
-def batchify(data, bsz):
-    nbatch = data.size(0) // bsz
-    data = data.narrow(0, 0, nbatch * bsz)
-    data = data.view(bsz, -1).t().contiguous()
-    return data
-
-
-# # Define a function to yield tokens from the dataset
-# def yield_tokens(tokenizer, data_iter):
-#     for item in data_iter:
-#         if len(item["text"]):
-#             yield tokenizer(item["text"])
-#
-#
-# # Define a function to process the raw text and convert it to tensors
-# def data_process(tokenizer, vocab, raw_text_iter):
-#     data = [
-#         torch.tensor(
-#             [vocab[token] for token in tokenizer(item["text"])],
-#             dtype=torch.long,
-#         )
-#         for item in raw_text_iter
-#     ]
-#     return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
-
-
 def get_batch(source, i, bptt=35):
     seq_len = min(bptt, len(source) - 1 - i)
     data = source[i : i + seq_len]
     target = source[i + 1 : i + 1 + seq_len].view(-1)
     return data, target
-
-
-# def get_wiki_text(
-#     tokenizer_type="basic_english", # spacy, moses, toktok, revtok, subword
-#     subset_size=None
-# ):
-#     # Load the WikiText2 dataset
-#     dataset = load_dataset("wikitext", "wikitext-2-v1")
-#     test_dataset = dataset["test"]
-#     train_dataset = dataset["train"]
-#     validation_dataset = dataset["validation"]
-#
-#     if subset_size is not None and subset_size > 0:
-#         test_dataset = Subset(test_dataset, range(subset_size))
-#         train_dataset = Subset(train_dataset, range(subset_size))
-#         validation_dataset = Subset(validation_dataset, range(subset_size))
-#
-#     # Build the vocabulary from the training dataset
-#     tokenizer = get_tokenizer(tokenizer_type)
-#     vocab = build_vocab_from_iterator(yield_tokens(tokenizer, train_dataset))
-#     vocab.set_default_index(vocab["<unk>"])
-#     ntokens = len(vocab)
-#
-#     # Process the train, validation, and test datasets
-#     train_data = data_process(tokenizer, vocab, train_dataset)
-#     val_data = data_process(tokenizer, vocab, validation_dataset)
-#     test_data = data_process(tokenizer, vocab, test_dataset)
-#
-#     device = torch.device("cpu")
-#     if torch.cuda.is_available():
-#         device = torch.device("gpu")
-#     elif torch.backends.mps.is_available():
-#         device = torch.device("mps")
-#
-#     if device.type != 'cpu':
-#         train_data = train_data.to(device)
-#         val_data = val_data.to(device)
-#         test_data = test_data.to(device)
-#
-#     print("Train data", train_data.shape)
-#     print("Validation data", val_data.shape)
-#     print("Test data", test_data.shape)
-#     return ntokens, train_data, val_data, test_data
 
 
 @flowcept_torch
@@ -113,6 +43,8 @@ class TransformerModel(nn.Module):
         custom_metadata: dict = None,
         get_profile: bool = False,
         save_workflow: bool = True,
+        inspect_children_tensors: bool = True,
+        capture_enabled=True,
         *args,
         **kwargs
     ):
@@ -137,7 +69,7 @@ class TransformerModel(nn.Module):
         mask = mask.float().masked_fill(mask == 0, float("-inf")).masked_fill(mask == 1, float(0.0))
         return mask
 
-    def forward(self, src):
+    def forward(self, src, *args, **kwargs):
         if self.src_mask is None or self.src_mask.size(0) != len(src):
             device = src.device
             mask = self._generate_square_subsequent_mask(len(src)).to(device)
@@ -178,19 +110,19 @@ def train_epoch(ntokens, model, train_data, criterion, optimizer, bptt=35):
 
     # Iterate through the mini-batches of data
     for batch, i in enumerate(range(0, train_data.size(0) - 1, bptt)):
+        print(f"train, batch {batch}")
         data, targets = get_batch(
             train_data, i, bptt
         )  # Get the input data and targets for the current mini-batch
         optimizer.zero_grad()  # Reset the gradients to zero before the next backward pass
-        output = model(data)  # Forward pass: compute the output of the model given the input data
-
+        output = model(data, batch=[batch, i])  # Forward pass: compute the output of the model given the input data
         loss = criterion(
             output.view(-1, ntokens), targets
         )  # Calculate the loss between the model output and the targets
         loss.backward()  # Backward pass: compute the gradients of the loss with respect to the model parameters
         optimizer.step()  # Update the model parameters using the computed gradients
         total_loss += loss.item()  # Accumulate the total loss
-
+    print("finished func train_epoch")
     return total_loss / (batch + 1)  # Return the average loss per mini-batch
 
 
@@ -201,12 +133,13 @@ def evaluate(ntokens, model, data_source, criterion, bptt=35):
     # Use torch.no_grad() to disable gradient calculation during evaluation
     with torch.no_grad():
         # Iterate through the mini-batches of data
-        for i in range(0, data_source.size(0) - 1, bptt):
+        for batch, i in enumerate(range(0, data_source.size(0) - 1, bptt)):
+            print("eval batch", batch)
             data, targets = get_batch(
                 data_source, i, bptt
             )  # Get the input data and targets for the current mini-batch
             output = model(
-                data
+                data, batch=[batch, i]
             )  # Forward pass: compute the output of the model given the input data
             loss = criterion(
                 output.view(-1, ntokens), targets
@@ -236,6 +169,7 @@ def model_train(
     *args,
     **kwargs
 ):
+    print("Starting model_train!")
     try:
         from distributed.worker import thread_state
         main_task_id = thread_state.key if hasattr(thread_state, "key") else None
@@ -243,11 +177,7 @@ def model_train(
         main_task_id = None
     torch.manual_seed(0)  # TODO: parametrize and save it
 
-    train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load = get_wiki_text_dataset(input_data_dir)
-
-    train_data = batchify(train_data, batch_size)
-    val_data = batchify(val_data, eval_batch_size)
-    test_data = batchify(test_data, eval_batch_size)
+    train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load = get_wiki_text_dataset(input_data_dir, batch_size, eval_batch_size)
 
     if torch.cuda.is_available():
         device = torch.device("gpu")
@@ -279,7 +209,7 @@ def model_train(
     for epoch in epochs_loop:
         print(f"Starting training for epoch {epoch}/{epochs}")
         # Train the model on the training data and calculate the training loss
-        model.set_parent_task_id(epochs_loop.current_iteration_task.get("task_id", None))
+        model.new_epoch(epochs_loop.get_current_iteration_id())
         train_loss = train_epoch(ntokens, model, train_data, criterion, optimizer, batch_size)
 
         # Evaluate the model on the validation data and calculate the validation loss
@@ -293,7 +223,7 @@ def model_train(
             best_val_loss = val_loss
             best_obj_id = Flowcept.db.save_torch_model(
                 model,
-                task_id=epochs_loop.current_iteration_task.get("task_id", None),
+                task_id=epochs_loop._current_iteration_task.get("task_id", None),
                 workflow_id=workflow_id,
                 custom_metadata={"best_val_loss": best_val_loss}
             )
@@ -317,7 +247,8 @@ def model_train(
             "model_step": "test",
             "cuda_visible": N_GPUS,
         },
-        parent_task_id=main_task_id
+        parent_task_id=main_task_id,
+        capture_enabled=False
     ).to(device)
     print("Loading model")
     Flowcept.db.load_torch_model(best_m, best_obj_id)
@@ -330,5 +261,8 @@ def model_train(
         "train_loss": train_loss,
         "val_loss": val_loss,
         "training_time": t1 - t0,
-        "best_obj_id": best_obj_id
+        "best_obj_id": best_obj_id,
+        "batchfied_train_data_shape": list(train_data.shape),
+        "batchfied_test_data_shape": list(test_data.shape),
+        "batchfied_val_data_shape": list(val_data.shape),
     }

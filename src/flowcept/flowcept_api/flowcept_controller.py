@@ -11,7 +11,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.utils import ClassProperty
 from flowcept.configs import MQ_INSTANCES, INSTRUMENTATION_ENABLED, MONGO_ENABLED
-from flowcept.flowcept_api.db_api import DBAPI
+
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -21,14 +21,15 @@ from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 class Flowcept(object):
     """Flowcept Controller class."""
 
-    _db: DBAPI = None
+    _db = None
     current_workflow_id = None
     campaign_id = None
 
     @ClassProperty
-    def db(cls) -> DBAPI:
+    def db(cls):
         """Property to expose the DBAPI. This also assures the DBAPI init will be called once."""
         if cls._db is None:
+            from flowcept.flowcept_api.db_api import DBAPI
             cls._db = DBAPI()
         return cls._db
 
@@ -152,9 +153,9 @@ class Flowcept(object):
     def stop(self):
         """Stop it."""
         if not self.is_started or not self.enabled:
-            self.logger.warning("Persistence is already stopped!")
+            self.logger.warning("Flowcept is already stopped!")
             return
-        sleep_time = 1
+        sleep_time = 0
         self.logger.info(
             f"Received the stop signal. We're going to wait {sleep_time} secs."
             f" before gracefully stopping..."

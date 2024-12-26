@@ -64,7 +64,7 @@ class FlowceptLoop:
         else:
             raise Exception("You must use an iterable has at least a __len__ method defined.")
 
-        self.current_iteration_task = {}
+        self._current_iteration_task = {}
         self.whole_loop_task_id = str(id(self))
 
         if not INSTRUMENTATION_ENABLED:
@@ -94,15 +94,18 @@ class FlowceptLoop:
     def __next__(self):
         return self._next_func()
 
+    def get_current_iteration_id(self):
+        return self._current_iteration_task.get("task_id", None)
+
     def _begin_loop(self):
         self.logger.debug("Capturing loop init.")
         self.whole_loop_task = {
             "started_at": time(),
             "task_id": self.whole_loop_task_id,
+            "subtype": "whole_loop",
             "type": "task",
             "activity_id": self._loop_name,
             "workflow_id": self._workflow_id,
-            "custom_metadata": {"subtype": "whole_loop"},
         }
         if self._parent_task_id:
             self.whole_loop_task["parent_task_id"] = self._parent_task_id
@@ -147,12 +150,13 @@ class FlowceptLoop:
             self._end_iteration_task(self._last_iteration_task)
 
         self.logger.debug(f"Capturing the init of iteration {self._next_counter}.")
-        self.current_iteration_task = self._begin_iteration_task()
-        self._last_iteration_task = self.current_iteration_task
+        self._current_iteration_task = self._begin_iteration_task()
+        self._last_iteration_task = self._current_iteration_task
 
     def _begin_iteration_task(self):
         iteration_task = {
             "started_at": (started_at := time()),
+            "subtype": "iteration",
             "task_id": str(started_at),
             "workflow_id": self._workflow_id,
             "activity_id": self._loop_name + "_iteration",
@@ -185,4 +189,4 @@ class FlowceptLoop:
            A dictionary containing the generated values for the current iteration. These values
            will be stored in the `generated` field of the iteration's metadata.
         """
-        self.current_iteration_task["generated"] = generated_value
+        self._current_iteration_task["generated"] = generated_value

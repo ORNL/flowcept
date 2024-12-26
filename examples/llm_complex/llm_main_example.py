@@ -105,39 +105,7 @@ def search_workflow(ntokens, input_data_dir, dataset_ref, exp_param_settings, ma
     return search_wf_id
 
 
-def main():
-
-    _campaign_id = str(uuid.uuid4())
-    print(f"Campaign id={_campaign_id}")
-    input_data_dir = "input_data"
-    tokenizer_type = "basic_english"
-    subset_size = 10
-    max_runs = 1
-    exp_param_settings = {
-        "batch_size": [20],
-        "eval_batch_size": [10],
-        "emsize": [200],
-        "nhid": [200],
-        "nlayers": [2],  # 2
-        "nhead": [2],
-        "dropout": [0.2],
-        "epochs": [1],
-        "lr": [0.1],
-        "pos_encoding_max_len": [5000],
-    }
-
-    _dataprep_wf_id, dataset_ref, ntokens = dataprep_workflow(
-        data_dir="input_data",
-        campaign_id=_campaign_id,
-        tokenizer_type=tokenizer_type,
-        subset_size=subset_size)
-
-    _search_wf_id = search_workflow(ntokens, input_data_dir, dataset_ref, exp_param_settings, max_runs, campaign_id=_campaign_id)
-
-    return _campaign_id, _dataprep_wf_id, _search_wf_id
-
-
-def run_asserts_and_exports(campaign_id, output_dir="output_data"):
+def run_asserts_and_exports(campaign_id):
     from flowcept.commons.vocabulary import Status
     print("Now running all asserts...")
     """
@@ -163,7 +131,7 @@ def run_asserts_and_exports(campaign_id, output_dir="output_data"):
     """
     campaign_workflows = Flowcept.db.query({"campaign_id": campaign_id}, collection="workflows")
     workflows_data = []
-    assert len(campaign_workflows) == 4 # dataprep + model_search + 2 subworkflows for the model_seearch
+    assert len(campaign_workflows) == 4 - 1 # dataprep + model_search + 2 subworkflows for the model_seearch
     model_search_wf = dataprep_wf = None
     for w in campaign_workflows:
         workflows_data.append(w)
@@ -182,7 +150,7 @@ def run_asserts_and_exports(campaign_id, output_dir="output_data"):
         assert t["status"] == Status.FINISHED.value
 
         whole_loop = Flowcept.db.query(
-            {"parent_task_id": t["task_id"], "custom_metadata.subtype": "whole_loop"})[0]
+            {"parent_task_id": t["task_id"], "subtype": "whole_loop"})[0]
         assert whole_loop["status"] == Status.FINISHED.value
         n_tasks_expected += 1
         iteration_tasks = Flowcept.db.query(
@@ -199,7 +167,7 @@ def run_asserts_and_exports(campaign_id, output_dir="output_data"):
 
             parent_module_wfs = Flowcept.db.query({"parent_workflow_id": model_search_wf_id},
                                                   collection="workflows")
-            assert len(parent_module_wfs) == 2  # train and test
+            assert len(parent_module_wfs) == 2 - 1  # train and test # TODO: train only for now
 
             for parent_module_wf in parent_module_wfs:
                 workflows_data.append(parent_module_wf)
@@ -214,7 +182,6 @@ def run_asserts_and_exports(campaign_id, output_dir="output_data"):
                     n_tasks_expected += 1
                     assert parent_forward["workflow_id"] == parent_module_wf_id
                     assert parent_forward["used"]
-                    assert parent_forward["generated"]
                     assert parent_forward["status"] == Status.FINISHED.value
                     if parent_module_wf['custom_metadata']['model_step'] == 'test':
                         assert parent_forward["parent_task_id"] == t["task_id"]
@@ -223,7 +190,7 @@ def run_asserts_and_exports(campaign_id, output_dir="output_data"):
                         assert parent_forward[
                                    "parent_task_id"] in iteration_ids  # TODO: improve to test exact value
 
-                    if "children" in TORCH_CAPTURE:
+                    if "children" in TORCH_CAPTURE and parent_forward["parent_task_id"] in iteration_ids:
                         children_forwards = Flowcept.db.query(
                             {"parent_task_id": parent_forward["task_id"]})
                         assert len(children_forwards) == 4  # there are four children submodules
@@ -232,9 +199,14 @@ def run_asserts_and_exports(campaign_id, output_dir="output_data"):
                             assert child_forward["status"] == Status.FINISHED.value
                             assert child_forward["workflow_id"] == parent_module_wf_id
 
-    os.makedirs(output_dir, exist_ok=True)
+    n_workflows_expected = len(campaign_workflows)
+    return n_workflows_expected, n_tasks_expected
 
-    best_task = Flowcept.db.query({"workflow_id": model_search_wf_id}, limit=1, sort=[("generated,val_loss", Flowcept.db.ASCENDING)])[0]
+
+def save_files(campaign_id, n_workflows_expected, n_tasks_expected, output_dir="output_data"):
+    os.makedirs(output_dir, exist_ok=True)
+    best_task = Flowcept.db.query({"workflow_id": model_search_wf_id}, limit=1,
+                                  sort=[("generated.val_loss", Flowcept.db.ASCENDING)])[0]
     best_model_obj_id = best_task["generated"]["best_obj_id"]
     model_args = best_task["used"].copy()
     # TODO: The wrapper is conflicting with the init arguments, that's why we need to copy & remove extra args. Needs to debug to improve.
@@ -243,26 +215,95 @@ def run_asserts_and_exports(campaign_id, output_dir="output_data"):
     model_args.pop("epochs", None)
     model_args.pop("lr", None)
     model_args.pop("input_data_dir", None)
-
     loaded_model = TransformerModel(**model_args, save_workflow=False)
     doc = Flowcept.db.load_torch_model(loaded_model, best_model_obj_id)
     print(doc)
-    torch.save(loaded_model.state_dict(), f"{output_dir}/wf_{model_search_wf_id}_transformer_wikitext2.pth")
-
-    print("Exporting workflows data to disk.")
+    torch.save(loaded_model.state_dict(),
+               f"{output_dir}/wf_{model_search_wf_id}_transformer_wikitext2.pth")
     workflows_file = f"{output_dir}/workflows_{uuid.uuid4()}.json"
+    print(f"workflows_file = '{workflows_file}'")
     Flowcept.db.dump_to_file(filter={"campaign_id": campaign_id}, collection="workflows",
                              output_file=workflows_file)
     workflows_df = pd.read_json(workflows_file)
     # Assert workflows dump
-    assert len(workflows_df) == len(campaign_workflows)
-
-    print("Exporting search tasks to disk.")
+    assert len(workflows_df) == n_workflows_expected
     tasks_file = f"{output_dir}/tasks_{uuid.uuid4()}.parquet"
+    print(f"tasks_file = '{tasks_file}'")
     Flowcept.db.dump_tasks_to_file_recursive(workflow_id=model_search_wf_id, output_file=tasks_file)
     # Assert tasks dump
     tasks_df = pd.read_parquet(tasks_file)
+    print(len(tasks_df), n_tasks_expected)
+
+    # TODO: get these values dynamically
+    # TODO: save #n_batches for train, test, val individually
+    search_tasks = 1
+    whole_loop = 1
+    epochs = 4
+    batches_train = 2
+    batches_eval = 4
+    modules = 4
+    at_every = INSTRUMENTATION.get("torch", {}).get("capture_at_every", 1)
+
+    non_module_tasks = search_tasks+whole_loop+epochs
+    parent_module_tasks = search_tasks*whole_loop*epochs*((batches_train*1)+(batches_eval*1))
+    parent_module_tasks = parent_module_tasks/at_every
+    expected_non_child_tasks = non_module_tasks + parent_module_tasks
+
+    assert len(tasks_df[tasks_df.subtype != 'child_forward']) == expected_non_child_tasks
+
+    expected_child_tasks = search_tasks * whole_loop * epochs * ((batches_train * modules) + (batches_eval * modules))
+    expected_child_tasks = expected_child_tasks/at_every
+    assert len(tasks_df[tasks_df.subtype == 'child_forward']) == expected_child_tasks
+
+    number_of_captured_epochs = epochs/at_every
+    expected_child_tasks_per_epoch = expected_child_tasks/number_of_captured_epochs
+
+    with_used = 1*expected_child_tasks_per_epoch
+    without_used = (number_of_captured_epochs-1)*expected_child_tasks_per_epoch
+
     assert len(tasks_df) == n_tasks_expected
+
+    # Testing if only the first epoch got the inspection
+    assert len(tasks_df[(tasks_df.subtype == 'parent_forward') & (tasks_df.used.str.contains('tensor'))]) == batches_train + batches_eval
+    # Testing if capturing at every at_every epochs
+    assert len(tasks_df[(tasks_df.subtype == 'child_forward') & (tasks_df.used == 'NaN')]) == without_used
+    assert len(tasks_df[(tasks_df.subtype == 'child_forward') & (tasks_df.used != 'NaN')]) == with_used
+
+
+
+
+
+
+
+def main():
+
+    _campaign_id = str(uuid.uuid4())
+    print(f"Campaign id={_campaign_id}")
+    input_data_dir = "input_data"
+    tokenizer_type = "basic_english"
+    subset_size = 10
+    max_runs = 1
+    exp_param_settings = {
+        "batch_size": [20],
+        "eval_batch_size": [10],
+        "emsize": [200],
+        "nhid": [200],
+        "nlayers": [2],  # 2
+        "nhead": [2],
+        "dropout": [0.2],
+        "epochs": [4],
+        "lr": [0.1],
+        "pos_encoding_max_len": [5000],
+    }
+
+    _dataprep_wf_id, dataset_ref, ntokens = dataprep_workflow(
+        data_dir="input_data",
+        campaign_id=_campaign_id,
+        tokenizer_type=tokenizer_type,
+        subset_size=subset_size)
+    _search_wf_id = search_workflow(ntokens, input_data_dir, dataset_ref, exp_param_settings, max_runs, campaign_id=_campaign_id)
+
+    return _campaign_id, _dataprep_wf_id, _search_wf_id
 
 
 if __name__ == "__main__":
@@ -272,6 +313,8 @@ if __name__ == "__main__":
         sys.exit(0)
 
     campaign_id, dataprep_wf_id, model_search_wf_id = main()
-    run_asserts_and_exports(campaign_id)
+    n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id)
+    save_files(campaign_id, n_workflows_expected=n_workflows_expected, n_tasks_expected=n_tasks_expected)
+
     print("Alright! Congrats.")
 

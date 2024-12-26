@@ -62,9 +62,6 @@ LOG_STREAM_LEVEL = settings["log"].get("log_stream_level", "disable").upper()
 ##########################
 
 FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
-CAMPAIGN_ID = settings["experiment"].get(
-    "campaign_id", os.environ.get("CAMPAIGN_ID", "super_campaign")
-)
 
 ######################
 #   MQ Settings   #

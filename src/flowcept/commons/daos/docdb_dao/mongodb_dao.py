@@ -750,7 +750,6 @@ class MongoDBDAO(DocumentDBDAO):
         """Dump_tasks_to_file_recursive in MongoDB."""
         try:
             tasks = self.get_tasks_recursive(workflow_id)
-
             chunk_size = 100_000
             output_dir = "temp_chunks"
             os.makedirs(output_dir, exist_ok=True)
@@ -761,6 +760,9 @@ class MongoDBDAO(DocumentDBDAO):
                 chunk.append(record)
                 if (idx + 1) % chunk_size == 0:
                     df = pd.DataFrame(chunk)
+                    for field in TaskObject.get_dict_field_names():
+                        if field in df.columns:
+                            df[field] = df[field].apply(lambda x: json.dumps(x))
                     table = pa.Table.from_pandas(df)
                     pq.write_table(table, f"{output_dir}/chunk_{file_count}.parquet")
                     file_count += 1
@@ -769,6 +771,9 @@ class MongoDBDAO(DocumentDBDAO):
             # Write remaining rows
             if chunk:
                 df = pd.DataFrame(chunk)
+                for field in TaskObject.get_dict_field_names():
+                    if field in df.columns:
+                        df[field] = df[field].apply(lambda x: json.dumps(x))
                 table = pa.Table.from_pandas(df)
                 pq.write_table(table, f"{output_dir}/chunk_{file_count}.parquet")
 
