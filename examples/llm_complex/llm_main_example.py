@@ -300,6 +300,8 @@ def main():
         data_dir="input_data",
         campaign_id=_campaign_id,
         tokenizer_type=tokenizer_type,
+        batch_size=exp_param_settings["batch_size"][0],
+        eval_batch_size=exp_param_settings["eval_batch_size"][0],
         subset_size=subset_size)
     _search_wf_id = search_workflow(ntokens, input_data_dir, dataset_ref, exp_param_settings, max_runs, campaign_id=_campaign_id)
 

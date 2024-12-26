@@ -16,6 +16,7 @@ from datasets import load_dataset
 from examples.llm_complex.llm_dataprep import get_wiki_text_dataset
 from flowcept import Flowcept, FlowceptLoop, flowcept_torch
 from flowcept.configs import N_GPUS
+from flowcept.instrumentation.flowcept_torch import FlowceptEpochLoop
 
 
 def get_batch(source, i, bptt=35):
@@ -177,14 +178,7 @@ def model_train(
         main_task_id = None
     torch.manual_seed(0)  # TODO: parametrize and save it
 
-    train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load = get_wiki_text_dataset(input_data_dir, batch_size, eval_batch_size)
-
-    if torch.cuda.is_available():
-        device = torch.device("gpu")
-    elif torch.backends.mps.is_available():
-        device = torch.device("mps")
-    else:
-        device = torch.device("cpu")
+    train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load, device = get_wiki_text_dataset(input_data_dir, batch_size, eval_batch_size)
 
     model = TransformerModel(
         ntokens,
@@ -205,11 +199,12 @@ def model_train(
     # Iterate through the epochs
     t0 = time()
 
-    epochs_loop = FlowceptLoop(range(1, epochs + 1), "epochs_loop", "epoch", parent_task_id=main_task_id)
+    #epochs_loop = FlowceptLoop(range(1, epochs + 1), "epochs_loop", "epoch", parent_task_id=main_task_id)
+    epochs_loop = FlowceptEpochLoop(range(1, epochs + 1), parent_task_id=main_task_id, model=model)
     for epoch in epochs_loop:
         print(f"Starting training for epoch {epoch}/{epochs}")
         # Train the model on the training data and calculate the training loss
-        model.new_epoch(epochs_loop.get_current_iteration_id())
+        #model.new_epoch(epochs_loop.get_current_iteration_id())
         train_loss = train_epoch(ntokens, model, train_data, criterion, optimizer, batch_size)
 
         # Evaluate the model on the validation data and calculate the validation loss

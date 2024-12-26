@@ -6,7 +6,7 @@ import os
 from torch.utils.data import Subset
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 
 from flowcept.commons.utils import replace_non_serializable
 
@@ -51,9 +51,6 @@ def get_wiki_text_dataset(data_dir, batch_size, eval_batch_size):
     train_data = torch.load(os.path.join(data_dir, "train_data.tensor"))
     val_data = torch.load(os.path.join(data_dir, "val_data.tensor"))
     test_data = torch.load(os.path.join(data_dir, "test_data.tensor"))
-    train_prov = train_data.provenance
-    val_prov = val_data.provenance
-    test_prov = test_data.provenance
     t1 = time()
     t_disk_load = t1 - t0
 
@@ -76,13 +73,6 @@ def get_wiki_text_dataset(data_dir, batch_size, eval_batch_size):
     except:
         raise Exception("Couldn't send data to device")
 
-    train_data = batchify(train_data, batch_size)
-    val_data = batchify(val_data, eval_batch_size)
-    test_data = batchify(test_data, eval_batch_size)
-    setattr(train_data, "provenance", train_prov)
-    setattr(val_data, "provenance", val_prov)
-    setattr(test_data, "provenance", test_prov)
-
     print("Train data", train_data.shape)
     print("Validation data", val_data.shape)
     print("Test data", test_data.shape)
@@ -93,6 +83,7 @@ def get_wiki_text_dataset(data_dir, batch_size, eval_batch_size):
         t_disk_load,
         t_device_available,
         t_gpu_load,
+        device
     )
 
 def save_workflow(ntokens, train_data, val_data, test_data, dataset_ref, dataset_info, subset_size=None, tokenizer_type=None, campaign_id=None):
@@ -121,15 +112,22 @@ def save_workflow(ntokens, train_data, val_data, test_data, dataset_ref, dataset
 
 def dataprep_workflow(data_dir="input_data",
                       tokenizer_type="basic_english",  # spacy, moses, toktok, revtok, subword
+                      batch_size=20,
+                      eval_batch_size=10,
                       subset_size=None,
-                      campaign_id=None):
+                      campaign_id=None,
+                      ):
 
     os.makedirs(data_dir, exist_ok=True)
 
-    print("Downloading dataset")
-    dataset = load_dataset("wikitext", "wikitext-2-v1")
-    print("Ok, now saving it into the current directory")
-    dataset.save_to_disk(os.path.join(data_dir, "wikitext-2-v1.data"))
+    dataset_path = os.path.join(data_dir, "wikitext-2-v1.data")
+    if os.path.exists(dataset_path):
+        dataset = load_from_disk(dataset_path)
+    else:
+        print("Downloading dataset")
+        dataset = load_dataset("wikitext", "wikitext-2-v1")
+        print(f"Ok, now saving it into {dataset_path}")
+        dataset.save_to_disk(dataset_path)
 
     test_dataset = dataset["test"]
     train_dataset = dataset["train"]
@@ -154,9 +152,10 @@ def dataprep_workflow(data_dir="input_data",
     train_data = data_process(tokenizer, vocab, train_dataset)
     val_data = data_process(tokenizer, vocab, validation_dataset)
     test_data = data_process(tokenizer, vocab, test_dataset)
-    setattr(train_data, "provenance", "train")
-    setattr(val_data, "provenance", "val")
-    setattr(test_data, "provenance", "test")
+
+    train_data = batchify(train_data, batch_size)
+    val_data = batchify(val_data, eval_batch_size)
+    test_data = batchify(test_data, eval_batch_size)
 
     train_data_path = os.path.join(data_dir, "train_data.tensor")
     val_data_path = os.path.join(data_dir, "val_data.tensor")
@@ -172,11 +171,9 @@ def dataprep_workflow(data_dir="input_data",
     val_data_loaded = torch.load(val_data_path)
     test_data_loaded = torch.load(test_data_path)
 
-    assert all(train_data == train_data_loaded)
-    assert all(val_data == val_data_loaded)
-    assert all(test_data == test_data_loaded)
-
-    # TODO: save batchified here
+    assert torch.equal(train_data, train_data_loaded), "Train data mismatch"
+    assert torch.equal(val_data, val_data_loaded), "Validation data mismatch"
+    assert torch.equal(test_data, test_data_loaded), "Test data mismatch"
 
     dataset_ref = get_dataset_ref(campaign_id, train_data, val_data, test_data)
     wf_id = save_workflow(ntokens, train_data, val_data, test_data, dataset_ref, dataset_info, subset_size=subset_size, tokenizer_type=tokenizer_type, campaign_id=campaign_id)

@@ -1,12 +1,12 @@
-"""Pytorch module."""
-
+"""Flowcept's module for Pytorch instrumentation."""
+import typing
 from time import time
 from types import MethodType
 
 import numpy as np
 
 from flowcept.commons.utils import replace_non_serializable
-from typing import Dict
+from typing import Dict, Callable
 import uuid
 
 import torch
@@ -24,8 +24,18 @@ from flowcept.configs import (
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
+from flowcept.instrumentation.flowcept_loop import FlowceptLoop
 from flowcept.instrumentation.flowcept_task import get_current_context_task_id
 
+
+class FlowceptEpochLoop(FlowceptLoop):
+    def __init__(self, items: typing.Union[typing.Sized, int], model: 'TorchModuleWrapper', parent_task_id=None, workflow_id=None):
+        super().__init__(items, loop_name="EpochLoop", item_name="epoch", parent_task_id=parent_task_id, workflow_id=workflow_id)
+        self.model = model
+
+    def _capture_iteration_bounds(self):
+        super()._capture_iteration_bounds()
+        self.model.new_epoch(self.get_current_iteration_id())
 
 def flowcept_torch(cls):
     """
@@ -104,7 +114,7 @@ def flowcept_torch(cls):
 
     class TorchModuleWrapper(cls):
         _original_children_forward_functions: Dict = {}
-        interceptor: BaseInterceptor = None
+        _interceptor: BaseInterceptor = None
 
         def __init__(self, *args, **kwargs):
             super(TorchModuleWrapper, self).__init__(*args, **kwargs)
@@ -119,25 +129,26 @@ def flowcept_torch(cls):
 
             if self._parent_enabled:
                 self.forward = self._our_forward_parent
-
+            self._at_every = INSTRUMENTATION.get("torch", {}).get("capture_at_every", 1)
             self._children_mode = None
+            self._should_update_children_forward = False
             if self._children_enabled:
                 self._children_mode = INSTRUMENTATION.get("torch", {}).get("children_mode", None)
                 self._children_tensor_inspection_enabled = ("inspection" in self._children_mode)
                 if self._children_mode is None:
                     raise Exception("You enabled children mode, but did not specify which mode.")
 
-                child_forward_func = _get_child_our_forward_func(self._children_mode)
+                self._child_forward_func = _get_our_child_forward_func(self._children_mode)
                 for name, child in self.named_children():
                     child.__dict__["_parent_module"] = self
                     TorchModuleWrapper._original_children_forward_functions[child.__class__] = (
                         child.__class__.forward
                     )
-                    child.forward = MethodType(child_forward_func, child)
+                    child.forward = MethodType(self._child_forward_func, child)
 
-            TorchModuleWrapper.interceptor = InstrumentationInterceptor.get_instance()
+            TorchModuleWrapper._interceptor = InstrumentationInterceptor.get_instance()
             self._current_epoch = -1
-            self._at_every = INSTRUMENTATION.get("torch", {}).get("capture_at_every", 1)
+
             self._is_first_epoch = True
             self._module_name = cls.__name__
             self._current_forward_task_id = None
@@ -152,6 +163,62 @@ def flowcept_torch(cls):
             self._campaign_id = kwargs.get("campaign_id", Flowcept.campaign_id)
             if kwargs.get("save_workflow", True):
                 self._workflow_id = self._register_as_workflow()
+
+        def _our_forward_parent(self, *args, **kwargs):
+            print(f"Main forward, current epoch={self._current_epoch}")
+            if self._current_epoch % self._at_every != 0:
+                return super(TorchModuleWrapper, self).forward(*args, **kwargs)
+
+            started_at = time()
+            self._current_forward_task_id = str(started_at)
+            custom_metadata = {}
+            if hasattr(self, "training"):
+                custom_metadata["is_training"] = self.training
+            used = {}
+            if self._current_epoch < 1:
+                custom_metadata["is_first_epoch"] = True
+                used["tensor"] = _inspect_torch_tensor(args[0])
+
+            forward_task = {
+                "task_id": self._current_forward_task_id,
+                "workflow_id": self._workflow_id,
+                "activity_id": self._module_name,
+                "started_at": started_at,
+                "used": used,
+                "parent_task_id": self._parent_task_id,
+                "custom_metadata": custom_metadata,
+                "type": "task",
+                "subtype": "parent_forward",
+                # Following is ok. if an error happens, it will break before sending it
+                "status": "FINISHED",
+            }
+            if kwargs is not None:
+                forward_task["used"].update(kwargs)
+
+            self._enable_children_forward()
+            y = super(TorchModuleWrapper, self).forward(*args, **kwargs)
+            self._disable_children_forward()
+
+            # forward_task["ended_at"] = time()
+            if self._current_epoch < 1:
+                forward_task["generated"] = {"tensor": _inspect_torch_tensor(y)}
+
+            tel = TorchModuleWrapper._interceptor.telemetry_capture.capture()
+            if tel:
+                forward_task["telemetry_at_end"] = tel.to_dict()
+
+            TorchModuleWrapper._interceptor.intercept(forward_task)
+
+            return y
+
+        def _enable_children_forward(self):
+            if self._at_every > 1 and self._should_update_children_forward:
+                self._update_children_with_our_forward()
+
+        def _disable_children_forward(self):
+            if self._at_every > 1 and self._should_update_children_forward:
+                self._update_children_with_original_forward()
+            self._should_update_children_forward = True
 
         def _get_profile(self):
             nparams = 0
@@ -177,20 +244,29 @@ def flowcept_torch(cls):
 
             return this_result
 
+        def _update_children_with_our_forward(self):
+            for name, child in self.named_children():
+                child.forward = MethodType(self._child_forward_func, child)
+
+        def _update_children_with_original_forward(self):
+            for name, child in self.named_children():
+                original = TorchModuleWrapper._original_children_forward_functions[
+                    child.__class__]
+                child.forward = MethodType(original, child)
+
         def _disable_children_tensor_inspection(self):
-            if self._children_enabled:
-                self._children_tensor_inspection_enabled = False
-                get_original = False
-                if self._children_mode in {"lightweight", "tensor_inspection"}:
-                    get_original = True
-                elif self._children_mode == "telemetry_and_tensor_inspection":
-                    child_forward_func = _get_child_our_forward_func(mode="telemetry")
-                else:
-                    return
-                for name, child in self.named_children():
-                    if get_original:
-                        child_forward_func = TorchModuleWrapper._original_children_forward_functions[child.__class__]
-                    child.forward = MethodType(child_forward_func, child)
+            print("Disabling children forward")
+            self._children_tensor_inspection_enabled = False
+            if self._children_mode in {"lightweight", "tensor_inspection"}:
+                self._update_children_with_original_forward()
+                # If we get to the original children forwards here, we should stick with them.
+                self._should_update_children_forward = False
+            elif self._children_mode == "telemetry_and_tensor_inspection":
+                self._child_forward_func = _get_our_child_forward_func(mode="telemetry")
+                if self._at_every == 1:
+                    self._update_children_with_our_forward()
+            else:
+                return
 
         def new_epoch(self, parent_task_id):
             """
@@ -211,55 +287,9 @@ def flowcept_torch(cls):
             when capturing telemetry or workflow execution data.
             """
             self._parent_task_id = parent_task_id
-            print(f"Ended epoch {self._current_epoch}. Starting a new epoch.")
             if self._children_tensor_inspection_enabled and self._current_epoch >= 0:
-                print("Disabling children tensor")
                 self._disable_children_tensor_inspection()
             self._current_epoch += 1
-
-        def _our_forward_parent(self, *args, **kwargs):
-            if self._current_epoch % self._at_every != 0:
-                print(f"Skipping parent forward because its counter: {self._current_epoch}")
-                return super(TorchModuleWrapper, self).forward(*args, **kwargs)
-            started_at = time()
-            self._current_forward_task_id = str(started_at)
-            custom_metadata = {}
-            if hasattr(self, "training"):
-                custom_metadata["is_training"] = self.training
-            used = {}
-            if self._current_epoch < 1:
-                custom_metadata["is_first_epoch"] = True
-                used["tensor"] = _inspect_torch_tensor(args[0])
-
-            forward_task = {
-                "subtype": "parent_forward",
-                "task_id": self._current_forward_task_id,
-                "workflow_id": self._workflow_id,
-                "activity_id": self._module_name,
-                "started_at": started_at,
-                "used": used,
-                "parent_task_id": self._parent_task_id,
-                "custom_metadata": custom_metadata,
-                "type": "task",
-                # Following is ok. if an error happens, it will break before sending it
-                "status": "FINISHED",
-            }
-            if kwargs is not None:
-                forward_task["used"].update(kwargs)
-
-            y = super(TorchModuleWrapper, self).forward(*args, **kwargs)
-
-            # forward_task["ended_at"] = time()
-            if self._current_epoch < 1:
-                forward_task["generated"] = {"tensor": _inspect_torch_tensor(y)}
-
-            tel = TorchModuleWrapper.interceptor.telemetry_capture.capture()
-            if tel:
-                forward_task["telemetry_at_end"] = tel.to_dict()
-
-            TorchModuleWrapper.interceptor.intercept(forward_task)
-
-            return y
 
         def _register_as_workflow(self):
             """Register as a workflow."""
@@ -279,7 +309,7 @@ def flowcept_torch(cls):
                 _custom_metadata["model_profile"] = profile
 
             workflow_obj.custom_metadata = _custom_metadata
-            TorchModuleWrapper.interceptor.send_workflow_message(workflow_obj)
+            TorchModuleWrapper._interceptor.send_workflow_message(workflow_obj)
             return workflow_obj.workflow_id
 
     def _inspect_inner_modules(model, modules_dict={}, in_named=None, first_level_child=True):
@@ -298,7 +328,7 @@ def flowcept_torch(cls):
             _inspect_inner_modules(module, modules_dict, in_named=name, first_level_child=False)
         return modules_dict
 
-    def _get_child_our_forward_func(mode):
+    def _get_our_child_forward_func(mode):
         """Pick the torch_task function."""
         if "telemetry" in mode and TELEMETRY_CAPTURE is None:
             raise Exception(
@@ -360,47 +390,51 @@ def flowcept_torch(cls):
         return task_dict, result
 
     def _our_forward_lightweight(self, *args, **kwargs):
-        if self._parent_module._current_epoch % self._parent_module._at_every != 0:
-            return TorchModuleWrapper._original_children_forward_functions[self.__class__](
-                self, *args, **kwargs
-            )
+        # if self._parent_module._current_epoch % self._parent_module._at_every != 0:
+        #     return TorchModuleWrapper._original_children_forward_functions[self.__class__](
+        #         self, *args, **kwargs
+        #     )
+        print("Calling a")
         task_dict, result = _run_forward(self, *args, **kwargs)
-        TorchModuleWrapper.interceptor.intercept(task_dict)
+        TorchModuleWrapper._interceptor.intercept(task_dict)
         return result
 
     def _our_forward_telemetry(self, *args, **kwargs):
-        if self._parent_module._current_epoch % self._parent_module._at_every != 0:
-            return TorchModuleWrapper._original_children_forward_functions[self.__class__](
-                self, *args, **kwargs
-            )
+        # if self._parent_module._current_epoch % self._parent_module._at_every != 0:
+        #     return TorchModuleWrapper._original_children_forward_functions[self.__class__](
+        #         self, *args, **kwargs
+        #     )
+        print("Calling b")
         task_dict, result = _run_forward(self, *args, **kwargs)
-        tel = TorchModuleWrapper.interceptor.telemetry_capture.capture()
+        tel = TorchModuleWrapper._interceptor.telemetry_capture.capture()
         task_dict["telemetry_at_end"] = tel.to_dict()
-        TorchModuleWrapper.interceptor.intercept(task_dict)
+        TorchModuleWrapper._interceptor.intercept(task_dict)
         return result
 
     def _our_forward_telemetry_tensor_inspection(self, *args, **kwargs):
-        if self._parent_module._current_epoch % self._parent_module._at_every != 0:
-            return TorchModuleWrapper._original_children_forward_functions[self.__class__](
-                self, *args, **kwargs
-            )
+        # if self._parent_module._current_epoch % self._parent_module._at_every != 0:
+        #     return TorchModuleWrapper._original_children_forward_functions[self.__class__](
+        #         self, *args, **kwargs
+        #     )
+        print("Calling c")
         task_dict, result = _run_forward(self, *args, **kwargs)
-        tel = TorchModuleWrapper.interceptor.telemetry_capture.capture()
+        tel = TorchModuleWrapper._interceptor.telemetry_capture.capture()
         task_dict["telemetry_at_end"] = tel.to_dict()
         task_dict["used"] = _get_forward_used_args(self, args[0])
         task_dict["generated"] = {"tensor": _inspect_torch_tensor(result)}
-        TorchModuleWrapper.interceptor.intercept(task_dict)
+        TorchModuleWrapper._interceptor.intercept(task_dict)
         return result
 
     def _our_forward_tensor_inspection(self, *args, **kwargs):
-        if self._parent_module._current_epoch % self._parent_module._at_every != 0:
-            return TorchModuleWrapper._original_children_forward_functions[self.__class__](
-                self, *args, **kwargs
-            )
+        # if self._parent_module._current_epoch % self._parent_module._at_every != 0:
+        #     return TorchModuleWrapper._original_children_forward_functions[self.__class__](
+        #         self, *args, **kwargs
+        #     )
+        print("Calling d")
         task_dict, result = _run_forward(self, *args, **kwargs)
         task_dict["used"] = _get_forward_used_args(self, args[0])
         task_dict["generated"] = {"tensor": _inspect_torch_tensor(result)}
-        TorchModuleWrapper.interceptor.intercept(task_dict)
+        TorchModuleWrapper._interceptor.intercept(task_dict)
         return result
 
     return TorchModuleWrapper
