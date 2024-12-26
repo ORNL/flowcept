@@ -30,12 +30,13 @@ from flowcept.instrumentation.flowcept_task import get_current_context_task_id
 
 class FlowceptEpochLoop(FlowceptLoop):
     def __init__(self, items: typing.Union[typing.Sized, int], model: 'TorchModuleWrapper', parent_task_id=None, workflow_id=None):
-        super().__init__(items, loop_name="EpochLoop", item_name="epoch", parent_task_id=parent_task_id, workflow_id=workflow_id)
+        super().__init__(items, loop_name="epochs_loop", item_name="epoch", parent_task_id=parent_task_id, workflow_id=workflow_id)
         self.model = model
 
     def _capture_iteration_bounds(self):
         super()._capture_iteration_bounds()
         self.model.new_epoch(self.get_current_iteration_id())
+
 
 def flowcept_torch(cls):
     """
@@ -165,7 +166,6 @@ def flowcept_torch(cls):
                 self._workflow_id = self._register_as_workflow()
 
         def _our_forward_parent(self, *args, **kwargs):
-            print(f"Main forward, current epoch={self._current_epoch}")
             if self._current_epoch % self._at_every != 0:
                 return super(TorchModuleWrapper, self).forward(*args, **kwargs)
 
@@ -255,7 +255,6 @@ def flowcept_torch(cls):
                 child.forward = MethodType(original, child)
 
         def _disable_children_tensor_inspection(self):
-            print("Disabling children forward")
             self._children_tensor_inspection_enabled = False
             if self._children_mode in {"lightweight", "tensor_inspection"}:
                 self._update_children_with_original_forward()
@@ -390,21 +389,11 @@ def flowcept_torch(cls):
         return task_dict, result
 
     def _our_forward_lightweight(self, *args, **kwargs):
-        # if self._parent_module._current_epoch % self._parent_module._at_every != 0:
-        #     return TorchModuleWrapper._original_children_forward_functions[self.__class__](
-        #         self, *args, **kwargs
-        #     )
-        print("Calling a")
         task_dict, result = _run_forward(self, *args, **kwargs)
         TorchModuleWrapper._interceptor.intercept(task_dict)
         return result
 
     def _our_forward_telemetry(self, *args, **kwargs):
-        # if self._parent_module._current_epoch % self._parent_module._at_every != 0:
-        #     return TorchModuleWrapper._original_children_forward_functions[self.__class__](
-        #         self, *args, **kwargs
-        #     )
-        print("Calling b")
         task_dict, result = _run_forward(self, *args, **kwargs)
         tel = TorchModuleWrapper._interceptor.telemetry_capture.capture()
         task_dict["telemetry_at_end"] = tel.to_dict()
@@ -412,11 +401,6 @@ def flowcept_torch(cls):
         return result
 
     def _our_forward_telemetry_tensor_inspection(self, *args, **kwargs):
-        # if self._parent_module._current_epoch % self._parent_module._at_every != 0:
-        #     return TorchModuleWrapper._original_children_forward_functions[self.__class__](
-        #         self, *args, **kwargs
-        #     )
-        print("Calling c")
         task_dict, result = _run_forward(self, *args, **kwargs)
         tel = TorchModuleWrapper._interceptor.telemetry_capture.capture()
         task_dict["telemetry_at_end"] = tel.to_dict()
@@ -426,11 +410,6 @@ def flowcept_torch(cls):
         return result
 
     def _our_forward_tensor_inspection(self, *args, **kwargs):
-        # if self._parent_module._current_epoch % self._parent_module._at_every != 0:
-        #     return TorchModuleWrapper._original_children_forward_functions[self.__class__](
-        #         self, *args, **kwargs
-        #     )
-        print("Calling d")
         task_dict, result = _run_forward(self, *args, **kwargs)
         task_dict["used"] = _get_forward_used_args(self, args[0])
         task_dict["generated"] = {"tensor": _inspect_torch_tensor(result)}

@@ -199,8 +199,7 @@ def model_train(
     # Iterate through the epochs
     t0 = time()
 
-    #epochs_loop = FlowceptLoop(range(1, epochs + 1), "epochs_loop", "epoch", parent_task_id=main_task_id)
-    epochs_loop = FlowceptEpochLoop(range(1, epochs + 1), parent_task_id=main_task_id, model=model)
+    epochs_loop = FlowceptEpochLoop(range(1, epochs + 1), model=model, parent_task_id=main_task_id)
     for epoch in epochs_loop:
         print(f"Starting training for epoch {epoch}/{epochs}")
         # Train the model on the training data and calculate the training loss

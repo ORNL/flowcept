@@ -193,7 +193,7 @@ def run_asserts_and_exports(campaign_id):
                     if "children" in TORCH_CAPTURE and parent_forward["parent_task_id"] in iteration_ids:
                         children_forwards = Flowcept.db.query(
                             {"parent_task_id": parent_forward["task_id"]})
-                        assert len(children_forwards) == 4  # there are four children submodules
+                        assert len(children_forwards) == 4  # there are four children submodules # TODO get dynamically
                         for child_forward in children_forwards:
                             n_tasks_expected += 1
                             assert child_forward["status"] == Status.FINISHED.value
@@ -224,34 +224,68 @@ def save_files(campaign_id, n_workflows_expected, n_tasks_expected, output_dir="
     print(f"workflows_file = '{workflows_file}'")
     Flowcept.db.dump_to_file(filter={"campaign_id": campaign_id}, collection="workflows",
                              output_file=workflows_file)
-    workflows_df = pd.read_json(workflows_file)
-    # Assert workflows dump
-    assert len(workflows_df) == n_workflows_expected
     tasks_file = f"{output_dir}/tasks_{uuid.uuid4()}.parquet"
     print(f"tasks_file = '{tasks_file}'")
     Flowcept.db.dump_tasks_to_file_recursive(workflow_id=model_search_wf_id, output_file=tasks_file)
-    # Assert tasks dump
+
+    return workflows_file, tasks_file
+
+
+def main():
+
+    _campaign_id = str(uuid.uuid4())
+    print(f"Campaign id={_campaign_id}")
+    input_data_dir = "input_data"
+    tokenizer_type = "basic_english"
+    subset_size = 10
+    max_runs = 1
+    epochs = 4
+    exp_param_settings = {
+        "batch_size": [20],
+        "eval_batch_size": [10],
+        "emsize": [200],
+        "nhid": [200],
+        "nlayers": [2],  # 2
+        "nhead": [2],
+        "dropout": [0.2],
+        "epochs": [epochs],
+        "lr": [0.1],
+        "pos_encoding_max_len": [5000],
+    }
+
+    _dataprep_wf_id, dataprep_generated = dataprep_workflow(
+        data_dir="input_data",
+        campaign_id=_campaign_id,
+        tokenizer_type=tokenizer_type,
+        batch_size=exp_param_settings["batch_size"][0],
+        eval_batch_size=exp_param_settings["eval_batch_size"][0],
+        subset_size=subset_size)
+    _search_wf_id = search_workflow(dataprep_generated["ntokens"], input_data_dir, dataprep_generated["dataset_ref"], exp_param_settings, max_runs, campaign_id=_campaign_id)
+
+    return _campaign_id, _dataprep_wf_id, _search_wf_id, epochs, max_runs, dataprep_generated["train_n_batches"], dataprep_generated["val_n_batches"]
+
+
+def asserts_on_saved_dfs(workflows_file, tasks_file, epochs, max_runs, n_batches_train, n_batches_eval, n_modules):
+
+    workflows_df = pd.read_json(workflows_file)
+    # Assert workflows dump
+    assert len(workflows_df) == n_workflows_expected
     tasks_df = pd.read_parquet(tasks_file)
     print(len(tasks_df), n_tasks_expected)
 
-    # TODO: get these values dynamically
     # TODO: save #n_batches for train, test, val individually
-    search_tasks = 1
+    search_tasks = max_runs
     whole_loop = 1
-    epochs = 4
-    batches_train = 2
-    batches_eval = 4
-    modules = 4
     at_every = INSTRUMENTATION.get("torch", {}).get("capture_at_every", 1)
 
     non_module_tasks = search_tasks+whole_loop+epochs
-    parent_module_tasks = search_tasks*whole_loop*epochs*((batches_train*1)+(batches_eval*1))
+    parent_module_tasks = search_tasks*whole_loop*epochs*((n_batches_train*1)+(n_batches_eval*1))
     parent_module_tasks = parent_module_tasks/at_every
     expected_non_child_tasks = non_module_tasks + parent_module_tasks
 
     assert len(tasks_df[tasks_df.subtype != 'child_forward']) == expected_non_child_tasks
 
-    expected_child_tasks = search_tasks * whole_loop * epochs * ((batches_train * modules) + (batches_eval * modules))
+    expected_child_tasks = search_tasks * whole_loop * epochs * ((n_batches_train * n_modules) + (n_batches_eval * n_modules))
     expected_child_tasks = expected_child_tasks/at_every
     assert len(tasks_df[tasks_df.subtype == 'child_forward']) == expected_child_tasks
 
@@ -264,48 +298,10 @@ def save_files(campaign_id, n_workflows_expected, n_tasks_expected, output_dir="
     assert len(tasks_df) == n_tasks_expected
 
     # Testing if only the first epoch got the inspection
-    assert len(tasks_df[(tasks_df.subtype == 'parent_forward') & (tasks_df.used.str.contains('tensor'))]) == batches_train + batches_eval
+    assert len(tasks_df[(tasks_df.subtype == 'parent_forward') & (tasks_df.used.str.contains('tensor'))]) == n_batches_train + n_batches_eval
     # Testing if capturing at every at_every epochs
     assert len(tasks_df[(tasks_df.subtype == 'child_forward') & (tasks_df.used == 'NaN')]) == without_used
     assert len(tasks_df[(tasks_df.subtype == 'child_forward') & (tasks_df.used != 'NaN')]) == with_used
-
-
-
-
-
-
-
-def main():
-
-    _campaign_id = str(uuid.uuid4())
-    print(f"Campaign id={_campaign_id}")
-    input_data_dir = "input_data"
-    tokenizer_type = "basic_english"
-    subset_size = 10
-    max_runs = 1
-    exp_param_settings = {
-        "batch_size": [20],
-        "eval_batch_size": [10],
-        "emsize": [200],
-        "nhid": [200],
-        "nlayers": [2],  # 2
-        "nhead": [2],
-        "dropout": [0.2],
-        "epochs": [4],
-        "lr": [0.1],
-        "pos_encoding_max_len": [5000],
-    }
-
-    _dataprep_wf_id, dataset_ref, ntokens = dataprep_workflow(
-        data_dir="input_data",
-        campaign_id=_campaign_id,
-        tokenizer_type=tokenizer_type,
-        batch_size=exp_param_settings["batch_size"][0],
-        eval_batch_size=exp_param_settings["eval_batch_size"][0],
-        subset_size=subset_size)
-    _search_wf_id = search_workflow(ntokens, input_data_dir, dataset_ref, exp_param_settings, max_runs, campaign_id=_campaign_id)
-
-    return _campaign_id, _dataprep_wf_id, _search_wf_id
 
 
 if __name__ == "__main__":
@@ -314,9 +310,9 @@ if __name__ == "__main__":
         print("This test is only available if Mongo is enabled.")
         sys.exit(0)
 
-    campaign_id, dataprep_wf_id, model_search_wf_id = main()
+    campaign_id, dataprep_wf_id, model_search_wf_id, epochs, max_runs, n_batches_train, n_batches_eval = main()
     n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id)
-    save_files(campaign_id, n_workflows_expected=n_workflows_expected, n_tasks_expected=n_tasks_expected)
-
+    workflows_file, tasks_file = save_files(campaign_id, n_workflows_expected=n_workflows_expected, n_tasks_expected=n_tasks_expected)
+    asserts_on_saved_dfs(workflows_file, tasks_file, epochs, max_runs, n_batches_train, n_batches_eval, n_modules=4)
     print("Alright! Congrats.")
 

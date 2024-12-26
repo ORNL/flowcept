@@ -86,28 +86,17 @@ def get_wiki_text_dataset(data_dir, batch_size, eval_batch_size):
         device
     )
 
-def save_workflow(ntokens, train_data, val_data, test_data, dataset_ref, dataset_info, subset_size=None, tokenizer_type=None, campaign_id=None):
+def save_workflow(campaign_id, used, generated):
     from flowcept import WorkflowObject, Flowcept
-    config = {
-        "subset_size": subset_size,
-        "tokenizer_type": tokenizer_type,
-        "dataset_info": dataset_info
-    }
     dataset_prep_wf = WorkflowObject()
-    dataset_prep_wf.used = config
+    dataset_prep_wf.used = used
     dataset_prep_wf.campaign_id = campaign_id
     dataset_prep_wf.name = "generate_wikitext_dataset"
 
-    dataset_prep_wf.generated = {
-        "ntokens": ntokens,
-        "dataset_ref": dataset_ref,
-        "train_data_shape": list(train_data.shape),
-        "val_data_shape": list(val_data.shape),
-        "test_data_shape": list(test_data.shape),
-    }
+    dataset_prep_wf.generated = generated
     Flowcept.db.insert_or_update_workflow(dataset_prep_wf)
     print(dataset_prep_wf)
-    return dataset_prep_wf.workflow_id, dataset_ref
+    return dataset_prep_wf.workflow_id
 
 
 def dataprep_workflow(data_dir="input_data",
@@ -157,6 +146,10 @@ def dataprep_workflow(data_dir="input_data",
     val_data = batchify(val_data, eval_batch_size)
     test_data = batchify(test_data, eval_batch_size)
 
+    train_n_batches = len(list(enumerate(range(0, train_data.size(0) - 1, batch_size))))
+    val_n_batches = len(list(enumerate(range(0, val_data.size(0) - 1, eval_batch_size))))
+    test_n_batches = val_n_batches
+
     train_data_path = os.path.join(data_dir, "train_data.tensor")
     val_data_path = os.path.join(data_dir, "val_data.tensor")
     test_data_path = os.path.join(data_dir, "test_data.tensor")
@@ -176,6 +169,28 @@ def dataprep_workflow(data_dir="input_data",
     assert torch.equal(test_data, test_data_loaded), "Test data mismatch"
 
     dataset_ref = get_dataset_ref(campaign_id, train_data, val_data, test_data)
-    wf_id = save_workflow(ntokens, train_data, val_data, test_data, dataset_ref, dataset_info, subset_size=subset_size, tokenizer_type=tokenizer_type, campaign_id=campaign_id)
-    return wf_id, dataset_ref, ntokens
+
+    used = {
+        "train_batch_size": batch_size,
+        "val_batch_size": eval_batch_size,
+        "test_batch_size": eval_batch_size,
+        "subset_size": subset_size,
+        "tokenizer_type": tokenizer_type,
+        "dataset_info": dataset_info,
+    }
+    generated = {
+        "ntokens": ntokens,
+        "dataset_ref": dataset_ref,
+        "train_n_batches": train_n_batches,
+        "test_n_batches": test_n_batches,
+        "val_n_batches": val_n_batches,
+        "train_data_shape": list(train_data.shape),
+        "val_data_shape": list(val_data.shape),
+        "test_data_shape": list(test_data.shape),
+        "train_data_path": train_data_path,
+        "test_data_path": test_data_path,
+        "val_data_path": val_data_path,
+    }
+    wf_id = save_workflow(campaign_id, used, generated)
+    return wf_id, generated
 
