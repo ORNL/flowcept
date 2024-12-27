@@ -5,7 +5,7 @@ project:
   performance_logging: false
   register_workflow: true
   enrich_messages: true
-  db_flush_mode: offline   # or offline
+  db_flush_mode: online   # or offline
 
 log:
   log_path: "default"
