@@ -9,8 +9,8 @@ project:
 
 log:
   log_path: "default"
-  log_file_level: disable # use 'disable' to disable logs
-  log_stream_level: disable
+  log_file_level: error # use 'disable' to disable logs
+  log_stream_level: error
 
 telemetry_capture:
   gpu: ~ # ~ means None. This is a list that should specify which metrics of the GPU that should be monitored
