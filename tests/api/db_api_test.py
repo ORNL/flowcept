@@ -1,12 +1,9 @@
 import unittest
 from uuid import uuid4
 
-import pandas as pd
-
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept import Flowcept, WorkflowObject
 from flowcept.configs import MONGO_ENABLED
-from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 
 
@@ -78,7 +75,7 @@ class DBAPITest(unittest.TestCase):
     def test_dump(self):
         wf_id = str(uuid4())
 
-        c0 = Flowcept.db._dao.count_tasks()
+        c0 = Flowcept.db._dao().count_tasks()
 
         for i in range(10):
             t = TaskObject()
@@ -93,7 +90,7 @@ class DBAPITest(unittest.TestCase):
         assert Flowcept.db.dump_to_file(filter=_filter, should_zip=True)
         assert Flowcept.db.dump_to_file(filter=_filter, output_file="dump_test.json")
 
-        Flowcept.db._dao.delete_tasks_with_filter(_filter)
-        c1 = Flowcept.db._dao.count_tasks()
+        Flowcept.db._dao().delete_tasks_with_filter(_filter)
+        c1 = Flowcept.db._dao().count_tasks()
         assert c0 == c1
 
