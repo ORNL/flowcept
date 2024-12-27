@@ -1,7 +1,7 @@
 """Tensorboard interceptor module."""
 
 import os
-import time
+from time import sleep
 
 from tbparse import SummaryReader
 from watchdog.observers.polling import PollingObserver
@@ -43,7 +43,7 @@ class TensorboardInterceptor(BaseInterceptor):
         self.logger.debug("New tensorboard directory event!")
         # TODO: now we're waiting for the file to be completely written.
         # Is there a better way to inform when the file writing is finished?
-        time.sleep(self.settings.watch_interval_sec)
+        sleep(self.settings.watch_interval_sec)
 
         reader = SummaryReader(self.settings.file_path)
         for child_event_file in reader.children:
@@ -116,7 +116,7 @@ class TensorboardInterceptor(BaseInterceptor):
                 f"\tI will sleep for {self.settings.watch_interval_sec} sec."
                 f" to see if it appears."
             )
-            time.sleep(self.settings.watch_interval_sec)
+            sleep(self.settings.watch_interval_sec)
 
         self._observer = PollingObserver()
         self._observer.schedule(event_handler, self.settings.file_path, recursive=True)

@@ -155,7 +155,7 @@ class Flowcept(object):
         if not self.is_started or not self.enabled:
             self.logger.warning("Flowcept is already stopped!")
             return
-        sleep_time = 0
+        sleep_time = 0.001
         self.logger.info(
             f"Received the stop signal. We're going to wait {sleep_time} secs."
             f" before gracefully stopping..."

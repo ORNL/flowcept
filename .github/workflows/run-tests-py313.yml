@@ -37,13 +37,8 @@ jobs:
 
       - name: Install dependencies that work on py3.13
         run: |
-           # Extract dependencies from the pyproject.toml (excluding 'lmdb')
-          dependencies=$(grep -A 10 "\[project\]" pyproject.toml | \
-            grep -oP '"([^"]+)"' | \
-            grep -v 'lmdb')  # Excluding lmdb
-          echo $dependencies
           pip install . --no-deps
-          pip install $dependencies
+          pip install flask-restful msgpack omegaconf pandas psutil py-cpuinfo redis requests pyarrow
           pip install .[mongo,analytics,dask,docs,kafka,mlflow,dev]
 
       - name: List installed packages
