@@ -29,7 +29,6 @@ activity_id:
 subtype:
   parent_forward:
     model: task['activity_id']
-    #first_epoch: "'is_first_epoch' in task['custom_metadata']"
     extend: parent['custom_characterization']
   child_forward:
     module: task['activity_id']

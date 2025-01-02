@@ -12,6 +12,7 @@ import pandas as pd
 
 from flowcept import WorkflowObject
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import PERF_LOG, LMDB_SETTINGS
 from flowcept.flowceptor.consumers.consumer_utils import curate_dict_task_messages
 
@@ -22,17 +23,11 @@ class LMDBDAO(DocumentDBDAO):
     Provides methods for storing and retrieving task and workflow data.
     """
 
-    # def __new__(cls, *args, **kwargs) -> "LMDBDAO":
-    #     """Singleton creator for LMDBDAO."""
-    #     # Check if an instance already exists
-    #     if DocumentDBDAO._instance is None:
-    #         DocumentDBDAO._instance = super(LMDBDAO, cls).__new__(cls)
-    #     return DocumentDBDAO._instance
-
     def __init__(self):
-        # if not hasattr(self, "_initialized"):
+        # TODO: if we are inheriting from DocumentDBDAO, shouldn't we call super() here?
         self._initialized = True
         self._open()
+        self.logger = FlowceptLogger()
 
     def _open(self):
         """Open LMDB environment and databases."""

@@ -8,7 +8,7 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until, get_current_config_values
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
-from src.flowcept.configs import INSERTION_BUFFER_TIME
+from src.flowcept.configs import INSERTION_BUFFER_TIME, MONGO_ENABLED
 
 
 @flowcept_task
@@ -44,7 +44,6 @@ class FlowceptAPITest(unittest.TestCase):
             o1 = sum_one(n)
             o2 = mult_two(o1)
             print(o2)
-            sleep(5)
 
         assert assert_by_querying_tasks_until(
             {"workflow_id": Flowcept.current_workflow_id},
@@ -98,7 +97,6 @@ class FlowceptAPITest(unittest.TestCase):
             o1 = sum_one(n)
             o2 = mult_two(o1)
             print(o2)
-            sleep(10)
 
     def test_simple_workflow_no_consumers(self):
         with Flowcept(workflow_name="test_workflow3", start_persistence=False):
@@ -106,8 +104,8 @@ class FlowceptAPITest(unittest.TestCase):
             o1 = sum_one(n)
             o2 = mult_two(o1)
             print(o2)
-            sleep(10)
 
+    @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_runtime_query(self):
         N = 5
         with Flowcept(workflow_name="test_workflow"):
