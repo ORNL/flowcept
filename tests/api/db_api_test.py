@@ -71,6 +71,37 @@ class DBAPITest(unittest.TestCase):
         loaded_obj = pickle.loads(obj_docs[0]["data"])
         assert type(loaded_obj) == OurObject
 
+    @unittest.skip("Test only for dev.")
+    def test_tasks_recursive(self):
+        mapping = {
+            "activity_id": {
+                "epochs_loop_iteration": [
+                    "{'epoch': task['used']['epoch']}",
+                    "{'model_train': ancestors[task['task_id']][-1]['task_id']}"
+                ],
+                "train_batch_iteration": [
+                    "{'train_batch': task['used']['i'], 'train_data_path': ancestors[task['task_id']][0]['used']['train_data_path'], 'train_batch_size': ancestors[task['task_id']][0]['used']['batch_size'] }",
+                    "{'epoch': ancestors[task['task_id']][-1]['used']['epoch']}"
+                ],
+                "eval_batch_iteration": [
+                    "{'eval_batch': task['used']['i'], 'eval_data_path': ancestors[task['task_id']][0]['used']['val_data_path'], 'train_batch_size': ancestors[task['task_id']][0]['used']['eval_batch_size'] }",
+                    "{'epoch': ancestors[task['task_id']][-1]['used']['epoch']}"
+                ],
+            },
+            "subtype": {
+                "parent_forward": [
+                    "{'model': task['activity_id']}",
+                    "ancestors[task['task_id']][-1]['custom_provenance_id']"
+                ],
+                "child_forward": [
+                    "{'module': task['activity_id']}",
+                    "ancestors[task['task_id']][-1]['custom_provenance_id']"
+                ]
+            }
+        }
+        d = Flowcept.db._dao().get_tasks_recursive('e9a3b567-cb56-4884-ba14-f137c0260191', mapping=mapping)
+
+
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_dump(self):
         wf_id = str(uuid4())

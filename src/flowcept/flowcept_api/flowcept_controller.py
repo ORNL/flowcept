@@ -30,6 +30,7 @@ class Flowcept(object):
         """Property to expose the DBAPI. This also assures the DBAPI init will be called once."""
         if cls._db is None:
             from flowcept.flowcept_api.db_api import DBAPI
+
             cls._db = DBAPI()
         return cls._db
 
@@ -155,7 +156,7 @@ class Flowcept(object):
         if not self.is_started or not self.enabled:
             self.logger.warning("Flowcept is already stopped!")
             return
-        sleep_time = 0.001
+        sleep_time = 0.005  # TODO: can we remove it?
         self.logger.info(
             f"Received the stop signal. We're going to wait {sleep_time} secs."
             f" before gracefully stopping..."

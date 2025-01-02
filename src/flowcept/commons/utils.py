@@ -253,6 +253,7 @@ class GenericJSONDecoder(json.JSONDecoder):
 
 class ClassProperty:
     """Wrapper to simulate property of class methods, removed in py313."""
+
     def __init__(self, fget):
         self.fget = fget
 

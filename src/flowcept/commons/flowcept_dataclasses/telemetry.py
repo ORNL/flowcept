@@ -24,6 +24,7 @@ class Telemetry:
 
         times_avg: Dict[str, float] = None
         percent_all: float = None
+        frequency: int = 0
 
         times_per_cpu: List[Dict[str, float]] = None
         percent_per_cpu: List[float] = None

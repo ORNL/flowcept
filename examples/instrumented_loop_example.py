@@ -15,4 +15,4 @@ with Flowcept():
         loop.end_iter({"item": item, "loss": loss})
 
 docs = Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id})
-assert len(docs) == iterations + 1  # The whole loop itself is a task
+assert len(docs) == iterations

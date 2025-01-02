@@ -37,6 +37,7 @@ class TaskObject:
     workflow_id: AnyStr = None
     parent_task_id: AnyStr = None
     activity_id: AnyStr = None
+    group_id: AnyStr = None # Utilized especially for loop iteration tasks, to group them.
     status: Status = None
     stdout: Union[AnyStr, Dict] = None
     stderr: Union[AnyStr, Dict] = None

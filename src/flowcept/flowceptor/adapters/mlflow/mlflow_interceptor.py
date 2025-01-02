@@ -1,7 +1,7 @@
 """Interceptor module."""
 
 import os
-from time import time, sleep
+from time import sleep
 from threading import Thread
 
 from watchdog.observers.polling import PollingObserver

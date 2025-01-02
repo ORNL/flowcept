@@ -93,7 +93,7 @@ class DBAPI(object):
             return None
         return results
 
-    def get_tasks_recursive(self, workflow_id, max_depth=999):
+    def get_tasks_recursive(self, workflow_id, max_depth=999, mapping=None):
         """
         Retrieve all tasks recursively for a given workflow ID.
 
@@ -125,12 +125,14 @@ class DBAPI(object):
         This method delegates the operation to the DAO implementation.
         """
         try:
-            return DBAPI._dao().get_tasks_recursive(workflow_id, max_depth)
+            return DBAPI._dao().get_tasks_recursive(workflow_id, max_depth, mapping)
         except Exception as e:
             self.logger.exception(e)
             raise e
 
-    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet", max_depth=999):
+    def dump_tasks_to_file_recursive(
+        self, workflow_id, output_file="tasks.parquet", max_depth=999, mapping=None
+    ):
         """
         Dump tasks recursively for a given workflow ID to a file.
 
@@ -161,7 +163,9 @@ class DBAPI(object):
         The method delegates the task retrieval and saving operation to the DAO implementation.
         """
         try:
-            return DBAPI._dao().dump_tasks_to_file_recursive(workflow_id, output_file, max_depth)
+            return DBAPI._dao().dump_tasks_to_file_recursive(
+                workflow_id, output_file, max_depth, mapping
+            )
         except Exception as e:
             self.logger.exception(e)
             raise e

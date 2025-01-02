@@ -1,22 +1,17 @@
 # The code in this file is based on:
 # https://blog.paperspace.com/build-a-language-model-using-pytorch/
 import math
-import os
 from time import time
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.nn import Embedding, Linear, TransformerEncoder, TransformerEncoderLayer, Dropout
-from torch.utils.data import Subset
-from torchtext.data.utils import get_tokenizer
-from torchtext.vocab import build_vocab_from_iterator
-from datasets import load_dataset
 
-from examples.llm_complex.llm_dataprep import get_wiki_text_dataset
-from flowcept import Flowcept, FlowceptLoop, flowcept_torch
+from llm_dataprep import get_wiki_text_dataset
+from flowcept import Flowcept, flowcept_torch
 from flowcept.configs import N_GPUS
-from flowcept.instrumentation.flowcept_torch import FlowceptEpochLoop
+from flowcept.instrumentation.flowcept_torch import FlowceptEpochLoop, FlowceptBatchLoop
 
 
 def get_batch(source, i, bptt=35):
@@ -105,56 +100,64 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[: x.size(0), :]
         return self.dropout(x)
 
-def train_epoch(ntokens, model, train_data, criterion, optimizer, bptt=35):
+def train_epoch(ntokens, model, train_data, criterion, optimizer, bptt=35, epochs_loop=None):
     model.train()  # Set the model to training mode
     total_loss = 0.0  # Initialize the total loss to 0
 
     # Iterate through the mini-batches of data
-    for batch, i in enumerate(range(0, train_data.size(0) - 1, bptt)):
-        print(f"train, batch {batch}")
+    loop = FlowceptBatchLoop(items=enumerate(range(0, train_data.size(0) - 1, bptt)),
+                             epochs_loop=epochs_loop,
+                             items_length=math.ceil((train_data.size(0) - 1) / bptt))
+    for batch, i in loop:
         data, targets = get_batch(
             train_data, i, bptt
         )  # Get the input data and targets for the current mini-batch
         optimizer.zero_grad()  # Reset the gradients to zero before the next backward pass
-        output = model(data, batch=[batch, i])  # Forward pass: compute the output of the model given the input data
+        output = model(data)  # Forward pass: compute the output of the model given the input data
         loss = criterion(
             output.view(-1, ntokens), targets
         )  # Calculate the loss between the model output and the targets
         loss.backward()  # Backward pass: compute the gradients of the loss with respect to the model parameters
         optimizer.step()  # Update the model parameters using the computed gradients
-        total_loss += loss.item()  # Accumulate the total loss
-    print("finished func train_epoch")
+        loss_item = loss.item()
+        total_loss += loss_item  # Accumulate the total loss
+        loop.end_iter({"loss": loss_item})
     return total_loss / (batch + 1)  # Return the average loss per mini-batch
 
 
-def evaluate(ntokens, model, data_source, criterion, bptt=35):
+def evaluate(ntokens, model, data_source, criterion, bptt=35, epochs_loop=None):
     model.eval()  # Set the model to evaluation mode
     total_loss = 0.0  # Initialize the total loss to 0
 
     # Use torch.no_grad() to disable gradient calculation during evaluation
     with torch.no_grad():
+        loop = FlowceptBatchLoop(items=enumerate(range(0, data_source.size(0) - 1, bptt)),
+                                 epochs_loop=epochs_loop,
+                                 step="eval",
+                                 items_length=math.ceil((data_source.size(0) - 1) / bptt))
         # Iterate through the mini-batches of data
-        for batch, i in enumerate(range(0, data_source.size(0) - 1, bptt)):
-            print("eval batch", batch)
+        for batch, i in loop:
             data, targets = get_batch(
                 data_source, i, bptt
             )  # Get the input data and targets for the current mini-batch
             output = model(
-                data, batch=[batch, i]
+                data
             )  # Forward pass: compute the output of the model given the input data
             loss = criterion(
                 output.view(-1, ntokens), targets
             )  # Calculate the loss between the model output and the targets
-            total_loss += loss.item()  # Accumulate the total loss
+            loss_item = loss.item()
+            total_loss += loss_item  # Accumulate the total loss
+            loop.end_iter({"loss": loss_item})
 
     return total_loss / (i + 1)  # Return the average loss per mini-batch
 
 
-
-
 def model_train(
     ntokens,
-    input_data_dir,
+    train_data_path,
+    val_data_path,
+    test_data_path,
     batch_size,
     eval_batch_size,
     epochs,
@@ -178,7 +181,7 @@ def model_train(
         main_task_id = None
     torch.manual_seed(0)  # TODO: parametrize and save it
 
-    train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load, device = get_wiki_text_dataset(input_data_dir, batch_size, eval_batch_size)
+    train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load, device = get_wiki_text_dataset(train_data_path, val_data_path, test_data_path)
 
     model = TransformerModel(
         ntokens,
@@ -190,24 +193,21 @@ def model_train(
         pos_encoding_max_len,
         parent_workflow_id=workflow_id,
         campaign_id=campaign_id,
-        get_profile=True,
-        custom_metadata={"model_step": "train", "cuda_visible": N_GPUS},
+        get_profile=True
     ).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     best_val_loss = float("inf")  # Initialize the best validation loss to infinity
     # Iterate through the epochs
+    epochs_loop = FlowceptEpochLoop(range(1, epochs + 1), parent_task_id=main_task_id, model=model)
     t0 = time()
-
-    epochs_loop = FlowceptEpochLoop(range(1, epochs + 1), model=model, parent_task_id=main_task_id)
     for epoch in epochs_loop:
         print(f"Starting training for epoch {epoch}/{epochs}")
         # Train the model on the training data and calculate the training loss
-        #model.new_epoch(epochs_loop.get_current_iteration_id())
-        train_loss = train_epoch(ntokens, model, train_data, criterion, optimizer, batch_size)
+        train_loss = train_epoch(ntokens, model, train_data, criterion, optimizer, batch_size, epochs_loop=epochs_loop)
 
         # Evaluate the model on the validation data and calculate the validation loss
-        val_loss = evaluate(ntokens, model, val_data, criterion, eval_batch_size)
+        val_loss = evaluate(ntokens, model, val_data, criterion, eval_batch_size, epochs_loop=epochs_loop)
 
         # Print the training and validation losses for the current epoch
         print(f"Epoch: {epoch}, Train loss: {train_loss:.2f}, Validation loss: {val_loss:.2f}") # TODO revisit loop because var epoch here is none?
@@ -217,15 +217,15 @@ def model_train(
             best_val_loss = val_loss
             best_obj_id = Flowcept.db.save_torch_model(
                 model,
-                task_id=epochs_loop._current_iteration_task.get("task_id", None),
+                task_id=epochs_loop.get_current_iteration_id(),
                 workflow_id=workflow_id,
                 custom_metadata={"best_val_loss": best_val_loss}
             )
 
         epochs_loop.end_iter({"train_loss": train_loss, "val_loss": val_loss})
 
-    print("Finished training")
     t1 = time()
+    print("Finished training")
 
     # Load the best model's state
     best_m = TransformerModel(
@@ -237,10 +237,6 @@ def model_train(
         dropout,
         parent_workflow_id=workflow_id,
         campaign_id=campaign_id,
-        custom_metadata={
-            "model_step": "test",
-            "cuda_visible": N_GPUS,
-        },
         parent_task_id=main_task_id,
         capture_enabled=False
     ).to(device)
@@ -256,7 +252,4 @@ def model_train(
         "val_loss": val_loss,
         "training_time": t1 - t0,
         "best_obj_id": best_obj_id,
-        "batchfied_train_data_shape": list(train_data.shape),
-        "batchfied_test_data_shape": list(test_data.shape),
-        "batchfied_val_data_shape": list(val_data.shape),
     }

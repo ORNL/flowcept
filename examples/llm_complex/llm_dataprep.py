@@ -25,7 +25,7 @@ def yield_tokens(tokenizer, data_iter):
 
 
 # Define a function to process the raw text and convert it to tensors
-def data_process(tokenizer, vocab, raw_text_iter):
+def data_process_old(tokenizer, vocab, raw_text_iter):
     i = 0
     data = []
     for item in raw_text_iter:
@@ -40,17 +40,26 @@ def data_process(tokenizer, vocab, raw_text_iter):
     return tensor_return
 
 
-def get_dataset_ref(campaign_id, train_data, val_data, test_data):
-    dataset_ref = f"{campaign_id}_train_shape_{list(train_data.shape)}_val_shape_{list(val_data.shape)}_test_shape_{list(test_data.shape)}"
-    return dataset_ref
+def data_process(tokenizer, vocab, raw_text_iter):
+    data = []
+    mapping = []  # To store the index of the raw dataset for each processed tensor
+    for idx, item in enumerate(raw_text_iter):
+        tokens = tokenizer(item["text"])
+        indices = [vocab[token] for token in tokens]
+        tensor = torch.tensor(indices, dtype=torch.long)
+        if tensor.numel() > 0:
+            data.append(tensor)
+            mapping.extend([idx] * len(tensor))  # Map each token to its raw text index
+    tensor_return = torch.cat(data)
+    return tensor_return, mapping
 
 
-def get_wiki_text_dataset(data_dir, batch_size, eval_batch_size):
+def get_wiki_text_dataset(train_data_path, val_data_path, test_data_path):
     # Load the WikiText2 dataset
     t0 = time()
-    train_data = torch.load(os.path.join(data_dir, "train_data.tensor"))
-    val_data = torch.load(os.path.join(data_dir, "val_data.tensor"))
-    test_data = torch.load(os.path.join(data_dir, "test_data.tensor"))
+    train_data = torch.load(train_data_path)
+    val_data = torch.load(val_data_path)
+    test_data = torch.load(test_data_path)
     t1 = time()
     t_disk_load = t1 - t0
 
@@ -67,15 +76,10 @@ def get_wiki_text_dataset(data_dir, batch_size, eval_batch_size):
         train_data = train_data.to(device)
         val_data = val_data.to(device)
         test_data = test_data.to(device)
-
-
         t_gpu_load = time() - t2
     except:
         raise Exception("Couldn't send data to device")
 
-    print("Train data", train_data.shape)
-    print("Validation data", val_data.shape)
-    print("Test data", test_data.shape)
     return (
         train_data,
         val_data,
@@ -85,6 +89,9 @@ def get_wiki_text_dataset(data_dir, batch_size, eval_batch_size):
         t_gpu_load,
         device
     )
+
+def get_dataset_ref(dataset):
+    return id(dataset)
 
 def save_workflow(campaign_id, used, generated):
     from flowcept import WorkflowObject, Flowcept
@@ -97,6 +104,14 @@ def save_workflow(campaign_id, used, generated):
     Flowcept.db.insert_or_update_workflow(dataset_prep_wf)
     print(dataset_prep_wf)
     return dataset_prep_wf.workflow_id
+
+
+def get_raw_batch(raw_dataset, mapping, i, batch_size):
+    start_idx = i
+    end_idx = i + batch_size
+    raw_indices = mapping[start_idx:end_idx]  # Indices of raw items in this batch
+    raw_batch = [raw_dataset[idx]["text"] for idx in set(raw_indices)]  # Unique raw items
+    return raw_batch
 
 
 def dataprep_workflow(data_dir="input_data",
@@ -138,9 +153,9 @@ def dataprep_workflow(data_dir="input_data",
     ntokens = len(vocab)
 
     # Process the train, validation, and test datasets
-    train_data = data_process(tokenizer, vocab, train_dataset)
-    val_data = data_process(tokenizer, vocab, validation_dataset)
-    test_data = data_process(tokenizer, vocab, test_dataset)
+    train_data, train_data_mapping = data_process(tokenizer, vocab, train_dataset)
+    val_data, val_data_mapping = data_process(tokenizer, vocab, validation_dataset)
+    test_data, test_data_mapping = data_process(tokenizer, vocab, test_dataset)
 
     train_data = batchify(train_data, batch_size)
     val_data = batchify(val_data, eval_batch_size)
@@ -150,13 +165,16 @@ def dataprep_workflow(data_dir="input_data",
     val_n_batches = len(list(enumerate(range(0, val_data.size(0) - 1, eval_batch_size))))
     test_n_batches = val_n_batches
 
-    train_data_path = os.path.join(data_dir, "train_data.tensor")
-    val_data_path = os.path.join(data_dir, "val_data.tensor")
-    test_data_path = os.path.join(data_dir, "test_data.tensor")
+    train_data_path = os.path.realpath(os.path.join(data_dir, "train_data.tensor"))
+    val_data_path = os.path.realpath(os.path.join(data_dir, "val_data.tensor"))
+    test_data_path = os.path.realpath(os.path.join(data_dir, "test_data.tensor"))
 
     torch.save(train_data, train_data_path)
     torch.save(val_data, val_data_path)
     torch.save(test_data, test_data_path)
+
+    val_data_mapping_path = os.path.realpath(os.path.join(data_dir, "val_data_mapping.tensor"))
+    torch.save(val_data_mapping, val_data_mapping_path)
 
     print(f"Saved files in {data_dir}. Now running some asserts.")
 
@@ -168,8 +186,6 @@ def dataprep_workflow(data_dir="input_data",
     assert torch.equal(val_data, val_data_loaded), "Validation data mismatch"
     assert torch.equal(test_data, test_data_loaded), "Test data mismatch"
 
-    dataset_ref = get_dataset_ref(campaign_id, train_data, val_data, test_data)
-
     used = {
         "train_batch_size": batch_size,
         "val_batch_size": eval_batch_size,
@@ -180,7 +196,7 @@ def dataprep_workflow(data_dir="input_data",
     }
     generated = {
         "ntokens": ntokens,
-        "dataset_ref": dataset_ref,
+        "dataset_ref": get_dataset_ref(dataset),
         "train_n_batches": train_n_batches,
         "test_n_batches": test_n_batches,
         "val_n_batches": val_n_batches,
