@@ -8,7 +8,7 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until, get_current_config_values
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
-from src.flowcept.configs import INSERTION_BUFFER_TIME, MONGO_ENABLED
+from src.flowcept.configs import INSERTION_BUFFER_TIME, MONGO_ENABLED, MQ_INSERTION_BUFFER_TIME
 
 
 @flowcept_task
@@ -111,7 +111,7 @@ class FlowceptAPITest(unittest.TestCase):
         with Flowcept(workflow_name="test_workflow"):
             for i in range(N):
                 sum_one(i)
-                sleep(2*INSERTION_BUFFER_TIME)
+                sleep(2.2*(INSERTION_BUFFER_TIME+MQ_INSERTION_BUFFER_TIME))
                 tasks = Flowcept.db.get_tasks_from_current_workflow()
                 assert len(tasks) == (i+1)
         assert len(Flowcept.db.get_tasks_from_current_workflow()) == N
