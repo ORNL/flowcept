@@ -259,7 +259,9 @@ def save_files(campaign_id, model_search_wf_id, output_dir="output_data"):
     tasks_file = f"{output_dir}/tasks_{uuid.uuid4()}.parquet"
     print(f"tasks_file = '{tasks_file}'")
 
-    with open('custom_provenance_id_mapping.yaml') as f:
+    mapping_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                'custom_provenance_id_mapping.yaml')
+    with open(mapping_path) as f:
         mapping = yaml.safe_load(f)
     Flowcept.db.dump_tasks_to_file_recursive(workflow_id=model_search_wf_id, output_file=tasks_file, mapping=mapping)
 

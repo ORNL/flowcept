@@ -154,7 +154,6 @@ def flowcept_torch(cls):
                 self.workflow_id = self._register_as_workflow()
 
         def _our_forward_parent(self, *args, **kwargs):
-            print("our parent forward")
             if self._current_epoch % self._at_every != 0:
                 return super(TorchModuleWrapper, self).forward(*args, **kwargs)
 
