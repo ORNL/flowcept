@@ -28,9 +28,10 @@ class MQDaoKafka(MQDao):
             "bootstrap.servers": f"{MQ_HOST}:{MQ_PORT}",
         }
         self._producer = Producer(self._kafka_conf)
+        self._consumer = None
 
-    def message_listener(self, message_handler: Callable):
-        """Get message listener."""
+    def subscribe(self):
+        """Subscribe to the interception channel."""
         self._kafka_conf.update(
             {
                 "group.id": "my_group",
@@ -38,12 +39,14 @@ class MQDaoKafka(MQDao):
                 "enable.auto.commit": True,
             }
         )
-        consumer = Consumer(self._kafka_conf)
-        consumer.subscribe([MQ_CHANNEL])
+        self._consumer = Consumer(self._kafka_conf)
+        self._consumer.subscribe([MQ_CHANNEL])
 
+    def message_listener(self, message_handler: Callable):
+        """Get message listener."""
         try:
             while True:
-                msg = consumer.poll(1.0)
+                msg = self._consumer.poll(1.0)
                 if msg is None:
                     continue
                 if msg.error():
@@ -59,7 +62,7 @@ class MQDaoKafka(MQDao):
         except Exception as e:
             self.logger.exception(e)
         finally:
-            consumer.close()
+            self._consumer.close()
 
     def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         """Send the message."""

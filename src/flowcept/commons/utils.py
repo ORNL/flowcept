@@ -1,6 +1,6 @@
 """Utilities."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 from time import time, sleep
 from typing import Callable
@@ -18,14 +18,14 @@ from flowcept.commons.vocabulary import Status
 
 def get_utc_now() -> float:
     """Get UTC time."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     return now.timestamp()
 
 
 def get_utc_now_str() -> str:
     """Get UTC string."""
     format_string = "%Y-%m-%dT%H:%M:%S.%f"
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     return now.strftime(format_string)
 
 
@@ -37,7 +37,7 @@ def datetime_to_str(dt: datetime) -> str:
 
 def get_utc_minutes_ago(minutes_ago=1):
     """Get UTC minutes."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     rounded = now - timedelta(
         minutes=now.minute % minutes_ago + minutes_ago,
         seconds=now.second,
@@ -157,7 +157,7 @@ class GenericJSONEncoder(json.JSONEncoder):
 
 
 def replace_non_serializable(obj):
-    """Replace it."""
+    """Replace non-serializable items in an object."""
     if isinstance(obj, (int, float, bool, str, list, tuple, dict, type(None))):
         if isinstance(obj, dict):
             return {key: replace_non_serializable(value) for key, value in obj.items()}
@@ -249,3 +249,13 @@ class GenericJSONDecoder(json.JSONDecoder):
         else:
             inst = dct
         return inst
+
+
+class ClassProperty:
+    """Wrapper to simulate property of class methods, removed in py313."""
+
+    def __init__(self, fget):
+        self.fget = fget
+
+    def __get__(self, instance, owner):
+        return self.fget(owner)

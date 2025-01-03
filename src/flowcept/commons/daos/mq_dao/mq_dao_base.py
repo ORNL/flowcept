@@ -185,6 +185,11 @@ class MQDao(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    def subscribe(self):
+        """Subscribe to the interception channel."""
+        raise NotImplementedError()
+
+    @abstractmethod
     def liveness_test(self):
         """Get livelyness of it."""
         try:

@@ -6,13 +6,14 @@ set -o pipefail
 
 # Display usage/help message
 usage() {
-  echo -e "\nUsage: $0 <examples_dir> <with_mongo>\n"
+  echo -e "\nUsage: $0 <examples_dir> <with_mongo> [tests]\n"
   echo "Arguments:"
   echo "  examples_dir   Path to the examples directory (Mandatory)"
   echo "  with_mongo     Boolean flag (true/false) indicating whether to include MongoDB support (Mandatory)"
+  echo "  tests          Optional array of test cases to run (e.g., \"test1 test2 test3\")"
   echo -e "\nExample:"
   echo "  $0 examples true"
-  echo "  $0 examples false"
+  echo "  $0 examples false \"test1 test2\""
   exit 1
 }
 
@@ -80,7 +81,16 @@ echo "Using examples directory: $EXAMPLES_DIR"
 echo "With Mongo? ${WITH_MONGO}"
 
 # Define the test cases
-tests=("instrumented_simple" "instrumented_loop" "dask" "mlflow" "tensorboard" "single_layer_perceptron" "llm_complex/llm_main")
+default_tests=("instrumented_simple" "instrumented_loop" "dask" "mlflow" "tensorboard" "single_layer_perceptron" "llm_complex/llm_main")
+
+# Use the third argument if provided, otherwise use default tests
+if [[ -n "$3" ]]; then
+  eval "tests=($3)"
+else
+  tests=("${default_tests[@]}")
+fi
+
+echo "Running the following tests: ${tests[*]}"
 
 # Iterate over the tests and run them
 for test_ in "${tests[@]}"; do

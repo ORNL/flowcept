@@ -1,7 +1,7 @@
 """Interceptor module."""
 
 import os
-import time
+from time import sleep
 from threading import Thread
 
 from watchdog.observers.polling import PollingObserver
@@ -73,6 +73,7 @@ class MLFlowInterceptor(BaseInterceptor):
 
     def stop(self) -> bool:
         """Stop it."""
+        sleep(1)
         super().stop()
         self.logger.debug("Interceptor stopping...")
         self._observer.stop()
@@ -91,7 +92,7 @@ class MLFlowInterceptor(BaseInterceptor):
                 f"\tI will sleep for {self.settings.watch_interval_sec} sec."
                 f" to see if it appears."
             )
-            time.sleep(self.settings.watch_interval_sec)
+            sleep(self.settings.watch_interval_sec)
 
         self._observer = PollingObserver()
         self._observer.schedule(event_handler, self.settings.file_path, recursive=True)

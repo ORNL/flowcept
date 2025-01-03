@@ -143,18 +143,20 @@ Data stored in MongoDB and LMDB are interchangeable. You can switch between them
 
 ## Performance Tuning for Performance Evaluation
 
-In the settings.yaml file, the following variables might impact interception performance:
+In the settings.yaml file, many variables may impact interception efficiency. 
+For fastest performance, configure the settings.yaml:
 
-```yaml
-main_redis:
-  buffer_size: 50
-  insertion_buffer_time_secs: 5
-
-plugin:
-  enrich_messages: false
+```
+project:
+  replace_non_json_serializable: false # Here it will assume that all captured data are JSON serializable
+  db_flush_mode: offline               # This disables the feature of runtime analysis in the database.
+mq:
+  chunk_size: -1                       # This disables chunking the messages to be sent to the MQ. Use this only if the main memory of the compute notes is large enough.
 ```
 
-And other variables depending on the Plugin. For instance, in Dask, timestamp creation by workers add interception overhead. As we evolve the software, other variables that impact overhead appear and we might not stated them in this README file yet. If you are doing extensive performance evaluation experiments using this software, please reach out to us (e.g., create an issue in the repository) for hints on how to reduce the overhead of our software.
+And use the most lightweight capture option available for the adapter or instrumentation.
+
+Other variables depending on the adapter may impact too. For instance, in Dask, timestamp creation by workers add interception overhead. As we evolve the software, other variables that impact overhead appear and we might not stated them in this README file yet. If you are doing extensive performance evaluation experiments using this software, please reach out to us (e.g., create an issue in the repository) for hints on how to reduce the overhead of our software.
 
 ## Install AMD GPU Lib
 

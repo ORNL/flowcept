@@ -31,8 +31,7 @@ if __name__ == "__main__":
             mlflow.log_params({"param2": 2})
             mlflow.log_metric("metric1", 10)
             run_id = run.info.run_uuid
-
-    run_data = interceptor.dao.get_run_data(run_id)
-    task = Flowcept.db.query(filter={"task_id": run.info.run_uuid})[0]
+    task = Flowcept.db.query(filter={"task_id": run_id})[0]
     assert task["status"] == "FINISHED"
-    # print(task)
+    assert "param1" in task["used"]
+    assert "metric1" in task["generated"]

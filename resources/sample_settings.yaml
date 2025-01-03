@@ -26,12 +26,12 @@ instrumentation:
   enabled: true
   torch:
     what: parent_and_children # parent_only, parent_and_children, ~
-    children_mode: lightweight   # lightweight, tensor_inspection, telemetry, telemetry_and_tensor_inspection
-    save_models: True
+    children_mode: telemetry_and_tensor_inspection   # lightweight, tensor_inspection, telemetry, telemetry_and_tensor_inspection
+    capture_at_every: 1 #epochs; please use a value that is multiple of #epochs
+    # enable to set between train, evaluate, and test
 
 experiment:
   user: root
-  campaign_id: super_campaign
 
 mq:
   type: redis  # or kafka; Please adjust the port (kafka's default is 9092; redis is 6379)
@@ -41,7 +41,7 @@ mq:
   channel: interception
   buffer_size: 50
   insertion_buffer_time_secs: 5
-  chunk_size: 10  # use can use 0 or -1 to disable this. Or simply omit this from the config file.
+  chunk_size: -1  # use 0 or -1 to disable this. Or simply omit this from the config file.
 
 kv_db:
   host: localhost

@@ -12,7 +12,6 @@ from flowcept.configs import (
     PUBLIC_IP,
     LOGIN_NAME,
     NODE_NAME,
-    CAMPAIGN_ID,
 )
 
 
@@ -20,6 +19,7 @@ class TaskObject:
     """Task class."""
 
     type = "task"
+    subtype: AnyStr = None
     task_id: AnyStr = None  # Any way to identify a task
     utc_timestamp: float = None
     adapter_id: AnyStr = None
@@ -37,6 +37,7 @@ class TaskObject:
     workflow_id: AnyStr = None
     parent_task_id: AnyStr = None
     activity_id: AnyStr = None
+    group_id: AnyStr = None  # Utilized especially for loop iteration tasks, to group them.
     status: Status = None
     stdout: Union[AnyStr, Dict] = None
     stderr: Union[AnyStr, Dict] = None
@@ -53,7 +54,6 @@ class TaskObject:
     dependents: List = None
 
     _DEFAULT_ENRICH_VALUES = {
-        "campaign_id": CAMPAIGN_ID,
         "node_name": NODE_NAME,
         "login_name": LOGIN_NAME,
         "public_ip": PUBLIC_IP,
@@ -102,9 +102,6 @@ class TaskObject:
 
         if self.utc_timestamp is None:
             self.utc_timestamp = flowcept.commons.utils.get_utc_now()
-
-        if self.campaign_id is None:
-            self.campaign_id = CAMPAIGN_ID
 
         if self.node_name is None and NODE_NAME is not None:
             self.node_name = NODE_NAME
