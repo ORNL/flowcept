@@ -1,17 +1,18 @@
 """Document Inserter module."""
 
-from time import time, sleep
 from threading import Thread, Event, Lock
+from time import time, sleep
 from typing import Dict
 from uuid import uuid4
 
 from flowcept.commons.autoflush_buffer import AutoflushBuffer
-
+from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
+from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import GenericJSONDecoder
-from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.configs import (
     INSERTION_BUFFER_TIME,
     MAX_BUFFER_SIZE,
@@ -23,9 +24,6 @@ from flowcept.configs import (
     MONGO_ENABLED,
     LMDB_ENABLED,
 )
-from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-
 from flowcept.flowceptor.consumers.consumer_utils import (
     remove_empty_fields_from_dict,
 )
@@ -221,11 +219,11 @@ class DocumentInserter:
     def stop(self, bundle_exec_id=None):
         """Stop it."""
         if self.check_safe_stops:
-            max_trials = 60
+            max_trials = 240
             trial = 0
             while not self._mq_dao.all_time_based_threads_ended(bundle_exec_id):
                 trial += 1
-                sleep_time = 3
+                sleep_time = 0.01
                 self.logger.info(
                     f"Doc Inserter {id(self)}: It's still not safe to stop DocInserter. "
                     f"Checking again in {sleep_time} secs. Trial={trial}."
