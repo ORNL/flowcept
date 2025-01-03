@@ -24,12 +24,14 @@ class MQDaoRedis(MQDao):
         self._consumer = None
 
     def subscribe(self):
+        """
+        Subscribe to interception channel.
+        """
         self._consumer = self._kv_conn.pubsub()
         self._consumer.psubscribe(MQ_CHANNEL)
 
     def message_listener(self, message_handler: Callable):
         """Get message listener."""
-
         for message in self._consumer.listen():
             self.logger.debug("Received a message!")
             if message["type"] in MQDaoRedis.MESSAGE_TYPES_IGNORE:

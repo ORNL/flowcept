@@ -186,7 +186,7 @@ class MQDao(ABC):
 
     @abstractmethod
     def subscribe(self):
-        """Subscribe to the interception channel"""
+        """Subscribe to the interception channel."""
         raise NotImplementedError()
 
     @abstractmethod
