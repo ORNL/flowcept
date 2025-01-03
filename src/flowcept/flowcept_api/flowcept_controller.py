@@ -1,34 +1,32 @@
 """Controller module."""
 
 from typing import List, Union
-from time import sleep
 from uuid import uuid4
 
+from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
-
-from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.configs import MQ_INSTANCES, INSTRUMENTATION_ENABLED, MONGO_ENABLED
-from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
-
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.commons.utils import ClassProperty
+from flowcept.configs import MQ_INSTANCES, INSTRUMENTATION_ENABLED, MONGO_ENABLED
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
+from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 
 class Flowcept(object):
     """Flowcept Controller class."""
 
-    _db: DBAPI = None
+    _db = None
     current_workflow_id = None
     campaign_id = None
 
-    @classmethod
-    @property
-    def db(cls) -> DBAPI:
+    @ClassProperty
+    def db(cls):
         """Property to expose the DBAPI. This also assures the DBAPI init will be called once."""
         if cls._db is None:
+            from flowcept.flowcept_api.db_api import DBAPI
+
             cls._db = DBAPI()
         return cls._db
 
@@ -96,6 +94,17 @@ class Flowcept(object):
             self.logger.warning("DB inserter may be already started or instrumentation is not set")
             return self
 
+        if self._enable_persistence:
+            self.logger.debug("Flowcept persistence starting...")
+            if MQ_INSTANCES is not None and len(MQ_INSTANCES):
+                for mq_host_port in MQ_INSTANCES:
+                    split = mq_host_port.split(":")
+                    mq_host = split[0]
+                    mq_port = int(split[1])
+                    self._init_persistence(mq_host, mq_port)
+            else:
+                self._init_persistence()
+
         if self._interceptors and len(self._interceptors):
             for interceptor in self._interceptors:
                 # TODO: :base-interceptor-refactor: revise
@@ -122,17 +131,6 @@ class Flowcept(object):
                 else:
                     Flowcept.current_workflow_id = None
 
-        if self._enable_persistence:
-            self.logger.debug("Flowcept persistence starting...")
-            if MQ_INSTANCES is not None and len(MQ_INSTANCES):
-                for mq_host_port in MQ_INSTANCES:
-                    split = mq_host_port.split(":")
-                    mq_host = split[0]
-                    mq_port = int(split[1])
-                    self._init_persistence(mq_host, mq_port)
-            else:
-                self._init_persistence()
-
         self.logger.debug("Ok, we're consuming messages to persist!")
         self.is_started = True
         return self
@@ -152,14 +150,8 @@ class Flowcept(object):
     def stop(self):
         """Stop it."""
         if not self.is_started or not self.enabled:
-            self.logger.warning("Persistence is already stopped!")
+            self.logger.warning("Flowcept is already stopped!")
             return
-        sleep_time = 1
-        self.logger.info(
-            f"Received the stop signal. We're going to wait {sleep_time} secs."
-            f" before gracefully stopping..."
-        )
-        sleep(sleep_time)
         if self._interceptors and len(self._interceptors):
             for interceptor in self._interceptors:
                 # TODO: :base-interceptor-refactor: revise

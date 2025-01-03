@@ -22,23 +22,22 @@ class DBAPI(object):
         self.logger = FlowceptLogger()
 
     @classmethod
-    @property
     def _dao(cls) -> DocumentDBDAO:
         return DocumentDBDAO.get_instance(create_indices=False)
 
     def close(self):
         """Close DB resources."""
-        DBAPI._dao.close()
+        DBAPI._dao().close()
 
     def insert_or_update_task(self, task: TaskObject):
         """Insert or update task."""
-        return DBAPI._dao.insert_one_task(task.to_dict())
+        return DBAPI._dao().insert_one_task(task.to_dict())
 
     def insert_or_update_workflow(self, workflow_obj: WorkflowObject) -> WorkflowObject:
         """Insert or update workflow."""
         if workflow_obj.workflow_id is None:
             workflow_obj.workflow_id = str(uuid.uuid4())
-        ret = DBAPI._dao.insert_or_update_workflow(workflow_obj)
+        ret = DBAPI._dao().insert_or_update_workflow(workflow_obj)
         if not ret:
             self.logger.error("Sorry, couldn't update or insert workflow.")
             return None
@@ -94,7 +93,7 @@ class DBAPI(object):
             return None
         return results
 
-    def get_tasks_recursive(self, workflow_id, max_depth=999):
+    def get_tasks_recursive(self, workflow_id, max_depth=999, mapping=None):
         """
         Retrieve all tasks recursively for a given workflow ID.
 
@@ -126,12 +125,14 @@ class DBAPI(object):
         This method delegates the operation to the DAO implementation.
         """
         try:
-            return DBAPI._dao.get_tasks_recursive(workflow_id, max_depth)
+            return DBAPI._dao().get_tasks_recursive(workflow_id, max_depth, mapping)
         except Exception as e:
             self.logger.exception(e)
             raise e
 
-    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet", max_depth=999):
+    def dump_tasks_to_file_recursive(
+        self, workflow_id, output_file="tasks.parquet", max_depth=999, mapping=None
+    ):
         """
         Dump tasks recursively for a given workflow ID to a file.
 
@@ -162,7 +163,9 @@ class DBAPI(object):
         The method delegates the task retrieval and saving operation to the DAO implementation.
         """
         try:
-            return DBAPI._dao.dump_tasks_to_file_recursive(workflow_id, output_file, max_depth)
+            return DBAPI._dao().dump_tasks_to_file_recursive(
+                workflow_id, output_file, max_depth, mapping
+            )
         except Exception as e:
             self.logger.exception(e)
             raise e
@@ -182,7 +185,7 @@ class DBAPI(object):
             )
             return False
         try:
-            DBAPI._dao.dump_to_file(
+            DBAPI._dao().dump_to_file(
                 collection,
                 filter,
                 output_file,
@@ -206,7 +209,7 @@ class DBAPI(object):
         pickle=False,
     ):
         """Save the object."""
-        return DBAPI._dao.save_object(
+        return DBAPI._dao().save_object(
             object,
             object_id,
             task_id,
@@ -219,7 +222,7 @@ class DBAPI(object):
 
     def to_df(self, collection="tasks", filter=None):
         """Return a dataframe given the filter."""
-        return DBAPI._dao.to_df(collection, filter)
+        return DBAPI._dao().to_df(collection, filter)
 
     def query(
         self,
@@ -232,7 +235,7 @@ class DBAPI(object):
         collection="tasks",
     ):
         """Query it."""
-        return DBAPI._dao.query(
+        return DBAPI._dao().query(
             filter, projection, limit, sort, aggregation, remove_json_unserializables, collection
         )
 
@@ -294,7 +297,7 @@ class DBAPI(object):
             binary_data = doc["data"]
         else:
             file_id = doc["grid_fs_file_id"]
-            binary_data = DBAPI._dao.get_file_data(file_id)
+            binary_data = DBAPI._dao().get_file_data(file_id)
 
         buffer = io.BytesIO(binary_data)
         state_dict = torch.load(buffer, weights_only=True)

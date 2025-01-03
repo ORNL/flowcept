@@ -557,7 +557,7 @@ class MongoDBDAO(DocumentDBDAO):
         self,
         filter=None,
         projection=None,
-        limit=None,
+        limit=0,
         sort=None,
         aggregation=None,
         remove_json_unserializables=None,
@@ -702,7 +702,7 @@ class MongoDBDAO(DocumentDBDAO):
                 _projection[proj_field] = 1
 
         if remove_json_unserializables:
-            _projection.update({"_id": 0, "timestamp": 0})
+            _projection.update({"_id": 0})  # Add here more fields that are non serializable
         try:
             rs = self._wfs_collection.find(
                 filter=filter,
@@ -732,26 +732,31 @@ class MongoDBDAO(DocumentDBDAO):
             setattr(self, "_initialized", False)
             self._client.close()
 
-    def get_tasks_recursive(self, workflow_id, max_depth=999):
+    def get_tasks_recursive(self, workflow_id, max_depth=999, mapping=None):
         """Get_tasks_recursive in MongoDB."""
         try:
             result = []
             parent_tasks = self._tasks_collection.find(
-                {"workflow_id": workflow_id}, projection={"_id": 0}
+                {"workflow_id": workflow_id, "parent_task_id": None}, projection={"_id": 0}
             )
             for parent_task in parent_tasks:
+                if "finished" in parent_task and parent_task["status"] != Status.FINISHED.value:
+                    parent_task["status"] = Status.FINISHED.value
                 result.append(parent_task)
-                self._get_children_tasks_iterative(parent_task["task_id"], result)
+                self._get_children_tasks_iterative(parent_task, result, max_depth, mapping)
             return result
         except Exception as e:
             raise Exception(e)
 
-    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet", max_depth=999):
+    def dump_tasks_to_file_recursive(
+        self, workflow_id, output_file="tasks.parquet", max_depth=999, mapping=None
+    ):
         """Dump_tasks_to_file_recursive in MongoDB."""
         try:
-            tasks = self.get_tasks_recursive(workflow_id)
-
+            tasks = self.get_tasks_recursive(workflow_id, max_depth=max_depth, mapping=mapping)
             chunk_size = 100_000
+            dict_fields = TaskObject.get_dict_field_names()
+            dict_fields.extend(["ancestor_ids", "custom_characterization"])
             output_dir = "temp_chunks"
             os.makedirs(output_dir, exist_ok=True)
             # Write chunks to temporary Parquet files
@@ -761,6 +766,9 @@ class MongoDBDAO(DocumentDBDAO):
                 chunk.append(record)
                 if (idx + 1) % chunk_size == 0:
                     df = pd.DataFrame(chunk)
+                    for field in dict_fields:
+                        if field in df.columns:
+                            df[field] = df[field].apply(lambda x: json.dumps(x))
                     table = pa.Table.from_pandas(df)
                     pq.write_table(table, f"{output_dir}/chunk_{file_count}.parquet")
                     file_count += 1
@@ -769,6 +777,9 @@ class MongoDBDAO(DocumentDBDAO):
             # Write remaining rows
             if chunk:
                 df = pd.DataFrame(chunk)
+                for field in dict_fields:
+                    if field in df.columns:
+                        df[field] = df[field].apply(lambda x: json.dumps(x))
                 table = pa.Table.from_pandas(df)
                 pq.write_table(table, f"{output_dir}/chunk_{file_count}.parquet")
 
@@ -787,23 +798,95 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             raise e
 
-    def _get_children_tasks_iterative(self, parent_task_id, result, max_depth=999):
-        stack = [parent_task_id]  # Use a stack to manage tasks to process
-        i = 0
-        while stack and i < max_depth:
-            # Pop the next parent task id
-            current_parent_id = stack.pop()
+    def _resolve_mapping(self, task, mapping, ancestors):
+        def do_eval(x, task, ancestors):
+            for word in ["task", "ancestors"]:
+                if word in x:
+                    return eval(x)
+            return x
 
-            # Query for tasks with the current parent_task_id
-            tasks = list(
-                self._tasks_collection.find(
-                    {"parent_task_id": current_parent_id}, projection={"_id": 0}
-                )
+        custom_characterization = {}
+        for mapping_type in {"activity_id", "subtype"}:
+            if task[mapping_type] in mapping[mapping_type]:
+                rules = mapping[mapping_type].get(task[mapping_type])
+                rules_str = str(rules)
+                if "grandparent" in rules_str:
+                    rules_str = rules_str.replace("grandparent", "ancestors[task['task_id']][-2]")
+                if "parent" in rules_str:
+                    rules_str = rules_str.replace("parent", "ancestors[task['task_id']][-1]")
+                if "primogenitor" in rules_str:
+                    rules_str = rules_str.replace("primogenitor", "ancestors[task['task_id']][0]")
+                rules = eval(rules_str)
+                for k, v in rules.items():
+                    k = do_eval(k, task, ancestors)
+                    v = do_eval(v, task, ancestors)
+                    if k == "extend":
+                        if isinstance(v, list):
+                            for _ in v:
+                                custom_characterization.update(_)
+                        elif isinstance(v, dict):
+                            custom_characterization.update(v)
+                    elif k == "query":
+                        query = v
+                        new_filter = {}
+                        for fk, fv in query["filter"].items():
+                            new_filter[fk] = do_eval(fv, task, ancestors)
+                        try:
+                            docs = self.query(
+                                filter=new_filter,
+                                collection=query.get("collection", None),
+                                projection=query.get("projection"),
+                                remove_json_unserializables=True,
+                            )
+                            if docs is not None:
+                                if len(docs) == 1:
+                                    query_result = docs[0]
+                                    for dict_field in {"used", "generated", "custom_metadata"}:
+                                        if dict_field in query_result:
+                                            dict_value = query_result.pop(dict_field)
+                                            custom_characterization.update(dict_value)
+                                    custom_characterization.update(query_result)
+                                elif len(docs) > 1:
+                                    custom_characterization["query_result"] = docs
+                        except Exception as e:
+                            self.logger.exception(e)
+                            continue
+                    else:
+                        custom_characterization[k] = v
+                task["custom_characterization"] = custom_characterization
+
+    def _get_children_tasks_iterative(self, current_parent, result, max_depth=999, mapping=None):
+        queue = []
+        tasks_ancestors = {current_parent["task_id"]: []}
+        current_parent["ancestor_ids"] = []
+        current_parent["depth"] = 0
+
+        while current_parent["depth"] < max_depth:
+            tasks = []
+            rs = self._tasks_collection.find(
+                {"parent_task_id": current_parent["task_id"]}, projection={"_id": 0}
             )
 
-            # Add these tasks to the result list
-            result.extend(tasks)
+            for task in rs:
+                if "finished" in task and task["status"] != Status.FINISHED.value:
+                    task["status"] = Status.FINISHED.value
+                tasks_ancestors[task["task_id"]] = tasks_ancestors[current_parent["task_id"]] + [
+                    current_parent
+                ]
+                task["ancestor_ids"] = current_parent["ancestor_ids"] + [
+                    {current_parent["activity_id"]: current_parent["task_id"]}
+                ]
+                task["depth"] = current_parent["depth"] + 1
+                if mapping is not None:
+                    self._resolve_mapping(task, mapping, tasks_ancestors)
+                tasks.append(task)
 
-            # Add the task ids of these tasks to the stack
-            stack.extend(task["task_id"] for task in tasks)
-            i += 1
+            if len(tasks):
+                result.extend(tasks)
+                queue = tasks + queue
+
+            if len(queue):
+                current_parent = queue[0]
+                queue = queue[1:]
+            else:
+                break

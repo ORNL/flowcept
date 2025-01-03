@@ -1,48 +1,17 @@
 # The code in this file is based on:
 # https://blog.paperspace.com/build-a-language-model-using-pytorch/
 import math
-import os
 from time import time
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.nn import Embedding, Linear, TransformerEncoder, TransformerEncoderLayer, Dropout
-from torch.utils.data import Subset
-from torchtext.data.utils import get_tokenizer
-from torchtext.vocab import build_vocab_from_iterator
-from datasets import load_dataset
 
-from examples.llm_complex.llm_dataprep import get_wiki_text_dataset
-from flowcept import Flowcept, FlowceptLoop, flowcept_torch
+from llm_dataprep import get_wiki_text_dataset
+from flowcept import Flowcept, flowcept_torch
 from flowcept.configs import N_GPUS
-
-
-# Define a function to batchify the data
-def batchify(data, bsz):
-    nbatch = data.size(0) // bsz
-    data = data.narrow(0, 0, nbatch * bsz)
-    data = data.view(bsz, -1).t().contiguous()
-    return data
-
-
-# # Define a function to yield tokens from the dataset
-# def yield_tokens(tokenizer, data_iter):
-#     for item in data_iter:
-#         if len(item["text"]):
-#             yield tokenizer(item["text"])
-#
-#
-# # Define a function to process the raw text and convert it to tensors
-# def data_process(tokenizer, vocab, raw_text_iter):
-#     data = [
-#         torch.tensor(
-#             [vocab[token] for token in tokenizer(item["text"])],
-#             dtype=torch.long,
-#         )
-#         for item in raw_text_iter
-#     ]
-#     return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
+from flowcept.instrumentation.flowcept_torch import FlowceptEpochLoop, FlowceptBatchLoop
 
 
 def get_batch(source, i, bptt=35):
@@ -50,49 +19,6 @@ def get_batch(source, i, bptt=35):
     data = source[i : i + seq_len]
     target = source[i + 1 : i + 1 + seq_len].view(-1)
     return data, target
-
-
-# def get_wiki_text(
-#     tokenizer_type="basic_english", # spacy, moses, toktok, revtok, subword
-#     subset_size=None
-# ):
-#     # Load the WikiText2 dataset
-#     dataset = load_dataset("wikitext", "wikitext-2-v1")
-#     test_dataset = dataset["test"]
-#     train_dataset = dataset["train"]
-#     validation_dataset = dataset["validation"]
-#
-#     if subset_size is not None and subset_size > 0:
-#         test_dataset = Subset(test_dataset, range(subset_size))
-#         train_dataset = Subset(train_dataset, range(subset_size))
-#         validation_dataset = Subset(validation_dataset, range(subset_size))
-#
-#     # Build the vocabulary from the training dataset
-#     tokenizer = get_tokenizer(tokenizer_type)
-#     vocab = build_vocab_from_iterator(yield_tokens(tokenizer, train_dataset))
-#     vocab.set_default_index(vocab["<unk>"])
-#     ntokens = len(vocab)
-#
-#     # Process the train, validation, and test datasets
-#     train_data = data_process(tokenizer, vocab, train_dataset)
-#     val_data = data_process(tokenizer, vocab, validation_dataset)
-#     test_data = data_process(tokenizer, vocab, test_dataset)
-#
-#     device = torch.device("cpu")
-#     if torch.cuda.is_available():
-#         device = torch.device("gpu")
-#     elif torch.backends.mps.is_available():
-#         device = torch.device("mps")
-#
-#     if device.type != 'cpu':
-#         train_data = train_data.to(device)
-#         val_data = val_data.to(device)
-#         test_data = test_data.to(device)
-#
-#     print("Train data", train_data.shape)
-#     print("Validation data", val_data.shape)
-#     print("Test data", test_data.shape)
-#     return ntokens, train_data, val_data, test_data
 
 
 @flowcept_torch
@@ -113,6 +39,8 @@ class TransformerModel(nn.Module):
         custom_metadata: dict = None,
         get_profile: bool = False,
         save_workflow: bool = True,
+        inspect_children_tensors: bool = True,
+        capture_enabled=True,
         *args,
         **kwargs
     ):
@@ -137,7 +65,7 @@ class TransformerModel(nn.Module):
         mask = mask.float().masked_fill(mask == 0, float("-inf")).masked_fill(mask == 1, float(0.0))
         return mask
 
-    def forward(self, src):
+    def forward(self, src, *args, **kwargs):
         if self.src_mask is None or self.src_mask.size(0) != len(src):
             device = src.device
             mask = self._generate_square_subsequent_mask(len(src)).to(device)
@@ -172,36 +100,43 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[: x.size(0), :]
         return self.dropout(x)
 
-def train_epoch(ntokens, model, train_data, criterion, optimizer, bptt=35):
+def train_epoch(ntokens, model, train_data, criterion, optimizer, bptt=35, epochs_loop=None):
     model.train()  # Set the model to training mode
     total_loss = 0.0  # Initialize the total loss to 0
 
     # Iterate through the mini-batches of data
-    for batch, i in enumerate(range(0, train_data.size(0) - 1, bptt)):
+    loop = FlowceptBatchLoop(items=enumerate(range(0, train_data.size(0) - 1, bptt)),
+                             epochs_loop=epochs_loop,
+                             items_length=math.ceil((train_data.size(0) - 1) / bptt))
+    for batch, i in loop:
         data, targets = get_batch(
             train_data, i, bptt
         )  # Get the input data and targets for the current mini-batch
         optimizer.zero_grad()  # Reset the gradients to zero before the next backward pass
         output = model(data)  # Forward pass: compute the output of the model given the input data
-
         loss = criterion(
             output.view(-1, ntokens), targets
         )  # Calculate the loss between the model output and the targets
         loss.backward()  # Backward pass: compute the gradients of the loss with respect to the model parameters
         optimizer.step()  # Update the model parameters using the computed gradients
-        total_loss += loss.item()  # Accumulate the total loss
-
+        loss_item = loss.item()
+        total_loss += loss_item  # Accumulate the total loss
+        loop.end_iter({"loss": loss_item})
     return total_loss / (batch + 1)  # Return the average loss per mini-batch
 
 
-def evaluate(ntokens, model, data_source, criterion, bptt=35):
+def evaluate(ntokens, model, data_source, criterion, bptt=35, epochs_loop=None):
     model.eval()  # Set the model to evaluation mode
     total_loss = 0.0  # Initialize the total loss to 0
 
     # Use torch.no_grad() to disable gradient calculation during evaluation
     with torch.no_grad():
+        loop = FlowceptBatchLoop(items=enumerate(range(0, data_source.size(0) - 1, bptt)),
+                                 epochs_loop=epochs_loop,
+                                 step="eval",
+                                 items_length=math.ceil((data_source.size(0) - 1) / bptt))
         # Iterate through the mini-batches of data
-        for i in range(0, data_source.size(0) - 1, bptt):
+        for batch, i in loop:
             data, targets = get_batch(
                 data_source, i, bptt
             )  # Get the input data and targets for the current mini-batch
@@ -211,16 +146,18 @@ def evaluate(ntokens, model, data_source, criterion, bptt=35):
             loss = criterion(
                 output.view(-1, ntokens), targets
             )  # Calculate the loss between the model output and the targets
-            total_loss += loss.item()  # Accumulate the total loss
+            loss_item = loss.item()
+            total_loss += loss_item  # Accumulate the total loss
+            loop.end_iter({"loss": loss_item})
 
     return total_loss / (i + 1)  # Return the average loss per mini-batch
 
 
-
-
 def model_train(
     ntokens,
-    input_data_dir,
+    train_data_path,
+    val_data_path,
+    test_data_path,
     batch_size,
     eval_batch_size,
     epochs,
@@ -236,6 +173,7 @@ def model_train(
     *args,
     **kwargs
 ):
+    print("Starting model_train!")
     try:
         from distributed.worker import thread_state
         main_task_id = thread_state.key if hasattr(thread_state, "key") else None
@@ -243,18 +181,7 @@ def model_train(
         main_task_id = None
     torch.manual_seed(0)  # TODO: parametrize and save it
 
-    train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load = get_wiki_text_dataset(input_data_dir)
-
-    train_data = batchify(train_data, batch_size)
-    val_data = batchify(val_data, eval_batch_size)
-    test_data = batchify(test_data, eval_batch_size)
-
-    if torch.cuda.is_available():
-        device = torch.device("gpu")
-    elif torch.backends.mps.is_available():
-        device = torch.device("mps")
-    else:
-        device = torch.device("cpu")
+    train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load, device = get_wiki_text_dataset(train_data_path, val_data_path, test_data_path)
 
     model = TransformerModel(
         ntokens,
@@ -266,24 +193,21 @@ def model_train(
         pos_encoding_max_len,
         parent_workflow_id=workflow_id,
         campaign_id=campaign_id,
-        get_profile=True,
-        custom_metadata={"model_step": "train", "cuda_visible": N_GPUS},
+        get_profile=True
     ).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     best_val_loss = float("inf")  # Initialize the best validation loss to infinity
     # Iterate through the epochs
+    epochs_loop = FlowceptEpochLoop(range(1, epochs + 1), parent_task_id=main_task_id, model=model)
     t0 = time()
-
-    epochs_loop = FlowceptLoop(range(1, epochs + 1), "epochs_loop", "epoch", parent_task_id=main_task_id)
     for epoch in epochs_loop:
         print(f"Starting training for epoch {epoch}/{epochs}")
         # Train the model on the training data and calculate the training loss
-        model.set_parent_task_id(epochs_loop.current_iteration_task.get("task_id", None))
-        train_loss = train_epoch(ntokens, model, train_data, criterion, optimizer, batch_size)
+        train_loss = train_epoch(ntokens, model, train_data, criterion, optimizer, batch_size, epochs_loop=epochs_loop)
 
         # Evaluate the model on the validation data and calculate the validation loss
-        val_loss = evaluate(ntokens, model, val_data, criterion, eval_batch_size)
+        val_loss = evaluate(ntokens, model, val_data, criterion, eval_batch_size, epochs_loop=epochs_loop)
 
         # Print the training and validation losses for the current epoch
         print(f"Epoch: {epoch}, Train loss: {train_loss:.2f}, Validation loss: {val_loss:.2f}") # TODO revisit loop because var epoch here is none?
@@ -293,15 +217,15 @@ def model_train(
             best_val_loss = val_loss
             best_obj_id = Flowcept.db.save_torch_model(
                 model,
-                task_id=epochs_loop.current_iteration_task.get("task_id", None),
+                task_id=epochs_loop.get_current_iteration_id(),
                 workflow_id=workflow_id,
                 custom_metadata={"best_val_loss": best_val_loss}
             )
 
         epochs_loop.end_iter({"train_loss": train_loss, "val_loss": val_loss})
 
-    print("Finished training")
     t1 = time()
+    print("Finished training")
 
     # Load the best model's state
     best_m = TransformerModel(
@@ -313,11 +237,8 @@ def model_train(
         dropout,
         parent_workflow_id=workflow_id,
         campaign_id=campaign_id,
-        custom_metadata={
-            "model_step": "test",
-            "cuda_visible": N_GPUS,
-        },
-        parent_task_id=main_task_id
+        parent_task_id=main_task_id,
+        capture_enabled=False
     ).to(device)
     print("Loading model")
     Flowcept.db.load_torch_model(best_m, best_obj_id)
@@ -330,5 +251,5 @@ def model_train(
         "train_loss": train_loss,
         "val_loss": val_loss,
         "training_time": t1 - t0,
-        "best_obj_id": best_obj_id
+        "best_obj_id": best_obj_id,
     }
