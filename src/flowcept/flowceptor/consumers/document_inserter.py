@@ -178,6 +178,7 @@ class DocumentInserter:
 
     def start(self) -> "DocumentInserter":
         """Start it."""
+        self._mq_dao.subscribe()
         self._main_thread = Thread(target=self._start)
         self._main_thread.start()
         return self
