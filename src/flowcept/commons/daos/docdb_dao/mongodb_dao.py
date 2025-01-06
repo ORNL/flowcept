@@ -807,7 +807,7 @@ class MongoDBDAO(DocumentDBDAO):
 
         custom_characterization = {}
         for mapping_type in {"activity_id", "subtype"}:
-            if task[mapping_type] in mapping[mapping_type]:
+            if mapping_type in task and task[mapping_type] in mapping[mapping_type]:
                 rules = mapping[mapping_type].get(task[mapping_type])
                 rules_str = str(rules)
                 if "grandparent" in rules_str:

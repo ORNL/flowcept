@@ -97,6 +97,7 @@ if __name__ == "__main__":
         result = main(**params)
         print(result)
 
+    # Querying stored data
     workflows = Flowcept.db.query({"campaign_id": Flowcept.campaign_id}, collection="workflows")
     train_wf = module_forward_wf = None
     for wf in workflows:
