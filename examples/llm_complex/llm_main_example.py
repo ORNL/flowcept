@@ -18,7 +18,7 @@ from flowcept import Flowcept
 from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskSchedulerAdapter, \
     FlowceptDaskWorkerAdapter, register_dask_workflow
 
-TORCH_CAPTURE = INSTRUMENTATION.get("torch").get("what")
+TORCH_CAPTURE = INSTRUMENTATION.get("torch")
 
 
 def _interpolate_values(start, end, step):
@@ -202,7 +202,7 @@ def run_asserts_and_exports(campaign_id):
                 for batch_iteration in batch_iterations:
                     n_tasks_expected += 1
 
-                    if "parent" in TORCH_CAPTURE:
+                    if "parent" in TORCH_CAPTURE.get("what"):
 
                         parent_forwards = Flowcept.db.query(
                             {"workflow_id": parent_module_wf_id, "activity_id": "TransformerModel", "parent_task_id": batch_iteration["task_id"]})
@@ -210,7 +210,6 @@ def run_asserts_and_exports(campaign_id):
                         if len(parent_forwards) == 0:
                             continue
                         assert len(parent_forwards) == 1
-                        print("found parent forward")
                         parent_forward = parent_forwards[0]
 
                         n_tasks_expected += 1
@@ -220,14 +219,18 @@ def run_asserts_and_exports(campaign_id):
                         assert parent_forward[
                                    "parent_task_id"] == batch_iteration["task_id"]
 
-                        if "children" in TORCH_CAPTURE:
+                        if "children" in TORCH_CAPTURE.get("what"):
                             children_forwards = Flowcept.db.query(
                                 {"parent_task_id": parent_forward["task_id"]})
-                            assert len(children_forwards) == 4  # there are four children submodules # TODO get dynamically
-                            for child_forward in children_forwards:
-                                n_tasks_expected += 1
-                                assert child_forward["status"] == Status.FINISHED.value
-                                assert child_forward["workflow_id"] == parent_module_wf_id
+
+                            if "telemetry" in TORCH_CAPTURE.get("children_mode") or epoch_iteration_task["used"]["i"] == 0:
+                                assert len(children_forwards) == 4  # there are four children submodules # TODO get dynamically
+                                for child_forward in children_forwards:
+                                    n_tasks_expected += 1
+                                    assert child_forward["status"] == Status.FINISHED.value
+                                    assert child_forward["workflow_id"] == parent_module_wf_id
+                            else:
+                                assert len(children_forwards) == 0
 
     n_workflows_expected = len(campaign_workflows)
     return n_workflows_expected, n_tasks_expected
@@ -313,7 +316,7 @@ def asserts_on_saved_dfs(workflows_file, tasks_file, n_workflows_expected, n_tas
 
     # TODO: save #n_batches for train, test, val individually
     search_tasks = max_runs
-    at_every = INSTRUMENTATION.get("torch", {}).get("capture_at_every", 1)
+    at_every = INSTRUMENTATION.get("torch", {}).get("capture_epochs_at_every", 1)
 
     batch_iteration_tasks = epoch_iterations * (n_batches_train + n_batches_eval)
     non_module_tasks = search_tasks + epoch_iterations + batch_iteration_tasks
@@ -324,15 +327,26 @@ def asserts_on_saved_dfs(workflows_file, tasks_file, n_workflows_expected, n_tas
 
     assert len(tasks_df[tasks_df.subtype != 'child_forward']) == expected_non_child_tasks
 
-    expected_child_tasks = search_tasks * epoch_iterations * ((n_batches_train * n_modules) + (n_batches_eval * n_modules))
-    expected_child_tasks = expected_child_tasks/at_every
+    number_of_captured_epochs = epoch_iterations / at_every
+
+    if "telemetry" in TORCH_CAPTURE.get("children_mode"):
+        expected_child_tasks = search_tasks * epoch_iterations * (
+                    (n_batches_train * n_modules) + (n_batches_eval * n_modules))
+        expected_child_tasks = expected_child_tasks/at_every
+        expected_child_tasks_per_epoch = expected_child_tasks / number_of_captured_epochs
+        with_used = 1 * expected_child_tasks_per_epoch
+        without_used = (number_of_captured_epochs - 1) * expected_child_tasks_per_epoch
+    elif "tensor_inspection" in TORCH_CAPTURE.get("children_mode"):
+        expected_child_tasks = search_tasks * 1 * (
+                    (n_batches_train * n_modules) + (n_batches_eval * n_modules))
+        expected_child_tasks_per_epoch = expected_child_tasks
+        with_used = 1 * expected_child_tasks_per_epoch
+        without_used = 0
+    else:
+        raise NotImplementedError("Needs to implement for lightweight")
+
     assert len(tasks_df[tasks_df.subtype == 'child_forward']) == expected_child_tasks
     assert non_module_tasks + parent_module_tasks + expected_child_tasks == len(tasks_df)
-    number_of_captured_epochs = epoch_iterations / at_every
-    expected_child_tasks_per_epoch = expected_child_tasks/number_of_captured_epochs
-
-    with_used = 1*expected_child_tasks_per_epoch
-    without_used = (number_of_captured_epochs-1)*expected_child_tasks_per_epoch
 
     # Testing if only the first epoch got the inspection
     assert len(tasks_df[(tasks_df.subtype == 'parent_forward') & (tasks_df.used.str.contains('tensor'))]) == n_batches_train + n_batches_eval

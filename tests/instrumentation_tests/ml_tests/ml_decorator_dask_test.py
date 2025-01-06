@@ -13,7 +13,7 @@ from tests.adapters.dask_test_utils import (
     start_local_dask_cluster,
     stop_local_dask_cluster,
 )
-from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer
+from tests.instrumentation_tests.ml_tests.dl_trainer import ModelTrainer
 
 
 class MLDecoratorDaskTests(unittest.TestCase):

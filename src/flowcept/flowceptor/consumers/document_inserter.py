@@ -1,6 +1,6 @@
 """Document Inserter module."""
 
-from threading import Thread, Event, Lock
+from threading import Thread, Lock
 from time import time, sleep
 from typing import Dict
 from uuid import uuid4
@@ -13,6 +13,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import GenericJSONDecoder
+from flowcept.commons.vocabulary import Status
 from flowcept.configs import (
     INSERTION_BUFFER_TIME,
     MAX_BUFFER_SIZE,
@@ -118,25 +119,34 @@ class DocumentInserter:
             )  # TODO: add name
 
     def _handle_task_message(self, message: Dict):
-        if "task_id" not in message:
-            message["task_id"] = str(uuid4())
-
         if "workflow_id" not in message and len(message.get("used", {})):
             wf_id = message.get("used").get("workflow_id", None)
             if wf_id:
                 message["workflow_id"] = wf_id
 
+        if "subtype" not in message and "group_id" in message:
+            message["subtype"] = "iteration"
+
+        if "task_id" not in message:
+            if "subtype" in message and message["subtype"] == "iteration":
+                message["task_id"] = message["group_id"] + str(message["used"]["i"])
+            else:
+                message["task_id"] = str(uuid4())
+
+        if "finished" in message and message["finished"]:
+            message["status"] = Status.FINISHED.value
+
+        message.pop("type")
+
         if ENRICH_MESSAGES:
             TaskObject.enrich_task_dict(message)
 
-        message.pop("type")
+        if REMOVE_EMPTY_FIELDS:
+            remove_empty_fields_from_dict(message)
 
         self.logger.debug(
             f"Received following Task msg in DocInserter:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
         )
-        if REMOVE_EMPTY_FIELDS:
-            remove_empty_fields_from_dict(message)
-
         self.buffer.append(message)
 
     def _handle_workflow_message(self, message: Dict):
@@ -184,11 +194,9 @@ class DocumentInserter:
         return self
 
     def _start(self):
-        stop_event = Event()
         while True:
             try:
                 self._mq_dao.message_listener(self._message_handler)
-                stop_event.set()
                 self.buffer.stop()
                 break
             except Exception as e:
@@ -211,7 +219,15 @@ class DocumentInserter:
             self._handle_workflow_message(msg_obj)
             return True
         elif msg_type is None:
-            self.logger.error(f"Message without type??? --> {msg_obj}")
+            # Trying to infer the type
+            if "task_id" in msg_obj or "activity_id" in msg_obj:
+                msg_obj["type"] = "task"
+                self._handle_task_message(msg_obj)
+            elif "name" in msg_obj or "environment_id" in msg_obj:
+                msg_obj["type"] = "workflow"
+                self._handle_workflow_message(msg_obj)
+            else:
+                self.logger.error(f"We couldn't infer msg type!!! --> {msg_obj}")
             return True
         else:
             self.logger.error("Unexpected message type")

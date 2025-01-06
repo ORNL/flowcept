@@ -1,6 +1,6 @@
 project:
   debug: true
-  json_serializer: default # or complex. If "complex", FlowCept will deal with complex python dicts that may contain JSON unserializable values
+  json_serializer: default # or complex. If "complex", Flowcept will deal with complex python dicts that may contain JSON unserializable values
   replace_non_json_serializable: true
   performance_logging: false
   register_workflow: true
@@ -27,7 +27,9 @@ instrumentation:
   torch:
     what: parent_and_children # parent_only, parent_and_children, ~
     children_mode: telemetry_and_tensor_inspection   # lightweight, tensor_inspection, telemetry, telemetry_and_tensor_inspection
-    capture_at_every: 1 #epochs; please use a value that is multiple of #epochs
+    epoch_loop: lightweight # or default, which is the same as ~
+    batch_loop: lightweight # or default, which is the same as ~
+    capture_epochs_at_every: 1 #epochs; please use a value that is multiple of #epochs
     # enable to set between train, evaluate, and test
 
 experiment:
