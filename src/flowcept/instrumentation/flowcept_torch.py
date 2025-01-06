@@ -1,13 +1,12 @@
 """Flowcept's module for Pytorch instrumentation."""
 
-import typing
 from time import time
 from types import MethodType
 
 import numpy as np
 
 from flowcept.commons.utils import replace_non_serializable
-from typing import Dict
+from typing import Dict, Union, Sized, Iterator
 import uuid
 
 import torch
@@ -16,6 +15,7 @@ from torch import nn
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
+from flowcept.commons.vocabulary import Status
 from flowcept.configs import (
     REGISTER_WORKFLOW,
     INSTRUMENTATION,
@@ -25,7 +25,6 @@ from flowcept.configs import (
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
-from flowcept.instrumentation.flowcept_loop import FlowceptLoop
 from flowcept.instrumentation.flowcept_task import get_current_context_task_id
 
 
@@ -121,7 +120,9 @@ def flowcept_torch(cls):
 
             if self._parent_enabled:
                 self.forward = self._our_forward_parent
-            self._at_every = INSTRUMENTATION.get("torch", {}).get("capture_at_every", 1)
+            self._epochs_at_every = INSTRUMENTATION.get("torch", {}).get(
+                "capture_epochs_at_every", 1
+            )
             self._children_mode = None
             self._should_update_children_forward = False
             if self._children_enabled:
@@ -153,8 +154,10 @@ def flowcept_torch(cls):
             if kwargs.get("save_workflow", True):
                 self.workflow_id = self._register_as_workflow()
 
+        PARENT_FORWARD = "parent_forward"
+
         def _our_forward_parent(self, *args, **kwargs):
-            if self._current_epoch % self._at_every != 0:
+            if self._current_epoch % self._epochs_at_every != 0:
                 return super(TorchModuleWrapper, self).forward(*args, **kwargs)
 
             started_at = time()
@@ -174,10 +177,9 @@ def flowcept_torch(cls):
                 "used": used,
                 "parent_task_id": self.parent_task_id,
                 "custom_metadata": custom_metadata,
-                "type": "task",
-                "subtype": "parent_forward",
+                "subtype": TorchModuleWrapper.PARENT_FORWARD,
                 # Following is ok. if an error happens, it will break before sending it
-                "status": "FINISHED",
+                "status": Status.FINISHED.value,
             }
             if kwargs is not None:
                 forward_task["used"].update(kwargs)
@@ -186,7 +188,6 @@ def flowcept_torch(cls):
             y = super(TorchModuleWrapper, self).forward(*args, **kwargs)
             self._disable_children_forward()
 
-            # forward_task["ended_at"] = time()
             if self._current_epoch < 1:
                 forward_task["generated"] = {"tensor": _inspect_torch_tensor(y)}
 
@@ -199,11 +200,11 @@ def flowcept_torch(cls):
             return y
 
         def _enable_children_forward(self):
-            if self._at_every > 1 and self._should_update_children_forward:
+            if self._epochs_at_every > 1 and self._should_update_children_forward:
                 self._update_children_with_our_forward()
 
         def _disable_children_forward(self):
-            if self._at_every > 1 and self._should_update_children_forward:
+            if self._epochs_at_every > 1 and self._should_update_children_forward:
                 self._update_children_with_original_forward()
             self._should_update_children_forward = True
 
@@ -248,7 +249,7 @@ def flowcept_torch(cls):
                 self._should_update_children_forward = False
             elif self._children_mode == "telemetry_and_tensor_inspection":
                 self._child_forward_func = _get_our_child_forward_func(mode="telemetry")
-                if self._at_every == 1:
+                if self._epochs_at_every == 1:
                     self._update_children_with_our_forward()
             else:
                 return
@@ -290,7 +291,7 @@ def flowcept_torch(cls):
             workflow_obj.parent_workflow_id = self.parent_workflow_id
             _custom_metadata = self._custom_metadata or {}
             _custom_metadata["workflow_type"] = "TorchModule"
-            workflow_obj.used = {"capture_at_every": self._at_every}
+            workflow_obj.used = {"capture_at_every": self._epochs_at_every}
 
             if self._should_get_profile:
                 profile = self._get_profile()
@@ -358,141 +359,189 @@ def flowcept_torch(cls):
                     used[k] = v
         return used
 
-    def _run_forward(self, *args, **kwargs):
-        started_at = time()
+    CHILD_FORWARD = "child_forward"
+
+    def _our_forward_lightweight(self, *args, **kwargs):
         result = TorchModuleWrapper._original_children_forward_functions[self.__class__](
             self, *args, **kwargs
         )
         task_dict = dict(
-            type="task",
-            subtype="child_forward",
-            started_at=started_at,
-            task_id=str(started_at),
+            subtype=CHILD_FORWARD,
             workflow_id=self._parent_module.workflow_id,
             parent_task_id=self._parent_module._current_forward_task_id,
             activity_id=self.__class__.__name__,
-            status="FINISHED",
+            status=Status.FINISHED.value,
         )
-        return task_dict, result
-
-    def _our_forward_lightweight(self, *args, **kwargs):
-        task_dict, result = _run_forward(self, *args, **kwargs)
         TorchModuleWrapper._interceptor.intercept(task_dict)
         return result
 
     def _our_forward_telemetry(self, *args, **kwargs):
-        task_dict, result = _run_forward(self, *args, **kwargs)
-        tel = TorchModuleWrapper._interceptor.telemetry_capture.capture()
-        task_dict["telemetry_at_end"] = tel.to_dict()
+        result = TorchModuleWrapper._original_children_forward_functions[self.__class__](
+            self, *args, **kwargs
+        )
+        task_dict = dict(
+            subtype=CHILD_FORWARD,
+            workflow_id=self._parent_module.workflow_id,
+            parent_task_id=self._parent_module._current_forward_task_id,
+            activity_id=self.__class__.__name__,
+            status=Status.FINISHED.value,
+            telemetry_at_end=TorchModuleWrapper._interceptor.telemetry_capture.capture().to_dict(),
+        )
         TorchModuleWrapper._interceptor.intercept(task_dict)
         return result
 
     def _our_forward_telemetry_tensor_inspection(self, *args, **kwargs):
-        task_dict, result = _run_forward(self, *args, **kwargs)
-        tel = TorchModuleWrapper._interceptor.telemetry_capture.capture()
-        task_dict["telemetry_at_end"] = tel.to_dict()
-        task_dict["used"] = _get_forward_used_args(self, args[0])
-        task_dict["generated"] = {"tensor": _inspect_torch_tensor(result)}
+        result = TorchModuleWrapper._original_children_forward_functions[self.__class__](
+            self, *args, **kwargs
+        )
+        task_dict = dict(
+            subtype=CHILD_FORWARD,
+            workflow_id=self._parent_module.workflow_id,
+            parent_task_id=self._parent_module._current_forward_task_id,
+            activity_id=self.__class__.__name__,
+            status=Status.FINISHED.value,
+            telemetry_at_end=TorchModuleWrapper._interceptor.telemetry_capture.capture().to_dict(),
+            used=_get_forward_used_args(self, args[0]),
+            generated={"tensor": _inspect_torch_tensor(result)},
+        )
         TorchModuleWrapper._interceptor.intercept(task_dict)
         return result
 
     def _our_forward_tensor_inspection(self, *args, **kwargs):
-        task_dict, result = _run_forward(self, *args, **kwargs)
-        task_dict["used"] = _get_forward_used_args(self, args[0])
-        task_dict["generated"] = {"tensor": _inspect_torch_tensor(result)}
+        result = TorchModuleWrapper._original_children_forward_functions[self.__class__](
+            self, *args, **kwargs
+        )
+        task_dict = dict(
+            subtype=CHILD_FORWARD,
+            workflow_id=self._parent_module.workflow_id,
+            parent_task_id=self._parent_module._current_forward_task_id,
+            activity_id=self.__class__.__name__,
+            status=Status.FINISHED.value,
+            used=_get_forward_used_args(self, args[0]),
+            generated={"tensor": _inspect_torch_tensor(result)},
+        )
         TorchModuleWrapper._interceptor.intercept(task_dict)
         return result
 
     return TorchModuleWrapper
 
 
-class FlowceptEpochLoop(FlowceptLoop):
-    """Specialization of FlowceptLoop for Epoch Loops."""
+def _get_parent_loop_class(epoch_or_batch):
+    loop_mode = INSTRUMENTATION.get("torch", {}).get(f"{epoch_or_batch}_loop", "default")
+    if loop_mode == "lightweight":
+        from flowcept.instrumentation.flowcept_loop import FlowceptLightweightLoop
 
-    ACTIVITY_ID = "epochs_loop"
+        parent_class = FlowceptLightweightLoop
+    else:
+        from flowcept.instrumentation.flowcept_loop import FlowceptLoop
 
-    def __init__(
-        self,
-        items: typing.Union[typing.Sized, typing.Iterator, int],
-        model: "flowcept_torch.TorchModuleWrapper",
-        parent_task_id=None,
-        workflow_id=None,
-    ):
-        super().__init__(
-            items,
-            loop_name=FlowceptEpochLoop.ACTIVITY_ID,
-            item_name="epoch",
-            parent_task_id=parent_task_id,
-            workflow_id=workflow_id,
-        )
-        self.model = model
-
-    def _capture_iteration_bounds(self):
-        super()._capture_iteration_bounds()
-        self.model.new_epoch(self.get_current_iteration_id())
+        parent_class = FlowceptLoop
+    return parent_class
 
 
-class FlowceptBatchLoop(FlowceptLoop):
-    """
-    Specialization of FlowceptLoop for Batch Loops.
+def _create_epoch_loop_class():
+    parent_class = _get_parent_loop_class(epoch_or_batch="epoch")
 
-    This class extends `FlowceptLoop` to handle batch-level iterations within
-    a training or workflow loop. It optionally integrates with a `FlowceptEpochLoop`
-    to capture hierarchical loop information.
+    class FlowceptEpochLoop(parent_class):
+        """Specialization of FlowceptLoop for Epoch Loops."""
 
-    Parameters
-    ----------
-    items : typing.Union[typing.Sized, typing.Iterator, int]
-        The items to iterate over, which can be a collection, an iterator, or an integer
-        specifying the number of iterations.
-    epochs_loop : FlowceptEpochLoop, optional
-        The epoch-level loop to associate with this batch loop. If `None`,
-        loop capture is disabled.
-    parent_task_id : str, optional
-        The parent task ID to associate with the loop. If not provided, it will be
-        inferred from `epochs_loop`.
-    workflow_id : str, optional
-        The workflow ID to associate with the loop. If not provided, it will be
-        inferred from `epochs_loop`.
-    step : str, default="train"
-        A string representing the loop's activity step, e.g., "train" or "validate".
-    items_length : int, optional
-        The length of the items if it cannot be determined automatically.
+        ACTIVITY_ID = "epochs_loop"
 
-    Notes
-    -----
-    To disable loop capture entirely, set `epochs_loop` to `None` during initialization.
+        def __init__(
+            self,
+            items: Union[Sized, Iterator, int],
+            model: "flowcept_torch.TorchModuleWrapper",
+            parent_task_id=None,
+            workflow_id=None,
+        ):
+            super().__init__(
+                items,
+                loop_name=FlowceptEpochLoop.ACTIVITY_ID,
+                item_name="epoch",
+                parent_task_id=parent_task_id,
+                workflow_id=workflow_id,
+            )
+            self.model = model
 
-    See Also
-    --------
-    FlowceptLoop : The base class for implementing loops.
-    FlowceptEpochLoop : The parent loop for managing epoch-level iterations.
-    """
+        def _capture_iteration_bounds(self):
+            super()._capture_iteration_bounds()
+            self.model.new_epoch(self.get_current_iteration_id())
 
-    def __init__(
-        self,
-        items: typing.Union[typing.Sized, typing.Iterator, int],
-        epochs_loop: "FlowceptEpochLoop" = None,
-        parent_task_id=None,
-        workflow_id=None,
-        step="train",
-        items_length=0,
-    ):
-        self._epochs_loop = epochs_loop
-        if self._epochs_loop is None:
-            super().__init__(items, items_length, capture_enabled=False)
-            return
-        self.activity_id = f"{step}_batch"
-        super().__init__(
-            items,
-            loop_name=self.activity_id,
-            item_name="batch",
-            parent_task_id=parent_task_id or epochs_loop.get_current_iteration_id(),
-            workflow_id=workflow_id or epochs_loop.workflow_id,
-            items_length=items_length,
-        )
+    return FlowceptEpochLoop
 
-    def _capture_iteration_bounds(self):
-        super()._capture_iteration_bounds()
-        if self._epochs_loop is not None:
-            self._epochs_loop.model.new_batch(self.get_current_iteration_id())
+
+def _create_batch_loop_class():
+    parent_class = _get_parent_loop_class(epoch_or_batch="batch")
+
+    class FlowceptBatchLoop(parent_class):
+        """
+        Specialization of FlowceptLoop for Batch Loops.
+
+        This class extends `FlowceptLoop` to handle batch-level iterations within
+        a training or workflow loop. It optionally integrates with a `FlowceptEpochLoop`
+        to capture hierarchical loop information.
+
+        Parameters
+        ----------
+        items : Union[Sized, Iterator, int]
+            The items to iterate over, which can be a collection, an iterator, or an integer
+            specifying the number of iterations.
+        epochs_loop : FlowceptEpochLoop, optional
+            The epoch-level loop to associate with this batch loop. If `None`,
+            loop capture is disabled.
+        parent_task_id : str, optional
+            The parent task ID to associate with the loop. If not provided, it will be
+            inferred from `epochs_loop`.
+        workflow_id : str, optional
+            The workflow ID to associate with the loop. If not provided, it will be
+            inferred from `epochs_loop`.
+        step : str, default="train"
+            A string representing the loop's activity step, e.g., "train" or "validate".
+        items_length : int, optional
+            The length of the items if it cannot be determined automatically.
+
+        Notes
+        -----
+        To disable loop capture entirely, set `epochs_loop` to `None` during initialization.
+
+        See Also
+        --------
+        FlowceptLoop : The base class for implementing loops.
+        FlowceptEpochLoop : The parent loop for managing epoch-level iterations.
+        """
+
+        def __init__(
+            self,
+            items: Union[Sized, Iterator, int],
+            epochs_loop=None,
+            parent_task_id=None,
+            workflow_id=None,
+            step="train",
+            items_length=0,
+        ):
+            self._epochs_loop = epochs_loop
+            if self._epochs_loop is None:
+                super().__init__(items=items, items_length=items_length, capture_enabled=False)
+                return
+            self.activity_id = f"{step}_batch"
+            if parent_task_id is None:
+                print()
+            super().__init__(
+                items,
+                loop_name=self.activity_id,
+                item_name="batch",
+                parent_task_id=parent_task_id or epochs_loop.get_current_iteration_id(),
+                workflow_id=workflow_id or epochs_loop.workflow_id,
+                items_length=items_length,
+            )
+
+        def _capture_iteration_bounds(self):
+            super()._capture_iteration_bounds()
+            if self._epochs_loop is not None:
+                self._epochs_loop.model.new_batch(self.get_current_iteration_id())
+
+    return FlowceptBatchLoop
+
+
+FlowceptEpochLoop = _create_epoch_loop_class()
+FlowceptBatchLoop = _create_batch_loop_class()

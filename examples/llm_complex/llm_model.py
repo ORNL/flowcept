@@ -10,7 +10,6 @@ from torch.nn import Embedding, Linear, TransformerEncoder, TransformerEncoderLa
 
 from llm_dataprep import get_wiki_text_dataset
 from flowcept import Flowcept, flowcept_torch
-from flowcept.configs import N_GPUS
 from flowcept.instrumentation.flowcept_torch import FlowceptEpochLoop, FlowceptBatchLoop
 
 

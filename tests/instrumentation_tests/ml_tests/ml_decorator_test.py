@@ -4,7 +4,7 @@ from torch import nn
 
 from flowcept import Flowcept
 from flowcept.configs import MONGO_ENABLED
-from tests.decorator_tests.ml_tests.dl_trainer import ModelTrainer, MyNet
+from tests.instrumentation_tests.ml_tests.dl_trainer import ModelTrainer, MyNet
 
 
 class MLDecoratorTests(unittest.TestCase):

@@ -36,10 +36,15 @@ class AutoflushBuffer:
 
     def append(self, item):
         """Append it."""
-        # if self.stop_event.is_set():
-        #     return
         buffer = self._buffers[self._current_buffer_index]
         buffer.append(item)
+        if len(buffer) >= self._max_size:
+            self._swap_event.set()
+
+    def extend(self, items):
+        """Extend it."""
+        buffer = self._buffers[self._current_buffer_index]
+        buffer.extend(items)
         if len(buffer) >= self._max_size:
             self._swap_event.set()
 
