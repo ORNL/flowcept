@@ -71,6 +71,7 @@ services-stop-mongo:
 build:
 	bash deployment/build-image.sh
 
+# To use run, you must run make services first.
 run:
 	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_HOST=flowcept_mongo --network flowcept_default -it flowcept
 

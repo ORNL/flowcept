@@ -166,8 +166,13 @@ def replace_non_serializable(obj):
         else:
             return obj
     else:
-        # Replace non-serializable values with id()
-        return f"{obj.__class__.__name__}_instance_id_{id(obj)}"
+        if hasattr(obj, "to_dict"):
+            return obj.to_dict()
+        elif hasattr(obj, "to_flowcept_dict"):
+            return obj.to_flowcept_dict()
+        else:
+            # Replace non-serializable values with id()
+            return f"{obj.__class__.__name__}_instance_id_{id(obj)}"
 
 
 def get_gpu_vendor():
