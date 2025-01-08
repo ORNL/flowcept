@@ -69,7 +69,8 @@ dev = [
     "pika",
     "pytest",
     "ruff",
-    "pyyaml"
+    "pyyaml",
+    "psutil>=6.1.1"
 ]
 # Torch and some other ml-specific libs, only used for dev purposes, require the following specific versions.
 ml_dev = [
