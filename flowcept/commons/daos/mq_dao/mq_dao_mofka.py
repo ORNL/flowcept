@@ -8,6 +8,7 @@ from flowcept.commons.utils import perf_log
 
 #from pymargo.core import Engine
 import mochi.mofka.client as mofka
+from mochi.mofka.client import ThreadPool, AdaptiveBatchSize
 from flowcept.configs import (
     MQ_CHANNEL,
     PERF_LOG,
@@ -23,43 +24,53 @@ def data_broker(metadata, descriptor):
 
 class MQDaoMofka(MQDao):
     def __init__(self,
-                #  mofka_protocol: str = MQ_SETTINGS["mofka_protocol"],
-                #  group_file: str = MQ_SETTINGS["group_file"],
-                #  topic_name: MQ_CHANNEL = "flowcept",
-                kv_host=None, kv_port=None, adapter_settings=None, consume=False):
-        super().__init__(kv_host=None, kv_port=None, adapter_settings=None)
+                 kv_host=None, kv_port=None, adapter_settings=None, with_producer=True):
+        super().__init__(kv_host=kv_host, kv_port=kv_port, adapter_settings=adapter_settings)
         self._mofka_conf = {
-            "group_file": "mofka.json",
-            "topic_name": "flowcept"
+            "group_file": MQ_SETTINGS["group_file"],
+            "topic_name": MQ_SETTINGS["channel"]
         }
 
+        print("With producer value", with_producer)
+
         print("In init", self._mofka_conf)
-        self._driver = mofka.MofkaDriver(self._mofka_conf["group_file"], True)
+        self._driver = mofka.MofkaDriver(self._mofka_conf["group_file"])
         print("after driver created ")
-        if not (self._driver.topic_exists(self._mofka_conf["topic_name"])):
-            self._driver.create_topic(self._mofka_conf["topic_name"])
-            self._driver.add_memory_partition(self._mofka_conf["topic_name"], 0)
-        topic = self._driver.open_topic(self._mofka_conf["topic_name"])
-        print("consumer value", consume)
-        if not consume:
-            print("before producer creation")
-            self.producer = topic.producer("producer_"+self._mofka_conf["topic_name"],
+
+        self.topic = self._driver.open_topic(self._mofka_conf["topic_name"])
+
+        self.producer = None
+        if with_producer:
+            print("Starting producer")
+            self.producer = self.topic.producer("p"+self._mofka_conf["topic_name"],
                                             batch_size=mofka.AdaptiveBatchSize,
                                             thread_pool=mofka.ThreadPool(1),
                                             ordering=mofka.Ordering.Strict)
-        else:
-            print("create consumer")
-            self.consumer = topic.consumer(name="consumer",
-                                 thread_pool=mofka.ThreadPool(1))
 
+    def subscribe(self):
+        batch_size = AdaptiveBatchSize
+        thread_pool = ThreadPool(0)
+        self.consumer = self.topic.consumer(
+            name="c"+self._mofka_conf["topic_name"],
+            thread_pool=thread_pool,
+            batch_size=batch_size,
+            data_selector=data_selector,
+            data_broker=data_broker
+        )
 
     def message_listener(self, message_handler: Callable):
         print("in message listener")
         try:
             while True:
                 print("in message listner loop", flush=True)
-                event = self.consumer.pull().wait()
+                # from time import sleep
+                # sleep(1)
+                #event = self.consumer.pull().wait()
+                future = self.consumer.pull()
+                print("Got future", str(future))
                 #messages = [msgpack.loads(event.data[i].value(), raw=False) for i in range(len(event.data))]
+                event = future.wait()
+                print("Got future event", str(event))
                 metadata = json.loads(event.metadata)
                 self.logger.debug(f"Received message: {metadata}")
                 if not message_handler(metadata):
@@ -88,6 +99,7 @@ class MQDaoMofka(MQDao):
             )
             print("buffer", type(buffer[0]))
             [self.producer.push(m) for m in buffer]
+            print("Sent buffer!!!")
 
         except Exception as e:
             self.logger.exception(e)
@@ -99,7 +111,9 @@ class MQDaoMofka(MQDao):
         if PERF_LOG:
             t0 = time()
         try:
+            print("Now flushing buffer!!!")
             self.producer.flush()
+            print("Flushed!!!")
             self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)

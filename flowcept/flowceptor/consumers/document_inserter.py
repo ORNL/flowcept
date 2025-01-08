@@ -1,6 +1,6 @@
 from datetime import datetime
 from time import time, sleep
-from threading import Thread, Event, Lock
+from threading import Thread
 from typing import Dict
 from uuid import uuid4
 
@@ -52,13 +52,12 @@ class DocumentInserter:
         bundle_exec_id=None,
     ):
         self._task_dicts_buffer = list()
-        self._mq_dao = MQDao.build(mq_host, mq_port, None, True)
+        self._mq_dao = MQDao.build(mq_host, mq_port, with_producer=False)
         self._doc_dao = DocumentDBDao()
         self._previous_time = time()
         self.logger = FlowceptLogger()
         self._main_thread: Thread = None
         self._curr_max_buffer_size = MONGO_MAX_BUFFER_SIZE
-        self._lock = Lock()
         self._bundle_exec_id = bundle_exec_id
         self.check_safe_stops = check_safe_stops
         self.buffer: AutoflushBuffer = AutoflushBuffer(
@@ -194,22 +193,16 @@ class DocumentInserter:
             return "stop"
 
     def start(self) -> "DocumentInserter":
+        self._mq_dao.subscribe()
+        print("Subscribed!")
         self._main_thread = Thread(target=self._start)
         self._main_thread.start()
+        print("Doc Inserter thread started.")
         return self
 
     def _start(self):
-        stop_event = Event()
-        while True:
-            try:
-                self._mq_dao.message_listener(self._message_handler)
-                stop_event.set()
-                self.buffer.stop()
-                break
-            except Exception as e:
-                self.logger.exception(e)
-                sleep(2)
-            self.logger.debug("Still in the doc insert. message listen loop")
+        self._mq_dao.message_listener(self._message_handler)
+        self.buffer.stop()
         self.logger.info("Ok, we broke the doc inserter message listen loop!")
 
     def _message_handler(self, msg_obj: dict):
