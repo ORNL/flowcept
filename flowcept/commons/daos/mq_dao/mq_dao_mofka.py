@@ -1,3 +1,4 @@
+import uuid
 from typing import Callable
 
 import msgpack
@@ -34,24 +35,26 @@ class MQDaoMofka(MQDao):
         print("With producer value", with_producer)
 
         print("In init", self._mofka_conf)
-        self._driver = mofka.MofkaDriver(self._mofka_conf["group_file"])
+        driver = mofka.MofkaDriver(self._mofka_conf["group_file"], use_progress_thread=True)
         print("after driver created ")
 
-        self.topic = self._driver.open_topic(self._mofka_conf["topic_name"])
+        self.topic = driver.open_topic(self._mofka_conf["topic_name"])
 
         self.producer = None
         if with_producer:
             print("Starting producer")
             self.producer = self.topic.producer("p"+self._mofka_conf["topic_name"],
-                                            batch_size=mofka.AdaptiveBatchSize,
-                                            thread_pool=mofka.ThreadPool(1),
-                                            ordering=mofka.Ordering.Strict)
+                                           batch_size=mofka.AdaptiveBatchSize,
+                                           thread_pool=mofka.ThreadPool(1),
+                                           ordering=mofka.Ordering.Strict)
+            #self.producer = self.topic.producer()
 
     def subscribe(self):
+        #self.consumer = self.topic.consumer(name=self._mofka_conf["topic_name"]+str(uuid.uuid4()))
         batch_size = AdaptiveBatchSize
         thread_pool = ThreadPool(0)
         self.consumer = self.topic.consumer(
-            name="c"+self._mofka_conf["topic_name"],
+            name=self._mofka_conf["topic_name"]+str(uuid.uuid4()),
             thread_pool=thread_pool,
             batch_size=batch_size,
             data_selector=data_selector,
@@ -63,18 +66,20 @@ class MQDaoMofka(MQDao):
         try:
             while True:
                 print("in message listner loop", flush=True)
-                # from time import sleep
-                # sleep(1)
+                from time import sleep
+                sleep(1)
+
+                # I commented out these below to see what happens. The code gets stuck in the flush
                 #event = self.consumer.pull().wait()
-                future = self.consumer.pull()
-                print("Got future", str(future))
-                #messages = [msgpack.loads(event.data[i].value(), raw=False) for i in range(len(event.data))]
-                event = future.wait()
-                print("Got future event", str(event))
-                metadata = json.loads(event.metadata)
-                self.logger.debug(f"Received message: {metadata}")
-                if not message_handler(metadata):
-                    break
+                # future = self.consumer.pull()
+                # print("Got future", str(future))
+                # #messages = [msgpack.loads(event.data[i].value(), raw=False) for i in range(len(event.data))]
+                # event = future.wait()
+                # print("Got future event", str(event))
+                # metadata = json.loads(event.metadata)
+                # self.logger.debug(f"Received message: {metadata}")
+                # if not message_handler(metadata):
+                #     break
         except Exception as e:
             self.logger.exception(e)
         finally:
