@@ -24,37 +24,29 @@ def data_broker(metadata, descriptor):
     return [bytearray(descriptor.size)]
 
 class MQDaoMofka(MQDao):
+
+    _driver = mofka.MofkaDriver(MQ_SETTINGS.get("group_file", None), use_progress_thread=True)
+    _TOPIC_NAME = MQ_SETTINGS.get("channel", None)
+    _topic = _driver.open_topic(MQ_SETTINGS["channel"])
+
     def __init__(self,
                  kv_host=None, kv_port=None, adapter_settings=None, with_producer=True):
         super().__init__(kv_host=kv_host, kv_port=kv_port, adapter_settings=adapter_settings)
-        self._mofka_conf = {
-            "group_file": MQ_SETTINGS["group_file"],
-            "topic_name": MQ_SETTINGS["channel"]
-        }
-
-        print("With producer value", with_producer)
-
-        print("In init", self._mofka_conf)
-        driver = mofka.MofkaDriver(self._mofka_conf["group_file"], use_progress_thread=True)
-        print("after driver created ")
-
-        self.topic = driver.open_topic(self._mofka_conf["topic_name"])
-
         self.producer = None
         if with_producer:
             print("Starting producer")
-            self.producer = self.topic.producer("p"+self._mofka_conf["topic_name"],
-                                           batch_size=mofka.AdaptiveBatchSize,
-                                           thread_pool=mofka.ThreadPool(1),
-                                           ordering=mofka.Ordering.Strict)
+            self.producer = MQDaoMofka._topic.producer("p" + MQDaoMofka._TOPIC_NAME,
+                                                       batch_size=mofka.AdaptiveBatchSize,
+                                                       thread_pool=mofka.ThreadPool(1),
+                                                       ordering=mofka.Ordering.Strict)
             #self.producer = self.topic.producer()
 
     def subscribe(self):
         #self.consumer = self.topic.consumer(name=self._mofka_conf["topic_name"]+str(uuid.uuid4()))
         batch_size = AdaptiveBatchSize
         thread_pool = ThreadPool(0)
-        self.consumer = self.topic.consumer(
-            name=self._mofka_conf["topic_name"]+str(uuid.uuid4()),
+        self.consumer = MQDaoMofka._topic.consumer(
+            name=MQDaoMofka._TOPIC_NAME+str(uuid.uuid4()),
             thread_pool=thread_pool,
             batch_size=batch_size,
             data_selector=data_selector,
@@ -126,3 +118,4 @@ class MQDaoMofka(MQDao):
         print("done sending")
     def liveness_test(self):
         return True
+
