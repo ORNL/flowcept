@@ -50,9 +50,7 @@ class MQDaoRedis(MQDao):
         pipe = self._producer.pipeline()
         for message in buffer:
             try:
-                self.logger.debug(
-                    f"Going to send Message:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
-                )
+                self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t")
                 pipe.publish(MQ_CHANNEL, serializer(message))
             except Exception as e:
                 self.logger.exception(e)

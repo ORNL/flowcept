@@ -72,9 +72,7 @@ class MQDaoKafka(MQDao):
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         for message in buffer:
             try:
-                self.logger.debug(
-                    f"Going to send Message:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
-                )
+                self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t")
                 self._producer.produce(channel, key=channel, value=serializer(message))
             except Exception as e:
                 self.logger.exception(e)
