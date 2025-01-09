@@ -150,7 +150,7 @@ class Flowcept(object):
     def stop(self):
         """Stop it."""
         if not self.is_started or not self.enabled:
-            self.logger.warning("Flowcept is already stopped!")
+            self.logger.warning("Flowcept is already stopped or may never have been started!")
             return
         if self._interceptors and len(self._interceptors):
             for interceptor in self._interceptors:
