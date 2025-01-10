@@ -67,7 +67,7 @@ if __name__ == "__main__":
 
     simple_flowcept_task(workflow_id)
 
-    sleep(5)  # Give enough time for the consumer services to do their thing
+    sleep(15)  # Give enough time for the consumer services to do their thing
 
     kill_process(pid)
 
