@@ -4,7 +4,7 @@
 **/*build*
 **/*egg*
 **/*pycache*
-**/*dist*
+#**/*dist*
 **/*mlflow.db*
 **/*mnist*
 **/*tensorboard_events*
@@ -23,3 +23,4 @@ deployment/data
 **/*output_data*
 examples/llm_complex/input_data
 tmp_tests/
+nohup.out

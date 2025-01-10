@@ -1,6 +1,6 @@
 """Document Inserter module."""
 
-from threading import Thread, Lock
+from threading import Thread
 from time import time, sleep
 from typing import Dict
 from uuid import uuid4
@@ -69,7 +69,6 @@ class DocumentInserter:
         self.logger = FlowceptLogger()
         self._main_thread: Thread = None
         self._curr_max_buffer_size = MAX_BUFFER_SIZE
-        self._lock = Lock()
         self._bundle_exec_id = bundle_exec_id
         self.check_safe_stops = check_safe_stops
         self.buffer: AutoflushBuffer = AutoflushBuffer(
@@ -186,23 +185,19 @@ class DocumentInserter:
             self.logger.info("Document Inserter is stopping...")
             return "stop"
 
-    def start(self) -> "DocumentInserter":
+    def start(self, threaded=True) -> "DocumentInserter":
         """Start it."""
         self._mq_dao.subscribe()
-        self._main_thread = Thread(target=self._start)
-        self._main_thread.start()
+        if threaded:
+            self._main_thread = Thread(target=self._start)
+            self._main_thread.start()
+        else:
+            self._start()
         return self
 
     def _start(self):
-        while True:
-            try:
-                self._mq_dao.message_listener(self._message_handler)
-                self.buffer.stop()
-                break
-            except Exception as e:
-                self.logger.exception(e)
-                sleep(2)
-            self.logger.debug("Still in the doc insert. message listen loop")
+        self._mq_dao.message_listener(self._message_handler)
+        self.buffer.stop()
         self.logger.info("Ok, we broke the doc inserter message listen loop!")
 
     def _message_handler(self, msg_obj: dict):

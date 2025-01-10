@@ -39,6 +39,8 @@ run_test() {
     pip install .[mongo] > /dev/null 2>&1
   fi
 
+
+  # The following block is only needed to install special dependencies.
   if [[ "$test_type" =~ "mlflow" ]]; then
     echo "Installing mlflow"
     pip install .[mlflow] > /dev/null 2>&1
@@ -62,7 +64,6 @@ run_test() {
   echo "Running $test_path ..."
   python "$test_path" | tee output.log
   echo "Ok, ran $test_path."
-  # Check for errors in the output
   if grep -iq "error" output.log; then
     echo "Test $test_path failed! See output.log for details."
     exit 1
@@ -70,7 +71,6 @@ run_test() {
 
   echo "Great, no errors to run $test_path."
 
-  # Clean up the log file
   rm output.log
 }
 
@@ -81,7 +81,7 @@ echo "Using examples directory: $EXAMPLES_DIR"
 echo "With Mongo? ${WITH_MONGO}"
 
 # Define the test cases
-default_tests=("instrumented_simple" "instrumented_loop" "dask" "mlflow" "tensorboard" "single_layer_perceptron" "llm_complex/llm_main")
+default_tests=("instrumented_simple" "instrumented_loop" "distributed_consumer" "dask" "mlflow" "tensorboard" "single_layer_perceptron" "llm_complex/llm_main")
 
 # Use the third argument if provided, otherwise use default tests
 if [[ -n "$3" ]]; then
