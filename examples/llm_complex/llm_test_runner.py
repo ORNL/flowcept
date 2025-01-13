@@ -65,7 +65,7 @@ def all():
         write_log(f"\n\nStarting for combination {i}/{len(combinations)}: {config}")
 
         try:
-            success = run_test(max_runs=5, config=config)
+            success = run_test(max_runs=3, config=config)
             if not success:
                 write_log(str(i) + "--> " + str(config))
                 sys.exit(1)
