@@ -55,6 +55,7 @@ run_test() {
     pip install .[ml_dev] > /dev/null 2>&1
   elif [[ "$test_type" =~ "llm_complex" ]]; then
     echo "Installing ml_dev dependencies"
+    pip install .[dask] > /dev/null 2>&1
     pip install .[ml_dev]
     echo "Defining python path for llm_complex..."
     export PYTHONPATH=$PYTHONPATH:${EXAMPLES_DIR}/llm_complex
