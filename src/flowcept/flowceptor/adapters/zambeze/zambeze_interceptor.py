@@ -54,7 +54,7 @@ class ZambezeInterceptor(BaseInterceptor):
             self._channel.stop_consuming()
         except Exception as e:
             self.logger.warning(
-                f"This exception is expected to occur after " f"channel.basic_cancel: {e}"
+                f"This exception is expected to occur after channel.basic_cancel: {e}"
             )
         sleep(2)
         self._observer_thread.join()
@@ -88,9 +88,7 @@ class ZambezeInterceptor(BaseInterceptor):
             )
 
     def _intercept(self, body_obj):
-        self.logger.debug(
-            f"Zambeze interceptor needs to intercept this:" f"\n\t{json.dumps(body_obj)}"
-        )
+        self.logger.debug(f"Zambeze interceptor needs to intercept this:\n\t{json.dumps(body_obj)}")
         task_msg = self.prepare_task_msg(body_obj)
         self.intercept(task_msg.to_dict())
 

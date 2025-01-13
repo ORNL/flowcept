@@ -322,6 +322,66 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
+    def delete_workflow_keys(self, key_name, keys_list: List[Any]) -> bool:
+        """
+        Delete workflow documents based on a specific key and value from the workflows collection.
+
+        Parameters
+        ----------
+        key_name : str
+            The name of the key to be matched for deletion.
+        keys_list : list of any
+            The list of values for the specified key to delete the matching documents.
+
+        Returns
+        -------
+        bool
+            True if the deletion was successful, False otherwise.
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the deletion operation.
+        """
+        if type(keys_list) is not list:
+            keys_list = [keys_list]
+        try:
+            self._wfs_collection.delete_many({key_name: {"$in": keys_list}})
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
+    def delete_object_keys(self, key_name, keys_list: List[Any]) -> bool:
+        """
+        Delete workflow documents based on a specific key and value from the objects collection.
+
+        Parameters
+        ----------
+        key_name : str
+            The name of the key to be matched for deletion.
+        keys_list : list of any
+            The list of values for the specified key to delete the matching documents.
+
+        Returns
+        -------
+        bool
+            True if the deletion was successful, False otherwise.
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the deletion operation.
+        """
+        if type(keys_list) is not list:
+            keys_list = [keys_list]
+        try:
+            self._obj_collection.delete_many({key_name: {"$in": keys_list}})
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
     def delete_tasks_with_filter(self, filter) -> bool:
         """
         Delete task documents that match the specified filter.
@@ -352,6 +412,22 @@ class MongoDBDAO(DocumentDBDAO):
         """Count number of docs in tasks collection."""
         try:
             return self._tasks_collection.count_documents({})
+        except Exception as e:
+            self.logger.exception(e)
+            return -1
+
+    def count_workflows(self) -> int:
+        """Count number of docs in tasks collection."""
+        try:
+            return self._wfs_collection.count_documents({})
+        except Exception as e:
+            self.logger.exception(e)
+            return -1
+
+    def count_objects(self) -> int:
+        """Count number of docs in tasks collection."""
+        try:
+            return self._obj_collection.count_documents({})
         except Exception as e:
             self.logger.exception(e)
             return -1
@@ -495,7 +571,7 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
-    def save_object(
+    def save_or_update_object(
         self,
         object,
         object_id=None,
@@ -534,7 +610,11 @@ class MongoDBDAO(DocumentDBDAO):
         if custom_metadata is not None:
             obj_doc["custom_metadata"] = custom_metadata
 
-        self._obj_collection.insert_one(obj_doc)
+        update_query = {
+            "$set": obj_doc,
+        }
+
+        self._obj_collection.update_one({"object_id": object_id}, update_query, upsert=True)
 
         return object_id
 

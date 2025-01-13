@@ -197,7 +197,7 @@ class DBAPI(object):
             self.logger.exception(e)
             return False
 
-    def save_object(
+    def save_or_update_object(
         self,
         object,
         object_id=None,
@@ -209,7 +209,7 @@ class DBAPI(object):
         pickle=False,
     ):
         """Save the object."""
-        return DBAPI._dao().save_object(
+        return DBAPI._dao().save_or_update_object(
             object,
             object_id,
             task_id,
@@ -239,9 +239,10 @@ class DBAPI(object):
             filter, projection, limit, sort, aggregation, remove_json_unserializables, collection
         )
 
-    def save_torch_model(
+    def save_or_update_torch_model(
         self,
         model,
+        object_id=None,
         task_id=None,
         workflow_id=None,
         custom_metadata: dict = {},
@@ -270,8 +271,9 @@ class DBAPI(object):
             **custom_metadata,
             "class": model.__class__.__name__,
         }
-        obj_id = self.save_object(
+        obj_id = self.save_or_update_object(
             object=binary_data,
+            object_id=object_id,
             type="ml_model",
             task_id=task_id,
             workflow_id=workflow_id,

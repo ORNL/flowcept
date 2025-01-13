@@ -1,6 +1,6 @@
 """Document Inserter module."""
 
-from threading import Thread, Lock
+from threading import Thread
 from time import time, sleep
 from typing import Dict
 from uuid import uuid4
@@ -54,7 +54,6 @@ class DocumentInserter:
         mq_port=None,
         bundle_exec_id=None,
     ):
-        self._task_dicts_buffer = list()
         self._mq_dao = MQDao.build(mq_host, mq_port)
         self._doc_daos = []
         if MONGO_ENABLED:
@@ -69,13 +68,11 @@ class DocumentInserter:
         self.logger = FlowceptLogger()
         self._main_thread: Thread = None
         self._curr_max_buffer_size = MAX_BUFFER_SIZE
-        self._lock = Lock()
         self._bundle_exec_id = bundle_exec_id
         self.check_safe_stops = check_safe_stops
         self.buffer: AutoflushBuffer = AutoflushBuffer(
             max_size=self._curr_max_buffer_size,
             flush_interval=INSERTION_BUFFER_TIME,
-            logger=self.logger,
             flush_function=DocumentInserter.flush_function,
             flush_function_kwargs={"logger": self.logger, "doc_daos": self._doc_daos},
         )
@@ -84,38 +81,25 @@ class DocumentInserter:
         if not ADAPTIVE_BUFFER_SIZE:
             return
         else:
-            # Adaptive buffer size to increase/decrease depending on the flow
-            # of messages (#messages/unit of time)
-            if len(self._task_dicts_buffer) >= MAX_BUFFER_SIZE:
-                self._curr_max_buffer_size = MAX_BUFFER_SIZE
-            elif len(self._task_dicts_buffer) < self._curr_max_buffer_size:
-                # decrease buffer size by 10%, lower-bounded by 10
-                self._curr_max_buffer_size = max(
-                    MIN_BUFFER_SIZE,
-                    int(self._curr_max_buffer_size * 0.9),
-                )
-            else:
-                # increase buffer size by 10%,
-                # upper-bounded by MONGO_INSERTION_BUFFER_SIZE
-                self._curr_max_buffer_size = max(
-                    MIN_BUFFER_SIZE,
-                    min(
-                        MAX_BUFFER_SIZE,
-                        int(self._curr_max_buffer_size * 1.1),
-                    ),
-                )
+            self._curr_max_buffer_size = max(
+                MIN_BUFFER_SIZE,
+                min(
+                    MAX_BUFFER_SIZE,
+                    int(self._curr_max_buffer_size * 1.1),
+                ),
+            )
 
     @staticmethod
     def flush_function(buffer, doc_daos, logger):
         """Flush it."""
         logger.info(
-            f"Current Doc buffer size: {len(buffer)}, " f"Gonna flush {len(buffer)} msgs to DocDBs!"
+            f"Current Doc buffer size: {len(buffer)}, Gonna flush {len(buffer)} msgs to DocDBs!"
         )
         for dao in doc_daos:
             dao.insert_and_update_many_tasks(buffer, TaskObject.task_id_field())
             logger.debug(
-                f"DocDao={id(dao)},DocDaoClass={dao.__class__.__name__};"
-                f" Flushed {len(buffer)} msgs to this DocDB!"
+                f"DocDao={id(dao)},DocDaoClass={dao.__class__.__name__};\
+                Flushed {len(buffer)} msgs to this DocDB!"
             )  # TODO: add name
 
     def _handle_task_message(self, message: Dict):
@@ -145,14 +129,14 @@ class DocumentInserter:
             remove_empty_fields_from_dict(message)
 
         self.logger.debug(
-            f"Received following Task msg in DocInserter:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
+            f"Received following Task msg in DocInserter:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
         )
         self.buffer.append(message)
 
     def _handle_workflow_message(self, message: Dict):
         message.pop("type")
         self.logger.debug(
-            f"Received following Workflow msg in DocInserter: \n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
+            f"Received following Workflow msg in DocInserter:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
         )
         if REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
@@ -186,23 +170,19 @@ class DocumentInserter:
             self.logger.info("Document Inserter is stopping...")
             return "stop"
 
-    def start(self) -> "DocumentInserter":
+    def start(self, threaded=True) -> "DocumentInserter":
         """Start it."""
         self._mq_dao.subscribe()
-        self._main_thread = Thread(target=self._start)
-        self._main_thread.start()
+        if threaded:
+            self._main_thread = Thread(target=self._start)
+            self._main_thread.start()
+        else:
+            self._start()
         return self
 
     def _start(self):
-        while True:
-            try:
-                self._mq_dao.message_listener(self._message_handler)
-                self.buffer.stop()
-                break
-            except Exception as e:
-                self.logger.exception(e)
-                sleep(2)
-            self.logger.debug("Still in the doc insert. message listen loop")
+        self._mq_dao.message_listener(self._message_handler)
+        self.buffer.stop()
         self.logger.info("Ok, we broke the doc inserter message listen loop!")
 
     def _message_handler(self, msg_obj: dict):
@@ -247,10 +227,10 @@ class DocumentInserter:
                 )
                 sleep(sleep_time)
                 if trial >= max_trials:
-                    if len(self._task_dicts_buffer) == 0:  # and len(self._mq_dao._buffer) == 0:
-                        msg = f"DocInserter {id(self)} gave up waiting for signal. "
-                        self.logger.critical(msg + "Safe to stop now.")
-                        break
+                    # if len(self._mq_dao._buffer) == 0:
+                    msg = f"DocInserter {id(self)} gave up waiting for signal. "
+                    self.logger.critical(msg + "Safe to stop now.")
+                    break
         self.logger.info("Sending message to stop document inserter.")
         self._mq_dao.send_document_inserter_stop()
         self.logger.info(f"Doc Inserter {id(self)} Sent message to stop itself.")

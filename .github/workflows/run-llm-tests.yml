@@ -1,0 +1,52 @@
+name: LLM Tests
+on: [pull_request]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12" ]
+    env:
+      MONGO_ENABLED: true
+      LMDB_ENABLED: false
+    timeout-minutes: 60
+    if: "!contains(github.event.head_commit.message, 'CI Bot')"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Show OS Info
+        run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
+
+      - name: Start docker compose with redis
+        run: make services-mongo
+
+      - name: Upgrade pip
+        run: |  
+          python -m pip install --upgrade pip
+          python --version
+
+      - name: Test LLM
+        run: bash .github/workflows/run_examples.sh examples true llm_complex/llm_test_runner.py
+
+      - name: Shut down docker compose
+        run: make services-stop-mongo
+
+      - name: Clean up
+        run: |
+          make clean
+          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
+          docker image prune -a -f
+
+      - name: List large files
+        run: find . -type f -exec du -h {} + | sort -h

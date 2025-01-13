@@ -57,12 +57,14 @@ class FlowceptLoop:
         items_length=0,
         capture_enabled=True,
     ):
+        self._current_iteration_task = {}
         if not (INSTRUMENTATION_ENABLED and capture_enabled):
             # These do_nothing functions help reduce overhead if no instrumentation is needed
             # because we do this if not enabled only here and never again.
             self._next_func = self._do_nothing_next
             self.end_iter = self._do_nothing_in_end_iter
             self._iterator = iter(items)
+            self.enabled = False
             return
 
         if hasattr(items, "__len__"):
@@ -89,8 +91,9 @@ class FlowceptLoop:
         else:
             raise Exception("Not supported iterator items type.")
 
-        self._current_iteration_task = {}
-        self._group_id = str(id(self))
+        group_id = str(id(self) + id(self._iterator) + id(parent_task_id))
+        self._group_id = group_id  # str(id(self))
+        self.enabled = True
         self.end_iter = self._end_iter
         self._next_func = self._our_next
         self._next_counter = 0
@@ -243,14 +246,16 @@ class FlowceptLightweightLoop:
             # because we do this if not enabled only here and never again.
             self._next_func = self._do_nothing_next
             self.end_iter = self._do_nothing_in_end_iter
+            self.enabled = False
             return
 
+        self.enabled = True
         self._next_func = self._our_next
         self._next_counter = -1
         self._current_item = None
         self._loop_name = loop_name
         self._item_name = item_name
-        self._group_id = str(id(self))
+        self._group_id = str(id(self) + id(self._iterator) + id(parent_task_id))
         self._act_id = loop_name + "_iteration"
         self.workflow_id = workflow_id or Flowcept.current_workflow_id or str(uuid.uuid4())
         task_obj = {

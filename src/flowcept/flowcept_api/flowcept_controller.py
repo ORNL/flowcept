@@ -179,7 +179,30 @@ class Flowcept(object):
 
     @staticmethod
     def services_alive() -> bool:
-        """Get alive services."""
+        """
+        Checks the liveness of the MQ (Message Queue) and, if enabled, the MongoDB service.
+
+        Returns
+        -------
+        bool
+            True if all services (MQ and optionally MongoDB) are alive, False otherwise.
+
+        Notes
+        -----
+        - The method tests the liveness of the MQ service using `MQDao`.
+        - If `MONGO_ENABLED` is True, it also checks the liveness of the MongoDB service
+          using `MongoDBDAO`.
+        - Logs errors if any service is not ready, and logs success when both services are
+        operational.
+
+        Examples
+        --------
+        >>> is_alive = services_alive()
+        >>> if is_alive:
+        ...     print("All services are running.")
+        ... else:
+        ...     print("One or more services are not ready.")
+        """
         logger = FlowceptLogger()
         if not MQDao.build().liveness_test():
             logger.error("MQ Not Ready!")
@@ -192,3 +215,46 @@ class Flowcept(object):
                 return False
         logger.info("MQ and DocDB are alive!")
         return True
+
+    @staticmethod
+    def start_consumption_services(
+        bundle_exec_id: str = None, check_safe_stops: bool = False, consumers: List = None
+    ):
+        """
+        Starts the document consumption services for processing.
+
+        Parameters
+        ----------
+        bundle_exec_id : str, optional
+            The execution ID of the bundle being processed. Defaults to None.
+        check_safe_stops : bool, optional
+            Whether to enable safe stop checks for the service. Defaults to False.
+        consumers : List, optional
+            A list of consumer types to be started. Currently, only one type of consumer
+            is supported. Defaults to None.
+
+        Raises
+        ------
+        NotImplementedError
+            If multiple consumer types are provided in the `consumers` list.
+
+        Notes
+        -----
+        - The method initializes the `DocumentInserter` service, which processes documents
+          based on the provided parameters.
+        - The `threaded` parameter for `DocumentInserter.start` is set to `False`.
+
+        Examples
+        --------
+        >>> start_consumption_services(bundle_exec_id="12345", check_safe_stops=True)
+        """
+        if consumers is not None:
+            raise NotImplementedError("We currently only have one type of consumer.")
+        from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
+
+        logger = FlowceptLogger()
+        doc_inserter = DocumentInserter(
+            check_safe_stops=check_safe_stops, bundle_exec_id=bundle_exec_id
+        )
+        logger.debug("Starting doc inserter service.")
+        doc_inserter.start(threaded=False)

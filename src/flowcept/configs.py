@@ -36,10 +36,11 @@ else:
     SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", f"{_SETTINGS_DIR}/settings.yaml")
 
     if not os.path.exists(SETTINGS_PATH):
-        SETTINGS_PATH = None
         from importlib import resources
 
-        with resources.files("resources").joinpath("sample_settings.yaml").open("r") as f:
+        SETTINGS_PATH = str(resources.files("resources").joinpath("sample_settings.yaml"))
+
+        with open(SETTINGS_PATH) as f:
             settings = OmegaConf.load(f)
     else:
         settings = OmegaConf.load(SETTINGS_PATH)

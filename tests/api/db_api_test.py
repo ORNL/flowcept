@@ -64,7 +64,7 @@ class DBAPITest(unittest.TestCase):
 
         obj = pickle.dumps(OurObject())
 
-        obj_id = Flowcept.db.save_object(object=obj, save_data_in_collection=True)
+        obj_id = Flowcept.db.save_or_update_object(object=obj, save_data_in_collection=True)
         print(obj_id)
 
         obj_docs = Flowcept.db.query(filter={"object_id": obj_id}, collection="objects")
