@@ -25,7 +25,7 @@ fi
 
 # Function to run tests with common steps
 run_test() {
-  test_path="${EXAMPLES_DIR}/${1}_example.py"
+  test_path="${EXAMPLES_DIR}/${1}"
   test_type="$1"
   with_mongo="$2"
   echo "Test type=${test_type}"
@@ -81,7 +81,7 @@ echo "Using examples directory: $EXAMPLES_DIR"
 echo "With Mongo? ${WITH_MONGO}"
 
 # Define the test cases
-default_tests=("instrumented_simple" "instrumented_loop" "distributed_consumer" "dask" "mlflow" "tensorboard" "single_layer_perceptron" "llm_complex/llm_main")
+default_tests=("instrumented_simple_example.py" "instrumented_loop_example.py" "distributed_consumer_example.py" "dask_example.py" "mlflow_example.py" "tensorboard_example.py" "single_layer_perceptron_example.py" "llm_complex/llm_main_example.py")
 
 # Use the third argument if provided, otherwise use default tests
 if [[ -n "$3" ]]; then

@@ -27,6 +27,8 @@ from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 from flowcept.instrumentation.flowcept_task import get_current_context_task_id
 
+TORCH_CONFIG = INSTRUMENTATION.get("torch")
+
 
 def flowcept_torch(cls):
     """
@@ -113,20 +115,19 @@ def flowcept_torch(cls):
             capture_enabled = kwargs.get("capture_enabled", True)
             if not instrumentation_enabled or not capture_enabled:
                 return
-            _what = INSTRUMENTATION.get("torch", {}).get("what")
+            _what = TORCH_CONFIG.get("what")
             self._parent_enabled = _what is not None and "parent" in _what
 
             self._children_enabled = _what is not None and "children" in _what
 
             if self._parent_enabled:
                 self.forward = self._our_forward_parent
-            self._epochs_at_every = INSTRUMENTATION.get("torch", {}).get(
-                "capture_epochs_at_every", 1
-            )
+            self._epochs_at_every = TORCH_CONFIG.get("capture_epochs_at_every", 1)
             self._children_mode = None
             self._should_update_children_forward = False
+            self._children_tensor_inspection_enabled = False
             if self._children_enabled:
-                self._children_mode = INSTRUMENTATION.get("torch", {}).get("children_mode", None)
+                self._children_mode = TORCH_CONFIG.get("children_mode", None)
                 self._children_tensor_inspection_enabled = "inspection" in self._children_mode
                 if self._children_mode is None:
                     raise Exception("You enabled children mode, but did not specify which mode.")
@@ -200,13 +201,21 @@ def flowcept_torch(cls):
             return y
 
         def _enable_children_forward(self):
-            if self._epochs_at_every > 1 and self._should_update_children_forward:
-                self._update_children_with_our_forward()
+            if (
+                "children" in TORCH_CONFIG.get("what", "parent_only")
+                and "telemetry" in TORCH_CONFIG["children_mode"]
+            ):
+                if self._epochs_at_every > 1 and self._should_update_children_forward:
+                    self._update_children_with_our_forward()
 
         def _disable_children_forward(self):
-            if self._epochs_at_every > 1 and self._should_update_children_forward:
-                self._update_children_with_original_forward()
-            self._should_update_children_forward = True
+            if (
+                "children" in TORCH_CONFIG.get("what", "parent_only")
+                and "telemetry" in TORCH_CONFIG["children_mode"]
+            ):
+                if self._epochs_at_every > 1 and self._should_update_children_forward:
+                    self._update_children_with_original_forward()
+                self._should_update_children_forward = True
 
         def _get_profile(self):
             nparams = 0
@@ -427,7 +436,7 @@ def flowcept_torch(cls):
 
 
 def _get_parent_loop_class(epoch_or_batch):
-    loop_mode = INSTRUMENTATION.get("torch", {}).get(f"{epoch_or_batch}_loop", "default")
+    loop_mode = TORCH_CONFIG.get(f"{epoch_or_batch}_loop", "default")
     if loop_mode == "lightweight":
         from flowcept.instrumentation.flowcept_loop import FlowceptLightweightLoop
 
@@ -454,6 +463,9 @@ def _create_epoch_loop_class():
             parent_task_id=None,
             workflow_id=None,
         ):
+            if TORCH_CONFIG.get("epoch_loop", None) is None:
+                super().__init__(items=items, capture_enabled=False)
+                return
             super().__init__(
                 items,
                 loop_name=FlowceptEpochLoop.ACTIVITY_ID,
@@ -520,17 +532,19 @@ def _create_batch_loop_class():
             items_length=0,
         ):
             self._epochs_loop = epochs_loop
-            if self._epochs_loop is None:
+            if (
+                (self._epochs_loop is None)
+                or (not self._epochs_loop.enabled)
+                or (TORCH_CONFIG.get("batch_loop", None) is None)
+            ):
                 super().__init__(items=items, items_length=items_length, capture_enabled=False)
                 return
             self.activity_id = f"{step}_batch"
-            if parent_task_id is None:
-                print()
             super().__init__(
                 items,
                 loop_name=self.activity_id,
                 item_name="batch",
-                parent_task_id=parent_task_id or epochs_loop.get_current_iteration_id(),
+                parent_task_id=parent_task_id or self._epochs_loop.get_current_iteration_id(),
                 workflow_id=workflow_id or epochs_loop.workflow_id,
                 items_length=items_length,
             )

@@ -11,7 +11,7 @@ class MLDecoratorTests(unittest.TestCase):
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_torch_save_n_load(self):
         model = nn.Module()
-        model_id = Flowcept.db.save_torch_model(model)
+        model_id = Flowcept.db.save_or_update_torch_model(model)
         new_model = nn.Module()
         doc = Flowcept.db.load_torch_model(model=new_model, object_id=model_id)
         print(doc)

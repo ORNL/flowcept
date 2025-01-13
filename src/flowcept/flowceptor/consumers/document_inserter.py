@@ -54,7 +54,6 @@ class DocumentInserter:
         mq_port=None,
         bundle_exec_id=None,
     ):
-        self._task_dicts_buffer = list()
         self._mq_dao = MQDao.build(mq_host, mq_port)
         self._doc_daos = []
         if MONGO_ENABLED:
@@ -74,7 +73,6 @@ class DocumentInserter:
         self.buffer: AutoflushBuffer = AutoflushBuffer(
             max_size=self._curr_max_buffer_size,
             flush_interval=INSERTION_BUFFER_TIME,
-            logger=self.logger,
             flush_function=DocumentInserter.flush_function,
             flush_function_kwargs={"logger": self.logger, "doc_daos": self._doc_daos},
         )
@@ -83,26 +81,13 @@ class DocumentInserter:
         if not ADAPTIVE_BUFFER_SIZE:
             return
         else:
-            # Adaptive buffer size to increase/decrease depending on the flow
-            # of messages (#messages/unit of time)
-            if len(self._task_dicts_buffer) >= MAX_BUFFER_SIZE:
-                self._curr_max_buffer_size = MAX_BUFFER_SIZE
-            elif len(self._task_dicts_buffer) < self._curr_max_buffer_size:
-                # decrease buffer size by 10%, lower-bounded by 10
-                self._curr_max_buffer_size = max(
-                    MIN_BUFFER_SIZE,
-                    int(self._curr_max_buffer_size * 0.9),
-                )
-            else:
-                # increase buffer size by 10%,
-                # upper-bounded by MONGO_INSERTION_BUFFER_SIZE
-                self._curr_max_buffer_size = max(
-                    MIN_BUFFER_SIZE,
-                    min(
-                        MAX_BUFFER_SIZE,
-                        int(self._curr_max_buffer_size * 1.1),
-                    ),
-                )
+            self._curr_max_buffer_size = max(
+                MIN_BUFFER_SIZE,
+                min(
+                    MAX_BUFFER_SIZE,
+                    int(self._curr_max_buffer_size * 1.1),
+                ),
+            )
 
     @staticmethod
     def flush_function(buffer, doc_daos, logger):
@@ -242,10 +227,10 @@ class DocumentInserter:
                 )
                 sleep(sleep_time)
                 if trial >= max_trials:
-                    if len(self._task_dicts_buffer) == 0:  # and len(self._mq_dao._buffer) == 0:
-                        msg = f"DocInserter {id(self)} gave up waiting for signal. "
-                        self.logger.critical(msg + "Safe to stop now.")
-                        break
+                    # if len(self._mq_dao._buffer) == 0:
+                    msg = f"DocInserter {id(self)} gave up waiting for signal. "
+                    self.logger.critical(msg + "Safe to stop now.")
+                    break
         self.logger.info("Sending message to stop document inserter.")
         self._mq_dao.send_document_inserter_stop()
         self.logger.info(f"Doc Inserter {id(self)} Sent message to stop itself.")

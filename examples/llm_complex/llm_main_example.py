@@ -12,13 +12,13 @@ from distributed import LocalCluster, Client
 
 from examples.llm_complex.llm_dataprep import dataprep_workflow
 from examples.llm_complex.llm_model import model_train, TransformerModel
+from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+from flowcept.commons.flowcept_logger import FlowceptLogger
 
 from flowcept.configs import MONGO_ENABLED, INSTRUMENTATION
 from flowcept import Flowcept
 from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskSchedulerAdapter, \
     FlowceptDaskWorkerAdapter, register_dask_workflow
-
-TORCH_CAPTURE = INSTRUMENTATION.get("torch")
 
 
 def _interpolate_values(start, end, step):
@@ -92,8 +92,8 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
         {**c, "ntokens": ntokens,
          "dataset_ref": dataset_ref,
          "train_data_path":train_data_path,
-        "val_data_path": val_data_path,
-        "test_data_path": test_data_path,
+         "val_data_path": val_data_path,
+         "test_data_path": test_data_path,
          "workflow_id": search_wf_id,
          "campaign_id": campaign_id}
         for c in configs
@@ -112,7 +112,7 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
     return search_wf_id
 
 
-def run_asserts_and_exports(campaign_id):
+def run_asserts_and_exports(campaign_id, model_search_wf_id):
     from flowcept.commons.vocabulary import Status
     print("Now running all asserts...")
     """
@@ -137,6 +137,11 @@ def run_asserts_and_exports(campaign_id):
             Module Layer Forward Test Workflow . Parent module forward tasks
                 Module Layer Forward Test Workflow . Children modules forward tasks
     """
+
+    if INSTRUMENTATION.get("torch").get("epoch_loop") is None or INSTRUMENTATION.get("torch").get("batch_loop") is None:
+        raise Exception("We can't assert this now.")
+
+    at_every = INSTRUMENTATION.get("torch").get("capture_epochs_at_every", 1)
     campaign_workflows = Flowcept.db.query({"campaign_id": campaign_id}, collection="workflows")
     workflows_data = []
     assert len(campaign_workflows) == 4 - 1 # dataprep + model_search + 2 subworkflows for the model_seearch
@@ -166,10 +171,6 @@ def run_asserts_and_exports(campaign_id):
         n_tasks_expected += 1
         assert t["status"] == Status.FINISHED.value
 
-        # epochs_loop = Flowcept.db.query(
-        #     {"parent_task_id": t["task_id"], "activity_id": FlowceptEpochLoop.ACTIVITY_ID})[0]
-        # assert epochs_loop["status"] == Status.FINISHED.value
-        # n_tasks_expected += 1
         epoch_iteration_tasks = Flowcept.db.query(
             {"parent_task_id": t["task_id"], "activity_id": "epochs_loop_iteration"})
         assert len(epoch_iteration_tasks) == t["used"]["epochs"]
@@ -180,21 +181,15 @@ def run_asserts_and_exports(campaign_id):
             epoch_iteration_ids.add(epoch_iteration_task["task_id"])
             assert epoch_iteration_task["status"] == Status.FINISHED.value
 
-            # train_batches_loop = Flowcept.db.query(
-            #     {"parent_task_id": epoch_iteration_task["task_id"], "activity_id": "train_batch"})[0]
-            # n_tasks_expected += 1
             train_batch_iteration_tasks = Flowcept.db.query(
                 {"parent_task_id": epoch_iteration_task["task_id"], "activity_id": "train_batch_iteration"})
+
             assert len(train_batch_iteration_tasks) > 0  # TODO: == number of train_batches
 
-            # eval_batches_loop = Flowcept.db.query(
-            #     {"parent_task_id": epoch_iteration_task["task_id"], "activity_id": "eval_batch"})[
-            #     0]
-            # n_tasks_expected += 1
             eval_batch_iteration_tasks = Flowcept.db.query(
                 {"parent_task_id": epoch_iteration_task["task_id"],
                  "activity_id": "eval_batch_iteration"})
-            assert len(eval_batch_iteration_tasks) > 0  # TODO: == number of train_batches
+            assert len(eval_batch_iteration_tasks) > 0  # TODO: == number of eval_batches
 
             batch_iteration_lst = [train_batch_iteration_tasks, eval_batch_iteration_tasks]
             for batch_iterations in batch_iteration_lst:
@@ -202,13 +197,14 @@ def run_asserts_and_exports(campaign_id):
                 for batch_iteration in batch_iterations:
                     n_tasks_expected += 1
 
-                    if "parent" in TORCH_CAPTURE.get("what"):
+                    if "parent" in INSTRUMENTATION.get("torch").get("what"):
 
                         parent_forwards = Flowcept.db.query(
                             {"workflow_id": parent_module_wf_id, "activity_id": "TransformerModel", "parent_task_id": batch_iteration["task_id"]})
 
                         if len(parent_forwards) == 0:
                             continue
+
                         assert len(parent_forwards) == 1
                         parent_forward = parent_forwards[0]
 
@@ -219,11 +215,16 @@ def run_asserts_and_exports(campaign_id):
                         assert parent_forward[
                                    "parent_task_id"] == batch_iteration["task_id"]
 
-                        if "children" in TORCH_CAPTURE.get("what"):
+                        if "children" in INSTRUMENTATION.get("torch").get("what"):
                             children_forwards = Flowcept.db.query(
                                 {"parent_task_id": parent_forward["task_id"]})
 
-                            if "telemetry" in TORCH_CAPTURE.get("children_mode") or epoch_iteration_task["used"]["i"] == 0:
+                            # We only have children_forward if:
+                            # epoch == 1 or
+                            # telemetry and epoch % at every == 0
+                            curr_epoch = epoch_iteration_task["used"]["i"]
+                            if  (curr_epoch == 0) or \
+                                ("telemetry" in INSTRUMENTATION.get("torch").get("children_mode") and curr_epoch % at_every == 0):
                                 assert len(children_forwards) == 4  # there are four children submodules # TODO get dynamically
                                 for child_forward in children_forwards:
                                     n_tasks_expected += 1
@@ -255,6 +256,11 @@ def save_files(campaign_id, model_search_wf_id, output_dir="output_data"):
     doc = Flowcept.db.load_torch_model(loaded_model, best_model_obj_id)
     torch.save(loaded_model.state_dict(),
                f"{output_dir}/wf_{model_search_wf_id}_transformer_wikitext2.pth")
+
+    print("Deleting best model from the database.")
+    dao = MongoDBDAO(create_indices=False)
+    dao.delete_object_keys("object_id", [doc["object_id"]])
+
     workflows_file = f"{output_dir}/workflows_{uuid.uuid4()}.json"
     print(f"workflows_file = '{workflows_file}'")
     Flowcept.db.dump_to_file(filter={"campaign_id": campaign_id}, collection="workflows",
@@ -271,11 +277,10 @@ def save_files(campaign_id, model_search_wf_id, output_dir="output_data"):
     return workflows_file, tasks_file
 
 
-def main():
+def run_campaign():
 
     _campaign_id = str(uuid.uuid4())
     print(f"Campaign id={_campaign_id}")
-    input_data_dir = "input_data"
     tokenizer_type = "basic_english"
     subset_size = 10
     max_runs = 1
@@ -300,13 +305,13 @@ def main():
         batch_size=exp_param_settings["batch_size"][0],
         eval_batch_size=exp_param_settings["eval_batch_size"][0],
         subset_size=subset_size)
+
     _search_wf_id = search_workflow(dataprep_generated["ntokens"], dataprep_generated["dataset_ref"], dataprep_generated["train_data_path"], dataprep_generated["val_data_path"], dataprep_generated["test_data_path"], exp_param_settings, max_runs, campaign_id=_campaign_id)
 
     return _campaign_id, _dataprep_wf_id, _search_wf_id, epochs, max_runs, dataprep_generated["train_n_batches"], dataprep_generated["val_n_batches"]
 
 
 def asserts_on_saved_dfs(workflows_file, tasks_file, n_workflows_expected, n_tasks_expected, epoch_iterations, max_runs, n_batches_train, n_batches_eval, n_modules):
-
     workflows_df = pd.read_json(workflows_file)
     # Assert workflows dump
     assert len(workflows_df) == n_workflows_expected
@@ -316,7 +321,7 @@ def asserts_on_saved_dfs(workflows_file, tasks_file, n_workflows_expected, n_tas
 
     # TODO: save #n_batches for train, test, val individually
     search_tasks = max_runs
-    at_every = INSTRUMENTATION.get("torch", {}).get("capture_epochs_at_every", 1)
+    at_every = INSTRUMENTATION.get("torch").get("capture_epochs_at_every", 1)
 
     batch_iteration_tasks = epoch_iterations * (n_batches_train + n_batches_eval)
     non_module_tasks = search_tasks + epoch_iterations + batch_iteration_tasks
@@ -329,14 +334,14 @@ def asserts_on_saved_dfs(workflows_file, tasks_file, n_workflows_expected, n_tas
 
     number_of_captured_epochs = epoch_iterations / at_every
 
-    if "telemetry" in TORCH_CAPTURE.get("children_mode"):
+    if "telemetry" in INSTRUMENTATION.get("torch").get("children_mode"):
         expected_child_tasks = search_tasks * epoch_iterations * (
                     (n_batches_train * n_modules) + (n_batches_eval * n_modules))
         expected_child_tasks = expected_child_tasks/at_every
         expected_child_tasks_per_epoch = expected_child_tasks / number_of_captured_epochs
         with_used = 1 * expected_child_tasks_per_epoch
         without_used = (number_of_captured_epochs - 1) * expected_child_tasks_per_epoch
-    elif "tensor_inspection" in TORCH_CAPTURE.get("children_mode"):
+    elif "tensor_inspection" in INSTRUMENTATION.get("torch").get("children_mode"):
         expected_child_tasks = search_tasks * 1 * (
                     (n_batches_train * n_modules) + (n_batches_eval * n_modules))
         expected_child_tasks_per_epoch = expected_child_tasks
@@ -345,25 +350,75 @@ def asserts_on_saved_dfs(workflows_file, tasks_file, n_workflows_expected, n_tas
     else:
         raise NotImplementedError("Needs to implement for lightweight")
 
-    assert len(tasks_df[tasks_df.subtype == 'child_forward']) == expected_child_tasks
-    assert non_module_tasks + parent_module_tasks + expected_child_tasks == len(tasks_df)
-
     # Testing if only the first epoch got the inspection
     assert len(tasks_df[(tasks_df.subtype == 'parent_forward') & (tasks_df.used.str.contains('tensor'))]) == n_batches_train + n_batches_eval
-    # Testing if capturing at every at_every epochs
-    assert len(tasks_df[(tasks_df.subtype == 'child_forward') & (tasks_df.used == 'NaN')]) == without_used
-    assert len(tasks_df[(tasks_df.subtype == 'child_forward') & (tasks_df.used != 'NaN')]) == with_used
+
+    if "children" in INSTRUMENTATION.get("torch").get("what"):
+        assert len(tasks_df[tasks_df.subtype == 'child_forward']) == expected_child_tasks
+        assert non_module_tasks + parent_module_tasks + expected_child_tasks == len(tasks_df)
+        # Testing if capturing at every at_every epochs
+        assert len(tasks_df[(tasks_df.subtype == 'child_forward') & (
+                    tasks_df.used == 'NaN')]) == without_used
+        assert len(
+            tasks_df[(tasks_df.subtype == 'child_forward') & (tasks_df.used != 'NaN')]) == with_used
+
+    task_ids = list(tasks_df["task_id"].unique())
+    workflow_ids = list(workflows_df["workflow_id"].unique())
+    print("Deleting generated data in MongoDB")
+    dao = MongoDBDAO(create_indices=False)
+    dao.delete_task_keys("task_id", task_ids)
+    dao.delete_workflow_keys("workflow_id", workflow_ids)
 
 
-if __name__ == "__main__":
+def verify_number_docs_in_db(n_tasks=None, n_wfs=None, n_objects=None):
+    dao = MongoDBDAO(create_indices=False)
+    _n_tasks = dao.count_tasks()
+    _n_wfs = dao.count_workflows()
+    _n_objects = dao.count_objects()
+
+    if n_tasks:
+        if n_tasks != _n_tasks:
+            raise Exception("Number of tasks now is different than when we started this campaign.")
+        else:
+            print("Good, #tasks are equal to the beginning!")
+
+    if n_wfs:
+        if n_wfs != _n_wfs:
+            raise Exception("Number of workflows now is different than when we started this campaign.")
+        else:
+            print("Good, #workflows are equal to the beginning!")
+
+    if n_objects:
+        if n_objects != _n_objects:
+            raise Exception("Number of object now is different than when we started this campaign.")
+        else:
+            print("Good, #objects are equal to the beginning!")
+
+    return _n_tasks, _n_wfs, _n_objects
+
+
+
+def main():
 
     if not MONGO_ENABLED:
         print("This test is only available if Mongo is enabled.")
         sys.exit(0)
 
-    campaign_id, dataprep_wf_id, model_search_wf_id, epochs, max_runs, n_batches_train, n_batches_eval = main()
-    n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id)
+    print("TORCH SETTINGS: " + str(INSTRUMENTATION.get("torch")))
+
+    n_tasks, n_wfs, n_objects = verify_number_docs_in_db()
+
+    campaign_id, dataprep_wf_id, model_search_wf_id, epochs, max_runs, n_batches_train, n_batches_eval = run_campaign()
+
+    n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id)
     workflows_file, tasks_file = save_files(campaign_id, model_search_wf_id)
-    asserts_on_saved_dfs(workflows_file, tasks_file, n_workflows_expected, n_tasks_expected, epochs, max_runs, n_batches_train, n_batches_eval, n_modules=4)
+    asserts_on_saved_dfs(workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
+                         epochs, max_runs, n_batches_train, n_batches_eval, n_modules=4)
+    verify_number_docs_in_db(n_tasks, n_wfs, n_objects)
     print("Alright! Congrats.")
+
+
+if __name__ == "__main__":
+    main()
+    sys.exit(0)
 

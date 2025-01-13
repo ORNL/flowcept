@@ -251,6 +251,7 @@ class Flowcept(object):
         if consumers is not None:
             raise NotImplementedError("We currently only have one type of consumer.")
         from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
+
         logger = FlowceptLogger()
         doc_inserter = DocumentInserter(
             check_safe_stops=check_safe_stops, bundle_exec_id=bundle_exec_id
