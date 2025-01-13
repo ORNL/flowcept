@@ -197,6 +197,7 @@ def model_train(
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     best_val_loss = float("inf")  # Initialize the best validation loss to infinity
+    best_obj_id = None  # Initialize with unknown best model
     # Iterate through the epochs
     epochs_loop = FlowceptEpochLoop(range(1, epochs + 1), parent_task_id=main_task_id, model=model)
     t0 = time()
@@ -214,8 +215,9 @@ def model_train(
         # If the validation loss has improved, save the model's state
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_obj_id = Flowcept.db.save_torch_model(
+            best_obj_id = Flowcept.db.save_or_update_torch_model(
                 model,
+                object_id=best_obj_id,
                 task_id=epochs_loop.get_current_iteration_id(),
                 workflow_id=workflow_id,
                 custom_metadata={"best_val_loss": best_val_loss}

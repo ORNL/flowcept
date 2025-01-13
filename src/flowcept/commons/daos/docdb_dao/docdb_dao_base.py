@@ -338,7 +338,7 @@ class DocumentDBDAO(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def save_object(
+    def save_or_update_object(
         self,
         object,
         object_id,

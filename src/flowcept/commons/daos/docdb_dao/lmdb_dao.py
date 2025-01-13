@@ -318,7 +318,7 @@ class LMDBDAO(DocumentDBDAO):
         """Dump data to file."""
         raise NotImplementedError
 
-    def save_object(
+    def save_or_update_object(
         self,
         object,
         object_id,
