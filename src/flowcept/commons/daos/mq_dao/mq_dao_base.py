@@ -89,7 +89,7 @@ class MQDao(ABC):
 
     def bulk_publish(self, buffer):
         """Publish it."""
-        self.logger.info(f"Going to flush {len(buffer)} to MQ...")
+        # self.logger.info(f"Going to flush {len(buffer)} to MQ...")
         if MQ_CHUNK_SIZE > 1:
             for chunk in chunked(buffer, MQ_CHUNK_SIZE):
                 self._bulk_publish(chunk)
@@ -99,9 +99,9 @@ class MQDao(ABC):
     def register_time_based_thread_init(self, interceptor_instance_id: str, exec_bundle_id=None):
         """Register the time."""
         set_name = MQDao._get_set_name(exec_bundle_id)
-        self.logger.info(
-            f"Register start of time_based MQ flush thread {set_name}.{interceptor_instance_id}"
-        )
+        # self.logger.info(
+        #     f"Register start of time_based MQ flush thread {set_name}.{interceptor_instance_id}"
+        # )
         self._keyvalue_dao.add_key_into_set(set_name, interceptor_instance_id)
 
     def register_time_based_thread_end(self, interceptor_instance_id: str, exec_bundle_id=None):
@@ -123,12 +123,11 @@ class MQDao(ABC):
     def init_buffer(self, interceptor_instance_id: str, exec_bundle_id=None):
         """Create the buffer."""
         if flowcept.configs.DB_FLUSH_MODE == "online":
-            msg = "Starting MQ time-based flushing! bundle: "
-            self.logger.info(msg + f"{exec_bundle_id}; interceptor id: {interceptor_instance_id}")
+            # msg = "Starting MQ time-based flushing! bundle: "
+            # self.logger.debug(msg+f"{exec_bundle_id}; interceptor id: {interceptor_instance_id}")
             self.buffer = AutoflushBuffer(
                 max_size=MQ_BUFFER_SIZE,
                 flush_interval=MQ_INSERTION_BUFFER_TIME,
-                logger=self.logger,
                 flush_function=self.bulk_publish,
             )
             self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
@@ -150,10 +149,10 @@ class MQDao(ABC):
     def stop(self, interceptor_instance_id: str, bundle_exec_id: int = None):
         """Stop it."""
         msg0 = "MQ publisher received stop signal! bundle: "
-        self.logger.info(msg0 + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
+        self.logger.debug(msg0 + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
         self._close_buffer()
         msg = "Flushed MQ for last time! Send stop msg. bundle: "
-        self.logger.info(msg + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
+        self.logger.debug(msg + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
         self._send_mq_dao_time_thread_stop(interceptor_instance_id, bundle_exec_id)
 
     def _send_mq_dao_time_thread_stop(self, interceptor_instance_id, exec_bundle_id=None):
@@ -165,7 +164,7 @@ class MQDao(ABC):
             "interceptor_instance_id": interceptor_instance_id,
             "exec_bundle_id": exec_bundle_id,
         }
-        self.logger.info("Control msg sent: " + str(msg))
+        # self.logger.info("Control msg sent: " + str(msg))
         self.send_message(msg)
 
     def send_document_inserter_stop(self):

@@ -41,11 +41,11 @@ clean:
 	find . -type f -name "*.pth" -exec rm -f {} \; || true
 	find . -type f -name "mlflow.db" -exec rm -f {} \; || true
 	find . -type d -name "mlruns" -exec rm -rf {} \; 2>/dev/null || true
-	find . -type d -name "mlruns" -exec rm -rf {} \; 2>/dev/null || true
 	find . -type d -name "__pycache__" -exec rm -rf {} \;  2>/dev/null || true
 	find . -type d -name "*tfevents*" -exec rm -rf {} \;  2>/dev/null || true
 	find . -type d -name "*output_data*" -exec rm -rf {} \;  2>/dev/null || true
-	# sphinx-build -M clean docs docs/_build This needs to be fixed.
+	find . -type f -name "*nohup*" -exec rm -rf {} \;  2>/dev/null || true
+	sphinx-build -M clean docs docs/_build > /dev/null 2>&1 || true
 
 # Build the HTML documentation using Sphinx
 .PHONY: docs
@@ -96,7 +96,3 @@ tests:
 .PHONY: tests-notebooks
 tests-notebooks:
 	pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
-
-.PHONY: tests-all
-tests-all:
-	pytest

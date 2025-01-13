@@ -7,6 +7,7 @@ from typing import List, Dict
 import pytz
 
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
+from flowcept.commons.vocabulary import Status
 
 
 def curate_task_msg(task_msg_dict: dict, convert_times=True):
@@ -101,6 +102,8 @@ def curate_dict_task_messages(
         if "status" in doc:
             doc[doc["status"].lower()] = True
             # doc.pop("status")
+            if "finished" in doc and doc["finished"]:
+                doc["status"] = Status.FINISHED.value
 
         if utc_time_at_insertion > 0:
             doc["utc_time_at_insertion"] = utc_time_at_insertion

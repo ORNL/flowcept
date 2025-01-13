@@ -37,7 +37,7 @@ class FlowceptLogger(object):
             logger.addHandler(stream_handler)
 
         if file_level <= logging.CRITICAL:
-            file_handler = logging.FileHandler(LOG_FILE_PATH, mode="a+")
+            file_handler = logging.FileHandler(LOG_FILE_PATH, delay=True, mode="a+")
             file_handler.setLevel(file_level)
             file_format = logging.Formatter(f"[%(asctime)s]{_BASE_FORMAT}")
             file_handler.setFormatter(file_format)

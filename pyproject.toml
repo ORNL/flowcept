@@ -11,7 +11,7 @@ dependencies = [
     "msgpack",
     "omegaconf",
     "pandas",
-    "psutil",
+    "psutil>=6.1.1",
     "py-cpuinfo",
     "redis",
     "requests",
@@ -64,13 +64,13 @@ mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog"]
 nvidia = ["nvidia-ml-py"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
 dev = [
+    "flowcept[docs]",
     "jupyterlab",
     "nbmake",
     "pika",
     "pytest",
     "ruff",
     "pyyaml",
-    "psutil>=6.1.1"
 ]
 # Torch and some other ml-specific libs, only used for dev purposes, require the following specific versions.
 ml_dev = [

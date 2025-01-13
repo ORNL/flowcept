@@ -110,11 +110,10 @@ class TensorboardInterceptor(BaseInterceptor):
         event_handler = InterceptionEventHandler(self, self.__class__.callback)
         while not os.path.isdir(self.settings.file_path):
             self.logger.debug(
-                f"I can't watch the file {self.settings.file_path}," f" as it does not exist."
+                f"I can't watch the file {self.settings.file_path}, as it does not exist."
             )
             self.logger.debug(
-                f"\tI will sleep for {self.settings.watch_interval_sec} sec."
-                f" to see if it appears."
+                f"\tI will sleep for {self.settings.watch_interval_sec} s to see if it appears."
             )
             sleep(self.settings.watch_interval_sec)
 

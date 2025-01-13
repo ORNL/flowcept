@@ -25,7 +25,7 @@ fi
 
 # Function to run tests with common steps
 run_test() {
-  test_path="${EXAMPLES_DIR}/${1}_example.py"
+  test_path="${EXAMPLES_DIR}/${1}"
   test_type="$1"
   with_mongo="$2"
   echo "Test type=${test_type}"
@@ -39,6 +39,8 @@ run_test() {
     pip install .[mongo] > /dev/null 2>&1
   fi
 
+
+  # The following block is only needed to install special dependencies.
   if [[ "$test_type" =~ "mlflow" ]]; then
     echo "Installing mlflow"
     pip install .[mlflow] > /dev/null 2>&1
@@ -53,6 +55,7 @@ run_test() {
     pip install .[ml_dev] > /dev/null 2>&1
   elif [[ "$test_type" =~ "llm_complex" ]]; then
     echo "Installing ml_dev dependencies"
+    pip install .[dask] > /dev/null 2>&1
     pip install .[ml_dev]
     echo "Defining python path for llm_complex..."
     export PYTHONPATH=$PYTHONPATH:${EXAMPLES_DIR}/llm_complex
@@ -62,7 +65,6 @@ run_test() {
   echo "Running $test_path ..."
   python "$test_path" | tee output.log
   echo "Ok, ran $test_path."
-  # Check for errors in the output
   if grep -iq "error" output.log; then
     echo "Test $test_path failed! See output.log for details."
     exit 1
@@ -70,7 +72,6 @@ run_test() {
 
   echo "Great, no errors to run $test_path."
 
-  # Clean up the log file
   rm output.log
 }
 
@@ -81,7 +82,7 @@ echo "Using examples directory: $EXAMPLES_DIR"
 echo "With Mongo? ${WITH_MONGO}"
 
 # Define the test cases
-default_tests=("instrumented_simple" "instrumented_loop" "dask" "mlflow" "tensorboard" "single_layer_perceptron" "llm_complex/llm_main")
+default_tests=("instrumented_simple_example.py" "instrumented_loop_example.py" "distributed_consumer_example.py" "dask_example.py" "mlflow_example.py" "tensorboard_example.py" "single_layer_perceptron_example.py" "llm_complex/llm_main_example.py")
 
 # Use the third argument if provided, otherwise use default tests
 if [[ -n "$3" ]]; then
