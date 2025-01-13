@@ -93,7 +93,7 @@ class DocumentInserter:
     def flush_function(buffer, doc_daos, logger):
         """Flush it."""
         logger.info(
-            f"Current Doc buffer size: {len(buffer)}, " f"Gonna flush {len(buffer)} msgs to DocDBs!"
+            f"Current Doc buffer size: {len(buffer)}, Gonna flush {len(buffer)} msgs to DocDBs!"
         )
         for dao in doc_daos:
             dao.insert_and_update_many_tasks(buffer, TaskObject.task_id_field())
@@ -129,7 +129,7 @@ class DocumentInserter:
             remove_empty_fields_from_dict(message)
 
         self.logger.debug(
-            f"Received following Task msg in DocInserter:" f"\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
+            f"Received following Task msg in DocInserter:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
         )
         self.buffer.append(message)
 
