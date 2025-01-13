@@ -113,7 +113,7 @@ class TensorboardInterceptor(BaseInterceptor):
                 f"I can't watch the file {self.settings.file_path}, as it does not exist."
             )
             self.logger.debug(
-                f"\tI will sleep for {self.settings.watch_interval_sec} sec. to see if it appears."
+                f"\tI will sleep for {self.settings.watch_interval_sec} s to see if it appears."
             )
             sleep(self.settings.watch_interval_sec)
 

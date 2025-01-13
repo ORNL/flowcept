@@ -98,8 +98,8 @@ class DocumentInserter:
         for dao in doc_daos:
             dao.insert_and_update_many_tasks(buffer, TaskObject.task_id_field())
             logger.debug(
-                f"DocDao={id(dao)},DocDaoClass={dao.__class__.__name__};"
-                f" Flushed {len(buffer)} msgs to this DocDB!"
+                f"DocDao={id(dao)},DocDaoClass={dao.__class__.__name__};\
+                Flushed {len(buffer)} msgs to this DocDB!"
             )  # TODO: add name
 
     def _handle_task_message(self, message: Dict):
@@ -136,7 +136,7 @@ class DocumentInserter:
     def _handle_workflow_message(self, message: Dict):
         message.pop("type")
         self.logger.debug(
-            f"Received following Workflow msg in DocInserter: \n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
+            f"Received following Workflow msg in DocInserter:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
         )
         if REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
