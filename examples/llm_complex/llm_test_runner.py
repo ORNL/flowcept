@@ -88,12 +88,15 @@ def update_yaml_file(torch_config: dict) -> None:
 
 
 def run_process():
-    command = ["python", "llm_main_example.py"]
+    current_script_path = os.path.abspath(__file__)
+    parent_directory = os.path.dirname(current_script_path)
+    llm_main_script = os.path.join(parent_directory, "llm_main_example.py")
+    command = ["python", llm_main_script]
     process = subprocess.Popen(
         command,
-        stdout=subprocess.PIPE,  # Capture stdout
-        stderr=subprocess.STDOUT,  # Redirect stderr to stdout
-        text=True,  # Decode output as text
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
     )
 
     # Print the output line by line in real-time
