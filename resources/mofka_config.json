@@ -12,7 +12,7 @@
             "provider_id" : 1,
             "config": {
                 "bootstrap": "self",
-                "file": "/home/agueroudji/flowcept/mofka.json",
+                "file": "/config/mofka.json",
                 "group": {
                     "type": "static"
                 }
