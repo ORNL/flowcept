@@ -1,7 +1,7 @@
 [![Build](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml)
 [![PyPI](https://badge.fury.io/py/flowcept.svg)](https://pypi.org/project/flowcept)
 [![Tests](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml)
-[![Code Formatting](https://github.com/ORNL/flowcept/actions/workflows/run-checks.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-checks.yml)
+[![Code Formatting](https://github.com/ORNL/flowcept/actions/workflows/checks.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-checks.yml)
 [![License: MIT](https://img.shields.io/github/license/ORNL/flowcept)](LICENSE)
 
 # Flowcept
@@ -44,6 +44,7 @@ Refer to [Contributing](CONTRIBUTING.md) for adding new adapters. Note: The term
 1. Install Flowcept: 
 
 `pip install .[all]` in this directory (or `pip install flowcept[all]`) if you want to install all dependencies.
+In some shells, you may need to use quotes, like: pip install ".[all]"
 
 For convenience, this will install all dependencies for all adapters. But it can install dependencies for adapters you will not use. For this reason, you may want to install like this: `pip install .[extra_dep1,extra_dep2]` for the adapters we have implemented, e.g., `pip install .[dask]`.
 Currently, the optional dependencies available are:

@@ -153,9 +153,9 @@ def flowcept_task(func=None, **decorator_kwargs):
             try:
                 if result is not None:
                     if isinstance(result, dict):
-                        task_obj.generated = args_handler(task_obj, **result)
+                        task_obj.generated = args_handler(**result)
                     else:
-                        task_obj.generated = args_handler(task_obj, result)
+                        task_obj.generated = args_handler(result)
             except Exception as e:
                 logger.exception(e)
 
