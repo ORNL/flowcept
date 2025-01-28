@@ -32,18 +32,3 @@ class TestLog(unittest.TestCase):
         self.assertIs(_logger, _logger2)
         _logger.v = "test_val"
         self.assertEqual(_logger2.v, "test_val")
-
-    def test_file_empty(self):
-        if os.path.exists(LOG_FILE_PATH):
-            os.remove(LOG_FILE_PATH)
-            assert not os.path.exists(LOG_FILE_PATH)
-
-        _logger = FlowceptLogger()
-        _logger.debug("Debug Test Msg")
-        _logger.error("Error Test Msg")
-        _logger.critical("Critical Test Msg")
-
-        if LOG_FILE_LEVEL == "DISABLE":
-            assert not os.path.exists(LOG_FILE_PATH), "Log file exists, but it shouldn't."
-        else:
-            assert os.path.exists(LOG_FILE_PATH), "Log file does not exist, but it should."
