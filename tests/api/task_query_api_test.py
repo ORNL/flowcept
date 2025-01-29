@@ -186,6 +186,7 @@ class TaskQueryAPITest(unittest.TestCase):
         assert task_ids[0] == r[0]["task_id"]
         self.delete_task_ids_and_assert(task_ids, init_db_count)
 
+    @unittest.skip("This is testing a deprecated feature.")
     def test_query_api_with_and_without_webserver(self):
         query_api_params = inspect.signature(TaskQueryAPI.query).parameters
         doc_query_api_params = inspect.signature(MongoDBDAO.task_query).parameters
