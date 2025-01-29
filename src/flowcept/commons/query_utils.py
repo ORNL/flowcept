@@ -29,9 +29,7 @@ def to_datetime(logger, df, column_name, _shift_hours=0):
     """Convert to datetime."""
     if column_name in df.columns:
         try:
-            df[column_name] = pd.to_datetime(df[column_name], unit="s") + timedelta(
-                hours=_shift_hours
-            )
+            df[column_name] = pd.to_datetime(df[column_name], unit="s") + timedelta(hours=_shift_hours)
         except Exception as _e:
             logger.info(_e)
 
@@ -68,9 +66,7 @@ def calculate_telemetry_diff_for_docs(docs: List[Dict]):
             continue
         new_telemetry = dict()
         for key in telemetry_start:
-            new_telemetry[key] = _calc_telemetry_diff_for_row(
-                telemetry_start[key], telemetry_end[key]
-            )
+            new_telemetry[key] = _calc_telemetry_diff_for_row(telemetry_start[key], telemetry_end[key])
         new_doc["telemetry_diff"] = new_telemetry
         new_docs.append(new_doc)
 

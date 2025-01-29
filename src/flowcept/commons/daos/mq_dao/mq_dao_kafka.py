@@ -55,7 +55,7 @@ class MQDaoKafka(MQDao):
                     else:
                         self.logger.error(f"Consumer error: {msg.error()}")
                         break
-                message = msgpack.loads(msg.value(), raw=False)
+                message = msgpack.loads(msg.value(), raw=False, strict_map_key=False)
                 self.logger.debug(f"Received message: {message}")
                 if not message_handler(message):
                     break
@@ -76,9 +76,7 @@ class MQDaoKafka(MQDao):
                 self._producer.produce(channel, key=channel, value=serializer(message))
             except Exception as e:
                 self.logger.exception(e)
-                self.logger.error(
-                    "Some messages couldn't be flushed! Check the messages' contents!"
-                )
+                self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
                 self.logger.error(f"Message that caused error: {message}")
         t0 = 0
         if PERF_LOG:

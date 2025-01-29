@@ -60,9 +60,7 @@ class TensorboardInterceptor(BaseInterceptor):
                     df_dict = dict(zip(df.tag, df.value))
                     tracked_tags[tag] = df_dict
 
-            if tracked_tags.get("tensors") and len(
-                self.log_metrics.intersection(tracked_tags["tensors"].keys())
-            ):
+            if tracked_tags.get("tensors") and len(self.log_metrics.intersection(tracked_tags["tensors"].keys())):
                 task_msg = TaskObject()
                 hparams = tracked_tags.get("hparams")
                 if "workflow_id" in hparams:
@@ -109,12 +107,8 @@ class TensorboardInterceptor(BaseInterceptor):
         """Observe it."""
         event_handler = InterceptionEventHandler(self, self.__class__.callback)
         while not os.path.isdir(self.settings.file_path):
-            self.logger.debug(
-                f"I can't watch the file {self.settings.file_path}, as it does not exist."
-            )
-            self.logger.debug(
-                f"\tI will sleep for {self.settings.watch_interval_sec} s to see if it appears."
-            )
+            self.logger.debug(f"I can't watch the file {self.settings.file_path}, as it does not exist.")
+            self.logger.debug(f"\tI will sleep for {self.settings.watch_interval_sec} s to see if it appears.")
             sleep(self.settings.watch_interval_sec)
 
         self._observer = PollingObserver()

@@ -53,12 +53,7 @@ def scatter2d_with_colors(
     color_label = color_col if color_label is None else color_label
 
     hovertemplate = (
-        x_label
-        + ": %{customdata[0]}<br>"
-        + y_label
-        + ": %{customdata[1]}<br>"
-        + color_label
-        + ": %{customdata[2]}"
+        x_label + ": %{customdata[0]}<br>" + y_label + ": %{customdata[1]}<br>" + color_label + ": %{customdata[2]}"
     )
 
     fig = go.Figure()

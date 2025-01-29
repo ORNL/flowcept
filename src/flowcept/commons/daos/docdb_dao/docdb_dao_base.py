@@ -151,9 +151,7 @@ class DocumentDBDAO(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def query(
-        self, filter, projection, limit, sort, aggregation, remove_json_unserializables, collection
-    ):
+    def query(self, filter, projection, limit, sort, aggregation, remove_json_unserializables, collection):
         """Query a collection.
 
         Parameters

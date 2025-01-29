@@ -149,9 +149,7 @@ class GenericJSONEncoder(json.JSONEncoder):
                 return None
         elif isinstance(obj, np.int) or isinstance(obj, np.int32) or isinstance(obj, np.int64):
             return int(obj)
-        elif (
-            isinstance(obj, np.float) or isinstance(obj, np.float32) or isinstance(obj, np.float64)
-        ):
+        elif isinstance(obj, np.float) or isinstance(obj, np.float32) or isinstance(obj, np.float64):
             return float(obj)
         return super().default(obj)
 
@@ -166,10 +164,10 @@ def replace_non_serializable(obj):
         else:
             return obj
     else:
-        if hasattr(obj, "to_dict"):
-            return obj.to_dict()
-        elif hasattr(obj, "to_flowcept_dict"):
+        if hasattr(obj, "to_flowcept_dict"):
             return obj.to_flowcept_dict()
+        elif hasattr(obj, "to_dict"):
+            return obj.to_dict()
         else:
             # Replace non-serializable values with id()
             return f"{obj.__class__.__name__}_instance_id_{id(obj)}"
@@ -196,9 +194,7 @@ def get_gpu_vendor():
     # Windows
     elif system == "Windows":
         try:
-            wmic_output = subprocess.check_output(
-                "wmic path win32_videocontroller get name", shell=True
-            ).decode()
+            wmic_output = subprocess.check_output("wmic path win32_videocontroller get name", shell=True).decode()
             if "NVIDIA" in wmic_output:
                 return "NVIDIA"
             elif "AMD" in wmic_output:
@@ -209,9 +205,7 @@ def get_gpu_vendor():
     # macOS
     elif system == "Darwin":  # macOS is "Darwin" in platform.system()
         try:
-            sp_output = subprocess.check_output(
-                "system_profiler SPDisplaysDataType", shell=True
-            ).decode()
+            sp_output = subprocess.check_output("system_profiler SPDisplaysDataType", shell=True).decode()
             if "NVIDIA" in sp_output:
                 return "NVIDIA"
             elif "AMD" in sp_output:

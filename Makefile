@@ -12,7 +12,6 @@ help:
 	@printf "\033[32mtests-in-container\033[0m        run unit tests with pytest inside Flowcept's container\n"
 	@printf "\033[32mtests-in-container-mongo\033[0m  run unit tests inside container with MongoDB\n"
 	@printf "\033[32mtests-in-container-kafka\033[0m  run unit tests inside container with Kafka and MongoDB\n"
-	@printf "\033[32mtests-all\033[0m                 run all unit tests with pytest, including long-running ones\n"
 	@printf "\033[32mtests-notebooks\033[0m           test the notebooks using pytest\n"
 	@printf "\033[32mclean\033[0m                     remove cache directories and Sphinx build output\n"
 	@printf "\033[32mdocs\033[0m                      build HTML documentation using Sphinx\n"

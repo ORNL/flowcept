@@ -12,13 +12,7 @@ import flowcept
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.commons.vocabulary import Status
-from flowcept import FlowceptTask, FlowceptLoop, Flowcept, lightweight_flowcept_task, flowcept_task
-# from flowcept.instrumentation.flowcept_loop import FlowceptLoop
-# from flowcept.instrumentation.flowcept_task import (
-#     flowcept_task,
-#     lightweight_flowcept_task,
-# )
-# from flowcept.instrumentation.task_capture import FlowceptTask
+from flowcept import Flowcept, lightweight_flowcept_task, flowcept_task
 
 
 def calc_time_to_sleep() -> float:
@@ -215,7 +209,7 @@ class DecoratorTests(unittest.TestCase):
         # Using the light decorator, the user has to control it.
         with Flowcept():
             print(Flowcept.current_workflow_id)
-            decorated_static_function(df=pd.DataFrame())
+            decorated_static_function(df=pd.DataFrame([1]))
             decorated_static_function2(x=1)
             decorated_static_function2(2)
 
@@ -223,9 +217,13 @@ class DecoratorTests(unittest.TestCase):
         assert assert_by_querying_tasks_until(
             filter={"workflow_id": Flowcept.current_workflow_id},
             condition_to_evaluate=lambda docs: len(docs) == 3,
-            max_time=60,
-            max_trials=60,
+            max_time=30,
+            max_trials=10,
         )
+        tasks = Flowcept.db.get_tasks_from_current_workflow()
+        for t in tasks:
+            assert len(t["used"]) == 1
+            assert len(t["generated"]) == 1
 
     @patch("sys.argv", ["script_name", "--a", "123", "--b", "abc", "--unknown_arg", "unk", "['a']"])
     def test_argparse(self):
