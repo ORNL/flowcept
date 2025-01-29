@@ -37,7 +37,7 @@ class MQDaoRedis(MQDao):
             if message["type"] in MQDaoRedis.MESSAGE_TYPES_IGNORE:
                 continue
             msg_obj = msgpack.loads(
-                message["data"]  # , cls=DocumentInserter.DECODER
+                message["data"], strict_map_key=False  # , cls=DocumentInserter.DECODER
             )
             if not message_handler(msg_obj):
                 break
@@ -53,9 +53,7 @@ class MQDaoRedis(MQDao):
                 pipe.publish(MQ_CHANNEL, serializer(message))
             except Exception as e:
                 self.logger.exception(e)
-                self.logger.error(
-                    "Some messages couldn't be flushed! Check the messages' contents!"
-                )
+                self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
                 self.logger.error(f"Message that caused error: {message}")
         t0 = 0
         if PERF_LOG:

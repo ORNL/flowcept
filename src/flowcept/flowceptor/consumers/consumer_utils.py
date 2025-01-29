@@ -20,11 +20,13 @@ def curate_task_msg(task_msg_dict: dict, convert_times=True):
         if type(field_val) is dict and not field_val:
             task_msg_dict.pop(field)  # removing empty fields
             continue
+
         if type(field_val) is dict:
             original_field_val = field_val.copy()
             for k in original_field_val:
                 if type(original_field_val[k]) is dict and not original_field_val[k]:
                     field_val.pop(k)  # removing inner empty fields
+            field_val = convert_keys_to_strings(field_val)
             task_msg_dict[field] = field_val
         else:
             field_val_dict = {}
@@ -47,9 +49,7 @@ def curate_task_msg(task_msg_dict: dict, convert_times=True):
         for time_field in TaskObject.get_time_field_names():
             if time_field in task_msg_dict:
                 has_time_fields = True
-                task_msg_dict[time_field] = datetime.fromtimestamp(
-                    task_msg_dict[time_field], pytz.utc
-                )
+                task_msg_dict[time_field] = datetime.fromtimestamp(task_msg_dict[time_field], pytz.utc)
 
         if not has_time_fields:
             task_msg_dict["registered_at"] = datetime.fromtimestamp(time(), pytz.utc)
@@ -65,6 +65,14 @@ def remove_empty_fields_from_dict(obj: dict):
         elif value in (None, ""):
             del obj[key]
 
+
+def convert_keys_to_strings(obj):
+    if isinstance(obj, dict):
+        return {str(k): convert_keys_to_strings(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_keys_to_strings(i) for i in obj]
+    else:
+        return obj
 
 def curate_dict_task_messages(
     doc_list: List[Dict], indexing_key: str, utc_time_at_insertion: float = 0, convert_times=True
@@ -89,11 +97,7 @@ def curate_dict_task_messages(
     """
     indexed_buffer = {}
     for doc_ref in doc_list:
-        if (
-            (len(doc_ref) == 1)
-            and (indexing_key in doc_ref)
-            and (doc_ref[indexing_key] in indexed_buffer)
-        ):
+        if (len(doc_ref) == 1) and (indexing_key in doc_ref) and (doc_ref[indexing_key] in indexed_buffer):
             # This task_msg does not add any metadata
             continue
         doc = doc_ref.copy()
@@ -118,6 +122,7 @@ def curate_dict_task_messages(
         for field in TaskObject.get_dict_field_names():
             if field in doc:
                 if doc[field] is not None and len(doc[field]):
+                    doc[field] = convert_keys_to_strings(doc[field])
                     if field in indexed_buffer[indexing_key_value]:
                         indexed_buffer[indexing_key_value][field].update(doc[field])
                     else:
