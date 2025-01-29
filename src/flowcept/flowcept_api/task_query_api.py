@@ -79,10 +79,9 @@ class TaskQueryAPI(object):
         remove_json_unserializables=True,
     ) -> List[Dict]:
         """Generate a mongo query pipeline.
-
         Generates a MongoDB query pipeline based on the provided arguments.
 
-        Parameters
+        Parameters.
         ----------
         filter (dict):
             The filter criteria for the $match stage.
@@ -366,7 +365,7 @@ class TaskQueryAPI(object):
         for col_name, order in sort:
             if col_name not in df.columns:
                 raise Exception(
-                    f"Column {col_name} is not in the dataframe. " f"The available columns are:\n{list(df.columns)}"
+                    f"Column {col_name} is not in the dataframe. The available columns are:\n{list(df.columns)}"
                 )
             if order not in {TaskQueryAPI.ASC, TaskQueryAPI.DESC}:
                 raise Exception("Use TaskQueryAPI.ASC or TaskQueryAPI.DESC for sorting order.")

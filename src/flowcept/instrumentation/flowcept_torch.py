@@ -322,7 +322,7 @@ def flowcept_torch(cls):
         """Pick the torch_task function."""
         if "telemetry" in mode and TELEMETRY_CAPTURE is None:
             raise Exception(
-                "Your telemetry settings are null but you chose a " "telemetry mode. Please revise your settings."
+                "Your telemetry settings are null but you chose a telemetry mode. Please revise your settings."
             )
         elif mode == "lightweight":
             return _our_forward_lightweight

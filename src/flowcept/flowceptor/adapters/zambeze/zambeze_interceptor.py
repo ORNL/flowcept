@@ -81,7 +81,7 @@ class ZambezeInterceptor(BaseInterceptor):
             self._channel.start_consuming()
         except Exception as e:
             self.logger.warning(
-                f"If this exception happens after " f"channel.start_consuming finishes, it is expected:\n {e}"
+                f"If this exception happens after channel.start_consuming finishes, it is expected:\n {e}"
             )
 
     def _intercept(self, body_obj):
