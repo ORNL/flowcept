@@ -82,9 +82,7 @@ class FlowceptLoop:
                 # TODO: think of a better way to do it
                 from flowcept.commons.flowcept_logger import FlowceptLogger
 
-                FlowceptLogger().warning(
-                    "If you know the length size of this iterator, lease inform it."
-                )
+                FlowceptLogger().warning("If you know the length size of this iterator, lease inform it.")
                 items = list(items)
                 self._iterator = iter(items)
                 self._max = len(items)
@@ -308,9 +306,7 @@ class FlowceptLightweightLoop:
         return self._current_item
 
     def _capture_iteration_bounds(self):
-        self._current_iteration_tasks[self._next_counter]["used"][self._item_name] = (
-            self._current_item
-        )
+        self._current_iteration_tasks[self._next_counter]["used"][self._item_name] = self._current_item
 
     def end_iter(self, generated_value: Dict):
         """

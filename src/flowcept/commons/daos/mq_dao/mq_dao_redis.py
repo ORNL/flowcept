@@ -37,7 +37,8 @@ class MQDaoRedis(MQDao):
             if message["type"] in MQDaoRedis.MESSAGE_TYPES_IGNORE:
                 continue
             msg_obj = msgpack.loads(
-                message["data"], strict_map_key=False  # , cls=DocumentInserter.DECODER
+                message["data"],
+                strict_map_key=False,  # , cls=DocumentInserter.DECODER
             )
             if not message_handler(msg_obj):
                 break

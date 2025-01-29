@@ -24,3 +24,5 @@ deployment/data
 examples/llm_complex/input_data
 tmp_tests/
 nohup.out
+launch.json
+.vscode/

@@ -130,9 +130,7 @@ class DBAPI(object):
             self.logger.exception(e)
             raise e
 
-    def dump_tasks_to_file_recursive(
-        self, workflow_id, output_file="tasks.parquet", max_depth=999, mapping=None
-    ):
+    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet", max_depth=999, mapping=None):
         """
         Dump tasks recursively for a given workflow ID to a file.
 
@@ -163,9 +161,7 @@ class DBAPI(object):
         The method delegates the task retrieval and saving operation to the DAO implementation.
         """
         try:
-            return DBAPI._dao().dump_tasks_to_file_recursive(
-                workflow_id, output_file, max_depth, mapping
-            )
+            return DBAPI._dao().dump_tasks_to_file_recursive(workflow_id, output_file, max_depth, mapping)
         except Exception as e:
             self.logger.exception(e)
             raise e
@@ -180,9 +176,7 @@ class DBAPI(object):
     ):
         """Dump to the file."""
         if filter is None and not should_zip:
-            self.logger.error(
-                "Not allowed to dump entire database without filter and without zipping it."
-            )
+            self.logger.error("Not allowed to dump entire database without filter and without zipping it.")
             return False
         try:
             DBAPI._dao().dump_to_file(
@@ -235,9 +229,7 @@ class DBAPI(object):
         collection="tasks",
     ):
         """Query it."""
-        return DBAPI._dao().query(
-            filter, projection, limit, sort, aggregation, remove_json_unserializables, collection
-        )
+        return DBAPI._dao().query(filter, projection, limit, sort, aggregation, remove_json_unserializables, collection)
 
     def save_or_update_torch_model(
         self,

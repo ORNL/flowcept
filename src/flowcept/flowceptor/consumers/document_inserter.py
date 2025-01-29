@@ -92,9 +92,7 @@ class DocumentInserter:
     @staticmethod
     def flush_function(buffer, doc_daos, logger):
         """Flush it."""
-        logger.info(
-            f"Current Doc buffer size: {len(buffer)}, Gonna flush {len(buffer)} msgs to DocDBs!"
-        )
+        logger.info(f"Current Doc buffer size: {len(buffer)}, Gonna flush {len(buffer)} msgs to DocDBs!")
         for dao in doc_daos:
             dao.insert_and_update_many_tasks(buffer, TaskObject.task_id_field())
             logger.debug(
@@ -128,16 +126,12 @@ class DocumentInserter:
         if REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
 
-        self.logger.debug(
-            f"Received following Task msg in DocInserter:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
-        )
+        self.logger.debug(f"Received following Task msg in DocInserter:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t")
         self.buffer.append(message)
 
     def _handle_workflow_message(self, message: Dict):
         message.pop("type")
-        self.logger.debug(
-            f"Received following Workflow msg in DocInserter:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t"
-        )
+        self.logger.debug(f"Received following Workflow msg in DocInserter:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t")
         if REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
         wf_obj = WorkflowObject.from_dict(message)
@@ -145,9 +139,7 @@ class DocumentInserter:
             dao.insert_or_update_workflow(wf_obj)
 
     def _handle_control_message(self, message):
-        self.logger.info(
-            f"I'm doc inserter {id(self)}. I received this control msg received: {message}"
-        )
+        self.logger.info(f"I'm doc inserter {id(self)}. I received this control msg received: {message}")
         if message["info"] == "mq_dao_thread_stopped":
             exec_bundle_id = message.get("exec_bundle_id", None)
             interceptor_instance_id = message.get("interceptor_instance_id")

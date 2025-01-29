@@ -135,9 +135,7 @@ def flowcept_torch(cls):
                 self._child_forward_func = _get_our_child_forward_func(self._children_mode)
                 for name, child in self.named_children():
                     child.__dict__["_parent_module"] = self
-                    TorchModuleWrapper._original_children_forward_functions[child.__class__] = (
-                        child.__class__.forward
-                    )
+                    TorchModuleWrapper._original_children_forward_functions[child.__class__] = child.__class__.forward
                     child.forward = MethodType(self._child_forward_func, child)
 
             TorchModuleWrapper._interceptor = InstrumentationInterceptor.get_instance()
@@ -201,18 +199,12 @@ def flowcept_torch(cls):
             return y
 
         def _enable_children_forward(self):
-            if (
-                "children" in TORCH_CONFIG.get("what", "parent_only")
-                and "telemetry" in TORCH_CONFIG["children_mode"]
-            ):
+            if "children" in TORCH_CONFIG.get("what", "parent_only") and "telemetry" in TORCH_CONFIG["children_mode"]:
                 if self._epochs_at_every > 1 and self._should_update_children_forward:
                     self._update_children_with_our_forward()
 
         def _disable_children_forward(self):
-            if (
-                "children" in TORCH_CONFIG.get("what", "parent_only")
-                and "telemetry" in TORCH_CONFIG["children_mode"]
-            ):
+            if "children" in TORCH_CONFIG.get("what", "parent_only") and "telemetry" in TORCH_CONFIG["children_mode"]:
                 if self._epochs_at_every > 1 and self._should_update_children_forward:
                     self._update_children_with_original_forward()
                 self._should_update_children_forward = True
@@ -330,8 +322,7 @@ def flowcept_torch(cls):
         """Pick the torch_task function."""
         if "telemetry" in mode and TELEMETRY_CAPTURE is None:
             raise Exception(
-                "Your telemetry settings are null but you chose a "
-                "telemetry mode. Please revise your settings."
+                "Your telemetry settings are null but you chose a " "telemetry mode. Please revise your settings."
             )
         elif mode == "lightweight":
             return _our_forward_lightweight
@@ -371,9 +362,7 @@ def flowcept_torch(cls):
     CHILD_FORWARD = "child_forward"
 
     def _our_forward_lightweight(self, *args, **kwargs):
-        result = TorchModuleWrapper._original_children_forward_functions[self.__class__](
-            self, *args, **kwargs
-        )
+        result = TorchModuleWrapper._original_children_forward_functions[self.__class__](self, *args, **kwargs)
         task_dict = dict(
             subtype=CHILD_FORWARD,
             workflow_id=self._parent_module.workflow_id,
@@ -385,9 +374,7 @@ def flowcept_torch(cls):
         return result
 
     def _our_forward_telemetry(self, *args, **kwargs):
-        result = TorchModuleWrapper._original_children_forward_functions[self.__class__](
-            self, *args, **kwargs
-        )
+        result = TorchModuleWrapper._original_children_forward_functions[self.__class__](self, *args, **kwargs)
         task_dict = dict(
             subtype=CHILD_FORWARD,
             workflow_id=self._parent_module.workflow_id,
@@ -400,9 +387,7 @@ def flowcept_torch(cls):
         return result
 
     def _our_forward_telemetry_tensor_inspection(self, *args, **kwargs):
-        result = TorchModuleWrapper._original_children_forward_functions[self.__class__](
-            self, *args, **kwargs
-        )
+        result = TorchModuleWrapper._original_children_forward_functions[self.__class__](self, *args, **kwargs)
         task_dict = dict(
             subtype=CHILD_FORWARD,
             workflow_id=self._parent_module.workflow_id,
@@ -417,9 +402,7 @@ def flowcept_torch(cls):
         return result
 
     def _our_forward_tensor_inspection(self, *args, **kwargs):
-        result = TorchModuleWrapper._original_children_forward_functions[self.__class__](
-            self, *args, **kwargs
-        )
+        result = TorchModuleWrapper._original_children_forward_functions[self.__class__](self, *args, **kwargs)
         task_dict = dict(
             subtype=CHILD_FORWARD,
             workflow_id=self._parent_module.workflow_id,

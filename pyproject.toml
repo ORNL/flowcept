@@ -96,7 +96,7 @@ all = [
 path = "src/flowcept/version.py"
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 
 [tool.ruff.lint]
 extend-select = ["E501", "D"]

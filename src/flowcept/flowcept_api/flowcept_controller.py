@@ -217,9 +217,7 @@ class Flowcept(object):
         return True
 
     @staticmethod
-    def start_consumption_services(
-        bundle_exec_id: str = None, check_safe_stops: bool = False, consumers: List = None
-    ):
+    def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: bool = False, consumers: List = None):
         """
         Starts the document consumption services for processing.
 
@@ -253,8 +251,6 @@ class Flowcept(object):
         from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 
         logger = FlowceptLogger()
-        doc_inserter = DocumentInserter(
-            check_safe_stops=check_safe_stops, bundle_exec_id=bundle_exec_id
-        )
+        doc_inserter = DocumentInserter(check_safe_stops=check_safe_stops, bundle_exec_id=bundle_exec_id)
         logger.debug("Starting doc inserter service.")
         doc_inserter.start(threaded=False)

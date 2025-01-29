@@ -67,12 +67,35 @@ def remove_empty_fields_from_dict(obj: dict):
 
 
 def convert_keys_to_strings(obj):
+    """
+    Recursively converts all dictionary keys to strings.
+
+    Parameters
+    ----------
+    obj : dict, list, or any
+        The input object, which can be a dictionary, list, or any other data type.
+
+    Returns
+    -------
+    dict, list, or any
+        The transformed object where all dictionary keys are converted to strings.
+        Lists and other values remain unchanged.
+
+    Examples
+    --------
+    >>> convert_keys_to_strings({1: "a", 2: {"nested": 3}})
+    {'1': 'a', '2': {'nested': 3}}
+
+    >>> convert_keys_to_strings([{"key": 123}, {456: "value"}])
+    [{'key': 123}, {'456': 'value'}]
+    """
     if isinstance(obj, dict):
         return {str(k): convert_keys_to_strings(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [convert_keys_to_strings(i) for i in obj]
     else:
         return obj
+
 
 def curate_dict_task_messages(
     doc_list: List[Dict], indexing_key: str, utc_time_at_insertion: float = 0, convert_times=True
