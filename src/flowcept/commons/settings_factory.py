@@ -40,9 +40,7 @@ def get_settings(adapter_key: str) -> BaseSettings:
         return None
     settings_dict = settings[Vocabulary.Settings.ADAPTERS][adapter_key]
     if not settings_dict:
-        raise Exception(
-            f"You must specify the adapter <<{adapter_key}>> in the settings YAML file."
-        )
+        raise Exception(f"You must specify the adapter <<{adapter_key}>> in the settings YAML file.")
     settings_dict["key"] = adapter_key
     kind = settings_dict[Vocabulary.Settings.KIND]
     settings_obj = _build_base_settings(kind, settings_dict)
@@ -50,7 +48,5 @@ def get_settings(adapter_key: str) -> BaseSettings:
     # Add any specific setting builder below
     if kind == Vocabulary.Settings.ZAMBEZE_KIND:
         if settings_obj.key_values_to_filter is not None:
-            settings_obj.key_values_to_filter = [
-                KeyValue(**item) for item in settings_obj.key_values_to_filter
-            ]
+            settings_obj.key_values_to_filter = [KeyValue(**item) for item in settings_obj.key_values_to_filter]
     return settings_obj

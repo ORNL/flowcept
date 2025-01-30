@@ -77,9 +77,7 @@ def clean_dataframe(
 
     if sum_lists:
         # Identify the original columns that were lists or lists of lists
-        list_cols = [
-            col for col in dfa.columns if any(isinstance(val, (list, list)) for val in dfa[col])
-        ]
+        list_cols = [col for col in dfa.columns if any(isinstance(val, (list, list)) for val in dfa[col])]
 
         cols_to_drop = []
         # Apply the function to all columns and create new scalar columns
@@ -132,9 +130,7 @@ def clean_dataframe(
         dfa.drop(columns=cols_to_drop, inplace=True)
 
     # Removing any leftover cols
-    cols_to_drop = [
-        col for col in dfa.columns if "telemetry_at_start" in col or "telemetry_at_end" in col
-    ]
+    cols_to_drop = [col for col in dfa.columns if "telemetry_at_start" in col or "telemetry_at_end" in col]
     if len(cols_to_drop):
         dfa.drop(columns=cols_to_drop, inplace=True)
 
@@ -214,9 +210,7 @@ def analyze_correlations_used_vs_telemetry_diff(df: pd.DataFrame, method="kendal
     )
 
 
-def analyze_correlations_generated_vs_telemetry_diff(
-    df: pd.DataFrame, method="kendall", threshold=0
-):
+def analyze_correlations_generated_vs_telemetry_diff(df: pd.DataFrame, method="kendall", threshold=0):
     """Analyze correlations."""
     return analyze_correlations_between(
         df,
@@ -256,9 +250,7 @@ def describe_col(df, col, label=None):
 
 def describe_cols(df, cols, col_labels):
     """Describe columns."""
-    return pd.DataFrame(
-        [describe_col(df, col, col_label) for col, col_label in zip(cols, col_labels)]
-    )
+    return pd.DataFrame([describe_col(df, col, col_label) for col, col_label in zip(cols, col_labels)])
 
 
 def identify_pareto(df):
@@ -274,8 +266,6 @@ def identify_pareto(df):
 def find_outliers_zscore(row, threshold=3):
     """Find outliers."""
     numeric_columns = [col for col, val in row.items() if pd.api.types.is_numeric_dtype(type(val))]
-    z_scores = np.abs(
-        (row[numeric_columns] - row[numeric_columns].mean()) / row[numeric_columns].std()
-    )
+    z_scores = np.abs((row[numeric_columns] - row[numeric_columns].mean()) / row[numeric_columns].std())
     outliers_columns = list(z_scores[z_scores > threshold].index)
     return outliers_columns

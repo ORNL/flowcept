@@ -92,9 +92,7 @@ class TelemetryCapture:
                     self._visible_gpus = amd
                     self._gpu_capture_func = self.__get_gpu_info_amd
                 else:
-                    self.logger.exception(
-                        "No GPU found. Consider disabling GPU capture in the settings file."
-                    )
+                    self.logger.exception("No GPU found. Consider disabling GPU capture in the settings file.")
 
     def capture(self) -> Telemetry:
         """Capture it."""
@@ -118,9 +116,7 @@ class TelemetryCapture:
         if self.conf.get("disk", False):
             tel.disk = self._capture_disk()
 
-        if self._gpu_conf is not None and len(
-            self._gpu_conf
-        ):  # TODO we might want to turn all tel types into lists
+        if self._gpu_conf is not None and len(self._gpu_conf):  # TODO we might want to turn all tel types into lists
             tel.gpu = self._capture_gpu()
 
         return tel
@@ -303,9 +299,7 @@ class TelemetryCapture:
                 ),
             }
             flowcept_gpu_info["temperature"] = temperature
-        if (
-            "metrics" in self._gpu_conf
-        ):  # USE IT CAREFULLY because it contains redundant information
+        if "metrics" in self._gpu_conf:  # USE IT CAREFULLY because it contains redundant information
             flowcept_gpu_info["metrics"] = amdsmi_get_gpu_metrics_info(device)
         return flowcept_gpu_info
 
@@ -323,15 +317,8 @@ class TelemetryCapture:
 
     def shutdown_gpu_telemetry(self):
         """Shutdown GPU telemetry."""
-        if (
-            self.conf is None
-            or self._visible_gpus is None
-            or self._gpu_conf is None
-            or len(self._gpu_conf) == 0
-        ):
-            self.logger.debug(
-                "GPU capture is off or has never been initialized, so we won't shut down."
-            )
+        if self.conf is None or self._visible_gpus is None or self._gpu_conf is None or len(self._gpu_conf) == 0:
+            self.logger.debug("GPU capture is off or has never been initialized, so we won't shut down.")
             return None
         if self._gpu_type == "nvidia":
             try:

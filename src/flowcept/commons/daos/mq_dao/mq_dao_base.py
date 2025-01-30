@@ -107,13 +107,9 @@ class MQDao(ABC):
     def register_time_based_thread_end(self, interceptor_instance_id: str, exec_bundle_id=None):
         """Register time."""
         set_name = MQDao._get_set_name(exec_bundle_id)
-        self.logger.info(
-            f"Registering end of time_based MQ flush thread {set_name}.{interceptor_instance_id}"
-        )
+        self.logger.info(f"Registering end of time_based MQ flush thread {set_name}.{interceptor_instance_id}")
         self._keyvalue_dao.remove_key_from_set(set_name, interceptor_instance_id)
-        self.logger.info(
-            f"Done registering time_based MQ flush thread {set_name}.{interceptor_instance_id}"
-        )
+        self.logger.info(f"Done registering time_based MQ flush thread {set_name}.{interceptor_instance_id}")
 
     def all_time_based_threads_ended(self, exec_bundle_id=None):
         """Get all time."""

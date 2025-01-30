@@ -686,9 +686,7 @@ class MongoDBDAO(DocumentDBDAO):
         elif collection == "objects":
             return self.object_query(filter)
         else:
-            raise Exception(
-                f"You used type={collection}, but MongoDB only stores tasks, workflows, and objects"
-            )
+            raise Exception(f"You used type={collection}, but MongoDB only stores tasks, workflows, and objects")
 
     def task_query(
         self,
@@ -828,9 +826,7 @@ class MongoDBDAO(DocumentDBDAO):
         except Exception as e:
             raise Exception(e)
 
-    def dump_tasks_to_file_recursive(
-        self, workflow_id, output_file="tasks.parquet", max_depth=999, mapping=None
-    ):
+    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet", max_depth=999, mapping=None):
         """Dump_tasks_to_file_recursive in MongoDB."""
         try:
             tasks = self.get_tasks_recursive(workflow_id, max_depth=max_depth, mapping=mapping)
@@ -943,16 +939,12 @@ class MongoDBDAO(DocumentDBDAO):
 
         while current_parent["depth"] < max_depth:
             tasks = []
-            rs = self._tasks_collection.find(
-                {"parent_task_id": current_parent["task_id"]}, projection={"_id": 0}
-            )
+            rs = self._tasks_collection.find({"parent_task_id": current_parent["task_id"]}, projection={"_id": 0})
 
             for task in rs:
                 if "finished" in task and task["status"] != Status.FINISHED.value:
                     task["status"] = Status.FINISHED.value
-                tasks_ancestors[task["task_id"]] = tasks_ancestors[current_parent["task_id"]] + [
-                    current_parent
-                ]
+                tasks_ancestors[task["task_id"]] = tasks_ancestors[current_parent["task_id"]] + [current_parent]
                 task["ancestor_ids"] = current_parent["ancestor_ids"] + [
                     {current_parent["activity_id"]: current_parent["task_id"]}
                 ]
