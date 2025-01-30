@@ -1,54 +1,73 @@
-name: All tests on Kafka MQ
+name: (With Mongo) Tests on Kafka MQ
 on:
   pull_request:
     branches: [ "dev", "main" ]
     types: [opened, synchronize, reopened]
-# branches: [ "disabled" ]
+#on:
+#  push:
 
 jobs:
 
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    strategy:
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12" ]
+    env:
+      MONGO_ENABLED: true
+      LMDB_ENABLED: false
+    timeout-minutes: 40
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
+
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.9"
-    - name: Check python version
-      run: python --version
-    - name: Install our dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .[fulldev]
-    - name: Pip list
-      run: pip list
-    - name: Run Docker Compose
-      run: docker compose -f deployment/compose-kafka.yml up -d
-    - name: Wait 1 min
-      run: sleep 60
-    - name: Check liveness
-      run: |
-        export MQ_TYPE=kafka
-        export MQ_PORT=9092
-        python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_TYPE={MQ_PORT}")'
-        python -c 'from flowcept import Flowcept; assert Flowcept.services_alive()'
-    - name: Run Tests with Kafka
-      run: |
-        export MQ_TYPE=kafka
-        export MQ_PORT=9092
-        pytest --ignore=tests/decorator_tests/ml_tests/llm_tests
-    - name: Test notebooks
-      run: |
-        pip install -e .[full]
-        export MQ_TYPE=kafka
-        export MQ_PORT=9092
-        python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_TYPE={MQ_PORT}")'
-        python -c 'from flowcept import Flowcept; assert Flowcept.services_alive()'
-        
-        python flowcept/flowcept_webserver/app.py &
-        sleep 3
-        export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
-        pytest --ignore=notebooks/zambeze.ipynb --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Run docker compose
+        run: docker compose -f deployment/compose-kafka.yml up -d
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Show Python version
+        run: python --version && pip --version
+
+      - name: Test examples
+        run: bash .github/workflows/run_examples.sh examples true # with mongo
+
+      - name: Install all dependencies
+        run: |
+          python -m pip install .[all]
+          python -m pip install .[ml_dev]
+
+      - name: Check liveness
+        run: |
+          export MQ_TYPE=kafka
+          export MQ_PORT=9092
+          python -c 'from flowcept.configs import MQ_TYPE, MQ_PORT; print(f"MQ_TYPE={MQ_TYPE}"); print(f"MQ_PORT={MQ_PORT}")'
+          python -c 'from flowcept import Flowcept; assert Flowcept.services_alive()'
+
+      - name: Run tests with kafka
+        run: |
+          export MQ_TYPE=kafka
+          export MQ_PORT=9092
+          make tests
+
+      - name: Test notebooks
+        run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
+
+      - name: Stop services
+        run: docker compose -f deployment/compose-kafka.yml down
+
+      - name: Clean up
+        run: |
+          make clean
+          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
+          docker image prune -a -f

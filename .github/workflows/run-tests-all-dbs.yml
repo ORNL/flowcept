@@ -1,0 +1,64 @@
+name: With and Without Mongo at the same time
+on: [pull_request]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12" ]
+    env:
+      MONGO_ENABLED: true
+      LMDB_ENABLED: true
+
+    if: "!contains(github.event.head_commit.message, 'CI Bot')"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Show OS Info
+        run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
+
+      - name: Start docker compose with redis
+        run: make services-mongo
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Show Python version
+        run: python --version && pip --version
+
+      - name: Test examples
+        run: bash .github/workflows/run_examples.sh examples true # with mongo
+
+      - name: Install all dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .[all]
+          python -m pip install .[ml_dev]
+
+      - name: List installed packages
+        run: pip list
+
+      - name: Test with pytest and redis
+        run: |
+          export MONGO_ENABLED=true
+          export LMDB_ENABLED=true
+          python -c "from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED; print('MONGO?', MONGO_ENABLED); print('LMDB?', LMDB_ENABLED)"
+          make tests
+
+      - name: Test notebooks with pytest and redis
+        run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb"
+
+      - name: Stop services
+        run: make services-stop-mongo

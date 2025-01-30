@@ -1,0 +1,63 @@
+name: (Without Mongo) Simple Tests
+on:
+  push:
+  schedule:
+    - cron: '0 12 * * *'  # Runs every day at 12 PM UTC (7 AM EST)
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12" ]
+    env:
+      MONGO_ENABLED: false
+      LMDB_ENABLED: true
+    timeout-minutes: 60
+    if: "!contains(github.event.head_commit.message, 'CI Bot')"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Show OS Info
+        run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
+
+      - name: Start docker compose with redis
+        run: make services
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Test examples
+        run: bash .github/workflows/run_examples.sh examples false # without mongo
+
+      - name: Install all dependencies
+        run: |
+          python -m pip install .[all]
+          python -m pip install .[ml_dev]
+
+      - name: List installed packages
+        run: pip list
+
+      - name: Test with pytest and redis
+        run: make tests
+
+      - name: Test notebooks with pytest and redis
+        run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb" --ignore="notebooks/analytics.ipynb"
+
+      - name: Shut down docker compose
+        run: make services-stop
+
+      - name: Clean up
+        run: |
+          make clean
+          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \;

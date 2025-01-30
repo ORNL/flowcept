@@ -1,0 +1,44 @@
+name: (With and Without Mongo) Inside a Container
+on: [pull_request]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    if: "!contains(github.event.head_commit.message, 'CI Bot')"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Show OS Info
+        run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
+
+      - name: Build Flowcept's image
+        run: make build
+
+      - name: Start dependent services (Mongo and Redis)
+        run: make services-mongo
+
+      - name: Run tests in container
+        run: make tests-in-container-mongo
+
+      - name: Stop services
+        run: make services-stop-mongo
+
+      - name: Start dependent services (Redis, no Mongo)
+        run: make services
+
+      - name: Run tests in container without mongo
+        run: make tests-in-container
+
+      - name: Stop services
+        run: make services-stop
+
+      - name: Clean up
+        run: |
+          make clean
+          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
+          docker image prune -a -f

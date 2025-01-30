@@ -1,4 +1,3 @@
-version: '3.8'
 name: flowcept
 services:
   flowcept_redis:
@@ -10,10 +9,10 @@ services:
   flowcept_mongo:
     container_name: flowcept_mongo
     image: mongo:latest
-    # volumes:
-    #   - /Users/rsr/Downloads/mongo_data/db:/data/db
     ports:
       - 27017:27017
+    volumes:
+      - mongo_data:/data/db
 
   zookeeper:
     image: confluentinc/cp-zookeeper:6.1.1
@@ -55,3 +54,10 @@ services:
       echo -e 'Successfully created the following topics:'
       kafka-topics --bootstrap-server kafka:29092 --list
       "
+
+networks:
+  flowcept:
+    driver: bridge
+
+volumes:
+  mongo_data:

@@ -1,0 +1,35 @@
+name: Linter, formatter, and docs checks
+
+on: pull_request
+
+jobs:
+
+  checks:
+    runs-on: ubuntu-22.04
+    if: "!contains(github.event.head_commit.message, 'CI Bot')"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install package and dependencies
+        run: |
+          pip install --upgrade pip
+          pip install ruff
+          pip install .[docs]
+
+      - name: Run linter and formatter checks using ruff
+        run: make checks
+
+      - name: Run HTML builder for Sphinx documentation
+        run: make docs
+
+      - name: Clean up
+        run: |
+          make clean
+          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
+

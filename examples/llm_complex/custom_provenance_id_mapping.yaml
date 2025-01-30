@@ -1,0 +1,35 @@
+activity_id:
+  epochs_loop_iteration:
+    epoch: task['used']['epoch']
+    model_train: parent['task_id']
+  train_batch_iteration:
+    query:
+        collection: 'workflows'
+        filter:
+          generated.dataset_ref: primogenitor['used']['dataset_ref']
+        projection: ['name', 'workflow_id', 'used.tokenizer_type', 'used.train_batch_size', 'used.subset_size', 'generated.train_n_batches' ]
+    step: train
+    batch: task['used']['i']
+    data_path: primogenitor['used']['train_data_path']
+    batch_size: primogenitor['used']['batch_size']
+    epoch: parent['used']['epoch']
+    model_train: grandparent['task_id']
+  eval_batch_iteration:
+    query:
+        collection: 'workflows'
+        filter:
+          generated.dataset_ref: primogenitor['used']['dataset_ref']
+        projection: ['name', 'workflow_id', 'used.tokenizer_type', 'used.eval_batch_size', 'used.subset_size', 'generated.eval_n_batches' ]
+    step: eval
+    batch: task['used']['i']
+    data_path: primogenitor['used']['val_data_path']
+    batch_size: primogenitor['used']['eval_batch_size']
+    epoch: parent['used']['epoch']
+    model_train: grandparent['task_id']
+subtype:
+  parent_forward:
+    model: task['activity_id']
+    extend: parent['custom_characterization']
+  child_forward:
+    module: task['activity_id']
+    extend: parent['custom_characterization']

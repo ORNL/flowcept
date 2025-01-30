@@ -1,0 +1,31 @@
+name: flowcept
+services:
+  flowcept_redis:
+    container_name: flowcept_redis
+    image: redis
+    ports:
+      - 6379:6379
+
+  flowcept_mongo:
+    container_name: flowcept_mongo
+    image: mongo:latest
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data:/data/db
+
+networks:
+  flowcept:
+    driver: bridge
+
+volumes:
+  mongo_data:
+
+# This is just for the cases where one does not want to use the same Redis instance for caching and messaging, but
+# it's not required to have separate instances.
+#  local_interceptor_cache:
+#    container_name: local_interceptor_cache
+#    image: redis
+#    ports:
+#      - 60379:6379
+

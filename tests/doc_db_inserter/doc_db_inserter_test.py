@@ -1,35 +1,24 @@
 import unittest
 from uuid import uuid4
 
-from flowcept.commons.daos.document_db_dao import DocumentDBDao
+
+from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+from flowcept.configs import MONGO_ENABLED
 
 
-class TestDocDBInserter(unittest.TestCase):
+@unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
+class TestMongoDBInserter(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestDocDBInserter, self).__init__(*args, **kwargs)
-        self.doc_dao = DocumentDBDao()
+        super(TestMongoDBInserter, self).__init__(*args, **kwargs)
 
-    def test_db(self):
-        c0 = self.doc_dao.count()
-        assert c0 >= 0
-        _id = self.doc_dao.insert_one(
-            {"dummy": "test", "task_id": str(uuid4())}
-        )
-        assert _id is not None
-        _ids = self.doc_dao.insert_many(
-            [
-                {"dummy1": "test1", "task_id": str(uuid4())},
-                {"dummy2": "test2", "task_id": str(uuid4())},
-            ]
-        )
-        assert len(_ids) == 2
-        self.doc_dao.delete_ids([_id])
-        self.doc_dao.delete_ids(_ids)
-        c1 = self.doc_dao.count()
-        assert c0 == c1
+    def setUp(self):
+        if MONGO_ENABLED:
+            self.doc_dao = MongoDBDAO(create_indices=False)
+        else:
+            self.doc_dao = None
 
     def test_db_insert_and_update_many(self):
-        c0 = self.doc_dao.count()
+        c0 = self.doc_dao.count_tasks()
         assert c0 >= 0
         uid = str(uuid4())
         docs = [
@@ -58,7 +47,7 @@ class TestDocDBInserter(unittest.TestCase):
                 "used": {"bla": 2, "lala": False},
             },
         ]
-        self.doc_dao.insert_and_update_many("myid", docs)
+        self.doc_dao.insert_and_update_many_tasks(docs, "myid")
         docs = [
             {
                 "task_id": str(uuid4()),
@@ -76,14 +65,14 @@ class TestDocDBInserter(unittest.TestCase):
                 "status": "RUNNING",
             },
         ]
-        self.doc_dao.insert_and_update_many("myid", docs)
+        self.doc_dao.insert_and_update_many_tasks(docs, "myid")
         print(uid)
-        self.doc_dao.delete_keys("myid", [uid])
-        c1 = self.doc_dao.count()
+        self.doc_dao.delete_task_keys("myid", [uid])
+        c1 = self.doc_dao.count_tasks()
         assert c0 == c1
 
     def test_status_updates(self):
-        c0 = self.doc_dao.count()
+        c0 = self.doc_dao.count_tasks()
         assert c0 >= 0
         uid = str(uuid4())
         docs = [
@@ -100,7 +89,7 @@ class TestDocDBInserter(unittest.TestCase):
                 "task_id": str(uuid4()),
             },
         ]
-        self.doc_dao.insert_and_update_many("myid", docs)
+        self.doc_dao.insert_and_update_many_tasks(docs, "myid")
         docs = [
             {
                 "myid": uid,
@@ -109,7 +98,7 @@ class TestDocDBInserter(unittest.TestCase):
                 "task_id": str(uuid4()),
             }
         ]
-        self.doc_dao.insert_and_update_many("myid", docs)
-        self.doc_dao.delete_keys("myid", [uid])
-        c1 = self.doc_dao.count()
+        self.doc_dao.insert_and_update_many_tasks(docs, "myid")
+        self.doc_dao.delete_task_keys("myid", [uid])
+        c1 = self.doc_dao.count_tasks()
         assert c0 == c1

@@ -1,0 +1,59 @@
+name: Tests on Py313
+on: [pull_request]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.13" ]
+    env:
+      MONGO_ENABLED: true
+      LMDB_ENABLED: false
+    timeout-minutes: 60
+    if: "!contains(github.event.head_commit.message, 'CI Bot')"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Show OS Info
+        run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
+
+      - name: Start docker compose with redis
+        run: make services-mongo
+
+      - name: Upgrade pip
+        run: |
+          python -m pip install --upgrade pip
+          python --version
+
+      - name: Install dependencies that work on py3.13
+        run: |
+          pip install . --no-deps
+          pip install flask-restful msgpack omegaconf pandas psutil py-cpuinfo redis requests pyarrow
+          pip install .[mongo,analytics,dask,docs,kafka,mlflow,dev]
+
+      - name: List installed packages
+        run: pip list
+
+      - name: Test with pytest and redis, ignoring the ones that (as of Dec 21 2024) don't work on py3.13)
+        run: |
+          pytest  --ignore=tests/adapters/test_tensorboard.py --ignore tests/instrumentation_tests/ml_tests/
+
+      - name: Shut down docker compose
+        run: make services-stop-mongo
+
+      - name: Clean up
+        run: |
+          make clean
+          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
+          docker image prune -a -f

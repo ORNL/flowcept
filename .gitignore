@@ -1,9 +1,10 @@
 .idea
 **/*mlruns*
+**/*.env*
 **/*build*
 **/*egg*
 **/*pycache*
-**/*dist*
+#**/*dist*
 **/*mlflow.db*
 **/*mnist*
 **/*tensorboard_events*
@@ -11,6 +12,7 @@
 **/*.log*
 **/*.pth
 **/*ipynb_checkpoints*
+**/*flowcept_lmdb
 notebooks/tb_*
 notebooks/scheduler_file.json
 test.py
@@ -18,3 +20,9 @@ test.py
 time.txt
 tmp/
 deployment/data
+**/*output_data*
+examples/llm_complex/input_data
+tmp_tests/
+nohup.out
+launch.json
+.vscode/
