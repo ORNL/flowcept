@@ -82,7 +82,7 @@ echo "Using examples directory: $EXAMPLES_DIR"
 echo "With Mongo? ${WITH_MONGO}"
 
 # Define the test cases
-default_tests=("instrumented_simple_example.py" "instrumented_loop_example.py" "distributed_consumer_example.py" "dask_example.py" "mlflow_example.py" "tensorboard_example.py" "single_layer_perceptron_example.py" "llm_complex/llm_main_example.py")
+default_tests=("instrumented_simple_example.py" "instrumented_loop_example.py" "distributed_consumer_example.py" "dask_example.py" "mlflow_example.py" "tensorboard_example.py" "single_layer_perceptron_example.py" "llm_complex/llm_main_example.py" "unmanaged/main.py")
 
 # Use the third argument if provided, otherwise use default tests
 if [[ -n "$3" ]]; then
