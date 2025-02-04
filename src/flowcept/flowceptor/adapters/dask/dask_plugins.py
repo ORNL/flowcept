@@ -73,7 +73,7 @@ class FlowceptDaskSchedulerAdapter(SchedulerPlugin):
         self.interceptor = None
 
     def start(self, scheduler: Scheduler) -> None:
-        """Run this when scheduler starts"""
+        """Run this when scheduler starts."""
         self.interceptor = DaskSchedulerInterceptor(scheduler)
 
     def transition(self, key, start, finish, *args, **kwargs):
