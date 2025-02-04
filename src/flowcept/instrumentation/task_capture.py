@@ -57,6 +57,7 @@ class FlowceptTask(object):
         task_id: str = None,
         workflow_id: str = None,
         campaign_id: str = None,
+        activity_id: str = None,
         used: Dict = None,
         custom_metadata: Dict = None,
     ):
@@ -65,6 +66,7 @@ class FlowceptTask(object):
             return
         self._task = TaskObject()
         self._task.telemetry_at_start = FlowceptTask._interceptor.telemetry_capture.capture()
+        self._task.activity_id = activity_id
         self._task.started_at = time()
         self._task.task_id = task_id or str(self._task.started_at)
         self._task.workflow_id = workflow_id or Flowcept.current_workflow_id

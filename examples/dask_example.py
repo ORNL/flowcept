@@ -26,7 +26,7 @@ if __name__ == "__main__":
     client.forward_logging()
 
     # Registering Flowcept's worker and scheduler adapters
-    scheduler.add_plugin(FlowceptDaskSchedulerAdapter(scheduler))
+    client.register_plugin(FlowceptDaskSchedulerAdapter())
     client.register_plugin(FlowceptDaskWorkerAdapter())
 
     # Registering a Dask workflow in Flowcept's database

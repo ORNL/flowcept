@@ -3,7 +3,7 @@
 from uuid import uuid4
 
 from dask.distributed import WorkerPlugin, SchedulerPlugin
-from distributed import Client
+from distributed import Client, Scheduler
 
 from flowcept import WorkflowObject
 from flowcept.configs import INSTRUMENTATION
@@ -69,8 +69,11 @@ def register_dask_workflow(
 class FlowceptDaskSchedulerAdapter(SchedulerPlugin):
     """Dask schedule adapter."""
 
-    def __init__(self, scheduler):
-        self.address = scheduler.address
+    def __init__(self):
+        self.interceptor = None
+
+    def start(self, scheduler: Scheduler) -> None:
+        """Run this when scheduler starts."""
         self.interceptor = DaskSchedulerInterceptor(scheduler)
 
     def transition(self, key, start, finish, *args, **kwargs):
