@@ -73,7 +73,7 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
     client = Client(scheduler.address)
     client.forward_logging()
     # Registering Flowcept's worker and scheduler adapters
-    scheduler.add_plugin(FlowceptDaskSchedulerAdapter(scheduler))
+    client.register_plugin(FlowceptDaskSchedulerAdapter())
     client.register_plugin(FlowceptDaskWorkerAdapter())
     exp_param_settings["max_runs"] = max_runs
     exp_param_settings["train_data_path"] = train_data_path

@@ -33,7 +33,7 @@ class TestDaskContextMgmt(unittest.TestCase):
         cluster = LocalCluster(n_workers=2)
         scheduler = cluster.scheduler
         client = Client(scheduler.address)
-        scheduler.add_plugin(FlowceptDaskSchedulerAdapter(scheduler))
+        client.register_plugin(FlowceptDaskSchedulerAdapter())
         client.register_plugin(FlowceptDaskWorkerAdapter())
         register_dask_workflow(client)
 

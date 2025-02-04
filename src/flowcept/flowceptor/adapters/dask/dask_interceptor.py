@@ -88,9 +88,9 @@ def get_times_from_task_state(task_msg, ts):
 class DaskSchedulerInterceptor(BaseInterceptor):
     """Dask scheduler."""
 
-    def __init__(self, scheduler, plugin_key="dask"):
+    def __init__(self, scheduler):
         self._scheduler = scheduler
-        super().__init__(plugin_key)
+        super().__init__(plugin_key="dask")
         super().start(bundle_exec_id=self._scheduler.address)
 
     def callback(self, task_id, start, finish, *args, **kwargs):
