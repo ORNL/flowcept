@@ -66,6 +66,7 @@ class GPUCapture:
             GPUCapture.VISIBLE_GPUS = visible_devices
             GPUCapture.GPU_VENDOR = "amd"
             GPUCapture.capture_func = GPUCapture.__get_gpu_info_amd
+
         except Exception as e:
             FlowceptLogger().debug(str(e))
 
@@ -122,33 +123,41 @@ class GPUCapture:
 
         if "used" in gpu_conf:
             flowcept_gpu_info["used"] = amdsmi_get_gpu_memory_usage(device, AmdSmiMemoryType.VRAM)
-        if "usage" in gpu_conf:
-            flowcept_gpu_info["usage"] = amdsmi_get_gpu_activity(device)
+
+        if "activity" in gpu_conf:
+            flowcept_gpu_info["activity"] = amdsmi_get_gpu_activity(device)
+
+        if "power" in gpu_conf or "temperature" in gpu_conf or "others" in gpu_conf:
+            all_metrics = amdsmi_get_gpu_metrics_info(device)
+        else:
+            return flowcept_gpu_info
+
         if "power" in gpu_conf:
-            flowcept_gpu_info["power"] = amdsmi_get_power_info(device)
-        if "id" in gpu_conf:
-            flowcept_gpu_info["id"] = amdsmi_get_gpu_device_uuid(device)
-        if "temperature" in gpu_conf:
-            temperature = {
-                "vram": amdsmi_get_temp_metric(
-                    device,
-                    AmdSmiTemperatureType.VRAM,
-                    AmdSmiTemperatureMetric.CURRENT,
-                ),
-                "hotspot": amdsmi_get_temp_metric(
-                    device,
-                    AmdSmiTemperatureType.HOTSPOT,
-                    AmdSmiTemperatureMetric.CURRENT,
-                ),
-                "edge": amdsmi_get_temp_metric(
-                    device,
-                    AmdSmiTemperatureType.EDGE,
-                    AmdSmiTemperatureMetric.CURRENT,
-                ),
+            flowcept_gpu_info["power"] = {
+                "average_socket_power": all_metrics["average_socket_power"],
+                "energy_accumulator": all_metrics["energy_accumulator"],
+                "current_socket_power": all_metrics["current_socket_power"],
             }
-            flowcept_gpu_info["temperature"] = temperature
-        if "metrics" in gpu_conf:  # USE IT CAREFULLY because it contains redundant information
-            flowcept_gpu_info["metrics"] = amdsmi_get_gpu_metrics_info(device)
+
+        if "temperature" in gpu_conf:
+            flowcept_gpu_info["temperature"] = {
+                "edge": all_metrics["temperature_edge"],
+                "hotspot": all_metrics["temperature_hotspot"],
+                "mem": all_metrics["temperature_mem"],
+                "vrgfx": all_metrics["temperature_vrgfx"],
+                "vrmem": all_metrics["temperature_vrmem"],
+                "hbm": all_metrics["temperature_hbm"],
+                "fan_speed": all_metrics["current_fan_speed"],
+            }
+        if "others" in gpu_conf:
+            flowcept_gpu_info["others"] = {
+                "current_gfxclk": all_metrics["current_gfxclk"],
+                "current_socclk": all_metrics["current_socclk"],
+                "current_uclk": all_metrics["current_uclk"],
+                "current_vclk0": all_metrics["current_vclk0"],
+                "current_dclk0": all_metrics["current_dclk0"],
+            }
+
         return flowcept_gpu_info
 
 
@@ -159,12 +168,7 @@ if GPUCapture.GPU_VENDOR == "amd":
         amdsmi_get_gpu_memory_usage,
         amdsmi_shut_down,
         AmdSmiMemoryType,
-        AmdSmiTemperatureType,
         amdsmi_get_gpu_activity,
-        amdsmi_get_power_info,
-        amdsmi_get_gpu_device_uuid,
-        amdsmi_get_temp_metric,
-        AmdSmiTemperatureMetric,
         amdsmi_get_gpu_metrics_info,
     )
 
@@ -191,7 +195,7 @@ class TelemetryCapture:
         self.conf = conf
         self._gpu_conf = None
         if self.conf is not None:
-            self._gpu_conf = self.conf.get("gpu", None)
+            self._gpu_conf = set(self.conf.get("gpu", []))
 
     def capture(self) -> Telemetry:
         """Capture it."""
