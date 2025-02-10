@@ -60,7 +60,7 @@ class MQDaoMofka(MQDao):
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         try:
-            self.logger.debug(f"Going to send Message:" f"\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t")
+            self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t")
             [self.producer.push(m) for m in buffer]
 
         except Exception as e:
