@@ -1,0 +1,20 @@
+# This is a Spack Environment file.
+# It describes a set of packages to be installed, along with
+# configuration settings.
+spack:
+  # add package specs to the `specs` list
+  specs:
+  - mofka@main+mpi+python ^json-c@0.13.0 ^libfabric@1.19.1 ^mercury~boostsys~checksum
+    ^mochi-bedrock~ssg ^mpich@3.4^gcc@13
+  view: true
+  concretizer:
+    unify: true
+  repos:
+  # add mochi-spack-packages recipes:
+  # git clone git@github.com:mochi-hpc/mochi-spack-packages.git
+  # spack repo add mochi-spack-packages
+  - ./mochi-spack-packages
+  mirrors:
+    mochi-buildcache:
+      url: oci://ghcr.io/mochi-hpc/mochi-spack-buildcache
+      signed: false
