@@ -152,6 +152,7 @@ class Flowcept(object):
         if not self.is_started or not self.enabled:
             self.logger.warning("Flowcept is already stopped or may never have been started!")
             return
+
         if self._interceptors and len(self._interceptors):
             for interceptor in self._interceptors:
                 # TODO: :base-interceptor-refactor: revise
@@ -161,6 +162,7 @@ class Flowcept(object):
                     key = interceptor.settings.key
                 self.logger.info(f"Flowceptor {key} stopping...")
                 interceptor.stop()
+
         if len(self._db_inserters):
             self.logger.info("Stopping DB Inserters...")
             for db_inserter in self._db_inserters:
