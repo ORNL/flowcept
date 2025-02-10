@@ -1,0 +1,44 @@
+version: '3.8'
+name: flowcept
+services:
+  # flowcept_redis:
+  #   container_name: flowcept_redis
+  #   image: redis
+  #   ports:
+  #     - 6379:6379
+
+  # flowcept_mongo:
+  #   container_name: flowcept_mongo
+  #   image: mongo:latest
+  #   # volumes:
+  #   #   - /Users/rsr/Downloads/mongo_data/db:/data/db
+  #   ports:
+  #     - 27017:27017
+
+  # mofka:
+  #   image: ghcr.io/mochi-hpc/mochi-spack-buildcache:mofka-0.4.0-cmuy7qp44yxutafxseqiqbn3iejima4k.spack
+  #   ports:
+  #     - '9999:9999'
+  #   volumes:
+  #     - ./resources/mofka_config.json:/config/mofka_config.json
+  #     - ./resources/mofka.json:/config/mofka.json
+
+  mofka:
+    container_name: flowcept_mofka
+    image: ghcr.io/mochi-hpc/mochi-spack-buildcache:mofka-0.4.0-cmuy7qp44yxutafxseqiqbn3iejima4k.spack
+    ports:
+      - '9999:9999'
+    volumes:
+      - ./resources/mofka_config.json:/config/mofka_config.json
+      - ./resources/mofka.json:/config/mofka.json
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      bedrock tcp://:9999 -c /config/mofka_config.json &
+      sleep 1
+      mofkactl topic create flowcept --groupfile /config/mofka.json
+      mofkactl partition add flowcept --type memory --rank 0 --groupfile /config/mofka.json
+      sleep 0.3
+      echo "Created topic."
+      while true; do sleep 3600; done
+      "

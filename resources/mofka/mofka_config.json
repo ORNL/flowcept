@@ -1,0 +1,58 @@
+{
+    "libraries" : [
+        "libmofka-bedrock-module.so",
+        "libyokan-bedrock-module.so",
+        "libwarabi-bedrock-module.so",
+        "libflock-bedrock-module.so"
+    ],
+    "providers" : [
+        {
+            "name" : "my_flock_provider",
+            "type" : "flock",
+            "provider_id" : 1,
+            "config": {
+                "bootstrap": "self",
+                "file": "/config/mofka.json",
+                "group": {
+                    "type": "static"
+                }
+            }
+        },
+        {
+            "name" : "my_warabi_provider",
+            "type" : "warabi",
+            "provider_id" : 2,
+            "tags" : [ "mofka:data" ],
+            "config" : {
+                "target" : {
+                    "type": "memory",
+                    "config": {}
+                }
+            }
+        },
+        {
+            "name" : "my_yokan_master_provider",
+            "type" : "yokan",
+            "provider_id" : 3,
+            "tags" : [ "mofka:master" ],
+            "config" : {
+                "database" : {
+                    "type": "map",
+                    "config": {}
+                }
+            }
+        },
+        {
+            "name" : "my_yokan_metadata_provider",
+            "type" : "yokan",
+            "provider_id" : 4,
+            "tags" : [ "mofka:metadata" ],
+            "config" : {
+                "database" : {
+                    "type": "map",
+                    "config": {}
+                }
+            }
+        }
+    ]
+}
