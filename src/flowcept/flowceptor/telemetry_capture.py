@@ -195,7 +195,9 @@ class TelemetryCapture:
         self.conf = conf
         self._gpu_conf = None
         if self.conf is not None:
-            self._gpu_conf = set(self.conf.get("gpu", []))
+            self._gpu_conf = self.conf.get("gpu", {})
+            if self._gpu_conf is not None:
+                self._gpu_conf = set(self._gpu_conf)
 
     def capture(self) -> Telemetry:
         """Capture it."""
