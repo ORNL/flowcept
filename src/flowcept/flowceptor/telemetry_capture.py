@@ -1,5 +1,7 @@
 """Telemetry module."""
 
+from typing import Callable, Set, List
+
 import psutil
 import platform
 import cpuinfo
@@ -8,91 +10,194 @@ import os
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
     TELEMETRY_CAPTURE,
-    N_GPUS,
-    GPU_HANDLES,
-    GPU_TYPE,
     HOSTNAME,
     LOGIN_NAME,
 )
 from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
 
-if GPU_TYPE == "nvidia":
-    try:
-        from pynvml import (
-            nvmlDeviceGetHandleByIndex,
-            nvmlDeviceGetMemoryInfo,
-            nvmlDeviceGetName,
-            nvmlShutdown,
-            nvmlDeviceGetTemperature,
-            nvmlDeviceGetPowerUsage,
-            NVML_TEMPERATURE_GPU,
-        )
-    except Exception as e:
-        print(f"We could not import NVIDIA libs: {e}")
-    pass
 
-if GPU_TYPE == "amd":
-    try:
-        from amdsmi import (
-            amdsmi_get_gpu_memory_usage,
-            amdsmi_shut_down,
-            AmdSmiMemoryType,
-            AmdSmiTemperatureType,
-            amdsmi_get_gpu_activity,
-            amdsmi_get_power_info,
-            amdsmi_get_gpu_device_uuid,
-            amdsmi_get_temp_metric,
-            AmdSmiTemperatureMetric,
-            amdsmi_get_gpu_metrics_info,
-        )
-    except Exception as e:
-        print(f"Exception to import AMD libs! {e}")
-        pass
+class GPUCapture:
+    """GPU Capture class."""
+
+    VISIBLE_GPUS: List = None
+    GPU_VENDOR: str = None
+    GPU_HANDLES = None
+    capture_func: Callable = None
+
+    @staticmethod
+    def _initialize_nvidia():
+        """Initialize NVIDIA GPU."""
+        try:
+            from pynvml import (
+                nvmlDeviceGetCount,
+            )
+
+            visible_devices_var = os.environ.get("CUDA_VISIBLE_DEVICES")
+            if visible_devices_var:
+                visible_devices = [int(i) for i in visible_devices_var.split(",")]
+            else:
+                visible_devices = list(range(nvmlDeviceGetCount()))
+
+            GPUCapture.GPU_VENDOR = "nvidia"
+            GPUCapture.VISIBLE_GPUS = visible_devices
+            GPUCapture.GPU_HANDLES = []  # TODO: Handle GPU handles if needed
+            GPUCapture.capture_func = GPUCapture.__get_gpu_info_nvidia
+        except Exception as e:
+            FlowceptLogger().debug(str(e))
+
+    @staticmethod
+    def _initialize_amd():
+        """Initialize AMD GPU."""
+        try:
+            from amdsmi import (
+                amdsmi_init,
+                amdsmi_get_processor_handles,
+            )
+
+            visible_devices_var = os.environ.get("ROCR_VISIBLE_DEVICES")
+            amdsmi_init()
+            GPUCapture.GPU_HANDLES = amdsmi_get_processor_handles()
+
+            if visible_devices_var:
+                visible_devices = [int(i) for i in visible_devices_var.split(",")]
+            else:
+                visible_devices = list(range(len(GPUCapture.GPU_HANDLES)))
+
+            GPUCapture.VISIBLE_GPUS = visible_devices
+            GPUCapture.GPU_VENDOR = "amd"
+            GPUCapture.capture_func = GPUCapture.__get_gpu_info_amd
+
+        except Exception as e:
+            FlowceptLogger().debug(str(e))
+
+    @staticmethod
+    def _init_gpu():
+        if TELEMETRY_CAPTURE is not None and TELEMETRY_CAPTURE.get("gpu", None) is not None:
+            if TELEMETRY_CAPTURE.get("gpu", None) is not None:
+                # First, try AMD:
+                GPUCapture._initialize_amd()
+                # If didn't work, try Nvidia
+                if not GPUCapture.GPU_VENDOR:
+                    GPUCapture._initialize_nvidia()
+
+            if len(GPUCapture.VISIBLE_GPUS):
+                FlowceptLogger().debug(f"Visible GPUs in Flowcept Capture: {GPUCapture.VISIBLE_GPUS}")
+
+    @staticmethod
+    def shutdown():
+        """Shutdown GPU Telemetry capture."""
+        if GPUCapture.GPU_VENDOR == "nvidia":
+            try:
+                nvmlShutdown()
+            except Exception as e:
+                FlowceptLogger().exception(e)
+        elif GPUCapture.GPU_VENDOR == "amd":
+            try:
+                amdsmi_shut_down()
+            except Exception as e:
+                FlowceptLogger().exception(e)
+        else:
+            FlowceptLogger().error("Could not end any GPU!")
+        FlowceptLogger().debug("GPU capture end!")
+
+    @staticmethod
+    def __get_gpu_info_nvidia(gpu_conf: Set = None, gpu_ix: int = 0):
+        device = nvmlDeviceGetHandleByIndex(gpu_ix)
+        nvidia_info = nvmlDeviceGetMemoryInfo(device)
+
+        flowcept_gpu_info = {
+            "total": nvidia_info.total,
+            "used": nvidia_info.used,
+            "temperature": nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU),
+            "power_usage": nvmlDeviceGetPowerUsage(device),
+            "name": nvmlDeviceGetName(device),
+            "device_ix": gpu_ix,
+        }
+        return flowcept_gpu_info
+
+    @staticmethod
+    def __get_gpu_info_amd(gpu_conf: Set = None, gpu_ix: int = 0):
+        # See: https://rocm.docs.amd.com/projects/amdsmi/en/docs-5.7.1/py-interface_readme_link.html#api
+        device = GPUCapture.GPU_HANDLES[gpu_ix]
+        flowcept_gpu_info = {"gpu_ix": gpu_ix}
+
+        if "used" in gpu_conf:
+            flowcept_gpu_info["used"] = amdsmi_get_gpu_memory_usage(device, AmdSmiMemoryType.VRAM)
+
+        if "activity" in gpu_conf:
+            flowcept_gpu_info["activity"] = amdsmi_get_gpu_activity(device)
+
+        if "power" in gpu_conf or "temperature" in gpu_conf or "others" in gpu_conf:
+            all_metrics = amdsmi_get_gpu_metrics_info(device)
+        else:
+            return flowcept_gpu_info
+
+        if "power" in gpu_conf:
+            flowcept_gpu_info["power"] = {
+                "average_socket_power": all_metrics["average_socket_power"],
+                "energy_accumulator": all_metrics["energy_accumulator"],
+                "current_socket_power": all_metrics["current_socket_power"],
+            }
+
+        if "temperature" in gpu_conf:
+            flowcept_gpu_info["temperature"] = {
+                "edge": all_metrics["temperature_edge"],
+                "hotspot": all_metrics["temperature_hotspot"],
+                "mem": all_metrics["temperature_mem"],
+                "vrgfx": all_metrics["temperature_vrgfx"],
+                "vrmem": all_metrics["temperature_vrmem"],
+                "hbm": all_metrics["temperature_hbm"],
+                "fan_speed": all_metrics["current_fan_speed"],
+            }
+        if "others" in gpu_conf:
+            flowcept_gpu_info["others"] = {
+                "current_gfxclk": all_metrics["current_gfxclk"],
+                "current_socclk": all_metrics["current_socclk"],
+                "current_uclk": all_metrics["current_uclk"],
+                "current_vclk0": all_metrics["current_vclk0"],
+                "current_dclk0": all_metrics["current_dclk0"],
+            }
+
+        return flowcept_gpu_info
+
+
+GPUCapture._init_gpu()
+
+if GPUCapture.GPU_VENDOR == "amd":
+    from amdsmi import (
+        amdsmi_get_gpu_memory_usage,
+        amdsmi_shut_down,
+        AmdSmiMemoryType,
+        amdsmi_get_gpu_activity,
+        amdsmi_get_gpu_metrics_info,
+    )
+
+    FlowceptLogger().debug("Imported AMD modules!")
+elif GPUCapture.GPU_VENDOR == "nvidia":
+    from pynvml import (
+        nvmlDeviceGetHandleByIndex,
+        nvmlDeviceGetMemoryInfo,
+        nvmlDeviceGetName,
+        nvmlShutdown,
+        nvmlDeviceGetTemperature,
+        nvmlDeviceGetPowerUsage,
+        NVML_TEMPERATURE_GPU,
+    )
+
+    FlowceptLogger().debug("Imported Nvidia modules!")
 
 
 class TelemetryCapture:
     """Telemetry class."""
 
-    # TODO: refactor; I need this to avoid querying GPU stuff that is
-    # generating errors. The idea is to try once and if it fails, add this in
-    # this dictionary to avoid trying again. The mapping will be
-    # {gpu_device_id:{query_type: True or False}}; False if it found that
-    # it's unsuccessful. If it's mapping to an empty dict, the whole GPU is
-    # bad for capture.
-    _gpu_unsuccessful_queries = dict()
-
     def __init__(self, conf=TELEMETRY_CAPTURE):
         self.logger = FlowceptLogger()
         self.conf = conf
+        self._gpu_conf = None
         if self.conf is not None:
-            self._visible_gpus = None
-            self._gpu_type = GPU_TYPE
-            self._gpu_conf = self.conf.get("gpu", None)
-
-            if self._gpu_conf is None:
-                return
-
-            if isinstance(self._gpu_conf, str):
-                self._gpu_conf = eval(self.conf.get("gpu", "None"))
-
-            if self._gpu_conf is None:
-                return
-
-            self._gpu_conf = set(self._gpu_conf)
-
-            if len(self._gpu_conf):
-                self.logger.info(f"These are the visible GPUs by Flowcept Capture: {N_GPUS}")
-                # TODO: refactor! This below is bad coding
-                nvidia = N_GPUS.get("nvidia", [])
-                amd = N_GPUS.get("amd", [])
-                if len(nvidia):
-                    self._visible_gpus = nvidia
-                    self._gpu_capture_func = self.__get_gpu_info_nvidia
-                elif len(amd):
-                    self._visible_gpus = amd
-                    self._gpu_capture_func = self.__get_gpu_info_amd
-                else:
-                    self.logger.exception("No GPU found. Consider disabling GPU capture in the settings file.")
+            self._gpu_conf = self.conf.get("gpu", {})
+            if self._gpu_conf is not None:
+                self._gpu_conf = set(self._gpu_conf)
 
     def capture(self) -> Telemetry:
         """Capture it."""
@@ -116,7 +221,7 @@ class TelemetryCapture:
         if self.conf.get("disk", False):
             tel.disk = self._capture_disk()
 
-        if self._gpu_conf is not None and len(self._gpu_conf):  # TODO we might want to turn all tel types into lists
+        if self._gpu_conf is not None:  # TODO we might want to turn all tel types into lists
             tel.gpu = self._capture_gpu()
 
         return tel
@@ -243,73 +348,13 @@ class TelemetryCapture:
             self.logger.exception(e)
             return None
 
-    def __get_gpu_info_nvidia(self, gpu_ix: int = 0):
-        try:
-            handle = nvmlDeviceGetHandleByIndex(gpu_ix)
-            nvidia_info = nvmlDeviceGetMemoryInfo(handle)
-        except Exception as e:
-            self.logger.exception(e)
-            return {}
-
-        flowcept_gpu_info = {
-            "total": nvidia_info.total,
-            "used": nvidia_info.used,
-            "temperature": nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU),
-            "power_usage": nvmlDeviceGetPowerUsage(handle),
-            "name": nvmlDeviceGetName(handle),
-            "device_ix": gpu_ix,
-        }
-        return flowcept_gpu_info
-
-    def __register_unsuccessful_gpu_query(self, gpu_ix, gpu_info_key):
-        self.logger.error(f"Error to get {gpu_info_key} for the GPU device ix {gpu_ix}")
-        if gpu_ix not in TelemetryCapture._gpu_unsuccessful_queries:
-            TelemetryCapture._gpu_unsuccessful_queries[gpu_ix] = {}
-        TelemetryCapture._gpu_unsuccessful_queries[gpu_ix][gpu_info_key] = True
-
-    def __get_gpu_info_amd(self, gpu_ix: int = 0):
-        # See: https://rocm.docs.amd.com/projects/amdsmi/en/docs-5.7.1/py-interface_readme_link.html#api
-        device = GPU_HANDLES[gpu_ix]
-        flowcept_gpu_info = {"gpu_ix": gpu_ix}
-
-        if "used" in self._gpu_conf:
-            flowcept_gpu_info["used"] = amdsmi_get_gpu_memory_usage(device, AmdSmiMemoryType.VRAM)
-        if "usage" in self._gpu_conf:
-            flowcept_gpu_info["usage"] = amdsmi_get_gpu_activity(device)
-        if "power" in self._gpu_conf:
-            flowcept_gpu_info["power"] = amdsmi_get_power_info(device)
-        if "id" in self._gpu_conf:
-            flowcept_gpu_info["id"] = amdsmi_get_gpu_device_uuid(device)
-        if "temperature" in self._gpu_conf:
-            temperature = {
-                "vram": amdsmi_get_temp_metric(
-                    device,
-                    AmdSmiTemperatureType.VRAM,
-                    AmdSmiTemperatureMetric.CURRENT,
-                ),
-                "hotspot": amdsmi_get_temp_metric(
-                    device,
-                    AmdSmiTemperatureType.HOTSPOT,
-                    AmdSmiTemperatureMetric.CURRENT,
-                ),
-                "edge": amdsmi_get_temp_metric(
-                    device,
-                    AmdSmiTemperatureType.EDGE,
-                    AmdSmiTemperatureMetric.CURRENT,
-                ),
-            }
-            flowcept_gpu_info["temperature"] = temperature
-        if "metrics" in self._gpu_conf:  # USE IT CAREFULLY because it contains redundant information
-            flowcept_gpu_info["metrics"] = amdsmi_get_gpu_metrics_info(device)
-        return flowcept_gpu_info
-
     def _capture_gpu(self):
         try:
-            if self._visible_gpus is None or self._gpu_conf is None or len(self._gpu_conf) == 0:
+            if GPUCapture.VISIBLE_GPUS is None or self._gpu_conf is None or len(self._gpu_conf) == 0:
                 return
             gpu_telemetry = {}
-            for gpu_ix in self._visible_gpus:
-                gpu_telemetry[f"gpu_{gpu_ix}"] = self._gpu_capture_func(gpu_ix)
+            for gpu_ix in GPUCapture.VISIBLE_GPUS:
+                gpu_telemetry[f"gpu_{gpu_ix}"] = GPUCapture.capture_func(self._gpu_conf, gpu_ix)
             return gpu_telemetry
         except Exception as e:
             self.logger.exception(e)
@@ -317,21 +362,7 @@ class TelemetryCapture:
 
     def shutdown_gpu_telemetry(self):
         """Shutdown GPU telemetry."""
-        if self.conf is None or self._visible_gpus is None or self._gpu_conf is None or len(self._gpu_conf) == 0:
+        if GPUCapture.VISIBLE_GPUS is None or self._gpu_conf is None or len(self._gpu_conf) == 0:
             self.logger.debug("GPU capture is off or has never been initialized, so we won't shut down.")
             return None
-        if self._gpu_type == "nvidia":
-            try:
-                nvmlShutdown()
-            except Exception as e:
-                self.logger.error("Error to shutdown GPU capture")
-                self.logger.exception(e)
-        elif self._gpu_type == "amd":
-            try:
-                amdsmi_shut_down()
-            except Exception as e:
-                self.logger.error("Error to shutdown GPU capture")
-                self.logger.exception(e)
-        else:
-            self.logger.error("Could not end any GPU!")
-        self.logger.debug("GPU capture end!")
+        GPUCapture.shutdown()

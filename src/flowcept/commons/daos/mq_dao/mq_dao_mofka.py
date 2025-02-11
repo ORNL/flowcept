@@ -3,48 +3,44 @@ from typing import Callable
 
 import msgpack
 from time import time
+import json
+
+import mochi.mofka.client as mofka
+from mochi.mofka.client import ThreadPool, AdaptiveBatchSize
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.utils import perf_log
+from flowcept.configs import PERF_LOG, MQ_SETTINGS, MQ_CHANNEL
 
-#from pymargo.core import Engine
-import mochi.mofka.client as mofka
-from mochi.mofka.client import ThreadPool, AdaptiveBatchSize
-from flowcept.configs import (
-    MQ_CHANNEL,
-    PERF_LOG,
-    MQ_SETTINGS
-    )
-
-import json
 
 class MQDaoMofka(MQDao):
+    """Main class to communicate with Mofka."""
 
     _driver = mofka.MofkaDriver(MQ_SETTINGS.get("group_file", None), use_progress_thread=True)
-    _TOPIC_NAME = MQ_SETTINGS.get("channel", None)
     _topic = _driver.open_topic(MQ_SETTINGS["channel"])
 
-    def __init__(self,
-                 kv_host=None, kv_port=None, adapter_settings=None, with_producer=True):
+    def __init__(self, kv_host=None, kv_port=None, adapter_settings=None, with_producer=True):
         super().__init__(kv_host=kv_host, kv_port=kv_port, adapter_settings=adapter_settings)
         self.producer = None
         if with_producer:
             print("Starting producer")
-            self.producer = MQDaoMofka._topic.producer("p" + MQDaoMofka._TOPIC_NAME,
-                                                       batch_size=mofka.AdaptiveBatchSize,
-                                                       thread_pool=mofka.ThreadPool(1),
-                                                       ordering=mofka.Ordering.Strict)
+            self.producer = MQDaoMofka._topic.producer(
+                "p" + MQ_CHANNEL,
+                batch_size=mofka.AdaptiveBatchSize,
+                thread_pool=mofka.ThreadPool(1),
+                ordering=mofka.Ordering.Strict,
+            )
 
     def subscribe(self):
+        """Subscribe to Mofka topic."""
         batch_size = AdaptiveBatchSize
         thread_pool = ThreadPool(0)
         self.consumer = MQDaoMofka._topic.consumer(
-            name=MQDaoMofka._TOPIC_NAME+str(uuid.uuid4()),
-            thread_pool=thread_pool,
-            batch_size=batch_size
+            name=MQ_CHANNEL + str(uuid.uuid4()), thread_pool=thread_pool, batch_size=batch_size
         )
 
     def message_listener(self, message_handler: Callable):
+        """Mofka's Message listener."""
         try:
             while True:
                 event = self.consumer.pull().wait()
@@ -57,27 +53,19 @@ class MQDaoMofka(MQDao):
         finally:
             pass
 
-    def send_message(
-        self, message: dict
-    ):
-        self.producer.push(metadata=message) # using metadata to send data
+    def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        """Send a single message to Mofka."""
+        self.producer.push(metadata=message)  # using metadata to send data
         self.producer.flush()
 
-    def _bulk_publish(
-        self, buffer, serializer=msgpack.dump
-    ):
+    def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         try:
-            self.logger.debug(
-                f"Going to send Message:"
-                f"\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t"
-            )
+            self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t")
             [self.producer.push(m) for m in buffer]
 
         except Exception as e:
             self.logger.exception(e)
-            self.logger.error(
-                "Some messages couldn't be flushed! Check the messages' contents!"
-            )
+            self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
             self.logger.error(f"Message that caused error: {buffer}")
         t0 = 0
         if PERF_LOG:
@@ -88,6 +76,7 @@ class MQDaoMofka(MQDao):
         except Exception as e:
             self.logger.exception(e)
         perf_log("mq_pipe_flush", t0)
-    def liveness_test(self):
-        return True
 
+    def liveness_test(self):
+        """Test Mofka Liveness."""
+        return True
