@@ -113,13 +113,11 @@ def start_dask(scheduler_file):
     from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskWorkerAdapter
     if scheduler_file is None:
         from distributed import LocalCluster
-        from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskSchedulerAdapter
         cluster = LocalCluster(n_workers=1)
         scheduler = cluster.scheduler
         client = Client(scheduler.address)
         client.forward_logging()
-        # Registering Flowcept's worker and scheduler adapters
-        # client.register_plugin(FlowceptDaskSchedulerAdapter())
+        # Registering Flowcept's worker adapters
         client.register_plugin(FlowceptDaskWorkerAdapter())
     else:
         # If scheduler file is provided, this cluster is not managed in this code.
