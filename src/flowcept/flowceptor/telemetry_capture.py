@@ -108,23 +108,20 @@ class GPUCapture:
         nvidia_info = nvmlDeviceGetMemoryInfo(device)
         flowcept_gpu_info = {}
 
-        if "total" in gpu_conf:
-            flowcept_gpu_info["total"] = nvidia_info.total
-
         if "used" in gpu_conf:
             flowcept_gpu_info["used"] = nvidia_info.used
 
         if "temperature" in gpu_conf:
             flowcept_gpu_info["temperature"] = nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU)
 
-        if "power_usage" in gpu_conf:
-            flowcept_gpu_info["power_usage"] = nvmlDeviceGetPowerUsage(device)
+        if "power" in gpu_conf:
+            flowcept_gpu_info["power"] = nvmlDeviceGetPowerUsage(device)
 
         if "name" in gpu_conf:
             flowcept_gpu_info["name"] = nvmlDeviceGetName(device)
 
-        if "device_ix" in gpu_conf:
-            flowcept_gpu_info["device_ix"] = gpu_ix
+        if "ix" in gpu_conf:
+            flowcept_gpu_info["gpu_ix"] = gpu_ix
 
         return flowcept_gpu_info
 

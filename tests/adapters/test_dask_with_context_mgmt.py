@@ -9,7 +9,6 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.flowceptor.adapters.dask.dask_plugins import (
     register_dask_workflow,
-    FlowceptDaskSchedulerAdapter,
     FlowceptDaskWorkerAdapter,
 )
 from tests.adapters.dask_test_utils import (
@@ -33,7 +32,6 @@ class TestDaskContextMgmt(unittest.TestCase):
         cluster = LocalCluster(n_workers=2)
         scheduler = cluster.scheduler
         client = Client(scheduler.address)
-        client.register_plugin(FlowceptDaskSchedulerAdapter())
         client.register_plugin(FlowceptDaskWorkerAdapter())
         register_dask_workflow(client)
 

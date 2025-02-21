@@ -84,39 +84,39 @@ def get_times_from_task_state(task_msg, ts):
             task_msg.ended_at = times["stop"]
 
 
-class DaskSchedulerInterceptor(BaseInterceptor):
-    """Dask scheduler."""
-
-    def __init__(self, scheduler):
-        self._scheduler = scheduler
-        super().__init__(plugin_key="dask")
-        super().start(bundle_exec_id=self._scheduler.address)
-
-    def callback(self, task_id, start, finish, *args, **kwargs):
-        """Implement the callback."""
-        try:
-            if task_id in self._scheduler.tasks:
-                ts = self._scheduler.tasks[task_id]
-
-            if ts.state == "waiting":
-                task_msg = TaskObject()
-                task_msg.task_id = task_id
-
-                task_msg.status = Status.SUBMITTED
-                if self.settings.scheduler_create_timestamps:
-                    task_msg.submitted_at = get_utc_now()
-
-                get_task_deps(ts, task_msg)
-
-                if self.settings.scheduler_should_get_input:
-                    if hasattr(ts, "run_spec"):
-                        get_run_spec_data(task_msg, ts.run_spec)
-
-                self.intercept(task_msg.to_dict())
-
-        except Exception as e:
-            self.logger.error("Error with dask scheduler!")
-            self.logger.exception(e)
+# class DaskSchedulerInterceptor(BaseInterceptor):
+#     """Dask scheduler."""
+#
+#     def __init__(self, scheduler):
+#         self._scheduler = scheduler
+#         super().__init__(plugin_key="dask")
+#         super().start(bundle_exec_id=self._scheduler.address)
+#
+#     def callback(self, task_id, start, finish, *args, **kwargs):
+#         """Implement the callback."""
+#         try:
+#             if task_id in self._scheduler.tasks:
+#                 ts = self._scheduler.tasks[task_id]
+#
+#             if ts.state == "waiting":
+#                 task_msg = TaskObject()
+#                 task_msg.task_id = task_id
+#
+#                 task_msg.status = Status.SUBMITTED
+#                 if self.settings.scheduler_create_timestamps:
+#                     task_msg.submitted_at = get_utc_now()
+#
+#                 get_task_deps(ts, task_msg)
+#
+#                 if self.settings.scheduler_should_get_input:
+#                     if hasattr(ts, "run_spec"):
+#                         get_run_spec_data(task_msg, ts.run_spec)
+#
+#                 self.intercept(task_msg.to_dict())
+#
+#         except Exception as e:
+#             self.logger.error("Error with dask scheduler!")
+#             self.logger.exception(e)
 
 
 class DaskWorkerInterceptor(BaseInterceptor):
@@ -193,12 +193,12 @@ class DaskWorkerInterceptor(BaseInterceptor):
             else:
                 return
 
+            if hasattr(self._worker, "current_workflow_id"):
+                task_msg.workflow_id = self._worker.current_workflow_id
+
             if self.settings.worker_should_get_input:
                 if hasattr(ts, "run_spec"):
                     get_run_spec_data(task_msg, ts.run_spec)
-
-                if hasattr(ts, "group_key"):
-                    task_msg.activity_id = ts.group_key
 
             if self.settings.worker_should_get_output:
                 if task_id in self._worker.data.memory:
