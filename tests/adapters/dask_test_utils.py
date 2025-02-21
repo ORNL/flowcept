@@ -27,18 +27,14 @@ def stop_local_dask_cluster(client, cluster, flowcept=None):
         print("Flowcept consumer closed.")
 
 
-def start_local_dask_cluster(n_workers=1, exec_bundle=None, start_persistence=False):
+def start_local_dask_cluster(n_workers=1, start_persistence=False):
     cluster = LocalCluster(n_workers=n_workers)
     scheduler = cluster.scheduler
     client = Client(scheduler.address)
-
+    exec_bundle = scheduler.address
     if start_persistence:
-        from flowcept import (
-            FlowceptDaskSchedulerAdapter,
-            FlowceptDaskWorkerAdapter,
-        )
+        from flowcept import FlowceptDaskWorkerAdapter
 
-        client.register_plugin(FlowceptDaskSchedulerAdapter())
         client.register_plugin(FlowceptDaskWorkerAdapter())
 
         flowcept = Flowcept(interceptors="dask", bundle_exec_id=exec_bundle).start()

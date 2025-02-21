@@ -1,7 +1,7 @@
 # Make sure you run `pip install flowcept[dask]` first.
 from distributed import Client, LocalCluster
 
-from flowcept import Flowcept, FlowceptDaskSchedulerAdapter, FlowceptDaskWorkerAdapter
+from flowcept import Flowcept, FlowceptDaskWorkerAdapter
 from flowcept.flowceptor.adapters.dask.dask_plugins import register_dask_workflow
 
 
@@ -26,16 +26,14 @@ if __name__ == "__main__":
     client.forward_logging()
 
     # Registering Flowcept's worker and scheduler adapters
-    client.register_plugin(FlowceptDaskSchedulerAdapter())
     client.register_plugin(FlowceptDaskWorkerAdapter())
 
-    # Registering a Dask workflow in Flowcept's database
-    wf_id = register_dask_workflow(client)
-    print(f"workflow_id={wf_id}")
-
     # Start Flowcept's Dask observer
-
     with Flowcept("dask"):  # Optionally: Flowcept("dask").start()
+        # Registering a Dask workflow in Flowcept's database
+        wf_id = register_dask_workflow(client)
+        print(f"workflow_id={wf_id}")
+
         t1 = client.submit(add, 1, 2)
         t2 = client.submit(multiply, 3, 4)
         t3 = client.submit(add, t1.result(), t2.result())

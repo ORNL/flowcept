@@ -1,4 +1,5 @@
-from time import time
+import json
+from time import time, ctime
 
 import torch
 import os
@@ -122,8 +123,61 @@ def dataprep_workflow(data_dir="input_data",
                       campaign_id=None,
                       ):
 
-    os.makedirs(data_dir, exist_ok=True)
+    train_data_path = os.path.realpath(os.path.join(data_dir, "train_data.tensor"))
+    val_data_path = os.path.realpath(os.path.join(data_dir, "val_data.tensor"))
+    test_data_path = os.path.realpath(os.path.join(data_dir, "test_data.tensor"))
+    val_data_mapping_path = os.path.realpath(os.path.join(data_dir, "val_data_mapping.tensor"))
+    dataset_info_path = os.path.realpath(os.path.join(data_dir, "dataset_info.json"))
+    n_batches_path = os.path.realpath(os.path.join(data_dir, "n_batches.json"))
+    n_tokens_path = os.path.realpath(os.path.join(data_dir, "n_tokens.txt"))
 
+    if not os.path.exists(train_data_path):
+
+        download_files(
+            batch_size, data_dir, eval_batch_size, subset_size, test_data_path, tokenizer_type, train_data_path,
+            val_data_mapping_path, val_data_path, dataset_info_path, n_batches_path, n_tokens_path)
+
+    train_data = torch.load(train_data_path)
+    val_data = torch.load(val_data_path)
+    test_data = torch.load(test_data_path)
+
+    with open(n_batches_path) as f:
+        n_batches = json.load(f)
+    with open(dataset_info_path) as f:
+        dataset_info = json.load(f)
+    with open(n_tokens_path) as f:
+        ntokens = int(f.read())
+    #
+    # assert torch.equal(train_data, train_data_loaded), "Train data mismatch"
+    # assert torch.equal(val_data, val_data_loaded), "Validation data mismatch"
+    # assert torch.equal(test_data, test_data_loaded), "Test data mismatch"
+
+    used = {
+        "train_batch_size": batch_size,
+        "val_batch_size": eval_batch_size,
+        "test_batch_size": eval_batch_size,
+        "subset_size": subset_size,
+        "tokenizer_type": tokenizer_type,
+    }
+    generated = {
+        "dataset_info": dataset_info,
+        "ntokens": ntokens,
+        "dataset_ref": dataset_info["dataset_ref"],
+        "train_data_shape": list(train_data.shape),
+        "val_data_shape": list(val_data.shape),
+        "test_data_shape": list(test_data.shape),
+        "train_data_path": train_data_path,
+        "test_data_path": test_data_path,
+        "val_data_path": val_data_path,
+    }
+    generated.update(n_batches)
+    wf_id = save_workflow(campaign_id, used, generated)
+    return wf_id, generated
+
+
+def download_files(batch_size, data_dir, eval_batch_size, subset_size, test_data_path, tokenizer_type, train_data_path,
+                   val_data_mapping_path, val_data_path, dataset_info_path, n_batches_path, n_tokens_path):
+    os.makedirs(data_dir, exist_ok=True)
     dataset_path = os.path.join(data_dir, "wikitext-2-v1.data")
     if os.path.exists(dataset_path):
         dataset = load_from_disk(dataset_path)
@@ -132,81 +186,46 @@ def dataprep_workflow(data_dir="input_data",
         dataset = load_dataset("wikitext", "wikitext-2-v1")
         print(f"Ok, now saving it into {dataset_path}")
         dataset.save_to_disk(dataset_path)
-
     test_dataset = dataset["test"]
     train_dataset = dataset["train"]
     validation_dataset = dataset["validation"]
     dataset_info = {
         "train": replace_non_serializable(train_dataset.info.__dict__),
         "val": replace_non_serializable(validation_dataset.info.__dict__),
-        "test": replace_non_serializable(test_dataset.info.__dict__)
+        "test": replace_non_serializable(test_dataset.info.__dict__),
+        "dataset_ref": get_dataset_ref(dataset),
+        "dataset_local_file_download_time": ctime(os.stat(dataset_path).st_ctime)
     }
+    with open(dataset_info_path, "w") as file:
+        json.dump(dataset_info, file, indent=2)
+
     if subset_size is not None and subset_size > 0:
         test_dataset = Subset(test_dataset, range(subset_size))
         train_dataset = Subset(train_dataset, range(subset_size))
         validation_dataset = Subset(validation_dataset, range(subset_size))
-
     # Build the vocabulary from the training dataset
     tokenizer = get_tokenizer(tokenizer_type)
     vocab = build_vocab_from_iterator(yield_tokens(tokenizer, train_dataset))
     vocab.set_default_index(vocab["<unk>"])
     ntokens = len(vocab)
-
+    with open(n_tokens_path, 'w') as f:
+        f.write(str(ntokens))
     # Process the train, validation, and test datasets
     train_data, train_data_mapping = data_process(tokenizer, vocab, train_dataset)
     val_data, val_data_mapping = data_process(tokenizer, vocab, validation_dataset)
     test_data, test_data_mapping = data_process(tokenizer, vocab, test_dataset)
-
     train_data = batchify(train_data, batch_size)
     val_data = batchify(val_data, eval_batch_size)
     test_data = batchify(test_data, eval_batch_size)
-
     train_n_batches = len(list(enumerate(range(0, train_data.size(0) - 1, batch_size))))
     val_n_batches = len(list(enumerate(range(0, val_data.size(0) - 1, eval_batch_size))))
     test_n_batches = val_n_batches
-
-    train_data_path = os.path.realpath(os.path.join(data_dir, "train_data.tensor"))
-    val_data_path = os.path.realpath(os.path.join(data_dir, "val_data.tensor"))
-    test_data_path = os.path.realpath(os.path.join(data_dir, "test_data.tensor"))
-
+    with open(n_batches_path, "w") as file:
+        json.dump({"train_n_batches": train_n_batches, "val_n_batches":val_n_batches, "test_n_batches": test_n_batches}, file, indent=2)
     torch.save(train_data, train_data_path)
     torch.save(val_data, val_data_path)
     torch.save(test_data, test_data_path)
-
-    val_data_mapping_path = os.path.realpath(os.path.join(data_dir, "val_data_mapping.tensor"))
     torch.save(val_data_mapping, val_data_mapping_path)
-
-    print(f"Saved files in {data_dir}. Now running some asserts.")
-
-    train_data_loaded = torch.load(train_data_path)
-    val_data_loaded = torch.load(val_data_path)
-    test_data_loaded = torch.load(test_data_path)
-
-    assert torch.equal(train_data, train_data_loaded), "Train data mismatch"
-    assert torch.equal(val_data, val_data_loaded), "Validation data mismatch"
-    assert torch.equal(test_data, test_data_loaded), "Test data mismatch"
-
-    used = {
-        "train_batch_size": batch_size,
-        "val_batch_size": eval_batch_size,
-        "test_batch_size": eval_batch_size,
-        "subset_size": subset_size,
-        "tokenizer_type": tokenizer_type,
-        "dataset_info": dataset_info,
-    }
-    generated = {
-        "ntokens": ntokens,
-        "dataset_ref": get_dataset_ref(dataset),
-        "train_n_batches": train_n_batches,
-        "test_n_batches": test_n_batches,
-        "val_n_batches": val_n_batches,
-        "train_data_shape": list(train_data.shape),
-        "val_data_shape": list(val_data.shape),
-        "test_data_shape": list(test_data.shape),
-        "train_data_path": train_data_path,
-        "test_data_path": test_data_path,
-        "val_data_path": val_data_path,
-    }
-    wf_id = save_workflow(campaign_id, used, generated)
-    return wf_id, generated
+    print(f"Saved files in {data_dir}.")
+    return dataset, dataset_info, ntokens, test_data, test_n_batches, train_data, train_n_batches, val_data, val_n_batches
 

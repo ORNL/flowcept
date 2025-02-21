@@ -49,12 +49,7 @@ def __getattr__(name):
         )
 
         return MLFlowInterceptor
-    elif name == "FlowceptDaskSchedulerAdapter":
-        from flowcept.flowceptor.adapters.dask.dask_plugins import (
-            FlowceptDaskSchedulerAdapter,
-        )
 
-        return FlowceptDaskSchedulerAdapter
     elif name == "FlowceptDaskWorkerAdapter":
         from flowcept.flowceptor.adapters.dask.dask_plugins import (
             FlowceptDaskWorkerAdapter,

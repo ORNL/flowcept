@@ -2,7 +2,6 @@
 
 import inspect
 
-from flowcept import WorkflowObject
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
 )
@@ -14,7 +13,6 @@ from flowcept.commons.utils import get_utc_now, replace_non_serializable
 from flowcept.configs import (
     TELEMETRY_CAPTURE,
     REPLACE_NON_JSON_SERIALIZABLE,
-    REGISTER_WORKFLOW,
     ENRICH_MESSAGES,
     INSTRUMENTATION,
 )
@@ -50,6 +48,7 @@ def get_run_spec_data(task_msg: TaskObject, run_spec):
     #     return ret_obj
 
     func = run_spec[0]
+    task_msg.activity_id = func.__name__
     args = run_spec[1]
     kwargs = run_spec[2]
 
@@ -60,9 +59,9 @@ def get_run_spec_data(task_msg: TaskObject, run_spec):
             task_msg.used[k] = v
 
     if kwargs:
+        task_msg.used.update(kwargs)
         if "workflow_id" in kwargs and not task_msg.workflow_id:
             task_msg.workflow_id = kwargs.get("workflow_id")
-            task_msg.used.update(kwargs)
             task_msg.used.pop("workflow_id", None)
 
     if REPLACE_NON_JSON_SERIALIZABLE:
@@ -85,51 +84,39 @@ def get_times_from_task_state(task_msg, ts):
             task_msg.ended_at = times["stop"]
 
 
-class DaskSchedulerInterceptor(BaseInterceptor):
-    """Dask scheduler."""
-
-    def __init__(self, scheduler):
-        self._scheduler = scheduler
-        super().__init__(plugin_key="dask")
-        super().start(bundle_exec_id=self._scheduler.address)
-
-    def callback(self, task_id, start, finish, *args, **kwargs):
-        """Implement the callback."""
-        try:
-            if task_id in self._scheduler.tasks:
-                ts = self._scheduler.tasks[task_id]
-
-            if ts.state == "waiting":
-                task_msg = TaskObject()
-                task_msg.task_id = task_id
-
-                task_msg.status = Status.SUBMITTED
-                if self.settings.scheduler_create_timestamps:
-                    task_msg.submitted_at = get_utc_now()
-
-                get_task_deps(ts, task_msg)
-
-                if hasattr(ts, "group_key"):
-                    task_msg.activity_id = ts.group_key
-
-                if self.settings.scheduler_should_get_input:
-                    if hasattr(ts, "run_spec"):
-                        get_run_spec_data(task_msg, ts.run_spec)
-
-                if REGISTER_WORKFLOW:
-                    if hasattr(self._scheduler, "current_workflow"):
-                        wf_obj: WorkflowObject = self._scheduler.current_workflow
-                        task_msg.workflow_id = wf_obj.workflow_id
-                        self.send_workflow_message(wf_obj)
-                    else:
-                        # TODO: we can't do much if the user didn't register the wf
-                        pass
-
-                self.intercept(task_msg.to_dict())
-
-        except Exception as e:
-            self.logger.error("Error with dask scheduler!")
-            self.logger.exception(e)
+# class DaskSchedulerInterceptor(BaseInterceptor):
+#     """Dask scheduler."""
+#
+#     def __init__(self, scheduler):
+#         self._scheduler = scheduler
+#         super().__init__(plugin_key="dask")
+#         super().start(bundle_exec_id=self._scheduler.address)
+#
+#     def callback(self, task_id, start, finish, *args, **kwargs):
+#         """Implement the callback."""
+#         try:
+#             if task_id in self._scheduler.tasks:
+#                 ts = self._scheduler.tasks[task_id]
+#
+#             if ts.state == "waiting":
+#                 task_msg = TaskObject()
+#                 task_msg.task_id = task_id
+#
+#                 task_msg.status = Status.SUBMITTED
+#                 if self.settings.scheduler_create_timestamps:
+#                     task_msg.submitted_at = get_utc_now()
+#
+#                 get_task_deps(ts, task_msg)
+#
+#                 if self.settings.scheduler_should_get_input:
+#                     if hasattr(ts, "run_spec"):
+#                         get_run_spec_data(task_msg, ts.run_spec)
+#
+#                 self.intercept(task_msg.to_dict())
+#
+#         except Exception as e:
+#             self.logger.error("Error with dask scheduler!")
+#             self.logger.exception(e)
 
 
 class DaskWorkerInterceptor(BaseInterceptor):
@@ -205,6 +192,9 @@ class DaskWorkerInterceptor(BaseInterceptor):
                     task_msg.telemetry_at_end = self.telemetry_capture.capture()
             else:
                 return
+
+            if hasattr(self._worker, "current_workflow_id"):
+                task_msg.workflow_id = self._worker.current_workflow_id
 
             if self.settings.worker_should_get_input:
                 if hasattr(ts, "run_spec"):

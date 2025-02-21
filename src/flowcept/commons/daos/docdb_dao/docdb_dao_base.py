@@ -303,7 +303,7 @@ class DocumentDBDAO(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet", max_depth=999):
+    def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet", max_depth=999, mapping=None):
         """
         Dump tasks recursively for a given workflow ID to a file.
 

@@ -2,13 +2,13 @@
 
 from uuid import uuid4
 
-from dask.distributed import WorkerPlugin, SchedulerPlugin
-from distributed import Client, Scheduler
+from dask.distributed import WorkerPlugin
+from distributed import Client
 
 from flowcept import WorkflowObject
 from flowcept.configs import INSTRUMENTATION
+from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 from flowcept.flowceptor.adapters.dask.dask_interceptor import (
-    DaskSchedulerInterceptor,
     DaskWorkerInterceptor,
 )
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
@@ -39,7 +39,16 @@ def _set_workflow_on_scheduler(
     wf_obj.used = used
     wf_obj.campaign_id = campaign_id
     wf_obj.name = workflow_name
-    setattr(dask_scheduler, "current_workflow", wf_obj)
+
+    interceptor = BaseInterceptor(plugin_key="dask")
+    interceptor.start(bundle_exec_id=dask_scheduler.address)
+    interceptor.send_workflow_message(wf_obj)
+    interceptor.stop()
+    # setattr(dask_scheduler, "current_workflow", wf_obj)
+
+
+def _set_workflow_id_on_workers(dask_worker, workflow_id):
+    setattr(dask_worker, "current_workflow_id", workflow_id)
 
 
 def register_dask_workflow(
@@ -63,27 +72,30 @@ def register_dask_workflow(
             "campaign_id": campaign_id,
         },
     )
+
+    dask_client.run(_set_workflow_id_on_workers, workflow_id=workflow_id)
+
     return workflow_id
 
 
-class FlowceptDaskSchedulerAdapter(SchedulerPlugin):
-    """Dask schedule adapter."""
-
-    def __init__(self):
-        self.interceptor = None
-
-    def start(self, scheduler: Scheduler) -> None:
-        """Run this when scheduler starts."""
-        self.interceptor = DaskSchedulerInterceptor(scheduler)
-
-    def transition(self, key, start, finish, *args, **kwargs):
-        """Get the transition."""
-        self.interceptor.callback(key, start, finish, args, kwargs)
-
-    async def close(self):
-        """Close it."""
-        self.interceptor.logger.debug("Going to close scheduler!")
-        self.interceptor.stop()
+# class FlowceptDaskSchedulerAdapter(SchedulerPlugin):
+#     """Dask schedule adapter."""
+#
+#     def __init__(self):
+#         self.interceptor = None
+#
+#     def start(self, scheduler: Scheduler) -> None:
+#         """Run this when scheduler starts."""
+#         self.interceptor = DaskSchedulerInterceptor(scheduler)
+#
+#     def transition(self, key, start, finish, *args, **kwargs):
+#         """Get the transition."""
+#         self.interceptor.callback(key, start, finish, args, kwargs)
+#
+#     async def close(self):
+#         """Close it."""
+#         self.interceptor.logger.debug("Going to close scheduler!")
+#         self.interceptor.stop()
 
 
 class FlowceptDaskWorkerAdapter(WorkerPlugin):
