@@ -100,9 +100,7 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
             print(t.result())
 
         print("Done main loop. Closing dask...")
-        client.close()  # This is to avoid generating errors
-        # TODO: what if cluster is none?
-        cluster.close()  # These calls are needed closeouts to inform of workflow conclusion.
+        close_dask(client, cluster, scheduler_file)
         print("Closed Dask. Closing Flowcept...")
     print("Closed.")
     return search_wf_id
@@ -128,6 +126,14 @@ def start_dask(scheduler_file):
         cluster = None
     return client, cluster
 
+
+def close_dask(client, cluster, scheduler_file=None):
+    if scheduler_file is None:
+        client.close()
+        cluster.close()
+    else:
+        client.close()
+        client.shutdown()
 
 def run_asserts_and_exports(campaign_id, model_search_wf_id):
     from flowcept.commons.vocabulary import Status
@@ -422,7 +428,7 @@ def parse_args():
         "lr": [0.1],
         "pos_encoding_max_len": [5000],
         "subset_size": 10,
-        "epochs": 1,
+        "epochs": 4,
         "max_runs": 1,
         "tokenizer_type": "basic_english",   # spacy, moses, toktok, revtok, subword
     }
