@@ -59,9 +59,9 @@ def get_run_spec_data(task_msg: TaskObject, run_spec):
             task_msg.used[k] = v
 
     if kwargs:
+        task_msg.used.update(kwargs)
         if "workflow_id" in kwargs and not task_msg.workflow_id:
             task_msg.workflow_id = kwargs.get("workflow_id")
-            task_msg.used.update(kwargs)
             task_msg.used.pop("workflow_id", None)
 
     if REPLACE_NON_JSON_SERIALIZABLE:
