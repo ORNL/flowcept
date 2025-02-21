@@ -2,7 +2,6 @@
 
 import inspect
 
-from flowcept import WorkflowObject
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
 )
@@ -14,7 +13,6 @@ from flowcept.commons.utils import get_utc_now, replace_non_serializable
 from flowcept.configs import (
     TELEMETRY_CAPTURE,
     REPLACE_NON_JSON_SERIALIZABLE,
-    REGISTER_WORKFLOW,
     ENRICH_MESSAGES,
     INSTRUMENTATION,
 )
@@ -50,6 +48,7 @@ def get_run_spec_data(task_msg: TaskObject, run_spec):
     #     return ret_obj
 
     func = run_spec[0]
+    task_msg.activity_id = func.__name__
     args = run_spec[1]
     kwargs = run_spec[2]
 
@@ -109,21 +108,9 @@ class DaskSchedulerInterceptor(BaseInterceptor):
 
                 get_task_deps(ts, task_msg)
 
-                if hasattr(ts, "group_key"):
-                    task_msg.activity_id = ts.group_key
-
                 if self.settings.scheduler_should_get_input:
                     if hasattr(ts, "run_spec"):
                         get_run_spec_data(task_msg, ts.run_spec)
-
-                if REGISTER_WORKFLOW:
-                    if hasattr(self._scheduler, "current_workflow"):
-                        wf_obj: WorkflowObject = self._scheduler.current_workflow
-                        task_msg.workflow_id = wf_obj.workflow_id
-                        self.send_workflow_message(wf_obj)
-                    else:
-                        # TODO: we can't do much if the user didn't register the wf
-                        pass
 
                 self.intercept(task_msg.to_dict())
 
@@ -209,6 +196,9 @@ class DaskWorkerInterceptor(BaseInterceptor):
             if self.settings.worker_should_get_input:
                 if hasattr(ts, "run_spec"):
                     get_run_spec_data(task_msg, ts.run_spec)
+
+                if hasattr(ts, "group_key"):
+                    task_msg.activity_id = ts.group_key
 
             if self.settings.worker_should_get_output:
                 if task_id in self._worker.data.memory:

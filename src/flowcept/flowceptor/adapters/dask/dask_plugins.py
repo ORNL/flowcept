@@ -7,6 +7,7 @@ from distributed import Client, Scheduler
 
 from flowcept import WorkflowObject
 from flowcept.configs import INSTRUMENTATION
+from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 from flowcept.flowceptor.adapters.dask.dask_interceptor import (
     DaskSchedulerInterceptor,
     DaskWorkerInterceptor,
@@ -39,7 +40,12 @@ def _set_workflow_on_scheduler(
     wf_obj.used = used
     wf_obj.campaign_id = campaign_id
     wf_obj.name = workflow_name
-    setattr(dask_scheduler, "current_workflow", wf_obj)
+
+    interceptor = BaseInterceptor(plugin_key="dask")
+    interceptor.start(bundle_exec_id=dask_scheduler.address)
+    interceptor.send_workflow_message(wf_obj)
+    interceptor.stop()
+    # setattr(dask_scheduler, "current_workflow", wf_obj)
 
 
 def register_dask_workflow(

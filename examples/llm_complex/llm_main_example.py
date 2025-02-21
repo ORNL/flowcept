@@ -75,12 +75,6 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
     workflow_params["val_data_path"] = val_data_path
     workflow_params["test_data_path"] = test_data_path
 
-    # Registering a Dask workflow in Flowcept's database
-    search_wf_id = register_dask_workflow(client, used=workflow_params,
-                                          workflow_name="model_search",
-                                          campaign_id=campaign_id)
-    print(f"workflow_id={search_wf_id}")
-
     configs = generate_configs(workflow_params)
     configs = [
         {**c, "ntokens": ntokens,
@@ -88,21 +82,29 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
          "train_data_path": train_data_path,
          "val_data_path": val_data_path,
          "test_data_path": test_data_path,
-         "workflow_id": search_wf_id,
          "campaign_id": campaign_id}
         for c in configs
     ]
-    max_runs = workflow_params.get("max_runs", None)
+
     # Start Flowcept's Dask observer
-    with Flowcept("dask") as f:
+    with Flowcept("dask"):
+
+        # Registering a Dask workflow in Flowcept's database
+        search_wf_id = register_dask_workflow(client, used=workflow_params,
+                                              workflow_name="model_search",
+                                              campaign_id=campaign_id)
+        print(f"search_workflow_id={search_wf_id}")
+
+        max_runs = workflow_params.get("max_runs", None)
+
         for conf in configs[:max_runs]:  # Edit here to enable more runs
-            t = client.submit(model_train, **conf)
+            t = client.submit(model_train, workflow_id=search_wf_id, **conf)
             print(t.result())
 
         print("Done main loop. Closing dask...")
         close_dask(client, cluster, scheduler_file)
         print("Closed Dask. Closing Flowcept...")
-    print("Closed.")
+        print("Closed.")
     return search_wf_id
 
 
@@ -117,7 +119,7 @@ def start_dask(scheduler_file):
         client = Client(scheduler.address)
         client.forward_logging()
         # Registering Flowcept's worker and scheduler adapters
-        client.register_plugin(FlowceptDaskSchedulerAdapter())
+        # client.register_plugin(FlowceptDaskSchedulerAdapter())
         client.register_plugin(FlowceptDaskWorkerAdapter())
     else:
         # If scheduler file is provided, this cluster is not managed in this code.
@@ -178,6 +180,9 @@ def run_asserts_and_exports(campaign_id, model_search_wf_id):
     assert dataprep_wf["generated"]["train_data_path"]
     assert dataprep_wf["generated"]["test_data_path"]
     assert dataprep_wf["generated"]["val_data_path"]
+
+    mswf = Flowcept.db.query({"workflow_id": model_search_wf_id}, collection="workflows")[0]
+    assert model_search_wf == mswf
 
     parent_module_wfs = Flowcept.db.query({"parent_workflow_id": model_search_wf_id},
                                           collection="workflows")
@@ -278,14 +283,16 @@ def save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir="output_da
     model_args.pop("dataset_ref", None)
     model_args.pop("subset_size", None)
     model_args.pop("tokenizer_type", None)
+    delete_after_run = model_args.pop("delete_after_run", True)
     model_args.pop("max_runs", None)
     loaded_model = TransformerModel(**model_args, save_workflow=False)
     doc = Flowcept.db.load_torch_model(loaded_model, best_model_obj_id)
     torch.save(loaded_model.state_dict(),
                f"{output_dir}/wf_{model_search_wf_id}_transformer_wikitext2.pth")
 
-    print("Deleting best model from the database.")
-    mongo_dao.delete_object_keys("object_id", [doc["object_id"]])
+    if delete_after_run:
+        print("Deleting best model from the database.")
+        mongo_dao.delete_object_keys("object_id", [doc["object_id"]])
 
     workflows_file = f"{output_dir}/workflows_{uuid.uuid4()}.json"
     print(f"workflows_file = '{workflows_file}'")
@@ -323,7 +330,7 @@ def run_campaign(workflow_params, campaign_id=None):
     return _campaign_id, _dataprep_wf_id, _search_wf_id, dataprep_generated["train_n_batches"], dataprep_generated["val_n_batches"]
 
 
-def asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected, epoch_iterations, max_runs, n_batches_train, n_batches_eval, n_modules):
+def asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected, epoch_iterations, max_runs, n_batches_train, n_batches_eval, n_modules, delete_after_run):
     workflows_df = pd.read_json(workflows_file)
     # Assert workflows dump
     assert len(workflows_df) == n_workflows_expected
@@ -376,9 +383,11 @@ def asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expe
 
     task_ids = list(tasks_df["task_id"].unique())
     workflow_ids = list(workflows_df["workflow_id"].unique())
-    print("Deleting generated data in MongoDB")
-    mongo_dao.delete_task_keys("task_id", task_ids)
-    mongo_dao.delete_workflow_keys("workflow_id", workflow_ids)
+
+    if delete_after_run:
+        print("Deleting generated data in MongoDB")
+        mongo_dao.delete_task_keys("task_id", task_ids)
+        mongo_dao.delete_workflow_keys("workflow_id", workflow_ids)
 
 
 def verify_number_docs_in_db(mongo_dao, n_tasks=None, n_wfs=None, n_objects=None):
@@ -430,6 +439,7 @@ def parse_args():
         "subset_size": 10,
         "epochs": 4,
         "max_runs": 1,
+        "delete_after_run": True,
         "tokenizer_type": "basic_english",   # spacy, moses, toktok, revtok, subword
     }
 
@@ -459,7 +469,7 @@ def main():
     workflows_file, tasks_file = save_files(mongo_dao, campaign_id, model_search_wf_id)
     asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
                          workflow_params["epochs"], workflow_params["max_runs"], n_batches_train, n_batches_eval,
-                         n_modules=4)
+                         n_modules=4, delete_after_run=workflow_params["delete_after_run"])
     verify_number_docs_in_db(mongo_dao, n_tasks, n_wfs, n_objects)
 
     print("Alright! Congrats.")
