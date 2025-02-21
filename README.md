@@ -175,8 +175,8 @@ Here is a summary:
 4. cd ~/amd_smi
 5. In your python environment, do a pip install .
 
-Current code is compatible with this version: amdsmi==24.6.2+2b02a07
-Which was installed using Frontier's /opt/rocm-6.2.0/share/amd_smi
+Current code is compatible with this version: amdsmi==24.7.1+0012a68
+Which was installed using Frontier's /opt/rocm-6.3.1/share/amd_smi
 
 ## Torch Dependencies
 

@@ -80,7 +80,9 @@ class GPUCapture:
                 if not GPUCapture.GPU_VENDOR:
                     GPUCapture._initialize_nvidia()
 
-            if len(GPUCapture.VISIBLE_GPUS):
+            if not GPUCapture.VISIBLE_GPUS:
+                FlowceptLogger().error("We couldn't see any GPU, but your settings have GPU telemetry capture.")
+            elif len(GPUCapture.VISIBLE_GPUS):
                 FlowceptLogger().debug(f"Visible GPUs in Flowcept Capture: {GPUCapture.VISIBLE_GPUS}")
 
     @staticmethod
@@ -104,15 +106,26 @@ class GPUCapture:
     def __get_gpu_info_nvidia(gpu_conf: Set = None, gpu_ix: int = 0):
         device = nvmlDeviceGetHandleByIndex(gpu_ix)
         nvidia_info = nvmlDeviceGetMemoryInfo(device)
+        flowcept_gpu_info = {}
 
-        flowcept_gpu_info = {
-            "total": nvidia_info.total,
-            "used": nvidia_info.used,
-            "temperature": nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU),
-            "power_usage": nvmlDeviceGetPowerUsage(device),
-            "name": nvmlDeviceGetName(device),
-            "device_ix": gpu_ix,
-        }
+        if "total" in gpu_conf:
+            flowcept_gpu_info["total"] = nvidia_info.total
+
+        if "used" in gpu_conf:
+            flowcept_gpu_info["used"] = nvidia_info.used
+
+        if "temperature" in gpu_conf:
+            flowcept_gpu_info["temperature"] = nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU)
+
+        if "power_usage" in gpu_conf:
+            flowcept_gpu_info["power_usage"] = nvmlDeviceGetPowerUsage(device)
+
+        if "name" in gpu_conf:
+            flowcept_gpu_info["name"] = nvmlDeviceGetName(device)
+
+        if "device_ix" in gpu_conf:
+            flowcept_gpu_info["device_ix"] = gpu_ix
+
         return flowcept_gpu_info
 
     @staticmethod
