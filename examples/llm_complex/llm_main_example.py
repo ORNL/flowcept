@@ -8,11 +8,10 @@ import yaml
 import os
 import uuid
 import pandas as pd
-import torch
 from time import sleep
 
 from examples.llm_complex.llm_dataprep import dataprep_workflow
-from examples.llm_complex.llm_model import model_train, TransformerModel
+from examples.llm_complex.llm_model import model_train
 from flowcept.commons.utils import replace_non_serializable_times
 from flowcept.flowceptor.adapters.dask.dask_plugins import register_dask_workflow
 from flowcept.configs import MONGO_ENABLED, INSTRUMENTATION
@@ -318,7 +317,7 @@ def save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir="output_da
     workflow_result = {
         "campaign_id": campaign_id,
         "best_task_id": best_task["task_id"],
-        "best_workflow_id": best_task["workflow_id"],
+        "workflow_id": best_task["workflow_id"],
         "best_hyperparameters": best_task["used"],
         "best_loss": best_task["generated"]["test_loss"],
         "best_obj_id": best_task["generated"]["best_obj_id"],
@@ -509,12 +508,14 @@ def main():
     print("Arguments:", args)
     workflow_params = json.loads(args.workflow_params)
     workflow_params["with_persistence"] = args.with_persistence
+    delete_after_run = workflow_params.get("delete_after_run", True)
     print("TORCH SETTINGS: " + str(INSTRUMENTATION.get("torch")))
 
     if args.with_persistence:
         from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
         mongo_dao = MongoDBDAO(create_indices=False)
-        n_tasks, n_wfs, n_objects = verify_number_docs_in_db(mongo_dao)
+        if delete_after_run:
+            n_tasks, n_wfs, n_objects = verify_number_docs_in_db(mongo_dao)
     else:
         print("We are not going to persist this run!")
     campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval = run_campaign(workflow_params, campaign_id=args.campaign_id, scheduler_file=args.scheduler_file, start_dask_cluster=args.start_dask_cluster, with_persistence=args.with_persistence)
@@ -525,9 +526,9 @@ def main():
         # TODO: 4 is the number of modules of the current modules. We should get it dynamically.
         asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
                              workflow_params["epochs"], workflow_params["max_runs"], n_batches_train, n_batches_eval,
-                             n_modules=4, delete_after_run=workflow_params["delete_after_run"])
-
-        verify_number_docs_in_db(mongo_dao, n_tasks, n_wfs, n_objects)
+                             n_modules=4, delete_after_run=delete_after_run)
+        if delete_after_run:
+            verify_number_docs_in_db(mongo_dao, n_tasks, n_wfs, n_objects)
 
     print("Alright! Congrats.")
 
