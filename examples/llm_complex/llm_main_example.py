@@ -314,12 +314,19 @@ def save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir="output_da
     os.makedirs(output_dir, exist_ok=True)
     best_task = Flowcept.db.query({"workflow_id": model_search_wf_id, "activity_id": "model_train"}, limit=1,
                                   sort=[("generated.test_loss", Flowcept.db.ASCENDING)])[0]
-    with open(f"{output_dir}/lowest_loss_task_{best_task['task_id']}.json", "w") as f:
-        replace_non_serializable_times(best_task)
-        json.dump(best_task, f, indent=2)
-
-    with open(f"{output_dir}/campaign_id_{campaign_id}.txt", "w") as f:
-        f.write(campaign_id)
+    replace_non_serializable_times(best_task)
+    workflow_result = {
+        "campaign_id": campaign_id,
+        "best_task_id": best_task["task_id"],
+        "best_workflow_id": best_task["workflow_id"],
+        "best_hyperparameters": best_task["used"],
+        "best_loss": best_task["generated"]["test_loss"],
+        "best_obj_id": best_task["generated"]["best_obj_id"],
+        "best_generated": best_task["generated"],
+        "best_task_data": best_task,
+    }
+    with open(f"{output_dir}/workflow_result.json", "w") as f:
+        json.dump(workflow_result, f, indent=2)
 
     delete_after_run = best_task["used"].get("delete_after_run", True)
     if delete_after_run:
@@ -456,7 +463,7 @@ def parse_args():
 
     arguments = parser.add_argument_group("arguments")
     arguments.add_argument("--scheduler-file", metavar="S", default=None, help="Dask's scheduler file")
-    arguments.add_argument("--rep-dir", metavar="D", default=".", help="Job's repetition directory")
+    arguments.add_argument("--rep-dir", metavar="D", default="./output_data", help="Job's repetition directory")
     arguments.add_argument("--workflow-id", metavar="D", default=None, help="Wf Id")
     arguments.add_argument("--campaign-id", metavar="D", default=None, help="Campaign Id")
     true_values = {"true", "t", "1", "yes", "y"}
@@ -482,6 +489,7 @@ def parse_args():
         "epochs": 4,
         "max_runs": 1,
         "delete_after_run": True,
+        "random_seed": 0,
         "tokenizer_type": "basic_english",   # spacy, moses, toktok, revtok, subword
     }
 
@@ -513,7 +521,7 @@ def main():
 
     if args.with_persistence:
         n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id)
-        workflows_file, tasks_file = save_files(mongo_dao, campaign_id, model_search_wf_id)
+        workflows_file, tasks_file = save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir=args.rep_dir)
         # TODO: 4 is the number of modules of the current modules. We should get it dynamically.
         asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
                              workflow_params["epochs"], workflow_params["max_runs"], n_batches_train, n_batches_eval,

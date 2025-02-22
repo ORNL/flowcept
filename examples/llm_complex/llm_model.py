@@ -167,6 +167,7 @@ def model_train(
     dropout,
     lr,
     pos_encoding_max_len,
+    random_seed=0,
     workflow_id=None,
     campaign_id=None,
     with_persistence=True,
@@ -179,7 +180,7 @@ def model_train(
         main_task_id = thread_state.key if hasattr(thread_state, "key") else None
     except:
         main_task_id = None
-    torch.manual_seed(0)  # TODO: parametrize and save it
+    torch.manual_seed(random_seed)
 
     train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load, device = get_wiki_text_dataset(train_data_path, val_data_path, test_data_path)
 
@@ -259,4 +260,8 @@ def model_train(
         "val_loss": val_loss,
         "training_time": t1 - t0,
         "best_obj_id": best_obj_id,
+        "t_disk_load": t_disk_load,
+        "t_device_available": t_device_available,
+        "t_gpu_load": t_gpu_load,
+        "device": str(device)
     }
