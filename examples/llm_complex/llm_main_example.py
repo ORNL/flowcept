@@ -120,6 +120,7 @@ def start_dask(scheduler_file):
         # Registering Flowcept's worker adapters
         client.register_plugin(FlowceptDaskWorkerAdapter())
     else:
+        print(f"Starting with Scheduler File {scheduler_file}!")
         # If scheduler file is provided, this cluster is not managed in this code.
         client = Client(scheduler_file=scheduler_file)
         client.register_plugin(FlowceptDaskWorkerAdapter())
@@ -308,7 +309,7 @@ def save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir="output_da
     return workflows_file, tasks_file
 
 
-def run_campaign(workflow_params, campaign_id=None):
+def run_campaign(workflow_params, campaign_id=None, scheduler_file=None):
 
     _campaign_id = campaign_id or str(uuid.uuid4())
     print(f"Campaign id={_campaign_id}")
@@ -323,7 +324,7 @@ def run_campaign(workflow_params, campaign_id=None):
         eval_batch_size=workflow_params["eval_batch_size"],
         subset_size=subset_size)
 
-    _search_wf_id = search_workflow(dataprep_generated["ntokens"], dataprep_generated["dataset_ref"], dataprep_generated["train_data_path"], dataprep_generated["val_data_path"], dataprep_generated["test_data_path"], workflow_params, campaign_id=_campaign_id)
+    _search_wf_id = search_workflow(dataprep_generated["ntokens"], dataprep_generated["dataset_ref"], dataprep_generated["train_data_path"], dataprep_generated["val_data_path"], dataprep_generated["test_data_path"], workflow_params, campaign_id=_campaign_id, scheduler_file=scheduler_file)
 
     return _campaign_id, _dataprep_wf_id, _search_wf_id, dataprep_generated["train_n_batches"], dataprep_generated["val_n_batches"]
 
@@ -461,7 +462,7 @@ def main():
     print("TORCH SETTINGS: " + str(INSTRUMENTATION.get("torch")))
     n_tasks, n_wfs, n_objects = verify_number_docs_in_db(mongo_dao)
 
-    campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval = run_campaign(workflow_params)
+    campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval = run_campaign(workflow_params, campaign_id=args.campaign_id, scheduler_file=args.scheduler_file)
 
     n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id)
     workflows_file, tasks_file = save_files(mongo_dao, campaign_id, model_search_wf_id)
