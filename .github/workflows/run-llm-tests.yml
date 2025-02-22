@@ -37,7 +37,10 @@ jobs:
           python --version
 
       - name: Test LLM
-        run: bash .github/workflows/run_examples.sh examples true llm_complex/llm_test_runner.py
+        run: |
+          bash .github/workflows/run_examples.sh examples true llm_complex/llm_test_runner.py
+          echo $PYTHONPATH
+          python examples/llm_complex/llm_main_example.py --start-dask-cluster
 
       - name: Shut down docker compose
         run: make services-stop-mongo

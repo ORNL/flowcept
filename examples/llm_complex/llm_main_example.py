@@ -9,6 +9,7 @@ import os
 import uuid
 import pandas as pd
 import torch
+from time import sleep
 
 from examples.llm_complex.llm_dataprep import dataprep_workflow
 from examples.llm_complex.llm_model import model_train, TransformerModel
@@ -69,8 +70,8 @@ def generate_configs(params: dict):
     return result
 
 
-def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_data_path, workflow_params, campaign_id=None, scheduler_file=None):
-    client, cluster = start_dask(scheduler_file)
+def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_data_path, workflow_params, campaign_id=None, scheduler_file=None, start_dask_cluster=False):
+    client, cluster = start_dask(scheduler_file, start_dask_cluster)
     workflow_params["train_data_path"] = train_data_path
     workflow_params["val_data_path"] = val_data_path
     workflow_params["test_data_path"] = test_data_path
@@ -102,15 +103,52 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
             print(t.result())
 
         print("Done main loop. Closing dask...")
-        close_dask(client, cluster, scheduler_file)
+        close_dask(client, cluster, scheduler_file, start_dask_cluster)
         print("Closed Dask. Closing Flowcept...")
         print("Closed.")
     return search_wf_id
 
 
-def start_dask(scheduler_file):
+def start_dask(scheduler_file=None, start_dask_cluster=False):
     from distributed import Client
     from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskWorkerAdapter
+
+    if start_dask_cluster:
+        import subprocess
+        import signal
+
+        def run_command(command, out_file, err_file):
+            with open(out_file, "w") as out, open(err_file, "w") as err:
+                process = subprocess.Popen(
+                    ["/bin/bash", "-c", command],
+                    stdout=out,
+                    stderr=err,
+                    preexec_fn=os.setsid
+                )
+
+            def terminate_child():
+                """Terminate the child process group when the parent exits."""
+                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
+            import atexit
+            atexit.register(terminate_child)  # Ensure cleanup on exit
+
+            return process
+
+        print("Starting Dask Cluster with command line.")
+        scheduler_file = "scheduler_info.json"
+        run_command(
+            f"dask scheduler --no-dashboard --no-show --scheduler-file {scheduler_file}",
+            "scheduler.out",
+            "scheduler.err"
+        )
+        run_command(
+            f"dask worker --nthreads 1 --nworkers 1 --no-dashboard  --scheduler-file {scheduler_file}",
+            "worker.out",
+            "worker.err"
+        )
+        sleep(5)
+
     if scheduler_file is None:
         from distributed import LocalCluster
         cluster = LocalCluster(n_workers=1)
@@ -128,13 +166,15 @@ def start_dask(scheduler_file):
     return client, cluster
 
 
-def close_dask(client, cluster, scheduler_file=None):
-    if scheduler_file is None:
+def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False):
+    if start_dask_cluster or scheduler_file:
         client.close()
-        cluster.close()
+        # client.shutdown() # We are getting an error here...
+        sleep(10)
     else:
         client.close()
-        client.shutdown()
+        cluster.close()
+
 
 def run_asserts_and_exports(campaign_id, model_search_wf_id):
     from flowcept.commons.vocabulary import Status
@@ -309,7 +349,7 @@ def save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir="output_da
     return workflows_file, tasks_file
 
 
-def run_campaign(workflow_params, campaign_id=None, scheduler_file=None):
+def run_campaign(workflow_params, campaign_id=None, scheduler_file=None, start_dask_cluster=False):
 
     _campaign_id = campaign_id or str(uuid.uuid4())
     print(f"Campaign id={_campaign_id}")
@@ -324,7 +364,7 @@ def run_campaign(workflow_params, campaign_id=None, scheduler_file=None):
         eval_batch_size=workflow_params["eval_batch_size"],
         subset_size=subset_size)
 
-    _search_wf_id = search_workflow(dataprep_generated["ntokens"], dataprep_generated["dataset_ref"], dataprep_generated["train_data_path"], dataprep_generated["val_data_path"], dataprep_generated["test_data_path"], workflow_params, campaign_id=_campaign_id, scheduler_file=scheduler_file)
+    _search_wf_id = search_workflow(dataprep_generated["ntokens"], dataprep_generated["dataset_ref"], dataprep_generated["train_data_path"], dataprep_generated["val_data_path"], dataprep_generated["test_data_path"], workflow_params, campaign_id=_campaign_id, scheduler_file=scheduler_file, start_dask_cluster=start_dask_cluster)
 
     return _campaign_id, _dataprep_wf_id, _search_wf_id, dataprep_generated["train_n_batches"], dataprep_generated["val_n_batches"]
 
@@ -424,6 +464,7 @@ def parse_args():
     arguments.add_argument("--rep-dir", metavar="D", default=".", help="Job's repetition directory")
     arguments.add_argument("--workflow-id", metavar="D", default=None, help="Wf Id")
     arguments.add_argument("--campaign-id", metavar="D", default=None, help="Campaign Id")
+    arguments.add_argument("--start-dask-cluster", action="store_true", default=False, help="Start the dask cluster before execution. Use only for tests and not for real experiments")
     default_exp_param_settings = {
         "input_data_dir": "./input_data",
         "batch_size": 20,
@@ -454,7 +495,7 @@ def parse_args():
 def main():
 
     args = parse_args()
-    print(args)
+    print("Arguments:", args)
     workflow_params = json.loads(args.workflow_params)
 
     from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
@@ -462,13 +503,15 @@ def main():
     print("TORCH SETTINGS: " + str(INSTRUMENTATION.get("torch")))
     n_tasks, n_wfs, n_objects = verify_number_docs_in_db(mongo_dao)
 
-    campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval = run_campaign(workflow_params, campaign_id=args.campaign_id, scheduler_file=args.scheduler_file)
+    campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval = run_campaign(workflow_params, campaign_id=args.campaign_id, scheduler_file=args.scheduler_file, start_dask_cluster=args.start_dask_cluster)
 
     n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id)
     workflows_file, tasks_file = save_files(mongo_dao, campaign_id, model_search_wf_id)
+    # TODO: 4 is the number of modules of the current modules. We should get it dynamically.
     asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
                          workflow_params["epochs"], workflow_params["max_runs"], n_batches_train, n_batches_eval,
                          n_modules=4, delete_after_run=workflow_params["delete_after_run"])
+
     verify_number_docs_in_db(mongo_dao, n_tasks, n_wfs, n_objects)
 
     print("Alright! Congrats.")

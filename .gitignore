@@ -9,7 +9,7 @@
 **/*mnist*
 **/*tensorboard_events*
 **/*.DS_Store*
-**/*.log*
+**/*.log
 **/*.pth
 **/*ipynb_checkpoints*
 **/*flowcept_lmdb
@@ -26,3 +26,5 @@ tmp_tests/
 nohup.out
 launch.json
 .vscode/
+**/*.err
+**/*.out
