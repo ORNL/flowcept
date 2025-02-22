@@ -9,8 +9,10 @@ import platform
 import subprocess
 import types
 import numpy as np
+import pytz
 
 from flowcept import configs
+from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import PERF_LOG
 from flowcept.commons.vocabulary import Status
@@ -152,6 +154,13 @@ class GenericJSONEncoder(json.JSONEncoder):
         elif isinstance(obj, np.float) or isinstance(obj, np.float32) or isinstance(obj, np.float64):
             return float(obj)
         return super().default(obj)
+
+
+def replace_non_serializable_times(obj, tz=pytz.utc):
+    """Replace non-serializable times in an object."""
+    for time_field in TaskObject.get_time_field_names():
+        if time_field in obj:
+            obj[time_field] = obj[time_field].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + f" {tz}"
 
 
 def replace_non_serializable(obj):

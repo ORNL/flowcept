@@ -66,7 +66,7 @@ def get_wiki_text_dataset(train_data_path, val_data_path, test_data_path):
 
     try:
         if torch.cuda.is_available():
-            device = torch.device("gpu")
+            device = torch.device("cuda:0")
         elif torch.backends.mps.is_available():
             device = torch.device("mps")
         else:
@@ -91,19 +91,20 @@ def get_wiki_text_dataset(train_data_path, val_data_path, test_data_path):
         device
     )
 
+
 def get_dataset_ref(dataset):
     return id(dataset)
 
-def save_workflow(campaign_id, used, generated):
+
+def save_workflow(campaign_id, used, generated, with_persistence=True):
     from flowcept import WorkflowObject, Flowcept
     dataset_prep_wf = WorkflowObject()
     dataset_prep_wf.used = used
     dataset_prep_wf.campaign_id = campaign_id
     dataset_prep_wf.name = "generate_wikitext_dataset"
-
     dataset_prep_wf.generated = generated
-    Flowcept.db.insert_or_update_workflow(dataset_prep_wf)
-    print(dataset_prep_wf)
+    if with_persistence:
+        Flowcept.db.insert_or_update_workflow(dataset_prep_wf)
     return dataset_prep_wf.workflow_id
 
 
@@ -121,6 +122,7 @@ def dataprep_workflow(data_dir="input_data",
                       eval_batch_size=10,
                       subset_size=None,
                       campaign_id=None,
+                      with_persistence=True
                       ):
 
     train_data_path = os.path.realpath(os.path.join(data_dir, "train_data.tensor"))
@@ -171,7 +173,7 @@ def dataprep_workflow(data_dir="input_data",
         "val_data_path": val_data_path,
     }
     generated.update(n_batches)
-    wf_id = save_workflow(campaign_id, used, generated)
+    wf_id = save_workflow(campaign_id, used, generated, with_persistence)
     return wf_id, generated
 
 
