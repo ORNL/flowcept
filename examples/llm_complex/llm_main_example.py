@@ -318,6 +318,9 @@ def save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir="output_da
         replace_non_serializable_times(best_task)
         json.dump(best_task, f, indent=2)
 
+    with open(f"{output_dir}/campaign_id_{campaign_id}.txt", "w") as f:
+        f.write(campaign_id)
+
     delete_after_run = best_task["used"].get("delete_after_run", True)
     if delete_after_run:
         best_model_obj_id = best_task["generated"]["best_obj_id"]
@@ -456,11 +459,12 @@ def parse_args():
     arguments.add_argument("--rep-dir", metavar="D", default=".", help="Job's repetition directory")
     arguments.add_argument("--workflow-id", metavar="D", default=None, help="Wf Id")
     arguments.add_argument("--campaign-id", metavar="D", default=None, help="Campaign Id")
+    true_values = {"true", "t", "1", "yes", "y"}
     arguments.add_argument(
         "--with-persistence",
-        type=lambda v: v.lower() in {"true", "1", "yes", "y"},
+        type=lambda v: v.lower() in true_values,
         default=True,
-        help="Store data in MongoDB (accepts: yes, true, 1, y)",
+        help=f"Store data in MongoDB (accepts: {', '.join(true_values)})",
     )
     arguments.add_argument("--start-dask-cluster", action="store_true", default=False, help="Start the dask cluster before execution. Use only for tests and not for real experiments")
     default_exp_param_settings = {

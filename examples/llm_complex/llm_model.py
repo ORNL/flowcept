@@ -218,7 +218,6 @@ def model_train(
         # If the validation loss has improved, save the model's state
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_obj_id = None
             if with_persistence:
                 best_obj_id = Flowcept.db.save_or_update_torch_model(
                     model,
@@ -253,7 +252,6 @@ def model_train(
         print("Evaluating")
         # Evaluate the best model on the test dataset
         test_loss = evaluate(ntokens, best_m, test_data, criterion, eval_batch_size)
-        print(f"Test loss: {test_loss:.2f}")
 
     return {
         "test_loss": test_loss,
