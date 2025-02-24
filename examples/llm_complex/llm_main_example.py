@@ -137,8 +137,8 @@ def start_dask(scheduler_file=None, start_dask_cluster=False):
 
         print("Starting Dask Cluster with command line.")
         scheduler_file = "scheduler_file.json"
-        print("Killing any old dask clusters.")
-        run_command("pkill -f dask")
+        # print("Killing any old dask clusters.")
+        # run_command("pkill -f dask")
         sleep(3)
         run_command(f"dask scheduler --no-dashboard --no-show --scheduler-file {scheduler_file}")
 
