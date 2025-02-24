@@ -40,7 +40,7 @@ jobs:
         run: |
           export PYTHONPATH=$PYTHONPATH:`pwd`
           echo "Python path: $PYTHONPATH"
-          pip install .[dask,mongo]
+          pip install .[ml_dev,dask,mongo]
           python examples/llm_complex/llm_main_example.py --start-dask-cluster
 
       - name: Test LLM
