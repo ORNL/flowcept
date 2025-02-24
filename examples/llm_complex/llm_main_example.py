@@ -126,12 +126,12 @@ def start_dask(scheduler_file=None, start_dask_cluster=False):
                     preexec_fn=os.setsid
                 )
 
-            def terminate_child():
-                """Terminate the child process group when the parent exits."""
-                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+            #def terminate_child():
+            #    """Terminate the child process group when the parent exits."""
+            #    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
 
-            import atexit
-            atexit.register(terminate_child)  # Ensure cleanup on exit
+            #import atexit
+            #atexit.register(terminate_child)  # Ensure cleanup on exit
 
             return process
 
