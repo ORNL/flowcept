@@ -1,12 +1,12 @@
 [![Build](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml)
 [![PyPI](https://badge.fury.io/py/flowcept.svg)](https://pypi.org/project/flowcept)
 [![Tests](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml)
-[![Code Formatting](https://github.com/ORNL/flowcept/actions/workflows/checks.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/checks.yml)
+[![Code Formatting](https://github.com/ORNL/flowcept/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/ORNL/flowcept/actions/workflows/checks.yml)
 [![License: MIT](https://img.shields.io/github/license/ORNL/flowcept)](LICENSE)
 
 # Flowcept
 
-Flowcept is a runtime data integration system that captures and queries workflow provenance with minimal or no code changes. It unifies data across diverse workflows and tools, enabling integrated analysis and insights, especially in federated environments. Designed for scenarios involving critical data from multiple workflows, Flowcept seamlessly integrates data at runtime, providing a unified view for end-to-end monitoring and analysis and enhanced support for Machine Learning (ML) workflows.
+Flowcept is a runtime data integration system that captures and queries workflow provenance with minimal or no code changes. It unifies data across diverse workflows and tools, enabling integrated analysis and insights, especially in federated environments. Designed for scenarios involving critical data from multiple workflows, Flowcept seamlessly integrates data at runtime, providing a unified view for end-to-end monitoring and analysis, and enhanced support for Machine Learning (ML) workflows.
 
 Other capabilities include:
 
@@ -39,38 +39,93 @@ Explore [Jupyter Notebooks](notebooks) and [Examples](examples) for usage.
 
 Refer to [Contributing](CONTRIBUTING.md) for adding new adapters. Note: The term "plugin" in the codebase is synonymous with "adapter," and future updates will standardize terminology.
 
-## Install and Setup:
+# Installation
 
-1. Install Flowcept: 
+Flowcept can be installed in multiple ways, depending on your needs.
 
-`pip install .[all]` in this directory (or `pip install flowcept[all]`) if you want to install all dependencies.
-In some shells, you may need to use quotes, like: pip install ".[all]"
-
-For convenience, this will install all dependencies for all adapters. But it can install dependencies for adapters you will not use. For this reason, you may want to install like this: `pip install .[extra_dep1,extra_dep2]` for the adapters we have implemented, e.g., `pip install .[dask]`.
-Currently, the optional dependencies available are:
+### 1. Default Installation
+To install Flowcept with its basic dependencies from [PyPI](https://pypi.org/project/flowcept/), run:
 
 ```
-pip install flowcept[mongo]         # To install Flowcept with MongoDB
-pip install flowcept[mlflow]        # To install mlflow's adapter.
-pip install flowcept[dask]          # To install dask's adapter.
-pip install flowcept[tensorboard]   # To install tensorboaard's adapter.
-pip install flowcept[kafka]         # To utilize Kafka as the MQ, instead of Redis.
-pip install flowcept[nvidia]        # To capture NVIDIA GPU runtime information.
-pip install flowcept[analytics]     # For extra analytics features.
-pip install flowcept[dev]           # To install Flowcept's developer dependencies.
+pip install flowcept
 ```
 
-You do not need to install any optional dependency to run Flowcept without any adapter, e.g., if you want to use simple instrumentation (see below). In this case, you need to remove the adapter part from the [settings.yaml](resources/settings.yaml) file.
- 
-2. Start the MQ System:
+This installs the core Flowcept package but does **not** include MongoDB or any adapter-specific dependencies.
+
+
+
+### 2. Installing Specific Adapters and Additional Dependencies
+To install extra dependencies required for specific adapters or features, use:
+
+```
+pip install flowcept[mongo]         # Install Flowcept with MongoDB support.
+pip install flowcept[mlflow]        # Install MLflow adapter.
+pip install flowcept[dask]          # Install Dask adapter.
+pip install flowcept[tensorboard]   # Install TensorBoard adapter.
+pip install flowcept[kafka]         # Use Kafka as the MQ instead of Redis.
+pip install flowcept[nvidia]        # Capture NVIDIA GPU runtime information.
+pip install flowcept[analytics]     # Enable extra analytics features.
+pip install flowcept[dev]           # Install Flowcept's developer dependencies.
+```
+
+### 3. Install All Optional Dependencies at Once
+If you want to install all optional dependencies, use:
+
+```
+pip install flowcept[all]
+```
+
+This is a convenient way to ensure all adapters are available, but it may install dependencies you don't need.
+
+### 4. Installing from Source
+To install Flowcept from the source repository:
+
+```
+git clone https://github.com/ORNL/flowcept.git
+cd flowcept
+pip install .
+```
+
+You can also install specific dependencies using:
+
+```
+pip install .[dependency_name]
+```
+
+This follows the same pattern as step 2, allowing for a customized installation from source.
+
+# Setup
+
+### Start the MQ System:
 
 To use Flowcept, one needs to start a MQ system `$> make services`. This will start up Redis but see other options in the [deployment](deployment) directory and see [Data Persistence](#data-persistence) notes below.
 
-3. Optionally, define custom settings (e.g., routes and ports) accordingly in a settings.yaml file. There is a sample file [here](resources/sample_settings.yaml), which can be used as basis. Then, set an environment variable `FLOWCEPT_SETTINGS_PATH` with the absolute path to the yaml file. If you do not follow this step, the default values defined [here](resources/sample_settings.yaml) will be used.
+### Flowcept Settings File
 
-4. See the [Jupyter Notebooks](notebooks) and [Examples directory](examples) for utilization examples.
+Flowcept requires a settings file for configuration. You can find an example [here](resources/sample_settings.yaml).
 
-## Installing and Running with Docker
+#### What You Can Configure:
+
+- Message queue and database routes, ports, and paths;
+- Buffer sizes and flush settings;
+- Telemetry data capture settings;
+- Instrumentation and PyTorch details;
+- Log levels;
+- Data observability adapters; and more.
+
+#### How to use a custom settings file:
+
+Create or modify your settings file based on the [example](resources/sample_settings.yaml).
+
+Set the `FLOWCEPT_SETTINGS_PATH` environment variable to its absolute path:
+```sh
+export FLOWCEPT_SETTINGS_PATH=/absolute/path/to/your/settings.yaml
+```
+
+If this variable is not set, Flowcept will use the default values from the [example](resources/sample_settings.yaml) file.
+
+
+# Running with Containers
 
 To use containers instead of installing Flowcept's dependencies on your host system, we provide a [Dockerfile](deployment/Dockerfile) alongside a [docker-compose.yml](deployment/compose.yml) for dependent services (e.g., Redis, MongoDB).  
 
@@ -100,6 +155,12 @@ To use containers instead of installing Flowcept's dependencies on your host sys
     ```bash
     make tests-in-container
     ```
+# Examples
+
+### Adapters and Notebooks
+
+ See the [Jupyter Notebooks](notebooks) and [Examples directory](examples) for utilization examples.
+
 
 ### Simple Example with Decorators Instrumentation
 
@@ -134,11 +195,11 @@ Flowcept uses an ephemeral message queue (MQ) with a pub/sub system to flush obs
 - [LMDB](https://lmdb.readthedocs.io/) (default): A lightweight, file-based database requiring no external services (but note it might require `gcc`). Ideal for simple tests or cases needing basic data persistence without query capabilities. Data stored in LMDB can be loaded into tools like Pandas for complex analysis. Flowcept's database API provides methods to export data in LMDB into Pandas DataFrames.
 - [MongoDB](https://www.mongodb.com/): A robust, service-based database with advanced query capabilities. Required to use Flowcept's Query API (i.e., `flowcept.Flowcept.db`) to run more complex queries and other features like ML model management or runtime queries (i.e., query while writing). To use MongoDB, initialize the service with `make services-mongo`.
 
-You can use both of them, meaning that the data pruducers will write data into both, none of them, or each of them. All is customizable in the settings file.
+Flowcept supports writing to both databases simultaneously (default configuration), individually, or to neither, depending on configuration.
 
 If data persistence is disabled, captured data is sent to the MQ without any default consumer subscribing to persist it. In this case, querying the data requires creating a custom consumer to subscribe to the MQ.
 
-However, for querying, Flowcept Database API uses only one at a time. If both are enabled in the settings file, MongoDB will be used. If none is enable, an error is thrown. 
+However, for querying, Flowcept Database API uses only one at a time. If both are enabled, Flowcept defaults to MongoDB. If neither is enabled, an error will occur.
 
 Data stored in MongoDB and LMDB are interchangeable. You can switch between them by transferring data from one to the other as needed.
 
@@ -209,7 +270,7 @@ R. Souza, T. Skluzacek, S. Wilkinson, M. Ziatdinov, and R. da Silva
 
 ## Disclaimer & Get in Touch
 
-Please note that this a research software. We encourage you to give it a try and use it with your own stack. We are continuously working on improving documentation and adding more examples and notebooks, but we are still far from a good documentation covering the whole system. If you are interested in working with Flowcept in your own scientific project, we can give you a jump start if you reach out to us. Feel free to [create an issue](https://github.com/ORNL/flowcept/issues/new), [create a new discussion thread](https://github.com/ORNL/flowcept/discussions/new/choose) or drop us an email (we trust you'll find a way to reach out to us :wink:).
+Please note that this a research software. We encourage you to give it a try and use it with your own stack. We are continuously working on improving documentation and adding more examples and notebooks, but we are continuously improving documentation and examples. If you are interested in working with Flowcept in your own scientific project, we can give you a jump start if you reach out to us. Feel free to [create an issue](https://github.com/ORNL/flowcept/issues/new), [create a new discussion thread](https://github.com/ORNL/flowcept/discussions/new/choose) or drop us an email (we trust you'll find a way to reach out to us :wink:).
 
 ## Acknowledgement
 
