@@ -810,6 +810,29 @@ class MongoDBDAO(DocumentDBDAO):
             setattr(self, "_initialized", False)
             self._client.close()
 
+    def get_db_stats(self):
+        _n_tasks = self.count_tasks()
+        _n_wfs = self.count_workflows()
+        _n_objects = self.count_objects()
+
+        db = self._db
+        db_stats = db.command("dbStats")
+        tasks_stats = db.command("collStats", "tasks")
+        wf_stats = db.command("collStats", "workflows")
+        obj_stats = db.command("collStats", "objects")
+
+        stats = {
+            "num_workflows": _n_wfs,
+            "num_tasks": _n_tasks,
+            "num_objects": _n_objects,
+            "tasks_stats": tasks_stats,
+            "wf_stats": wf_stats,
+            "obj_stats": obj_stats,
+            "db_stats": db_stats,
+        }
+
+        return stats
+
     def get_tasks_recursive(self, workflow_id, max_depth=999, mapping=None):
         """Get_tasks_recursive in MongoDB."""
         try:

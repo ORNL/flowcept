@@ -309,11 +309,12 @@ def run_asserts_and_exports(campaign_id, model_search_wf_id):
     return n_workflows_expected, n_tasks_expected
 
 
-def save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir="output_data"):
+def save_files(db_stats_at_start, mongo_dao, campaign_id, model_search_wf_id, output_dir="output_data"):
     os.makedirs(output_dir, exist_ok=True)
     best_task = Flowcept.db.query({"workflow_id": model_search_wf_id, "activity_id": "model_train"}, limit=1,
                                   sort=[("generated.test_loss", Flowcept.db.ASCENDING)])[0]
     replace_non_serializable_times(best_task)
+    db_stats_at_end = mongo_dao.get_db_stats()
     workflow_result = {
         "campaign_id": campaign_id,
         "best_task_id": best_task["task_id"],
@@ -323,15 +324,15 @@ def save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir="output_da
         "best_obj_id": best_task["generated"]["best_obj_id"],
         "best_generated": best_task["generated"],
         "best_task_data": best_task,
+        "db_stats": {
+            "db_stats_at_start": db_stats_at_start,
+            "db_stats_at_end": db_stats_at_end,
+        }
     }
     with open(f"{output_dir}/workflow_result.json", "w") as f:
         json.dump(workflow_result, f, indent=2)
 
-    delete_after_run = best_task["used"].get("delete_after_run", True)
-    if delete_after_run:
-        best_model_obj_id = best_task["generated"]["best_obj_id"]
-        print("Deleting best model from the database.")
-        mongo_dao.delete_object_keys("object_id", [best_model_obj_id])
+    best_model_obj_id = best_task["generated"]["best_obj_id"]
 
     workflows_file = f"{output_dir}/workflows_{uuid.uuid4()}.json"
     print(f"workflows_file = '{workflows_file}'")
@@ -346,7 +347,7 @@ def save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir="output_da
         mapping = yaml.safe_load(f)
     Flowcept.db.dump_tasks_to_file_recursive(workflow_id=model_search_wf_id, output_file=tasks_file, mapping=mapping)
 
-    return workflows_file, tasks_file
+    return workflows_file, tasks_file, best_model_obj_id
 
 
 def run_campaign(workflow_params, campaign_id=None, scheduler_file=None, start_dask_cluster=False, with_persistence=True):
@@ -370,13 +371,12 @@ def run_campaign(workflow_params, campaign_id=None, scheduler_file=None, start_d
     return _campaign_id, _dataprep_wf_id, _search_wf_id, dataprep_generated["train_n_batches"], dataprep_generated["val_n_batches"]
 
 
-def asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected, epoch_iterations, max_runs, n_batches_train, n_batches_eval, n_modules, delete_after_run):
+def asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected, epoch_iterations, max_runs, n_batches_train, n_batches_eval, n_modules, delete_after_run, best_model_obj_id):
     workflows_df = pd.read_json(workflows_file)
     # Assert workflows dump
     assert len(workflows_df) == n_workflows_expected
     tasks_df = pd.read_parquet(tasks_file)
     print(len(tasks_df), n_tasks_expected)
-    #assert len(tasks_df) == n_tasks_expected
 
     # TODO: save #n_batches for train, test, val individually
     search_tasks = max_runs
@@ -426,6 +426,7 @@ def asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expe
 
     if delete_after_run:
         print("Deleting generated data in MongoDB")
+        mongo_dao.delete_object_keys("object_id", [best_model_obj_id])
         mongo_dao.delete_task_keys("task_id", task_ids)
         mongo_dao.delete_workflow_keys("workflow_id", workflow_ids)
 
@@ -513,6 +514,7 @@ def main():
     if args.with_persistence:
         from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
         mongo_dao = MongoDBDAO(create_indices=False)
+        db_stats_at_start = mongo_dao.get_db_stats()
         if delete_after_run:
             n_tasks, n_wfs, n_objects = verify_number_docs_in_db(mongo_dao)
     else:
@@ -521,11 +523,12 @@ def main():
 
     if args.with_persistence:
         n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id)
-        workflows_file, tasks_file = save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir=args.rep_dir)
+        workflows_file, tasks_file, best_model_obj_id = save_files(db_stats_at_start, mongo_dao, campaign_id, model_search_wf_id, output_dir=args.rep_dir)
         # TODO: 4 is the number of modules of the current modules. We should get it dynamically.
         asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
                              workflow_params["epochs"], workflow_params["max_runs"], n_batches_train, n_batches_eval,
-                             n_modules=4, delete_after_run=delete_after_run)
+                             n_modules=4, delete_after_run=delete_after_run, best_model_obj_id=best_model_obj_id)
+
         if delete_after_run:
             verify_number_docs_in_db(mongo_dao, n_tasks, n_wfs, n_objects)
 
