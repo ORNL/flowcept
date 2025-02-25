@@ -134,7 +134,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
         That's why we call the super() constructor here.
         """
         self._worker = worker
-        super().__init__(self._plugin_key)
+        super().__init__(plugin_key=self._plugin_key, kind="dask")
         # TODO: :refactor: This is just to avoid the auto-generation of
         # workflow id, which doesnt make sense in Dask case.
         self._generated_workflow_id = True

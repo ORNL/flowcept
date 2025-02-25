@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.nn import Embedding, Linear, TransformerEncoder, TransformerEncoderLayer, Dropout
 
-from llm_dataprep import get_wiki_text_dataset
+from examples.llm_complex.llm_dataprep import get_wiki_text_dataset
 from flowcept import Flowcept, flowcept_torch
 from flowcept.instrumentation.flowcept_torch import FlowceptEpochLoop, FlowceptBatchLoop
 
@@ -167,8 +167,10 @@ def model_train(
     dropout,
     lr,
     pos_encoding_max_len,
+    random_seed=0,
     workflow_id=None,
     campaign_id=None,
+    with_persistence=True,
     *args,
     **kwargs
 ):
@@ -178,7 +180,7 @@ def model_train(
         main_task_id = thread_state.key if hasattr(thread_state, "key") else None
     except:
         main_task_id = None
-    torch.manual_seed(0)  # TODO: parametrize and save it
+    torch.manual_seed(random_seed)
 
     train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load, device = get_wiki_text_dataset(train_data_path, val_data_path, test_data_path)
 
@@ -201,6 +203,8 @@ def model_train(
     # Iterate through the epochs
     epochs_loop = FlowceptEpochLoop(range(1, epochs + 1), parent_task_id=main_task_id, model=model)
     t0 = time()
+    val_loss = -1
+    train_loss = -1
     for epoch in epochs_loop:
         print(f"Starting training for epoch {epoch}/{epochs}")
         # Train the model on the training data and calculate the training loss
@@ -215,42 +219,49 @@ def model_train(
         # If the validation loss has improved, save the model's state
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_obj_id = Flowcept.db.save_or_update_torch_model(
-                model,
-                object_id=best_obj_id,
-                task_id=epochs_loop.get_current_iteration_id(),
-                workflow_id=workflow_id,
-                custom_metadata={"best_val_loss": best_val_loss}
-            )
+            if with_persistence:
+                best_obj_id = Flowcept.db.save_or_update_torch_model(
+                    model,
+                    object_id=best_obj_id,
+                    task_id=epochs_loop.get_current_iteration_id(),
+                    workflow_id=workflow_id,
+                    custom_metadata={"best_val_loss": best_val_loss}
+                )
 
         epochs_loop.end_iter({"train_loss": train_loss, "val_loss": val_loss})
 
     t1 = time()
     print("Finished training")
 
-    # Load the best model's state
-    best_m = TransformerModel(
-        ntokens,
-        emsize,
-        nhead,
-        nhid,
-        nlayers,
-        dropout,
-        parent_workflow_id=workflow_id,
-        campaign_id=campaign_id,
-        parent_task_id=main_task_id,
-        capture_enabled=False
-    ).to(device)
-    print("Loading model")
-    Flowcept.db.load_torch_model(best_m, best_obj_id)
-    print("Evaluating")
-    # Evaluate the best model on the test dataset
-    test_loss = evaluate(ntokens, best_m, test_data, criterion, eval_batch_size)
-    print(f"Test loss: {test_loss:.2f}")
+    test_loss = -1
+    if with_persistence:
+        # Load the best model's state
+        best_m = TransformerModel(
+            ntokens,
+            emsize,
+            nhead,
+            nhid,
+            nlayers,
+            dropout,
+            parent_workflow_id=workflow_id,
+            campaign_id=campaign_id,
+            parent_task_id=main_task_id,
+            capture_enabled=False
+        ).to(device)
+        print("Loading model")
+        Flowcept.db.load_torch_model(best_m, best_obj_id)
+        print("Evaluating")
+        # Evaluate the best model on the test dataset
+        test_loss = evaluate(ntokens, best_m, test_data, criterion, eval_batch_size)
+
     return {
         "test_loss": test_loss,
         "train_loss": train_loss,
         "val_loss": val_loss,
         "training_time": t1 - t0,
         "best_obj_id": best_obj_id,
+        "t_disk_load": t_disk_load,
+        "t_device_available": t_device_available,
+        "t_gpu_load": t_gpu_load,
+        "device": str(device)
     }

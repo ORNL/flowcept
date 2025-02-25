@@ -8,10 +8,11 @@ import yaml
 import os
 import uuid
 import pandas as pd
-import torch
+from time import sleep
 
 from examples.llm_complex.llm_dataprep import dataprep_workflow
-from examples.llm_complex.llm_model import model_train, TransformerModel
+from examples.llm_complex.llm_model import model_train
+from flowcept.commons.utils import replace_non_serializable_times
 from flowcept.flowceptor.adapters.dask.dask_plugins import register_dask_workflow
 from flowcept.configs import MONGO_ENABLED, INSTRUMENTATION
 from flowcept import Flowcept
@@ -69,8 +70,8 @@ def generate_configs(params: dict):
     return result
 
 
-def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_data_path, workflow_params, campaign_id=None, scheduler_file=None):
-    client, cluster = start_dask(scheduler_file)
+def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_data_path, workflow_params, campaign_id=None, scheduler_file=None, start_dask_cluster=False, with_persistence=True):
+    client, cluster = start_dask(scheduler_file, start_dask_cluster)
     workflow_params["train_data_path"] = train_data_path
     workflow_params["val_data_path"] = val_data_path
     workflow_params["test_data_path"] = test_data_path
@@ -87,7 +88,7 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
     ]
 
     # Start Flowcept's Dask observer
-    with Flowcept("dask"):
+    with Flowcept("dask", start_persistence=with_persistence):
 
         # Registering a Dask workflow in Flowcept's database
         search_wf_id = register_dask_workflow(client, used=workflow_params,
@@ -102,15 +103,55 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
             print(t.result())
 
         print("Done main loop. Closing dask...")
-        close_dask(client, cluster, scheduler_file)
+        close_dask(client, cluster, scheduler_file, start_dask_cluster)
         print("Closed Dask. Closing Flowcept...")
         print("Closed.")
     return search_wf_id
 
 
-def start_dask(scheduler_file):
+def start_dask(scheduler_file=None, start_dask_cluster=False):
     from distributed import Client
     from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskWorkerAdapter
+
+    if start_dask_cluster:
+        import subprocess
+        import signal
+
+        def run_command(command, out_file="./cmd.out", err_file="./cmd.err"):
+            with open(out_file, "w") as out, open(err_file, "w") as err:
+                process = subprocess.Popen(
+                    ["/bin/bash", "-c", command],
+                    stdout=out,
+                    stderr=err,
+                    preexec_fn=os.setsid
+                )
+
+            #def terminate_child():
+            #    """Terminate the child process group when the parent exits."""
+            #    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
+            #import atexit
+            #atexit.register(terminate_child)  # Ensure cleanup on exit
+
+            return process
+
+        print("Starting Dask Cluster with command line.")
+        scheduler_file = "scheduler_file.json"
+        # print("Killing any old dask clusters.")
+        # run_command("pkill -f dask")
+        sleep(3)
+        run_command(f"dask scheduler --no-dashboard --no-show --scheduler-file {scheduler_file}")
+
+        sleep(2)
+        run_command(
+            f"dask worker --nthreads 1 --nworkers 1 --no-dashboard  --scheduler-file {scheduler_file}",
+            "worker.out",
+            "worker.err"
+        )
+        sleep(5)
+        assert os.path.exists(scheduler_file)
+        print(f"{scheduler_file} created!")
+
     if scheduler_file is None:
         from distributed import LocalCluster
         cluster = LocalCluster(n_workers=1)
@@ -120,20 +161,25 @@ def start_dask(scheduler_file):
         # Registering Flowcept's worker adapters
         client.register_plugin(FlowceptDaskWorkerAdapter())
     else:
+        print(f"Starting with Scheduler File {scheduler_file}!")
         # If scheduler file is provided, this cluster is not managed in this code.
         client = Client(scheduler_file=scheduler_file)
+        print("Started Client.")
         client.register_plugin(FlowceptDaskWorkerAdapter())
         cluster = None
+        print("Registered plugin.")
     return client, cluster
 
 
-def close_dask(client, cluster, scheduler_file=None):
-    if scheduler_file is None:
+def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False):
+    if start_dask_cluster or scheduler_file:
         client.close()
-        cluster.close()
+        # client.shutdown() # We are getting an error here...
+        sleep(10)
     else:
         client.close()
-        client.shutdown()
+        cluster.close()
+
 
 def run_asserts_and_exports(campaign_id, model_search_wf_id):
     from flowcept.commons.vocabulary import Status
@@ -167,7 +213,7 @@ def run_asserts_and_exports(campaign_id, model_search_wf_id):
     at_every = INSTRUMENTATION.get("torch").get("capture_epochs_at_every", 1)
     campaign_workflows = Flowcept.db.query({"campaign_id": campaign_id}, collection="workflows")
     workflows_data = []
-    assert len(campaign_workflows) == 4 - 1 # dataprep + model_search + 2 subworkflows for the model_seearch
+    assert len(campaign_workflows) == 4 - 1  # dataprep + model_search + 2 subworkflows for the model_seearch
     model_search_wf = dataprep_wf = None
     for w in campaign_workflows:
         workflows_data.append(w)
@@ -251,7 +297,7 @@ def run_asserts_and_exports(campaign_id, model_search_wf_id):
                             curr_epoch = epoch_iteration_task["used"]["i"]
                             if  (curr_epoch == 0) or \
                                 ("telemetry" in INSTRUMENTATION.get("torch").get("children_mode") and curr_epoch % at_every == 0):
-                                assert len(children_forwards) == 4  # there are four children submodules # TODO get dynamically
+                                assert len(children_forwards) == 4  # There are 4 children submodules # TODO get dynamically
                                 for child_forward in children_forwards:
                                     n_tasks_expected += 1
                                     assert child_forward["status"] == Status.FINISHED.value
@@ -267,30 +313,25 @@ def save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir="output_da
     os.makedirs(output_dir, exist_ok=True)
     best_task = Flowcept.db.query({"workflow_id": model_search_wf_id, "activity_id": "model_train"}, limit=1,
                                   sort=[("generated.test_loss", Flowcept.db.ASCENDING)])[0]
-    best_model_obj_id = best_task["generated"]["best_obj_id"]
-    model_args = best_task["used"].copy()
-    # TODO: The wrapper is conflicting with the init arguments, that's why we need to copy & remove extra args. Needs to debug to improve. Do not try to inspect signature. It's hard, ugly, and will likely not going to work. If it does, we'll change it later anyway.
-    model_args.pop("batch_size", None)
-    model_args.pop("eval_batch_size", None)
-    model_args.pop("epochs", None)
-    model_args.pop("lr", None)
-    model_args.pop("input_data_dir", None)
-    model_args.pop("train_data_path", None)
-    model_args.pop("test_data_path", None)
-    model_args.pop("val_data_path", None)
-    model_args.pop("dataset_ref", None)
-    model_args.pop("subset_size", None)
-    model_args.pop("tokenizer_type", None)
-    delete_after_run = model_args.pop("delete_after_run", True)
-    model_args.pop("max_runs", None)
-    loaded_model = TransformerModel(**model_args, save_workflow=False)
-    doc = Flowcept.db.load_torch_model(loaded_model, best_model_obj_id)
-    torch.save(loaded_model.state_dict(),
-               f"{output_dir}/wf_{model_search_wf_id}_transformer_wikitext2.pth")
+    replace_non_serializable_times(best_task)
+    workflow_result = {
+        "campaign_id": campaign_id,
+        "best_task_id": best_task["task_id"],
+        "workflow_id": best_task["workflow_id"],
+        "best_hyperparameters": best_task["used"],
+        "best_loss": best_task["generated"]["test_loss"],
+        "best_obj_id": best_task["generated"]["best_obj_id"],
+        "best_generated": best_task["generated"],
+        "best_task_data": best_task,
+    }
+    with open(f"{output_dir}/workflow_result.json", "w") as f:
+        json.dump(workflow_result, f, indent=2)
 
+    delete_after_run = best_task["used"].get("delete_after_run", True)
     if delete_after_run:
+        best_model_obj_id = best_task["generated"]["best_obj_id"]
         print("Deleting best model from the database.")
-        mongo_dao.delete_object_keys("object_id", [doc["object_id"]])
+        mongo_dao.delete_object_keys("object_id", [best_model_obj_id])
 
     workflows_file = f"{output_dir}/workflows_{uuid.uuid4()}.json"
     print(f"workflows_file = '{workflows_file}'")
@@ -308,7 +349,7 @@ def save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir="output_da
     return workflows_file, tasks_file
 
 
-def run_campaign(workflow_params, campaign_id=None):
+def run_campaign(workflow_params, campaign_id=None, scheduler_file=None, start_dask_cluster=False, with_persistence=True):
 
     _campaign_id = campaign_id or str(uuid.uuid4())
     print(f"Campaign id={_campaign_id}")
@@ -321,9 +362,10 @@ def run_campaign(workflow_params, campaign_id=None):
         tokenizer_type=tokenizer_type,
         batch_size=workflow_params["batch_size"],
         eval_batch_size=workflow_params["eval_batch_size"],
-        subset_size=subset_size)
+        subset_size=subset_size,
+        with_persistence=with_persistence)
 
-    _search_wf_id = search_workflow(dataprep_generated["ntokens"], dataprep_generated["dataset_ref"], dataprep_generated["train_data_path"], dataprep_generated["val_data_path"], dataprep_generated["test_data_path"], workflow_params, campaign_id=_campaign_id)
+    _search_wf_id = search_workflow(dataprep_generated["ntokens"], dataprep_generated["dataset_ref"], dataprep_generated["train_data_path"], dataprep_generated["val_data_path"], dataprep_generated["test_data_path"], workflow_params, campaign_id=_campaign_id, scheduler_file=scheduler_file, start_dask_cluster=start_dask_cluster, with_persistence=with_persistence)
 
     return _campaign_id, _dataprep_wf_id, _search_wf_id, dataprep_generated["train_n_batches"], dataprep_generated["val_n_batches"]
 
@@ -420,9 +462,17 @@ def parse_args():
 
     arguments = parser.add_argument_group("arguments")
     arguments.add_argument("--scheduler-file", metavar="S", default=None, help="Dask's scheduler file")
-    arguments.add_argument("--rep-dir", metavar="D", default=".", help="Job's repetition directory")
+    arguments.add_argument("--rep-dir", metavar="D", default="./output_data", help="Job's repetition directory")
     arguments.add_argument("--workflow-id", metavar="D", default=None, help="Wf Id")
     arguments.add_argument("--campaign-id", metavar="D", default=None, help="Campaign Id")
+    true_values = {"true", "t", "1", "yes", "y"}
+    arguments.add_argument(
+        "--with-persistence",
+        type=lambda v: v.lower() in true_values,
+        default=True,
+        help=f"Store data in MongoDB (accepts: {', '.join(true_values)})",
+    )
+    arguments.add_argument("--start-dask-cluster", action="store_true", default=False, help="Start the dask cluster before execution. Use only for tests and not for real experiments")
     default_exp_param_settings = {
         "input_data_dir": "./input_data",
         "batch_size": 20,
@@ -438,6 +488,7 @@ def parse_args():
         "epochs": 4,
         "max_runs": 1,
         "delete_after_run": True,
+        "random_seed": 0,
         "tokenizer_type": "basic_english",   # spacy, moses, toktok, revtok, subword
     }
 
@@ -450,25 +501,34 @@ def parse_args():
     args, _ = parser.parse_known_args()  # Ignore unknown arguments
     return args
 
+
 def main():
 
     args = parse_args()
-    print(args)
+    print("Arguments:", args)
     workflow_params = json.loads(args.workflow_params)
-
-    from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
-    mongo_dao = MongoDBDAO(create_indices=False)
+    workflow_params["with_persistence"] = args.with_persistence
+    delete_after_run = workflow_params.get("delete_after_run", True)
     print("TORCH SETTINGS: " + str(INSTRUMENTATION.get("torch")))
-    n_tasks, n_wfs, n_objects = verify_number_docs_in_db(mongo_dao)
 
-    campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval = run_campaign(workflow_params)
+    if args.with_persistence:
+        from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+        mongo_dao = MongoDBDAO(create_indices=False)
+        if delete_after_run:
+            n_tasks, n_wfs, n_objects = verify_number_docs_in_db(mongo_dao)
+    else:
+        print("We are not going to persist this run!")
+    campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval = run_campaign(workflow_params, campaign_id=args.campaign_id, scheduler_file=args.scheduler_file, start_dask_cluster=args.start_dask_cluster, with_persistence=args.with_persistence)
 
-    n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id)
-    workflows_file, tasks_file = save_files(mongo_dao, campaign_id, model_search_wf_id)
-    asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
-                         workflow_params["epochs"], workflow_params["max_runs"], n_batches_train, n_batches_eval,
-                         n_modules=4, delete_after_run=workflow_params["delete_after_run"])
-    verify_number_docs_in_db(mongo_dao, n_tasks, n_wfs, n_objects)
+    if args.with_persistence:
+        n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id)
+        workflows_file, tasks_file = save_files(mongo_dao, campaign_id, model_search_wf_id, output_dir=args.rep_dir)
+        # TODO: 4 is the number of modules of the current modules. We should get it dynamically.
+        asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
+                             workflow_params["epochs"], workflow_params["max_runs"], n_batches_train, n_batches_eval,
+                             n_modules=4, delete_after_run=delete_after_run)
+        if delete_after_run:
+            verify_number_docs_in_db(mongo_dao, n_tasks, n_wfs, n_objects)
 
     print("Alright! Congrats.")
 
