@@ -826,6 +826,58 @@ class MongoDBDAO(DocumentDBDAO):
         except Exception as e:
             raise Exception(e)
 
+    @staticmethod
+    def _align_schemas(tables):
+        """
+        Aligns schemas of a list of PyArrow tables by adding missing columns with default values
+        and ensuring a consistent column order.
+
+        Parameters
+        ----------
+        tables : list of pyarrow.Table
+            List of tables to be aligned.
+
+        Returns
+        -------
+        list of pyarrow.Table
+            The tables with aligned schemas.
+        """
+        if not tables:
+            return []
+
+        # Reference schema: take from the first table
+        reference_schema = tables[0].schema
+
+        aligned_tables = []
+        for table in tables:
+            current_schema = table.schema
+
+            # Find missing columns in the current table
+            missing_columns = [
+                (field.name, field.type) for field in reference_schema if field.name not in current_schema.names
+            ]
+
+            # Add missing columns with default values
+            for col_name, col_type in missing_columns:
+                if pa.types.is_integer(col_type) or pa.types.is_floating(col_type):
+                    default_value = 0
+                elif pa.types.is_boolean(col_type):
+                    default_value = False
+                elif pa.types.is_timestamp(col_type):
+                    default_value = pa.scalar(0, type=col_type)
+                elif pa.types.is_string(col_type):
+                    default_value = ""
+                else:
+                    default_value = None  # Default to None for unknown types
+
+                table = table.append_column(col_name, pa.array([default_value] * len(table), type=col_type))
+
+            # Reorder columns to match reference schema
+            table = table.select([field.name for field in reference_schema])
+            aligned_tables.append(table)
+
+        return aligned_tables
+
     def dump_tasks_to_file_recursive(self, workflow_id, output_file="tasks.parquet", max_depth=999, mapping=None):
         """Dump_tasks_to_file_recursive in MongoDB."""
         try:
@@ -862,13 +914,17 @@ class MongoDBDAO(DocumentDBDAO):
             # Merge all chunked files into a single Parquet file
             chunk_files = [f"{output_dir}/chunk_{i}.parquet" for i in range(file_count + 1)]
             tables = [pq.read_table(f) for f in chunk_files]
+            tables = MongoDBDAO._align_schemas(tables)  # Use the returned aligned tables
             merged_table = pa.concat_tables(tables)
             pq.write_table(merged_table, output_file)
 
             # Cleanup temporary files
-            for f in chunk_files:
-                os.remove(f)
-            os.rmdir(output_dir)
+            try:
+                for f in chunk_files:
+                    os.remove(f)
+                os.rmdir(output_dir)
+            except Exception as e:
+                self.logger.warning(e)
 
         except Exception as e:
             self.logger.exception(e)

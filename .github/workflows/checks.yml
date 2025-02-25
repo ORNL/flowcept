@@ -1,19 +1,14 @@
 name: Linter, formatter, and docs checks
 
-on:
-  pull_request:
-    branches:
-      - main
+on: pull_request
 
 jobs:
+
   checks:
     runs-on: ubuntu-22.04
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
     steps:
-      - name: Check out the main branch
-        uses: actions/checkout@v4
-        with:
-          ref: main
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -37,3 +32,4 @@ jobs:
         run: |
           make clean
           find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
+
