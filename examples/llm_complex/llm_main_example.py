@@ -126,19 +126,19 @@ def start_dask(scheduler_file=None, start_dask_cluster=False):
                     preexec_fn=os.setsid
                 )
 
-            def terminate_child():
-                """Terminate the child process group when the parent exits."""
-                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+            #def terminate_child():
+            #    """Terminate the child process group when the parent exits."""
+            #    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
 
-            import atexit
-            atexit.register(terminate_child)  # Ensure cleanup on exit
+            #import atexit
+            #atexit.register(terminate_child)  # Ensure cleanup on exit
 
             return process
 
         print("Starting Dask Cluster with command line.")
         scheduler_file = "scheduler_file.json"
-        print("Killing any old dask clusters.")
-        run_command("pkill -f dask")
+        # print("Killing any old dask clusters.")
+        # run_command("pkill -f dask")
         sleep(3)
         run_command(f"dask scheduler --no-dashboard --no-show --scheduler-file {scheduler_file}")
 
