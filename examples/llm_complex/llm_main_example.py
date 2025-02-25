@@ -94,13 +94,11 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
 
     # Start Flowcept's Dask observer
     with Flowcept("dask", start_persistence=with_persistence):
-
         # Registering a Dask workflow in Flowcept's database
         search_wf_id = register_dask_workflow(client, used=workflow_params,
                                               workflow_name="model_search",
                                               campaign_id=campaign_id)
         print(f"search_workflow_id={search_wf_id}")
-
 
         for conf in configs:  # Edit here to enable more runs
             t = client.submit(model_train, workflow_id=search_wf_id, **conf)
@@ -119,7 +117,6 @@ def start_dask(scheduler_file=None, start_dask_cluster=False):
 
     if start_dask_cluster:
         import subprocess
-        import signal
 
         def run_command(command, out_file="./cmd.out", err_file="./cmd.err"):
             with open(out_file, "w") as out, open(err_file, "w") as err:
@@ -130,19 +127,10 @@ def start_dask(scheduler_file=None, start_dask_cluster=False):
                     preexec_fn=os.setsid
                 )
 
-            #def terminate_child():
-            #    """Terminate the child process group when the parent exits."""
-            #    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
-
-            #import atexit
-            #atexit.register(terminate_child)  # Ensure cleanup on exit
-
             return process
 
         print("Starting Dask Cluster with command line.")
         scheduler_file = "scheduler_file.json"
-        # print("Killing any old dask clusters.")
-        # run_command("pkill -f dask")
         sleep(3)
         run_command(f"dask scheduler --no-dashboard --no-show --scheduler-file {scheduler_file}")
 
@@ -217,7 +205,7 @@ def run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs):
     at_every = INSTRUMENTATION.get("torch").get("capture_epochs_at_every", 1)
     campaign_workflows = Flowcept.db.query({"campaign_id": campaign_id}, collection="workflows")
     workflows_data = []
-    assert len(campaign_workflows) == n_configs + 3 - 1  # dataprep + model_search + 2 subworkflows for the model_seearch
+    assert len(campaign_workflows) == n_configs + 2  # dataprep + model_search + 1 subworkflows for the model_seearch per config
     model_search_wf = dataprep_wf = None
     for w in campaign_workflows:
         workflows_data.append(w)
@@ -234,7 +222,7 @@ def run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs):
 
     parent_module_wfs = Flowcept.db.query({"parent_workflow_id": model_search_wf_id},
                                           collection="workflows")
-    assert len(parent_module_wfs) == 1
+    assert len(parent_module_wfs) == n_configs
     parent_module_wf = parent_module_wfs[0]
     workflows_data.append(parent_module_wf)
     parent_module_wf_id = parent_module_wf["workflow_id"]
@@ -242,7 +230,7 @@ def run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs):
     n_tasks_expected = 0
     model_train_tasks = Flowcept.db.query(
         {"workflow_id": model_search_wf_id, "activity_id": "model_train"})
-    assert len(model_train_tasks) == model_search_wf["used"]["max_runs"]
+    assert len(model_train_tasks) == n_configs
     for t in model_train_tasks:
         n_tasks_expected += 1
         assert t["status"] == Status.FINISHED.value
@@ -263,8 +251,7 @@ def run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs):
             assert len(train_batch_iteration_tasks) > 0  # TODO: == number of train_batches
 
             eval_batch_iteration_tasks = Flowcept.db.query(
-                {"parent_task_id": epoch_iteration_task["task_id"],
-                 "activity_id": "eval_batch_iteration"})
+                {"parent_task_id": epoch_iteration_task["task_id"], "activity_id": "eval_batch_iteration"})
             assert len(eval_batch_iteration_tasks) > 0  # TODO: == number of eval_batches
 
             batch_iteration_lst = [train_batch_iteration_tasks, eval_batch_iteration_tasks]
@@ -375,31 +362,32 @@ def run_campaign(workflow_params, campaign_id=None, scheduler_file=None, start_d
     return _campaign_id, _dataprep_wf_id, _search_wf_id, dataprep_generated["train_n_batches"], dataprep_generated["val_n_batches"], n_configs
 
 
-def asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected, epoch_iterations, max_runs, n_batches_train, n_batches_eval, n_modules, delete_after_run, best_model_obj_id):
+def asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected, epoch_iterations, n_configs, n_batches_train, n_batches_eval, n_modules, delete_after_run):
     workflows_df = pd.read_json(workflows_file)
     # Assert workflows dump
     assert len(workflows_df) == n_workflows_expected
     tasks_df = pd.read_parquet(tasks_file)
     print(len(tasks_df), n_tasks_expected)
+    # assert len(tasks_df) == n_tasks_expected # TODO: Bug
 
     # TODO: save #n_batches for train, test, val individually
-    search_tasks = max_runs
+    search_tasks = n_configs
     at_every = INSTRUMENTATION.get("torch").get("capture_epochs_at_every", 1)
 
-    batch_iteration_tasks = epoch_iterations * (n_batches_train + n_batches_eval)
-    non_module_tasks = search_tasks + epoch_iterations + batch_iteration_tasks
+    epoch_iteration_tasks = search_tasks * epoch_iterations
+    batch_iteration_tasks = 1 * epoch_iteration_tasks * (n_batches_train + n_batches_eval)
+    non_module_tasks = search_tasks + epoch_iteration_tasks + batch_iteration_tasks
 
     parent_module_tasks = batch_iteration_tasks
     parent_module_tasks = parent_module_tasks/at_every
-    expected_non_child_tasks = non_module_tasks + parent_module_tasks
+    expected_non_child_tasks = (non_module_tasks + parent_module_tasks)
 
     assert len(tasks_df[tasks_df.subtype != 'child_forward']) == expected_non_child_tasks
 
     number_of_captured_epochs = epoch_iterations / at_every
 
     if "telemetry" in INSTRUMENTATION.get("torch").get("children_mode"):
-        expected_child_tasks = search_tasks * epoch_iterations * (
-                    (n_batches_train * n_modules) + (n_batches_eval * n_modules))
+        expected_child_tasks = 1 * epoch_iteration_tasks * ((n_batches_train * n_modules) + (n_batches_eval * n_modules))
         expected_child_tasks = expected_child_tasks/at_every
         expected_child_tasks_per_epoch = expected_child_tasks / number_of_captured_epochs
         with_used = 1 * expected_child_tasks_per_epoch
@@ -414,23 +402,23 @@ def asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expe
         raise NotImplementedError("Needs to implement for lightweight")
 
     # Testing if only the first epoch got the inspection
-    assert len(tasks_df[(tasks_df.subtype == 'parent_forward') & (tasks_df.used.str.contains('tensor'))]) == n_batches_train + n_batches_eval
+    assert len(tasks_df[(tasks_df.subtype == 'parent_forward') & (tasks_df.used.str.contains('tensor'))]) == search_tasks*(n_batches_train + n_batches_eval)
 
     if "children" in INSTRUMENTATION.get("torch").get("what"):
         assert len(tasks_df[tasks_df.subtype == 'child_forward']) == expected_child_tasks
         assert non_module_tasks + parent_module_tasks + expected_child_tasks == len(tasks_df)
         # Testing if capturing at every at_every epochs
-        assert len(tasks_df[(tasks_df.subtype == 'child_forward') & (
-                    tasks_df.used == 'NaN')]) == without_used
-        assert len(
-            tasks_df[(tasks_df.subtype == 'child_forward') & (tasks_df.used != 'NaN')]) == with_used
+        assert len(tasks_df[(tasks_df.subtype == 'child_forward') & (tasks_df.used == 'NaN')]) == without_used
+        assert len(tasks_df[(tasks_df.subtype == 'child_forward') & (tasks_df.used != 'NaN')]) == with_used
 
     task_ids = list(tasks_df["task_id"].unique())
     workflow_ids = list(workflows_df["workflow_id"].unique())
 
     if delete_after_run:
         print("Deleting generated data in MongoDB")
-        mongo_dao.delete_object_keys("object_id", [best_model_obj_id])
+        search_tasks_obj = tasks_df[tasks_df["activity_id"] == "model_train"]
+        best_obj_ids = [json.loads(row["generated"])["best_obj_id"] for _, row in search_tasks_obj.iterrows()]
+        mongo_dao.delete_object_keys("object_id", best_obj_ids)
         mongo_dao.delete_task_keys("task_id", task_ids)
         mongo_dao.delete_workflow_keys("workflow_id", workflow_ids)
 
@@ -461,7 +449,6 @@ def verify_number_docs_in_db(mongo_dao, n_tasks=None, n_wfs=None, n_objects=None
     return _n_tasks, _n_wfs, _n_objects
 
 
-
 def parse_args():
     parser = argparse.ArgumentParser(description="Submit Dask workflow.")
 
@@ -485,12 +472,12 @@ def parse_args():
         "nhid": [200],
         "nlayers": [2],  # 2
         "nhead": [2],
-        "dropout": [0.2],
+        "dropout": [0.2, 0.4],
         "lr": [0.1],
         "pos_encoding_max_len": [5000],
         "subset_size": 10,
         "epochs": 4,
-        "max_runs": 1,
+        "max_runs": 2,
         "delete_after_run": True,
         "random_seed": 0,
         "tokenizer_type": "basic_english",   # spacy, moses, toktok, revtok, subword
@@ -528,10 +515,10 @@ def main():
     if args.with_persistence:
         n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs)
         workflows_file, tasks_file, best_model_obj_id = save_files(db_stats_at_start, mongo_dao, campaign_id, model_search_wf_id, output_dir=args.rep_dir)
-        # TODO: 4 is the number of modules of the current modules. We should get it dynamically.
+        # TODO: 4 is the number of modules of the current model. We should get it dynamically.
         asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
-                             workflow_params["epochs"], workflow_params["max_runs"], n_batches_train, n_batches_eval,
-                             n_modules=4, delete_after_run=delete_after_run, best_model_obj_id=best_model_obj_id)
+                             workflow_params["epochs"], n_configs, n_batches_train, n_batches_eval,
+                             n_modules=4, delete_after_run=delete_after_run)
 
         if delete_after_run:
             verify_number_docs_in_db(mongo_dao, n_tasks, n_wfs, n_objects)
