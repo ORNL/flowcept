@@ -811,6 +811,7 @@ class MongoDBDAO(DocumentDBDAO):
             self._client.close()
 
     def get_db_stats(self):
+        """Get MongoDB stats for the main collections."""
         _n_tasks = self.count_tasks()
         _n_wfs = self.count_workflows()
         _n_objects = self.count_objects()
