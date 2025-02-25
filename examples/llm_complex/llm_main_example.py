@@ -87,6 +87,11 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
         for c in configs
     ]
 
+    max_runs = workflow_params.get("max_runs", None)
+    configs = configs[:max_runs]
+    
+    print(f"Size of configs: {len(configs)}")
+
     # Start Flowcept's Dask observer
     with Flowcept("dask", start_persistence=with_persistence):
 
@@ -96,9 +101,8 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
                                               campaign_id=campaign_id)
         print(f"search_workflow_id={search_wf_id}")
 
-        max_runs = workflow_params.get("max_runs", None)
 
-        for conf in configs[:max_runs]:  # Edit here to enable more runs
+        for conf in configs:  # Edit here to enable more runs
             t = client.submit(model_train, workflow_id=search_wf_id, **conf)
             print(t.result())
 
@@ -106,7 +110,7 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
         close_dask(client, cluster, scheduler_file, start_dask_cluster)
         print("Closed Dask. Closing Flowcept...")
         print("Closed.")
-    return search_wf_id
+    return search_wf_id, len(configs)
 
 
 def start_dask(scheduler_file=None, start_dask_cluster=False):
@@ -181,7 +185,7 @@ def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False):
         cluster.close()
 
 
-def run_asserts_and_exports(campaign_id, model_search_wf_id):
+def run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs):
     from flowcept.commons.vocabulary import Status
     print("Now running all asserts...")
     """
@@ -213,7 +217,7 @@ def run_asserts_and_exports(campaign_id, model_search_wf_id):
     at_every = INSTRUMENTATION.get("torch").get("capture_epochs_at_every", 1)
     campaign_workflows = Flowcept.db.query({"campaign_id": campaign_id}, collection="workflows")
     workflows_data = []
-    assert len(campaign_workflows) == 4 - 1  # dataprep + model_search + 2 subworkflows for the model_seearch
+    assert len(campaign_workflows) == n_configs + 3 - 1  # dataprep + model_search + 2 subworkflows for the model_seearch
     model_search_wf = dataprep_wf = None
     for w in campaign_workflows:
         workflows_data.append(w)
@@ -366,9 +370,9 @@ def run_campaign(workflow_params, campaign_id=None, scheduler_file=None, start_d
         subset_size=subset_size,
         with_persistence=with_persistence)
 
-    _search_wf_id = search_workflow(dataprep_generated["ntokens"], dataprep_generated["dataset_ref"], dataprep_generated["train_data_path"], dataprep_generated["val_data_path"], dataprep_generated["test_data_path"], workflow_params, campaign_id=_campaign_id, scheduler_file=scheduler_file, start_dask_cluster=start_dask_cluster, with_persistence=with_persistence)
+    _search_wf_id, n_configs = search_workflow(dataprep_generated["ntokens"], dataprep_generated["dataset_ref"], dataprep_generated["train_data_path"], dataprep_generated["val_data_path"], dataprep_generated["test_data_path"], workflow_params, campaign_id=_campaign_id, scheduler_file=scheduler_file, start_dask_cluster=start_dask_cluster, with_persistence=with_persistence)
 
-    return _campaign_id, _dataprep_wf_id, _search_wf_id, dataprep_generated["train_n_batches"], dataprep_generated["val_n_batches"]
+    return _campaign_id, _dataprep_wf_id, _search_wf_id, dataprep_generated["train_n_batches"], dataprep_generated["val_n_batches"], n_configs
 
 
 def asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected, epoch_iterations, max_runs, n_batches_train, n_batches_eval, n_modules, delete_after_run, best_model_obj_id):
@@ -519,10 +523,10 @@ def main():
             n_tasks, n_wfs, n_objects = verify_number_docs_in_db(mongo_dao)
     else:
         print("We are not going to persist this run!")
-    campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval = run_campaign(workflow_params, campaign_id=args.campaign_id, scheduler_file=args.scheduler_file, start_dask_cluster=args.start_dask_cluster, with_persistence=args.with_persistence)
+    campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval, n_configs = run_campaign(workflow_params, campaign_id=args.campaign_id, scheduler_file=args.scheduler_file, start_dask_cluster=args.start_dask_cluster, with_persistence=args.with_persistence)
 
     if args.with_persistence:
-        n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id)
+        n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs)
         workflows_file, tasks_file, best_model_obj_id = save_files(db_stats_at_start, mongo_dao, campaign_id, model_search_wf_id, output_dir=args.rep_dir)
         # TODO: 4 is the number of modules of the current modules. We should get it dynamically.
         asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
