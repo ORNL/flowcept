@@ -463,7 +463,6 @@ def parse_args():
     arguments = parser.add_argument_group("arguments")
     arguments.add_argument("--scheduler-file", metavar="S", default=None, help="Dask's scheduler file")
     arguments.add_argument("--rep-dir", metavar="D", default="./output_data", help="Job's repetition directory")
-    arguments.add_argument("--workflow-id", metavar="D", default=None, help="Wf Id")
     arguments.add_argument("--campaign-id", metavar="D", default=None, help="Campaign Id")
     true_values = {"true", "t", "1", "yes", "y"}
     arguments.add_argument(
