@@ -111,7 +111,7 @@ class TestDask(unittest.TestCase):
         sleep(1)
         stop_local_dask_cluster(client, cluster, flowcept)
         assert assert_by_querying_tasks_until(
-            {"task_id": o2.key},
+            {"workflow_id": wf_id, "task_id": o2.key},
             condition_to_evaluate=lambda docs: "ended_at" in docs[0]
             and "y" in docs[0]["used"]
             and len(docs[0]["generated"]) > 0,

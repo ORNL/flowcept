@@ -125,19 +125,24 @@ def dataprep_workflow(data_dir="input_data",
                       with_persistence=True
                       ):
 
-    train_data_path = os.path.realpath(os.path.join(data_dir, "train_data.tensor"))
-    val_data_path = os.path.realpath(os.path.join(data_dir, "val_data.tensor"))
-    test_data_path = os.path.realpath(os.path.join(data_dir, "test_data.tensor"))
-    val_data_mapping_path = os.path.realpath(os.path.join(data_dir, "val_data_mapping.tensor"))
-    dataset_info_path = os.path.realpath(os.path.join(data_dir, "dataset_info.json"))
-    n_batches_path = os.path.realpath(os.path.join(data_dir, "n_batches.json"))
-    n_tokens_path = os.path.realpath(os.path.join(data_dir, "n_tokens.txt"))
+    dataset_characteristics = f'batch_size_{batch_size}_eval_batch_size_{eval_batch_size}_subset_size_{subset_size}_tokenizer_{tokenizer_type}'
+    base_path = os.path.realpath(os.path.join(data_dir, dataset_characteristics))
+
+    train_data_path = f"{base_path}_train_data.tensor"
+    val_data_path = f"{base_path}_val_data.tensor"
+    test_data_path = f"{base_path}_test_data.tensor"
+    val_data_mapping_path = f"{base_path}_val_data_mapping.tensor"
+    dataset_info_path = f"{base_path}_dataset_info.json"
+    n_batches_path = f"{base_path}_n_batches.json"
+    n_tokens_path = f"{base_path}_n_tokens.txt"
 
     if not os.path.exists(train_data_path):
 
         download_files(
             batch_size, data_dir, eval_batch_size, subset_size, test_data_path, tokenizer_type, train_data_path,
             val_data_mapping_path, val_data_path, dataset_info_path, n_batches_path, n_tokens_path)
+    else:
+        print(f"Input files {base_path}* were found! We are not going to re-download or re-generate anything.")
 
     train_data = torch.load(train_data_path)
     val_data = torch.load(val_data_path)
