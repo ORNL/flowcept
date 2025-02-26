@@ -47,7 +47,7 @@ def _set_workflow_on_scheduler(
 
 
 def _set_workflow_on_workers(dask_worker, workflow_id, campaign_id=None):
-    setattr(dask_worker, "current_campaign_id", workflow_id)
+    setattr(dask_worker, "current_workflow_id", workflow_id)
     if campaign_id:
         setattr(dask_worker, "current_campaign_id", campaign_id)
 
