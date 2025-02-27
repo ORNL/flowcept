@@ -181,7 +181,7 @@ if GPUCapture.GPU_VENDOR == "amd":
         AmdSmiMemoryType,
         amdsmi_get_gpu_activity,
         amdsmi_get_gpu_metrics_info,
-        amdsmi_get_gpu_device_uuid
+        amdsmi_get_gpu_device_uuid,
     )
 
     FlowceptLogger().debug("Imported AMD modules!")

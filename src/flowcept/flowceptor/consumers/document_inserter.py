@@ -106,6 +106,11 @@ class DocumentInserter:
             if wf_id:
                 message["workflow_id"] = wf_id
 
+        if "campaign_id" not in message:
+            campaign_id = self._mq_dao._keyvalue_dao.get_key("current_campaign_id")
+            if campaign_id:
+                message["campaign_id"] = campaign_id
+
         if "subtype" not in message and "group_id" in message:
             message["subtype"] = "iteration"
 
@@ -230,4 +235,5 @@ class DocumentInserter:
         for dao in self._doc_daos:
             self.logger.info(f"Closing document_inserter {dao.__class__.__name__} connection.")
             dao.close()
+        self._mq_dao._keyvalue_dao.delete_key("current_campaign_id")
         self.logger.info("Document Inserter is stopped.")

@@ -21,6 +21,7 @@ from flowcept.configs import (
     INSTRUMENTATION,
     TELEMETRY_CAPTURE,
     REPLACE_NON_JSON_SERIALIZABLE,
+    INSTRUMENTATION_ENABLED,
 )
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
@@ -111,7 +112,7 @@ def flowcept_torch(cls):
 
         def __init__(self, *args, **kwargs):
             super(TorchModuleWrapper, self).__init__(*args, **kwargs)
-            instrumentation_enabled = INSTRUMENTATION.get("enabled", False)
+            instrumentation_enabled = INSTRUMENTATION_ENABLED
             capture_enabled = kwargs.get("capture_enabled", True)
             if not instrumentation_enabled or not capture_enabled:
                 return
@@ -298,6 +299,11 @@ def flowcept_torch(cls):
                 profile = self._get_profile()
                 _custom_metadata["model_profile"] = profile
 
+            if self._campaign_id:
+                TorchModuleWrapper._interceptor._mq_dao._keyvalue_dao.set_key_value(
+                    "current_campaign_id", self._campaign_id
+                )
+
             workflow_obj.custom_metadata = _custom_metadata
             TorchModuleWrapper._interceptor.send_workflow_message(workflow_obj)
             return workflow_obj.workflow_id
@@ -446,7 +452,7 @@ def _create_epoch_loop_class():
             parent_task_id=None,
             workflow_id=None,
         ):
-            if TORCH_CONFIG.get("epoch_loop", None) is None:
+            if TORCH_CONFIG.get("epoch_loop", None) is None or not INSTRUMENTATION_ENABLED:
                 super().__init__(items=items, capture_enabled=False)
                 return
             super().__init__(

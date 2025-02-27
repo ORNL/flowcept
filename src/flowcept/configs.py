@@ -225,7 +225,7 @@ ANALYTICS = settings.get("analytics", None)
 ####################
 
 INSTRUMENTATION = settings.get("instrumentation", {})
-INSTRUMENTATION_ENABLED = True  # INSTRUMENTATION.get("enabled", False)
+INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", False)
 
 ####################
 # Enabled ADAPTERS #
