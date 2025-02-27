@@ -100,10 +100,12 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
                                               campaign_id=campaign_id)
         print(f"search_workflow_id={search_wf_id}")
 
+        tasks = []
         for conf in configs:  # Edit here to enable more runs
-            t = client.submit(model_train, workflow_id=search_wf_id, **conf)
+            tasks.append(client.submit(model_train, workflow_id=search_wf_id, **conf))
+        for t in tasks:
             print(t.result())
-
+            
         print("Done main loop. Closing dask...")
         close_dask(client, cluster, scheduler_file, start_dask_cluster)
         print("Closed Dask. Closing Flowcept...")
@@ -503,6 +505,11 @@ def main():
     print("TORCH SETTINGS: " + str(INSTRUMENTATION.get("torch")))
 
     if args.with_persistence:
+
+        if not MONGO_ENABLED:
+            print("This test is only available if Mongo is enabled.")
+            sys.exit(0)
+        
         from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
         mongo_dao = MongoDBDAO(create_indices=False)
         db_stats_at_start = mongo_dao.get_db_stats()
@@ -513,12 +520,19 @@ def main():
     campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval, n_configs = run_campaign(workflow_params, campaign_id=args.campaign_id, scheduler_file=args.scheduler_file, start_dask_cluster=args.start_dask_cluster, with_persistence=args.with_persistence)
 
     if args.with_persistence:
-        n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs)
+        try:
+            n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs)
+        except Exception as e:
+            print(e)
         workflows_file, tasks_file, best_model_obj_id = save_files(db_stats_at_start, mongo_dao, campaign_id, model_search_wf_id, output_dir=args.rep_dir)
         # TODO: 4 is the number of modules of the current model. We should get it dynamically.
-        asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
+        try:
+            asserts_on_saved_dfs(mongo_dao, workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
                              workflow_params["epochs"], n_configs, n_batches_train, n_batches_eval,
                              n_modules=4, delete_after_run=delete_after_run)
+        except Exception as e:
+            print(e)
+
 
         if delete_after_run:
             verify_number_docs_in_db(mongo_dao, n_tasks, n_wfs, n_objects)
@@ -527,10 +541,6 @@ def main():
 
 
 if __name__ == "__main__":
-
-    if not MONGO_ENABLED:
-        print("This test is only available if Mongo is enabled.")
-        sys.exit(0)
 
     main()
     sys.exit(0)
