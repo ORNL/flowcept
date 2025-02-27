@@ -119,7 +119,7 @@ class Flowcept(object):
                 if interceptor.kind == "instrumentation":
                     Flowcept.current_workflow_id = self.current_workflow_id or str(uuid4())
                     Flowcept.campaign_id = self.campaign_id or str(uuid4())
-                    interceptor._keyvalue_dao.set_key_value("current_campaign_id", Flowcept.campaign_id)
+                    interceptor._mq_dao._keyvalue_dao.set_key_value("current_campaign_id", Flowcept.campaign_id)
                     if self._save_workflow:
                         wf_obj = WorkflowObject()
                         wf_obj.workflow_id = Flowcept.current_workflow_id
