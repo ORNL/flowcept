@@ -161,6 +161,7 @@ class GPUCapture:
             }
         if "others" in gpu_conf:
             flowcept_gpu_info["others"] = {
+                "uuid": amdsmi_get_gpu_device_uuid(device),
                 "current_gfxclk": all_metrics["current_gfxclk"],
                 "current_socclk": all_metrics["current_socclk"],
                 "current_uclk": all_metrics["current_uclk"],
@@ -180,6 +181,7 @@ if GPUCapture.GPU_VENDOR == "amd":
         AmdSmiMemoryType,
         amdsmi_get_gpu_activity,
         amdsmi_get_gpu_metrics_info,
+        amdsmi_get_gpu_device_uuid
     )
 
     FlowceptLogger().debug("Imported AMD modules!")
