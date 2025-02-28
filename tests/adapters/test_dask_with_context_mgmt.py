@@ -8,7 +8,7 @@ from flowcept import Flowcept
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.flowceptor.adapters.dask.dask_plugins import (
-    register_dask_workflow,
+    save_dask_workflow,
     FlowceptDaskWorkerAdapter,
 )
 from tests.adapters.dask_test_utils import (
@@ -33,9 +33,8 @@ class TestDaskContextMgmt(unittest.TestCase):
         scheduler = cluster.scheduler
         client = Client(scheduler.address)
         client.register_plugin(FlowceptDaskWorkerAdapter())
-        register_dask_workflow(client)
 
-        with Flowcept("dask"):
+        with Flowcept("dask", dask_client=client):
             i1 = np.random.random()
             o1 = client.submit(dummy_func1, i1)
             self.logger.debug(o1.result())
@@ -46,7 +45,7 @@ class TestDaskContextMgmt(unittest.TestCase):
             # all other interceptors stopped
 
         assert assert_by_querying_tasks_until(
-            {"task_id": o1.key},
+            {"task_id": o1.key, "workflow_id": Flowcept.current_workflow_id},
             condition_to_evaluate=lambda docs: "ended_at" in docs[0],
         )
 

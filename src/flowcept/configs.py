@@ -129,18 +129,18 @@ if not LMDB_ENABLED and not MONGO_ENABLED:
 ##########################
 # Buffer Settings        #
 ##########################
-_buffer_settings = settings["buffer"]
+db_buffer_settings = settings["db_buffer"]
 # In seconds:
-INSERTION_BUFFER_TIME = int(_buffer_settings.get("insertion_buffer_time_secs", 5))
+INSERTION_BUFFER_TIME = int(db_buffer_settings.get("insertion_buffer_time_secs", 5))
 INSERTION_BUFFER_TIME = random.randint(
     int(INSERTION_BUFFER_TIME * 0.9),
     int(INSERTION_BUFFER_TIME * 1.4),
 )
 
-ADAPTIVE_BUFFER_SIZE = _buffer_settings.get("adaptive_buffer_size", True)
-MAX_BUFFER_SIZE = int(_buffer_settings.get("max_buffer_size", 50))
-MIN_BUFFER_SIZE = max(1, int(_buffer_settings.get("min_buffer_size", 10)))
-REMOVE_EMPTY_FIELDS = _buffer_settings.get("remove_empty_fields", False)
+ADAPTIVE_DB_BUFFER_SIZE = db_buffer_settings.get("adaptive_buffer_size", True)
+DB_MAX_BUFFER_SIZE = int(db_buffer_settings.get("max_buffer_size", 50))
+DB_MIN_BUFFER_SIZE = max(1, int(db_buffer_settings.get("min_buffer_size", 10)))
+REMOVE_EMPTY_FIELDS = db_buffer_settings.get("remove_empty_fields", False)
 
 ######################
 # PROJECT SYSTEM SETTINGS #
