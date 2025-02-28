@@ -28,9 +28,7 @@ class GPUCapture:
     def _initialize_nvidia():
         """Initialize NVIDIA GPU."""
         try:
-            from pynvml import (
-                nvmlDeviceGetCount, nvmlInit
-            )
+            from pynvml import nvmlDeviceGetCount, nvmlInit
 
             visible_devices_var = os.environ.get("CUDA_VISIBLE_DEVICES")
             if visible_devices_var:
