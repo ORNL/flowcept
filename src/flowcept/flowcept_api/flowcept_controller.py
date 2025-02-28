@@ -11,7 +11,6 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import ClassProperty
 from flowcept.configs import MQ_INSTANCES, INSTRUMENTATION_ENABLED, MONGO_ENABLED
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
-from flowcept.flowceptor.adapters.dask.dask_plugins import save_dask_workflow
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 
@@ -175,6 +174,7 @@ class Flowcept(object):
                         dask_client = self.kwargs.get("dask_client", None)
                         if not dask_client:
                             raise Exception("You must give the argument `dask_client` so we can save the workflow.")
+                        from flowcept.flowceptor.adapters.dask.dask_plugins import save_dask_workflow
                         wf_id = save_dask_workflow(
                             dask_client,
                             used=self.workflow_args,
