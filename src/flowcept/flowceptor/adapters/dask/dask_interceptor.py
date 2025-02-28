@@ -87,9 +87,10 @@ def get_times_from_task_state(task_msg, ts):
 class DaskWorkerInterceptor(BaseInterceptor):
     """Dask worker."""
 
-    def __init__(self, plugin_key="dask"):
+    def __init__(self, plugin_key="dask", kind="dask"):
         self._plugin_key = plugin_key
         self._worker = None
+        self.kind = kind
         # super().__init__ goes to setup_worker.
 
     def setup_worker(self, worker):
@@ -99,7 +100,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
         That's why we call the super() constructor here.
         """
         self._worker = worker
-        super().__init__(plugin_key=self._plugin_key, kind="dask")
+        super().__init__(plugin_key=self._plugin_key, kind=self.kind)
         # TODO: :refactor: This is just to avoid the auto-generation of
         # workflow id, which doesnt make sense in Dask case.
         self._generated_workflow_id = True

@@ -1,13 +1,10 @@
 import unittest
 
-from flowcept import TaskQueryAPI
+from flowcept import TaskQueryAPI, Flowcept
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import evaluate_until
 from flowcept.configs import MONGO_ENABLED
-from flowcept.flowceptor.adapters.dask.dask_plugins import (
-    register_dask_workflow,
-)
 
 from tests.adapters.dask_test_utils import (
     start_local_dask_cluster,
@@ -39,8 +36,8 @@ class MLDecoratorDaskTests(unittest.TestCase):
         }
         confs = ModelTrainer.generate_hp_confs(hp_conf)
         hp_conf.update({"n_confs": len(confs)})
-        custom_metadata = {"hyperparameter_conf": hp_conf}
-        wf_id = register_dask_workflow(client, custom_metadata=custom_metadata)
+        #custom_metadata = {"hyperparameter_conf": hp_conf}
+        wf_id = Flowcept.current_workflow_id #save_dask_workflow(client, custom_metadata=custom_metadata)
         print("Workflow id", wf_id)
         for conf in confs:
             conf["workflow_id"] = wf_id

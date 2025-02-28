@@ -65,7 +65,7 @@ analytics:
     generated.loss: minimum_first
     generated.accuracy: maximum_first
 
-buffer:
+db_buffer:
   adaptive_buffer_size: true
   insertion_buffer_time_secs: 5
   max_buffer_size: 50

@@ -299,11 +299,6 @@ def flowcept_torch(cls):
                 profile = self._get_profile()
                 _custom_metadata["model_profile"] = profile
 
-            if self._campaign_id:
-                TorchModuleWrapper._interceptor._mq_dao._keyvalue_dao.set_key_value(
-                    "current_campaign_id", self._campaign_id
-                )
-
             workflow_obj.custom_metadata = _custom_metadata
             TorchModuleWrapper._interceptor.send_workflow_message(workflow_obj)
             return workflow_obj.workflow_id
@@ -451,8 +446,9 @@ def _create_epoch_loop_class():
             model: "flowcept_torch.TorchModuleWrapper",
             parent_task_id=None,
             workflow_id=None,
+            capture_enabled=True,
         ):
-            if TORCH_CONFIG.get("epoch_loop", None) is None or not INSTRUMENTATION_ENABLED:
+            if not capture_enabled or TORCH_CONFIG.get("epoch_loop", None) is None or not INSTRUMENTATION_ENABLED:
                 super().__init__(items=items, capture_enabled=False)
                 return
             super().__init__(
@@ -519,10 +515,12 @@ def _create_batch_loop_class():
             workflow_id=None,
             step="train",
             items_length=0,
+            capture_enabled=True,
         ):
             self._epochs_loop = epochs_loop
             if (
-                (self._epochs_loop is None)
+                (not capture_enabled)
+                or (self._epochs_loop is None)
                 or (not self._epochs_loop.enabled)
                 or (TORCH_CONFIG.get("batch_loop", None) is None)
             ):

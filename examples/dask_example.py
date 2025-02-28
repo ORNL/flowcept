@@ -2,7 +2,6 @@
 from distributed import Client, LocalCluster
 
 from flowcept import Flowcept, FlowceptDaskWorkerAdapter
-from flowcept.flowceptor.adapters.dask.dask_plugins import register_dask_workflow
 
 
 def add(x, y):
@@ -29,11 +28,8 @@ if __name__ == "__main__":
     client.register_plugin(FlowceptDaskWorkerAdapter())
 
     # Start Flowcept's Dask observer
-    with Flowcept("dask"):  # Optionally: Flowcept("dask").start()
+    with Flowcept("dask", dask_client=client):  # Optionally: Flowcept("dask").start()
         # Registering a Dask workflow in Flowcept's database
-        wf_id = register_dask_workflow(client)
-        print(f"workflow_id={wf_id}")
-
         t1 = client.submit(add, 1, 2)
         t2 = client.submit(multiply, 3, 4)
         t3 = client.submit(add, t1.result(), t2.result())
@@ -47,7 +43,8 @@ if __name__ == "__main__":
         cluster.close()  # This call is needed closeout to inform of workflow conclusion.
 
     # Optionally: flowcept.stop()
-
+    wf_id = Flowcept.current_workflow_id
+    print(f"workflow_id={wf_id}")
     # Querying Flowcept's database about this run
     print(f"t1_key={t1.key}")
     # Getting first task only:

@@ -13,7 +13,7 @@ from time import sleep
 from examples.llm_complex.llm_dataprep import dataprep_workflow
 from examples.llm_complex.llm_model import model_train
 from flowcept.commons.utils import replace_non_serializable_times
-from flowcept.flowceptor.adapters.dask.dask_plugins import register_dask_workflow
+from flowcept.flowceptor.adapters.dask.dask_plugins import save_dask_workflow
 from flowcept.configs import MONGO_ENABLED, INSTRUMENTATION, INSTRUMENTATION_ENABLED
 from flowcept import Flowcept
 
@@ -70,8 +70,8 @@ def generate_configs(params: dict):
     return result
 
 
-def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_data_path, workflow_params, campaign_id=None, scheduler_file=None, start_dask_cluster=False, with_persistence=True):
-    client, cluster = start_dask(scheduler_file, start_dask_cluster)
+def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_data_path, workflow_params, campaign_id=None, scheduler_file=None, start_dask_cluster=False, with_persistence=True, with_flowcept=True):
+    client, cluster = start_dask(scheduler_file, start_dask_cluster, with_flowcept)
     workflow_params["train_data_path"] = train_data_path
     workflow_params["val_data_path"] = val_data_path
     workflow_params["test_data_path"] = test_data_path
@@ -83,6 +83,8 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
          "train_data_path": train_data_path,
          "val_data_path": val_data_path,
          "test_data_path": test_data_path,
+         "with_persistence": with_persistence,
+         "with_flowcept": with_flowcept,
          "campaign_id": campaign_id}
         for c in configs
     ]
@@ -92,28 +94,30 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
     
     print(f"Size of configs: {len(configs)}")
 
-    # Start Flowcept's Dask observer
-    with Flowcept("dask", start_persistence=with_persistence):
-        # Registering a Dask workflow in Flowcept's database
-        search_wf_id = register_dask_workflow(client, used=workflow_params,
-                                              workflow_name="model_search",
-                                              campaign_id=campaign_id)
+    f = None
+    search_wf_id = None
+    if with_flowcept:
+        # Start Flowcept's Dask observer
+        prov_args = configs.copy()
+        prov_args["n_configs"] = len(configs)
+        f = Flowcept(["dask", "instrumentation"], campaign_id=campaign_id, start_persistence=with_persistence, workflow_args=configs, dask_client=client).start()
+        search_wf_id = Flowcept.current_workflow_id
         print(f"search_workflow_id={search_wf_id}")
 
-        tasks = []
-        for conf in configs:  # Edit here to enable more runs
-            tasks.append(client.submit(model_train, workflow_id=search_wf_id, **conf))
-        for t in tasks:
-            print(t.result())
-            
-        print("Done main loop. Closing dask...")
-        close_dask(client, cluster, scheduler_file, start_dask_cluster)
-        print("Closed Dask. Closing Flowcept...")
-        print("Closed.")
+    tasks = []
+    for conf in configs:  # Edit here to enable more runs
+        tasks.append(client.submit(model_train, workflow_id=search_wf_id, **conf))
+
+    for t in tasks:
+        print(t.result())
+
+    print("Done main loop. Closing dask...")
+    close_dask(client, cluster, scheduler_file, start_dask_cluster, f)
+    print("Closed Dask.")
     return search_wf_id, len(configs)
 
 
-def start_dask(scheduler_file=None, start_dask_cluster=False):
+def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True):
     from distributed import Client
     from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskWorkerAdapter
 
@@ -153,26 +157,36 @@ def start_dask(scheduler_file=None, start_dask_cluster=False):
         client = Client(scheduler.address)
         client.forward_logging()
         # Registering Flowcept's worker adapters
-        client.register_plugin(FlowceptDaskWorkerAdapter())
+        if with_flowcept:
+            client.register_plugin(FlowceptDaskWorkerAdapter())
     else:
         print(f"Starting with Scheduler File {scheduler_file}!")
         # If scheduler file is provided, this cluster is not managed in this code.
+        cluster = None
         client = Client(scheduler_file=scheduler_file)
         print("Started Client.")
-        client.register_plugin(FlowceptDaskWorkerAdapter())
-        cluster = None
-        print("Registered plugin.")
+        if with_flowcept:
+            client.register_plugin(FlowceptDaskWorkerAdapter())
+            print("Registered plugin.")
     return client, cluster
 
 
-def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False):
+def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _flowcept=None):
     if start_dask_cluster or scheduler_file:
         client.close()
+        if _flowcept:
+            print("Now closing flowcept consumer.")
+            _flowcept.stop()
+            print("Flowcept consumer closed.")
         # client.shutdown() # We are getting an error here...
         sleep(10)
     else:
         client.close()
         cluster.close()
+        if _flowcept:
+            print("Now closing flowcept consumer.")
+            _flowcept.stop()
+            print("Flowcept consumer closed.")
 
 
 def run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs):
@@ -343,7 +357,7 @@ def save_files(db_stats_at_start, mongo_dao, campaign_id, model_search_wf_id, ou
     return workflows_file, tasks_file
 
 
-def run_campaign(workflow_params, campaign_id=None, scheduler_file=None, start_dask_cluster=False, with_persistence=True):
+def run_campaign(workflow_params, campaign_id=None, scheduler_file=None, start_dask_cluster=False, with_persistence=True, with_flowcept=True):
 
     _campaign_id = campaign_id or str(uuid.uuid4())
     print(f"Campaign id={_campaign_id}")
@@ -359,7 +373,7 @@ def run_campaign(workflow_params, campaign_id=None, scheduler_file=None, start_d
         subset_size=subset_size,
         with_persistence=with_persistence)
 
-    _search_wf_id, n_configs = search_workflow(dataprep_generated["ntokens"], dataprep_generated["dataset_ref"], dataprep_generated["train_data_path"], dataprep_generated["val_data_path"], dataprep_generated["test_data_path"], workflow_params, campaign_id=_campaign_id, scheduler_file=scheduler_file, start_dask_cluster=start_dask_cluster, with_persistence=with_persistence)
+    _search_wf_id, n_configs = search_workflow(dataprep_generated["ntokens"], dataprep_generated["dataset_ref"], dataprep_generated["train_data_path"], dataprep_generated["val_data_path"], dataprep_generated["test_data_path"], workflow_params, campaign_id=_campaign_id, scheduler_file=scheduler_file, start_dask_cluster=start_dask_cluster, with_persistence=with_persistence, with_flowcept=with_flowcept)
 
     return _campaign_id, _dataprep_wf_id, _search_wf_id, dataprep_generated["train_n_batches"], dataprep_generated["val_n_batches"], n_configs
 
@@ -459,6 +473,12 @@ def parse_args():
         default=True,
         help=f"Store data in MongoDB (accepts: {', '.join(true_values)})",
     )
+    arguments.add_argument(
+        "--with-flowcept",
+        type=lambda v: v.lower() in true_values,
+        default=True,
+        help=f"Use flowcept dask plugin (accepts: {', '.join(true_values)})",
+    )
     arguments.add_argument("--start-dask-cluster", action="store_true", default=False, help="Start the dask cluster before execution. Use only for tests and not for real experiments")
     default_exp_param_settings = {
         "input_data_dir": "./input_data",
@@ -468,12 +488,12 @@ def parse_args():
         "nhid": [200],
         "nlayers": [2],  # 2
         "nhead": [2],
-        "dropout": [0.2, 0.4],
+        "dropout": [0.2],
         "lr": [0.1],
         "pos_encoding_max_len": [5000],
         "subset_size": 10,
         "epochs": 4,
-        "max_runs": 2,
+        "max_runs": None,
         "delete_after_run": True,
         "random_seed": 0,
         "tokenizer_type": "basic_english",   # spacy, moses, toktok, revtok, subword
@@ -492,7 +512,6 @@ def parse_args():
 def delete_mongo_data(mongo_dao, campaign_id):
     print("Deleting generated data in MongoDB")
 
-    from flowcept import Flowcept
     workflow_ids = []
     workflows = Flowcept.db.query({"campaign_id": campaign_id}, collection="workflows")
     for w in workflows:
@@ -515,6 +534,7 @@ def delete_mongo_data(mongo_dao, campaign_id):
 
     print("Deleted all!")
 
+
 def main():
 
     args = parse_args()
@@ -524,7 +544,7 @@ def main():
     delete_after_run = workflow_params.get("delete_after_run", True)
     print("TORCH SETTINGS: " + str(INSTRUMENTATION.get("torch")))
 
-    if args.with_persistence:
+    if args.with_persistence and args.with_flowcept:
 
         if not MONGO_ENABLED:
             print("This test is only available if Mongo is enabled.")
@@ -538,9 +558,9 @@ def main():
     else:
         print("We are not going to persist this run!")
 
-    campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval, n_configs = run_campaign(workflow_params, campaign_id=args.campaign_id, scheduler_file=args.scheduler_file, start_dask_cluster=args.start_dask_cluster, with_persistence=args.with_persistence)
+    campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval, n_configs = run_campaign(workflow_params, campaign_id=args.campaign_id, scheduler_file=args.scheduler_file, start_dask_cluster=args.start_dask_cluster, with_persistence=args.with_persistence, with_flowcept=args.with_flowcept)
 
-    if args.with_persistence:
+    if args.with_persistence and args.with_flowcept:
 
         workflows_file, tasks_file = save_files(db_stats_at_start, mongo_dao, campaign_id, model_search_wf_id,
                                                     output_dir=args.rep_dir)
@@ -554,17 +574,12 @@ def main():
         except Exception as e:
             print(e)
 
-
         if delete_after_run:
             delete_mongo_data(mongo_dao, campaign_id)
             verify_number_docs_in_db(mongo_dao, n_tasks, n_wfs, n_objects)
 
-
-
-
-
-
     print("Alright! Congrats.")
+    return 1
 
 
 if __name__ == "__main__":
