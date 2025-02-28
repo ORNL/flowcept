@@ -9,9 +9,6 @@ from flowcept.commons.utils import (
     assert_by_querying_tasks_until,
     evaluate_until,
 )
-from flowcept.flowceptor.adapters.dask.dask_plugins import (
-    register_dask_workflow,
-)
 from tests.adapters.dask_test_utils import (
     start_local_dask_cluster,
     stop_local_dask_cluster,
@@ -54,7 +51,6 @@ class TestDask(unittest.TestCase):
 
     def test_dummyfunc(self):
         client, cluster = start_local_dask_cluster(n_workers=1)
-        register_dask_workflow(client)
         i1 = np.random.random()
         o1 = client.submit(dummy_func1, i1)
         stop_local_dask_cluster(client, cluster)
@@ -63,7 +59,6 @@ class TestDask(unittest.TestCase):
     def test_long_workflow(self):
         client, cluster = start_local_dask_cluster(n_workers=1)
         i1 = np.random.random()
-        register_dask_workflow(client)
         o1 = client.submit(dummy_func1, i1)
         o2 = client.submit(dummy_func2, o1)
         o3 = client.submit(dummy_func3, o1, o2)
@@ -73,7 +68,6 @@ class TestDask(unittest.TestCase):
     def test_map_workflow(self):
         client, cluster = start_local_dask_cluster(n_workers=1)
         i1 = np.random.random(3)
-        register_dask_workflow(client)
         o1 = client.map(dummy_func1, i1)
         for o in o1:
             result = o.result()
@@ -89,7 +83,6 @@ class TestDask(unittest.TestCase):
             {"x": 4, "batch_norm": False},
             {"x": 6, "batch_norm": True, "empty_string": ""},
         ]
-        register_dask_workflow(client)
         o1 = client.map(dummy_func4, i1)
         for o in o1:
             result = o.result()
@@ -99,13 +92,13 @@ class TestDask(unittest.TestCase):
 
     def test_a_observer_and_consumption(self):
         client, cluster, flowcept = start_local_dask_cluster(n_workers=1, start_persistence=True)
-        wf_id = register_dask_workflow(client)
         i1 = np.random.random()
         o1 = client.submit(dummy_func1, i1)
         o2 = client.submit(dummy_func2, o1)
         self.logger.debug(o2.result())
         self.logger.debug(o2.key)
         print("Task_id=" + o2.key)
+        wf_id = Flowcept.current_workflow_id
         print("wf_id=" + wf_id)
         print("Done workflow!")
         sleep(1)
@@ -125,7 +118,7 @@ class TestDask(unittest.TestCase):
 
     def test_b_evaluate_submit(self):
         client, cluster, flowcept = start_local_dask_cluster(n_workers=1, start_persistence=True)
-        wf_id = register_dask_workflow(client)
+        wf_id = Flowcept.current_workflow_id
         print(wf_id)
         phenome = {
             "optimizer": "Adam",

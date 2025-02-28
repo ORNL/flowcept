@@ -28,12 +28,14 @@ from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 class BaseInterceptor(object):
     """Base interceptor class."""
 
+    KINDS_TO_NOT_EXPLICITLY_CONTROL = {"dask"}
+
     def __init__(self, plugin_key=None, kind=None):
         self.logger = FlowceptLogger()
         # self.logger.debug(f"Starting Interceptor{id(self)} at {time()}")
-
-        if plugin_key is not None:  # TODO :base-interceptor-refactor: :code-reorg: :usability:
-            self.settings = get_settings(plugin_key)
+        self.plugin_key = plugin_key
+        if self.plugin_key is not None:  # TODO :base-interceptor-refactor: :code-reorg: :usability:
+            self.settings = get_settings(self.plugin_key)
         else:
             self.settings = None
         self._mq_dao = MQDao.build(adapter_settings=self.settings)

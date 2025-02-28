@@ -37,7 +37,7 @@ def start_local_dask_cluster(n_workers=1, start_persistence=False):
 
         client.register_plugin(FlowceptDaskWorkerAdapter())
 
-        flowcept = Flowcept(interceptors="dask", bundle_exec_id=exec_bundle).start()
+        flowcept = Flowcept(interceptors="dask", bundle_exec_id=exec_bundle, dask_client=client).start()
 
         return client, cluster, flowcept
     else:
