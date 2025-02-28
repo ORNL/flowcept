@@ -823,7 +823,7 @@ class MongoDBDAO(DocumentDBDAO):
         obj_stats = db.command("collStats", "objects")
         for stats in [tasks_stats, wf_stats, obj_stats]:
             for keys in ["wiredTiger", "indexDetails"]:
-                stats.pop(keys)
+                stats.pop(keys, None)
         stats = {
             "num_workflows": _n_wfs,
             "num_tasks": _n_tasks,
