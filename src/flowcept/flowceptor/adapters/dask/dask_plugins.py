@@ -2,8 +2,7 @@
 
 from uuid import uuid4
 
-from dask.distributed import WorkerPlugin
-from distributed import Client
+from distributed import Client, WorkerPlugin
 
 from flowcept import WorkflowObject
 from flowcept.configs import INSTRUMENTATION
