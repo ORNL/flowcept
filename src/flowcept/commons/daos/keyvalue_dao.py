@@ -70,3 +70,52 @@ class KeyValueDAO:
         matching_sets = self._redis.keys(key_pattern)
         for set_name in matching_sets:
             self.delete_set(set_name)
+
+    def set_key_value(self, key, value):
+        """
+        Store a key-value pair in Redis.
+
+        Parameters
+        ----------
+        key : str
+            The key to store in Redis.
+        value : str
+            The value associated with the key.
+
+        Returns
+        -------
+        None
+        """
+        self._redis.set(key, value)
+
+    def get_key(self, key):
+        """
+        Retrieve a value from Redis by key.
+
+        Parameters
+        ----------
+        key : str
+            The key to look up in Redis.
+
+        Returns
+        -------
+        str or None
+            The decoded value if the key exists, otherwise None.
+        """
+        value = self._redis.get(key)
+        return value.decode() if value else None
+
+    def delete_key(self, key):
+        """
+        Delete the key if it exists.
+
+        Parameters
+        ----------
+        key : str
+            The key to look up in Redis.
+
+        Returns
+        -------
+        None
+        """
+        self._redis.delete(key)

@@ -182,8 +182,9 @@ def model_train(
         main_task_id = None
     torch.manual_seed(random_seed)
 
+    print("Starting to get data!")
     train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load, device = get_wiki_text_dataset(train_data_path, val_data_path, test_data_path)
-
+    print("Got data!")
     model = TransformerModel(
         ntokens,
         emsize,

@@ -245,6 +245,7 @@ class FlowceptLightweightLoop:
             self._next_func = self._do_nothing_next
             self.end_iter = self._do_nothing_in_end_iter
             self.enabled = False
+            self.get_current_iteration_id = lambda: ""
             return
 
         self.enabled = True
