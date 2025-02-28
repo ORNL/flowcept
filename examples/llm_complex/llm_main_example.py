@@ -98,9 +98,9 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
     search_wf_id = None
     if with_flowcept:
         # Start Flowcept's Dask observer
-        prov_args = configs.copy()
+        prov_args = workflow_params.copy()
         prov_args["n_configs"] = len(configs)
-        f = Flowcept(["dask", "instrumentation"], campaign_id=campaign_id, start_persistence=with_persistence, workflow_args=configs, dask_client=client).start()
+        f = Flowcept(["dask", "instrumentation"], campaign_id=campaign_id, start_persistence=with_persistence, workflow_args=prov_args, dask_client=client).start()
         search_wf_id = Flowcept.current_workflow_id
         print(f"search_workflow_id={search_wf_id}")
 
@@ -339,13 +339,11 @@ def save_files(db_stats_at_start, mongo_dao, campaign_id, model_search_wf_id, ou
     with open(f"{output_dir}/workflow_result.json", "w") as f:
         json.dump(workflow_result, f, indent=2)
 
-    best_model_obj_id = best_task["generated"]["best_obj_id"]
-
-    workflows_file = f"{output_dir}/workflows_{uuid.uuid4()}.json"
+    workflows_file = os.path.abspath(f"{output_dir}/workflows_{uuid.uuid4()}.json")
     print(f"workflows_file = '{workflows_file}'")
     Flowcept.db.dump_to_file(filter={"campaign_id": campaign_id}, collection="workflows",
                              output_file=workflows_file)
-    tasks_file = f"{output_dir}/tasks_{uuid.uuid4()}.parquet"
+    tasks_file = os.path.abspath(f"{output_dir}/tasks_{uuid.uuid4()}.parquet")
     print(f"tasks_file = '{tasks_file}'")
 
     mapping_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
