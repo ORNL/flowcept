@@ -28,7 +28,7 @@ if __name__ == "__main__":
     client.register_plugin(FlowceptDaskWorkerAdapter())
 
     # Start Flowcept's Dask observer
-    with Flowcept("dask", dask_client=client):  # Optionally: Flowcept("dask").start()
+    with Flowcept("dask", dask_client=client):  # Optionally: Flowcept("dask", dask_client=client).start()
         # Registering a Dask workflow in Flowcept's database
         t1 = client.submit(add, 1, 2)
         t2 = client.submit(multiply, 3, 4)

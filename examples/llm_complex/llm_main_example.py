@@ -113,7 +113,6 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
 
     print("Done main loop. Closing dask...")
     close_dask(client, cluster, scheduler_file, start_dask_cluster, f)
-    print("Closed Dask.")
     return search_wf_id, len(configs)
 
 
@@ -130,17 +129,16 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
                     ["/bin/bash", "-c", command],
                     stdout=out,
                     stderr=err,
-                    preexec_fn=os.setsid
                 )
 
             return process
 
         print("Starting Dask Cluster with command line.")
         scheduler_file = "scheduler_file.json"
-        sleep(3)
-        run_command(f"dask scheduler --no-dashboard --no-show --scheduler-file {scheduler_file}")
-
-        sleep(2)
+        print("Starting scheduler, then sleeping some...")
+        run_command(f"dask scheduler --host localhost --no-dashboard --no-show --scheduler-file {scheduler_file}")
+        sleep(5)
+        print("Starting worker, then sleeping some...")
         run_command(
             f"dask worker --nthreads 1 --nworkers 1 --no-dashboard  --scheduler-file {scheduler_file}",
             "worker.out",
@@ -173,16 +171,18 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
 
 def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _flowcept=None):
     if start_dask_cluster or scheduler_file:
-        client.close()
+        print("Closing dask...")
+        client.shutdown()
+        print("Dask closed.")
         if _flowcept:
             print("Now closing flowcept consumer.")
             _flowcept.stop()
             print("Flowcept consumer closed.")
-        # client.shutdown() # We are getting an error here...
-        sleep(10)
     else:
+        print("Closing dask...")
         client.close()
         cluster.close()
+        print("Dask closed.")
         if _flowcept:
             print("Now closing flowcept consumer.")
             _flowcept.stop()
