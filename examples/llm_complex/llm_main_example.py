@@ -70,7 +70,7 @@ def generate_configs(params: dict):
     return result
 
 
-def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_data_path, workflow_params, campaign_id=None, scheduler_file=None, start_dask_cluster=False, with_persistence=True, with_flowcept=True):
+def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_data_path, workflow_params, campaign_id=None, scheduler_file=None, start_dask_cluster=False, with_persistence=True, with_flowcept=True, dask_map_gpus=False):
     client, cluster = start_dask(scheduler_file, start_dask_cluster, with_flowcept)
     workflow_params["train_data_path"] = train_data_path
     workflow_params["val_data_path"] = val_data_path
@@ -85,7 +85,9 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
          "test_data_path": test_data_path,
          "with_persistence": with_persistence,
          "with_flowcept": with_flowcept,
-         "campaign_id": campaign_id}
+         "campaign_id": campaign_id,
+         "dask_map_gpus": dask_map_gpus
+         }
         for c in configs
     ]
 
@@ -166,6 +168,7 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
         if with_flowcept:
             client.register_plugin(FlowceptDaskWorkerAdapter())
             print("Registered plugin.")
+        
     return client, cluster
 
 
@@ -355,7 +358,7 @@ def save_files(db_stats_at_start, mongo_dao, campaign_id, model_search_wf_id, ou
     return workflows_file, tasks_file
 
 
-def run_campaign(workflow_params, campaign_id=None, scheduler_file=None, start_dask_cluster=False, with_persistence=True, with_flowcept=True):
+def run_campaign(workflow_params, campaign_id=None, scheduler_file=None, start_dask_cluster=False, with_persistence=True, with_flowcept=True, dask_map_gpus=False):
 
     _campaign_id = campaign_id or str(uuid.uuid4())
     print(f"Campaign id={_campaign_id}")
@@ -371,7 +374,7 @@ def run_campaign(workflow_params, campaign_id=None, scheduler_file=None, start_d
         subset_size=subset_size,
         with_persistence=with_persistence)
 
-    _search_wf_id, n_configs = search_workflow(dataprep_generated["ntokens"], dataprep_generated["dataset_ref"], dataprep_generated["train_data_path"], dataprep_generated["val_data_path"], dataprep_generated["test_data_path"], workflow_params, campaign_id=_campaign_id, scheduler_file=scheduler_file, start_dask_cluster=start_dask_cluster, with_persistence=with_persistence, with_flowcept=with_flowcept)
+    _search_wf_id, n_configs = search_workflow(dataprep_generated["ntokens"], dataprep_generated["dataset_ref"], dataprep_generated["train_data_path"], dataprep_generated["val_data_path"], dataprep_generated["test_data_path"], workflow_params, campaign_id=_campaign_id, scheduler_file=scheduler_file, start_dask_cluster=start_dask_cluster, with_persistence=with_persistence, with_flowcept=with_flowcept, dask_map_gpus=dask_map_gpus)
 
     return _campaign_id, _dataprep_wf_id, _search_wf_id, dataprep_generated["train_n_batches"], dataprep_generated["val_n_batches"], n_configs
 
@@ -477,6 +480,14 @@ def parse_args():
         default=True,
         help=f"Use flowcept dask plugin (accepts: {', '.join(true_values)})",
     )
+    
+    arguments.add_argument(
+        "--dask-map-gpus",
+        type=lambda v: v.lower() in true_values,
+        default=False,
+        help=f"Map dask workers to GPUs. Assumes 1 worker per-GPU. (accepts: {', '.join(true_values)})",
+    )
+
     arguments.add_argument("--start-dask-cluster", action="store_true", default=False, help="Start the dask cluster before execution. Use only for tests and not for real experiments")
     default_exp_param_settings = {
         "input_data_dir": "./input_data",
@@ -556,7 +567,7 @@ def main():
     else:
         print("We are not going to persist this run!")
 
-    campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval, n_configs = run_campaign(workflow_params, campaign_id=args.campaign_id, scheduler_file=args.scheduler_file, start_dask_cluster=args.start_dask_cluster, with_persistence=args.with_persistence, with_flowcept=args.with_flowcept)
+    campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval, n_configs = run_campaign(workflow_params, campaign_id=args.campaign_id, scheduler_file=args.scheduler_file, start_dask_cluster=args.start_dask_cluster, with_persistence=args.with_persistence, with_flowcept=args.with_flowcept, dask_map_gpus=args.dask_map_gpus)
 
     if args.with_persistence and args.with_flowcept:
 

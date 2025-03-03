@@ -174,6 +174,7 @@ def model_train(
     campaign_id=None,
     with_persistence=True,
     with_flowcept=True,
+    dask_map_gpus=False,
     *args,
     **kwargs
 ):
@@ -186,7 +187,7 @@ def model_train(
     torch.manual_seed(random_seed)
 
     print("Starting to get data!")
-    train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load, device = get_wiki_text_dataset(train_data_path, val_data_path, test_data_path)
+    train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load, device = get_wiki_text_dataset(train_data_path, val_data_path, test_data_path,dask_map_gpus=dask_map_gpus)
     print("Got data!")
     model = TransformerModel(
         ntokens,
