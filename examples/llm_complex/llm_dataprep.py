@@ -54,8 +54,28 @@ def data_process(tokenizer, vocab, raw_text_iter):
     tensor_return = torch.cat(data)
     return tensor_return, mapping
 
+def dask_map_gpus_to_worker():
+    from dask.distributed import get_worker,get_client
 
-def get_wiki_text_dataset(train_data_path, val_data_path, test_data_path):
+    d = get_client().scheduler_info()['workers']
+    w_name = get_worker().name
+    node = w_name.replace("tcp://","").split(":")[0]
+    workers = list(d.keys())
+    buckets = {}
+    for worker in workers:
+        target = worker.replace("tcp://","").split(":")[0]
+        if target in buckets.keys():
+            buckets[target].append(worker)
+        else:
+            buckets[target] = [worker]
+
+    for key in buckets.keys():
+        buckets[key] = sorted(buckets[key])
+    gpu_id = buckets[node].index(w_name)
+    
+    return gpu_id
+
+def get_wiki_text_dataset(train_data_path, val_data_path, test_data_path, dask_map_gpus=False):
     # Load the WikiText2 dataset
     t0 = time()
     train_data = torch.load(train_data_path)
@@ -66,7 +86,13 @@ def get_wiki_text_dataset(train_data_path, val_data_path, test_data_path):
 
     try:
         if torch.cuda.is_available():
-            device = torch.device("cuda:0")
+            if dask_map_gpus:
+                gpu_id = dask_map_gpus_to_worker()
+            else:
+                gpu_id = 0
+            device = torch.device(f"cuda:{gpu_id}")
+            torch.cuda.set_device(device)
+
         elif torch.backends.mps.is_available():
             device = torch.device("mps")
         else:
@@ -114,6 +140,8 @@ def get_raw_batch(raw_dataset, mapping, i, batch_size):
     raw_indices = mapping[start_idx:end_idx]  # Indices of raw items in this batch
     raw_batch = [raw_dataset[idx]["text"] for idx in set(raw_indices)]  # Unique raw items
     return raw_batch
+
+
 
 
 def dataprep_workflow(data_dir="input_data",
