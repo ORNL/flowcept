@@ -10,8 +10,8 @@ import uuid
 import pandas as pd
 from time import sleep
 
-from examples.llm_complex.llm_dataprep import dataprep_workflow
-from examples.llm_complex.llm_model import model_train
+from llm_dataprep import dataprep_workflow
+from llm_model import model_train
 from flowcept.commons.utils import replace_non_serializable_times
 from flowcept.flowceptor.adapters.dask.dask_plugins import save_dask_workflow
 from flowcept.configs import MONGO_ENABLED, INSTRUMENTATION, INSTRUMENTATION_ENABLED

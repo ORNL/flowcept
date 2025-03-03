@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.nn import Embedding, Linear, TransformerEncoder, TransformerEncoderLayer, Dropout
 
-from examples.llm_complex.llm_dataprep import get_wiki_text_dataset
+from llm_dataprep import get_wiki_text_dataset
 from flowcept import Flowcept, flowcept_torch
 from flowcept.instrumentation.flowcept_torch import FlowceptEpochLoop, FlowceptBatchLoop
 
