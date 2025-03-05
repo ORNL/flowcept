@@ -17,7 +17,6 @@ from flowcept.configs import MONGO_ENABLED, INSTRUMENTATION, INSTRUMENTATION_ENA
 from flowcept import Flowcept
 
 
-
 def generate_configs(params: dict):
     """
     Generate a list of configurations by computing the Cartesian product of list-valued parameters
