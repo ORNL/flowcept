@@ -36,6 +36,8 @@ jobs:
           python -m pip install --upgrade pip
           python --version
 
+      - name: Install dependencies
+        run: pip install .[ml_dev,dask,mongo]
 
 #      - name: Test LLM with Dask cluster
 #        run: |
