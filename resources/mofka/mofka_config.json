@@ -12,7 +12,7 @@
             "provider_id" : 1,
             "config": {
                 "bootstrap": "self",
-                "file": "/config/mofka.json",
+                "file": "mofka.json",
                 "group": {
                     "type": "static"
                 }
