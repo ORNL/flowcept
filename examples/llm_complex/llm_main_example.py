@@ -13,7 +13,6 @@ from time import sleep
 from llm_dataprep import dataprep_workflow
 from llm_model import model_train
 from flowcept.commons.utils import replace_non_serializable_times
-from flowcept.flowceptor.adapters.dask.dask_plugins import save_dask_workflow
 from flowcept.configs import MONGO_ENABLED, INSTRUMENTATION, INSTRUMENTATION_ENABLED
 from flowcept import Flowcept
 
@@ -120,7 +119,6 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
 
 def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True):
     from distributed import Client
-    from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskWorkerAdapter
 
     if start_dask_cluster:
         import subprocess
@@ -158,6 +156,7 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
         client.forward_logging()
         # Registering Flowcept's worker adapters
         if with_flowcept:
+            from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskWorkerAdapter
             client.register_plugin(FlowceptDaskWorkerAdapter())
     else:
         print(f"Starting with Scheduler File {scheduler_file}!")
@@ -166,6 +165,7 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
         client = Client(scheduler_file=scheduler_file)
         print("Started Client.")
         if with_flowcept:
+            from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskWorkerAdapter
             client.register_plugin(FlowceptDaskWorkerAdapter())
             print("Registered plugin.")
         
@@ -515,6 +515,10 @@ def parse_args():
         help="Workflow Parameters as a stringified dictionary",
     )
     args, _ = parser.parse_known_args()  # Ignore unknown arguments
+
+    if not args.with_flowcept:
+        args.with_persistence = False
+
     return args
 
 
