@@ -46,8 +46,6 @@ jobs:
 
       - name: Test LLM without Flowcept
         run: |
-#          export PYTHONPATH=`pwd`
-#          echo "Python path: $PYTHONPATH"
           pip list
           python examples/llm_complex/llm_main_example.py --with-flowcept false
 
