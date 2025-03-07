@@ -27,8 +27,8 @@ instrumentation:
   torch:
     what: parent_and_children # parent_only, parent_and_children, ~
     children_mode: telemetry_and_tensor_inspection   # tensor_inspection, telemetry, telemetry_and_tensor_inspection
-    epoch_loop: lightweight # or default, which is the same as ~
-    batch_loop: lightweight # or default, which is the same as ~
+    epoch_loop: lightweight # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
+    batch_loop: lightweight # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
     capture_epochs_at_every: 1 #epochs; please use a value that is multiple of #epochs
     # enable to set between train, evaluate, and test
 
