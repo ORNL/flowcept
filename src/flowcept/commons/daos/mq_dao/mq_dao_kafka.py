@@ -3,6 +3,7 @@
 from typing import Callable
 
 import msgpack
+import csv
 from time import time
 
 from confluent_kafka import Producer, Consumer, KafkaError
@@ -79,7 +80,7 @@ class MQDaoKafka(MQDao):
             try:
                 self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t")
                 self._producer.produce(channel, key=channel, value=serializer(message))
-                total += len(str(m).encode())
+                total += len(str(message).encode())
             except Exception as e:
                 self.logger.exception(e)
                 self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
@@ -122,5 +123,6 @@ class MQDaoKafka(MQDao):
             writer.writerows(self.flush_events)
         
         # lets consumer know when to stop
-        self.producer.push(metadata={"message":"stop-now"})  # using metadata to send data
-        self.producer.flush()
+        
+        self._producer.produce(MQ_CHANNEL, key=MQ_CHANNEL, value=msgpack.dumps({"message":"stop-now"}))  # using metadata to send data
+        self._producer.flush()
