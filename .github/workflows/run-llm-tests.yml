@@ -36,18 +36,14 @@ jobs:
           python -m pip install --upgrade pip
           python --version
 
+      - name: Install dependencies
+        run: pip install .[ml_dev,dask,mongo]
 
       - name: Test LLM with Dask cluster
-        run: |
-          export PYTHONPATH=`pwd`
-          echo "Python path: $PYTHONPATH"
-          pip install .[ml_dev,dask,mongo]
-          python examples/llm_complex/llm_main_example.py --start-dask-cluster
+        run: python examples/llm_complex/llm_main_example.py --start-dask-cluster
 
       - name: Test LLM without Flowcept
         run: |
-          export PYTHONPATH=`pwd`
-          echo "Python path: $PYTHONPATH"
           pip list
           python examples/llm_complex/llm_main_example.py --with-flowcept false
 

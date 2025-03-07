@@ -206,7 +206,21 @@ Data stored in MongoDB and LMDB are interchangeable. You can switch between them
 ## Performance Tuning for Performance Evaluation
 
 In the settings.yaml file, many variables may impact interception efficiency. 
-For fastest performance, configure the settings.yaml:
+Please be mindful of the following parameters:
+
+* `mq`
+    - `buffer_size` and `insertion_buffer_time_secs`. -- `buffer_size: 1` is really bad for performance, but it will give the most up-to-date info possible to the MQ.
+    
+* `log`
+    - set both stream and files to disable
+
+* `telemetry_capture` 
+  The more things you enable, the more overhead you'll get. For GPU, you can turn on/off specific metrics.
+
+* `instrumentation`
+  This will configure whether every single granular step in the model training process will be captured. Disable very granular model inspection and try to use more lightweight methods. There are commented instructions in the settings.yaml sample file.
+
+Other thing to consider:
 
 ```
 project:
@@ -215,8 +229,6 @@ project:
 mq:
   chunk_size: -1                       # This disables chunking the messages to be sent to the MQ. Use this only if the main memory of the compute notes is large enough.
 ```
-
-And use the most lightweight capture option available for the adapter or instrumentation.
 
 Other variables depending on the adapter may impact too. For instance, in Dask, timestamp creation by workers add interception overhead. As we evolve the software, other variables that impact overhead appear and we might not stated them in this README file yet. If you are doing extensive performance evaluation experiments using this software, please reach out to us (e.g., create an issue in the repository) for hints on how to reduce the overhead of our software.
 

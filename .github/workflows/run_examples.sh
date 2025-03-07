@@ -58,8 +58,6 @@ run_test() {
     pip install .[dask] > /dev/null 2>&1
     pip install .[ml_dev]
     echo "Defining python path for llm_complex..."
-    export PYTHONPATH=$PYTHONPATH:${EXAMPLES_DIR}/llm_complex
-    echo $PYTHONPATH
   fi
 
   echo "Running $test_path ..."

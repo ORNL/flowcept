@@ -82,6 +82,8 @@ class MongoDBDAO(DocumentDBDAO):
             self._tasks_collection.create_index(TaskObject.workflow_id_field())
         if "parent_task_id" not in existing_indices:
             self._tasks_collection.create_index("parent_task_id")
+        if "campaign_id" not in existing_indices:
+            self._tasks_collection.create_index("campaign_id")
 
         # Creating workflow collection indices:
         existing_indices = [list(x["key"].keys())[0] for x in self._wfs_collection.list_indexes()]
@@ -89,6 +91,8 @@ class MongoDBDAO(DocumentDBDAO):
             self._wfs_collection.create_index(WorkflowObject.workflow_id_field(), unique=True)
         if "parent_workflow_id" not in existing_indices:
             self._wfs_collection.create_index("parent_workflow_id")
+        if "campaign_id" not in existing_indices:
+            self._wfs_collection.create_index("campaign_id")
 
         # Creating objects collection indices:
         existing_indices = [list(x["key"].keys())[0] for x in self._obj_collection.list_indexes()]
@@ -100,6 +104,8 @@ class MongoDBDAO(DocumentDBDAO):
             self._obj_collection.create_index(WorkflowObject.workflow_id_field(), unique=False)
         if TaskObject.task_id_field() not in existing_indices:
             self._obj_collection.create_index(TaskObject.task_id_field(), unique=False)
+        if "campaign_id" not in existing_indices:
+            self._obj_collection.create_index("campaign_id")
 
     def _pipeline(
         self,
