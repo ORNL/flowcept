@@ -135,6 +135,8 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
         print("Starting Dask Cluster with command line.")
         scheduler_file = "scheduler_file.json"
         print("Starting scheduler, then sleeping some...")
+        llm_complex_dir = os.path.abspath(os.path.dirname(__file__))
+        os.environ["PYTHONPATH"] = llm_complex_dir
         run_command(f"dask scheduler --host localhost --no-dashboard --no-show --scheduler-file {scheduler_file}")
         sleep(5)
         print("Starting worker, then sleeping some...")
