@@ -9,7 +9,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import ClassProperty
-from flowcept.configs import MQ_INSTANCES, INSTRUMENTATION_ENABLED, MONGO_ENABLED
+from flowcept.configs import MQ_INSTANCES, INSTRUMENTATION_ENABLED, MONGO_ENABLED, SETTINGS_PATH
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
@@ -87,6 +87,7 @@ class Flowcept(object):
             should be provided in `kwargs` to enable saving the Dask workflow, which is recommended.
         """
         self.logger = FlowceptLogger()
+        self.logger.debug(f"Using settings file: {SETTINGS_PATH}")
         self._enable_persistence = start_persistence
         self._db_inserters: List = []
         if bundle_exec_id is None:
