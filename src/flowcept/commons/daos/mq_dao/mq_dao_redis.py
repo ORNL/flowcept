@@ -99,5 +99,4 @@ class MQDaoRedis(MQDao):
             writer.writerows(self.flush_events)
         
         # lets consumer know when to stop
-        self.producer.push(metadata={"message":{"stop-now"}})  # using metadata to send data
-        self.producer.flush()
+        self._producer.publish(MQ_CHANNEL, msgpack.dumps({"message":"stop-now"}))
