@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.nn import Embedding, Linear, TransformerEncoder, TransformerEncoderLayer, Dropout
 
-from examples.llm_complex.llm_dataprep import get_wiki_text_dataset
+from llm_dataprep import get_wiki_text_dataset
 from flowcept import Flowcept, flowcept_torch
 from flowcept.instrumentation.flowcept_torch import FlowceptEpochLoop, FlowceptBatchLoop
 
@@ -99,14 +99,15 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[: x.size(0), :]
         return self.dropout(x)
 
-def train_epoch(ntokens, model, train_data, criterion, optimizer, bptt=35, epochs_loop=None):
+def train_epoch(ntokens, model, train_data, criterion, optimizer, bptt=35, epochs_loop=None, with_flowcept=True):
     model.train()  # Set the model to training mode
     total_loss = 0.0  # Initialize the total loss to 0
 
     # Iterate through the mini-batches of data
     loop = FlowceptBatchLoop(items=enumerate(range(0, train_data.size(0) - 1, bptt)),
                              epochs_loop=epochs_loop,
-                             items_length=math.ceil((train_data.size(0) - 1) / bptt))
+                             items_length=math.ceil((train_data.size(0) - 1) / bptt),
+                             capture_enabled=with_flowcept)
     for batch, i in loop:
         data, targets = get_batch(
             train_data, i, bptt
@@ -124,7 +125,7 @@ def train_epoch(ntokens, model, train_data, criterion, optimizer, bptt=35, epoch
     return total_loss / (batch + 1)  # Return the average loss per mini-batch
 
 
-def evaluate(ntokens, model, data_source, criterion, bptt=35, epochs_loop=None):
+def evaluate(ntokens, model, data_source, criterion, bptt=35, epochs_loop=None, with_flowcept=True):
     model.eval()  # Set the model to evaluation mode
     total_loss = 0.0  # Initialize the total loss to 0
 
@@ -133,7 +134,8 @@ def evaluate(ntokens, model, data_source, criterion, bptt=35, epochs_loop=None):
         loop = FlowceptBatchLoop(items=enumerate(range(0, data_source.size(0) - 1, bptt)),
                                  epochs_loop=epochs_loop,
                                  step="eval",
-                                 items_length=math.ceil((data_source.size(0) - 1) / bptt))
+                                 items_length=math.ceil((data_source.size(0) - 1) / bptt),
+                                 capture_enabled=with_flowcept)
         # Iterate through the mini-batches of data
         for batch, i in loop:
             data, targets = get_batch(
@@ -171,6 +173,8 @@ def model_train(
     workflow_id=None,
     campaign_id=None,
     with_persistence=True,
+    with_flowcept=True,
+    dask_map_gpus=False,
     *args,
     **kwargs
 ):
@@ -183,7 +187,7 @@ def model_train(
     torch.manual_seed(random_seed)
 
     print("Starting to get data!")
-    train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load, device = get_wiki_text_dataset(train_data_path, val_data_path, test_data_path)
+    train_data, val_data, test_data, t_disk_load, t_device_available, t_gpu_load, device = get_wiki_text_dataset(train_data_path, val_data_path, test_data_path,dask_map_gpus=dask_map_gpus)
     print("Got data!")
     model = TransformerModel(
         ntokens,
@@ -195,14 +199,15 @@ def model_train(
         pos_encoding_max_len,
         parent_workflow_id=workflow_id,
         campaign_id=campaign_id,
-        get_profile=True
+        get_profile=True,
+        capture_enabled=with_flowcept
     ).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     best_val_loss = float("inf")  # Initialize the best validation loss to infinity
     best_obj_id = None  # Initialize with unknown best model
     # Iterate through the epochs
-    epochs_loop = FlowceptEpochLoop(range(1, epochs + 1), parent_task_id=main_task_id, model=model)
+    epochs_loop = FlowceptEpochLoop(range(1, epochs + 1), parent_task_id=main_task_id, model=model, capture_enabled=with_flowcept)
     t0 = time()
     val_loss = -1
     train_loss = -1

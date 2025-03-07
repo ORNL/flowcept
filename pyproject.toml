@@ -59,7 +59,7 @@ analytics = ["seaborn", "plotly", "scipy"]
 mongo = ["pymongo"]
 dask = ["tomli", "dask[distributed]<=2024.10.0"]
 docs = ["sphinx", "furo"]
-kafka = ["confluent-kafka"]
+kafka = ["confluent-kafka<=2.8.0"]  # As of today, 2/28/2025, version 2.8.1 is stale. When this gets fixed, let's remove the version constraint. https://pypi.org/project/confluent-kafka/#history
 mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog"]
 nvidia = ["nvidia-ml-py"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]

@@ -16,9 +16,9 @@ from flowcept.commons.utils import GenericJSONDecoder
 from flowcept.commons.vocabulary import Status
 from flowcept.configs import (
     INSERTION_BUFFER_TIME,
-    MAX_BUFFER_SIZE,
-    MIN_BUFFER_SIZE,
-    ADAPTIVE_BUFFER_SIZE,
+    DB_MAX_BUFFER_SIZE,
+    DB_MIN_BUFFER_SIZE,
+    ADAPTIVE_DB_BUFFER_SIZE,
     REMOVE_EMPTY_FIELDS,
     JSON_SERIALIZER,
     ENRICH_MESSAGES,
@@ -67,7 +67,7 @@ class DocumentInserter:
         self._previous_time = time()
         self.logger = FlowceptLogger()
         self._main_thread: Thread = None
-        self._curr_max_buffer_size = MAX_BUFFER_SIZE
+        self._curr_max_buffer_size = DB_MAX_BUFFER_SIZE
         self._bundle_exec_id = bundle_exec_id
         self.check_safe_stops = check_safe_stops
         self.buffer: AutoflushBuffer = AutoflushBuffer(
@@ -78,13 +78,13 @@ class DocumentInserter:
         )
 
     def _set_buffer_size(self):
-        if not ADAPTIVE_BUFFER_SIZE:
+        if not ADAPTIVE_DB_BUFFER_SIZE:
             return
         else:
             self._curr_max_buffer_size = max(
-                MIN_BUFFER_SIZE,
+                DB_MIN_BUFFER_SIZE,
                 min(
-                    MAX_BUFFER_SIZE,
+                    DB_MAX_BUFFER_SIZE,
                     int(self._curr_max_buffer_size * 1.1),
                 ),
             )

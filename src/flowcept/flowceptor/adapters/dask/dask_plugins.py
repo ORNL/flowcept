@@ -2,8 +2,7 @@
 
 from uuid import uuid4
 
-from dask.distributed import WorkerPlugin
-from distributed import Client
+from distributed import Client, WorkerPlugin
 
 from flowcept import WorkflowObject
 from flowcept.configs import INSTRUMENTATION
@@ -52,7 +51,7 @@ def _set_workflow_on_workers(dask_worker, workflow_id, campaign_id=None):
         setattr(dask_worker, "current_campaign_id", campaign_id)
 
 
-def register_dask_workflow(
+def save_dask_workflow(
     dask_client: Client,
     workflow_id=None,
     campaign_id=None,

@@ -120,6 +120,24 @@ class MQDao(ABC):
         set_name = MQDao._get_set_name(exec_bundle_id)
         return self._keyvalue_dao.set_is_empty(set_name)
 
+    def set_campaign_id(self, campaign_id=None):
+        """
+        Set the current campaign ID in the key-value store.
+
+        This method updates the "current_campaign_id" key in the key-value storage
+        with the provided campaign ID.
+
+        Parameters
+        ----------
+        campaign_id : str or None, optional
+            The campaign ID to be set. If None, the key will be updated with a None value.
+
+        Returns
+        -------
+        None
+        """
+        self._keyvalue_dao.set_key_value("current_campaign_id", campaign_id)
+
     def init_buffer(self, interceptor_instance_id: str, exec_bundle_id=None):
         """Create the buffer."""
         if flowcept.configs.DB_FLUSH_MODE == "online":
