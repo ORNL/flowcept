@@ -8,7 +8,7 @@ import yaml
 import os
 import uuid
 import pandas as pd
-from time import sleep
+from time import sleep, time
 
 from llm_dataprep import dataprep_workflow
 from llm_model import model_train
@@ -104,14 +104,25 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
         search_wf_id = Flowcept.current_workflow_id
         print(f"search_workflow_id={search_wf_id}")
 
+
+    while True:
+        if len(client.scheduler_info()['workers']) == 4:
+            print("4 workers detected", flush=True)
+            break
+    
+    t1 = time()
     tasks = []
     for conf in configs:  # Edit here to enable more runs
         tasks.append(client.submit(model_train, workflow_id=search_wf_id, **conf))
 
     for t in tasks:
-        print(t.result())
+        print(t.result(),flush=True)
 
-    print("Done main loop. Closing dask...")
+    t2 = time()
+    with open("time.txt", "w") as file:
+        file.write(f"{t2 - t1}\n")
+
+    print("Done main loop. Closing dask...",flush=True)
     close_dask(client, cluster, scheduler_file, start_dask_cluster, f)
     return search_wf_id, len(configs)
 
@@ -160,7 +171,7 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
             from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskWorkerAdapter
             client.register_plugin(FlowceptDaskWorkerAdapter())
     else:
-        print(f"Starting with Scheduler File {scheduler_file}!")
+        print(f"Starting with Scheduler File {scheduler_file}!",flush=True)
         # If scheduler file is provided, this cluster is not managed in this code.
         cluster = None
         client = Client(scheduler_file=scheduler_file)

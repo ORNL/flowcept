@@ -72,7 +72,7 @@ def dask_map_gpus_to_worker():
     for key in buckets.keys():
         buckets[key] = sorted(buckets[key])
     gpu_id = buckets[node].index(w_name)
-    
+    print(f"Name-rank: {w_name}-{gpu_id}",flush=True)
     return gpu_id
 
 def get_wiki_text_dataset(train_data_path, val_data_path, test_data_path, dask_map_gpus=False):
