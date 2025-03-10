@@ -1,6 +1,6 @@
 """Key value module."""
 
-from redis import Redis
+from redis import Redis, ConnectionPool
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
@@ -28,12 +28,17 @@ class KeyValueDAO:
             self._initialized = True
             self.logger = FlowceptLogger()
             if connection is None:
-                self._redis = Redis(
+                pool = ConnectionPool(
                     host=KVDB_HOST,
                     port=KVDB_PORT,
                     db=0,
                     password=KVDB_PASSWORD,
+                    decode_responses=True,
+                    max_connections=10000,
+                    socket_keepalive=True,
+                    retry_on_timeout=True
                 )
+                self._redis = Redis(connection_pool=pool)
             else:
                 self._redis = connection
 

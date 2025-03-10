@@ -1,9 +1,10 @@
 """MQ redis module."""
 
 from typing import Callable
+import redis
 
 import msgpack
-from time import time
+from time import time, sleep
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.utils import perf_log
@@ -29,20 +30,31 @@ class MQDaoRedis(MQDao):
         """
         self._consumer = self._kv_conn.pubsub()
         self._consumer.psubscribe(MQ_CHANNEL)
-
+    
     def message_listener(self, message_handler: Callable):
-        """Get message listener."""
-        for message in self._consumer.listen():
-            self.logger.debug("Received a message!")
-            if message["type"] in MQDaoRedis.MESSAGE_TYPES_IGNORE:
-                continue
-            msg_obj = msgpack.loads(
-                message["data"],
-                strict_map_key=False,  # , cls=DocumentInserter.DECODER
-            )
-            if not message_handler(msg_obj):
-                break
+        """Get message listener with automatic reconnection."""
+        while True:
+            try:
+                self.logger.debug("Connecting to Redis...")
+                for message in self._consumer.listen():
+                    if message and message["type"] in MQDaoRedis.MESSAGE_TYPES_IGNORE:
+                        continue
+                    
+                    self.logger.debug("Received a message!")
 
+                    try:
+                        msg_obj = msgpack.loads(
+                            message["data"], strict_map_key=False
+                        )
+                        if not message_handler(msg_obj):
+                            break
+                    except Exception as e:
+                        self.logger.error(f"Failed to process message: {e}")
+
+            except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+                self.logger.critical(f"Redis connection lost: {e}. Reconnecting in 3 seconds...")
+                sleep(3)
+                
     def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         """Send the message."""
         self._producer.publish(channel, serializer(message))
