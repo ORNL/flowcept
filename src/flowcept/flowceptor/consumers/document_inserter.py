@@ -235,5 +235,5 @@ class DocumentInserter:
         for dao in self._doc_daos:
             self.logger.critical(f"Closing document_inserter {dao.__class__.__name__} connection.")
             dao.close()
-        self._mq_dao._keyvalue_dao.delete_key("current_campaign_id")
+        self._mq_dao.delete_current_campaign_id()
         self.logger.critical("Document Inserter is stopped.")

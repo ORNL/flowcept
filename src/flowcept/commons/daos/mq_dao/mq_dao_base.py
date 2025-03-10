@@ -138,6 +138,12 @@ class MQDao(ABC):
         """
         self._keyvalue_dao.set_key_value("current_campaign_id", campaign_id)
 
+    def delete_current_campaign_id(self):
+        """
+        Delete current campaign id.
+        """
+        self._keyvalue_dao.delete_key("current_campaign_id")
+
     def init_buffer(self, interceptor_instance_id: str, exec_bundle_id=None):
         """Create the buffer."""
         if flowcept.configs.DB_FLUSH_MODE == "online":
