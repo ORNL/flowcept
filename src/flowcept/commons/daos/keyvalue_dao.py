@@ -36,7 +36,7 @@ class KeyValueDAO:
                     decode_responses=True,
                     max_connections=10000,
                     socket_keepalive=True,
-                    retry_on_timeout=True
+                    retry_on_timeout=True,
                 )
                 self._redis = Redis(connection_pool=pool)
             else:

@@ -30,7 +30,7 @@ class MQDaoRedis(MQDao):
         """
         self._consumer = self._kv_conn.pubsub()
         self._consumer.psubscribe(MQ_CHANNEL)
-    
+
     def message_listener(self, message_handler: Callable):
         """Get message listener with automatic reconnection."""
         while True:
@@ -39,13 +39,11 @@ class MQDaoRedis(MQDao):
                 for message in self._consumer.listen():
                     if message and message["type"] in MQDaoRedis.MESSAGE_TYPES_IGNORE:
                         continue
-                    
+
                     self.logger.debug("Received a message!")
 
                     try:
-                        msg_obj = msgpack.loads(
-                            message["data"], strict_map_key=False
-                        )
+                        msg_obj = msgpack.loads(message["data"], strict_map_key=False)
                         if not message_handler(msg_obj):
                             break
                     except Exception as e:
@@ -54,7 +52,7 @@ class MQDaoRedis(MQDao):
             except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
                 self.logger.critical(f"Redis connection lost: {e}. Reconnecting in 3 seconds...")
                 sleep(3)
-                
+
     def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         """Send the message."""
         self._producer.publish(channel, serializer(message))
