@@ -228,12 +228,12 @@ class DocumentInserter:
                     msg = f"DocInserter {id(self)} gave up waiting for signal. "
                     self.logger.critical(msg + "Safe to stop now.")
                     break
-        self.logger.critical("Sending message to stop document inserter.")
+        self.logger.info("Sending message to stop document inserter.")
         self._mq_dao.send_document_inserter_stop()
-        self.logger.critical(f"Doc Inserter {id(self)} Sent message to stop itself.")
+        self.logger.info(f"Doc Inserter {id(self)} Sent message to stop itself.")
         self._main_thread.join()
         for dao in self._doc_daos:
-            self.logger.critical(f"Closing document_inserter {dao.__class__.__name__} connection.")
+            self.logger.info(f"Closing document_inserter {dao.__class__.__name__} connection.")
             dao.close()
         self._mq_dao.delete_current_campaign_id()
-        self.logger.critical("Document Inserter is stopped.")
+        self.logger.info("Document Inserter is stopped.")
