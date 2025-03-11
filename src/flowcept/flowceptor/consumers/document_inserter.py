@@ -18,6 +18,8 @@ from flowcept.configs import (
     INSERTION_BUFFER_TIME,
     DB_MAX_BUFFER_SIZE,
     DB_MIN_BUFFER_SIZE,
+    DB_INSERTER_MAX_TRIALS_STOP,
+    DB_INSERTER_SLEEP_TRIALS_STOP,
     ADAPTIVE_DB_BUFFER_SIZE,
     REMOVE_EMPTY_FIELDS,
     JSON_SERIALIZER,
@@ -50,11 +52,9 @@ class DocumentInserter:
     def __init__(
         self,
         check_safe_stops=True,
-        mq_host=None,
-        mq_port=None,
         bundle_exec_id=None,
     ):
-        self._mq_dao = MQDao.build(mq_host, mq_port)
+        self._mq_dao = MQDao.build()
         self._doc_daos = []
         if MONGO_ENABLED:
             from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
@@ -213,17 +213,15 @@ class DocumentInserter:
     def stop(self, bundle_exec_id=None):
         """Stop it."""
         if self.check_safe_stops:
-            max_trials = 240
             trial = 0
             while not self._mq_dao.all_time_based_threads_ended(bundle_exec_id):
                 trial += 1
-                sleep_time = 0.01
                 self.logger.info(
                     f"Doc Inserter {id(self)}: It's still not safe to stop DocInserter. "
-                    f"Checking again in {sleep_time} secs. Trial={trial}."
+                    f"Checking again in {DB_INSERTER_SLEEP_TRIALS_STOP} secs. Trial={trial}."
                 )
-                sleep(sleep_time)
-                if trial >= max_trials:
+                sleep(DB_INSERTER_SLEEP_TRIALS_STOP)
+                if trial >= DB_INSERTER_MAX_TRIALS_STOP:
                     # if len(self._mq_dao._buffer) == 0:
                     msg = f"DocInserter {id(self)} gave up waiting for signal. "
                     self.logger.critical(msg + "Safe to stop now.")
@@ -235,5 +233,5 @@ class DocumentInserter:
         for dao in self._doc_daos:
             self.logger.info(f"Closing document_inserter {dao.__class__.__name__} connection.")
             dao.close()
-        self._mq_dao._keyvalue_dao.delete_key("current_campaign_id")
+        self._mq_dao.delete_current_campaign_id()
         self.logger.info("Document Inserter is stopped.")

@@ -145,7 +145,7 @@ class GPUCapture:
             flowcept_gpu_info["power"] = {
                 "average_socket_power": all_metrics["average_socket_power"],
                 "energy_accumulator": all_metrics["energy_accumulator"],
-                "current_socket_power": all_metrics["current_socket_power"],
+                # "current_socket_power": all_metrics["current_socket_power"],
             }
 
         if "temperature" in gpu_conf:

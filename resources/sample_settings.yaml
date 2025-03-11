@@ -49,6 +49,7 @@ mq:
 kv_db:
   host: localhost
   port: 6379
+  # uri: use Redis connection uri here
 
 web_server:
   host: 0.0.0.0
@@ -71,6 +72,8 @@ db_buffer:
   max_buffer_size: 50
   min_buffer_size: 10
   remove_empty_fields: false
+  stop_max_trials: 240
+  stop_trials_sleep: 0.01
 
 databases:
 

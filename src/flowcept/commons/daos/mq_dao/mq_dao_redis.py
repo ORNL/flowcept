@@ -1,9 +1,10 @@
 """MQ redis module."""
 
 from typing import Callable
+import redis
 
 import msgpack
-from time import time
+from time import time, sleep
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.utils import perf_log
@@ -18,29 +19,43 @@ class MQDaoRedis(MQDao):
 
     MESSAGE_TYPES_IGNORE = {"psubscribe"}
 
-    def __init__(self, kv_host=None, kv_port=None, adapter_settings=None):
-        super().__init__(kv_host, kv_port, adapter_settings)
-        self._producer = self._kv_conn  # if MQ is redis, we use the same KV for the MQ
+    def __init__(self, adapter_settings=None):
+        super().__init__(adapter_settings)
+        self._producer = self._keyvalue_dao.redis_conn  # if MQ is redis, we use the same KV for the MQ
         self._consumer = None
 
     def subscribe(self):
         """
         Subscribe to interception channel.
         """
-        self._consumer = self._kv_conn.pubsub()
+        self._consumer = self._keyvalue_dao.redis_conn.pubsub()
         self._consumer.psubscribe(MQ_CHANNEL)
 
     def message_listener(self, message_handler: Callable):
-        """Get message listener."""
-        for message in self._consumer.listen():
-            self.logger.debug("Received a message!")
-            if message["type"] in MQDaoRedis.MESSAGE_TYPES_IGNORE:
-                continue
-            msg_obj = msgpack.loads(
-                message["data"],
-                strict_map_key=False,  # , cls=DocumentInserter.DECODER
-            )
-            if not message_handler(msg_obj):
+        """Get message listener with automatic reconnection."""
+        max_retrials = 10
+        current_trials = 0
+        should_continue = True
+        while should_continue and current_trials < max_retrials:
+            try:
+                for message in self._consumer.listen():
+                    if message and message["type"] in MQDaoRedis.MESSAGE_TYPES_IGNORE:
+                        continue
+                    try:
+                        msg_obj = msgpack.loads(message["data"], strict_map_key=False)
+                        if not message_handler(msg_obj):
+                            should_continue = False  # Break While loop
+                            break  # Break For loop
+                    except Exception as e:
+                        self.logger.error(f"Failed to process message: {e}")
+
+                    current_trials = 0
+            except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+                current_trials += 1
+                self.logger.critical(f"Redis connection lost: {e}. Reconnecting in 3 seconds...")
+                sleep(3)
+            except Exception as e:
+                self.logger.exception(e)
                 break
 
     def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
