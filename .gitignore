@@ -28,3 +28,4 @@ launch.json
 .vscode/
 **/*.err
 **/*.out
+core.*

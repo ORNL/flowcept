@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 from typing import Union, List, Callable
 
 import msgpack
-from redis import Redis
 
 import flowcept.commons
 from flowcept.commons.autoflush_buffer import AutoflushBuffer
@@ -19,11 +18,7 @@ from flowcept.configs import (
     MQ_BUFFER_SIZE,
     MQ_INSERTION_BUFFER_TIME,
     MQ_CHUNK_SIZE,
-    MQ_URI,
     MQ_TYPE,
-    KVDB_HOST,
-    KVDB_PORT,
-    KVDB_PASSWORD,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -67,23 +62,11 @@ class MQDao(ABC):
             set_id += "_" + str(exec_bundle_id)
         return set_id
 
-    def __init__(self, kv_host=None, kv_port=None, adapter_settings=None):
+    def __init__(self, adapter_settings=None):
         self.logger = FlowceptLogger()
 
-        if MQ_URI is not None:
-            # If a URI is provided, use it for connection
-            self._kv_conn = Redis.from_url(MQ_URI)
-        else:
-            # Otherwise, use the host, port, and password settings
-            self._kv_conn = Redis(
-                host=KVDB_HOST if kv_host is None else kv_host,
-                port=KVDB_PORT if kv_port is None else kv_port,
-                db=0,
-                password=KVDB_PASSWORD if KVDB_PASSWORD else None,
-            )
-
         self._adapter_settings = adapter_settings
-        self._keyvalue_dao = KeyValueDAO(connection=self._kv_conn)
+        self._keyvalue_dao = KeyValueDAO()
         self._time_based_flushing_started = False
         self.buffer: Union[AutoflushBuffer, List] = None
 
@@ -137,6 +120,12 @@ class MQDao(ABC):
         None
         """
         self._keyvalue_dao.set_key_value("current_campaign_id", campaign_id)
+
+    def delete_current_campaign_id(self):
+        """
+        Delete current campaign id.
+        """
+        self._keyvalue_dao.delete_key("current_campaign_id")
 
     def init_buffer(self, interceptor_instance_id: str, exec_bundle_id=None):
         """Create the buffer."""

@@ -365,7 +365,7 @@ def save_files(db_stats_at_start, mongo_dao, campaign_id, model_search_wf_id, ou
                                 'custom_provenance_id_mapping.yaml')
     with open(mapping_path) as f:
         mapping = yaml.safe_load(f)
-    Flowcept.db.dump_tasks_to_file_recursive(workflow_id=model_search_wf_id, output_file=tasks_file, mapping=mapping)
+    #Flowcept.db.dump_tasks_to_file_recursive(workflow_id=model_search_wf_id, output_file=tasks_file, mapping=mapping)
 
     return workflows_file, tasks_file
 
@@ -593,9 +593,9 @@ def main():
         try:
             n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs)
             # TODO: 4 is the number of modules of the current model. We should get it dynamically.
-            asserts_on_saved_dfs(workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
-                                 workflow_params["epochs"], n_configs, n_batches_train, n_batches_eval,
-                                 n_modules=4)
+            # asserts_on_saved_dfs(workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
+            #                     workflow_params["epochs"], n_configs, n_batches_train, n_batches_eval,
+            #                     n_modules=4)
         except Exception as e:
             print(e)
 

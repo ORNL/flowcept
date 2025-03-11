@@ -227,8 +227,6 @@ class Flowcept(object):
             DocumentInserter(
                 check_safe_stops=True,
                 bundle_exec_id=self._bundle_exec_id,
-                mq_host=mq_host,
-                mq_port=mq_port,
             ).start()
         )
 
