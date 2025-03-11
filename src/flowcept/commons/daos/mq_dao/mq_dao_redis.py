@@ -4,7 +4,6 @@ from typing import Callable
 import redis
 
 import msgpack
-import csv
 from time import time, sleep
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
@@ -26,7 +25,6 @@ class MQDaoRedis(MQDao):
         self._consumer = None
         self.flush_events = []
         
-
     def subscribe(self):
         """
         Subscribe to interception channel.
@@ -100,18 +98,3 @@ class MQDaoRedis(MQDao):
         except Exception as e:
             self.logger.exception(e)
             return False
-
-    def stop(self,interceptor_instance_id: str, bundle_exec_id: int = None):
-        t1 = time()
-        super().stop(interceptor_instance_id, bundle_exec_id)
-        t2 = time()
-        self.flush_events.append(["final", t1, t2, t2 - t1,'n/a'])
-
-        
-        with open(f"redis_{interceptor_instance_id}_redis_flush_events.csv", "w", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow(["type", "start","end","duration","size"])
-            writer.writerows(self.flush_events)
-        
-        # lets consumer know when to stop
-        self._producer.publish(MQ_CHANNEL, msgpack.dumps({"message":"stop-now"}))

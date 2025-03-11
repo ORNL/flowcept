@@ -4,7 +4,6 @@ from typing import Callable
 import msgpack
 from time import time
 import json
-import csv
 
 import mochi.mofka.client as mofka
 from mochi.mofka.client import ThreadPool, AdaptiveBatchSize
@@ -57,7 +56,6 @@ class MQDaoMofka(MQDao):
 
     def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         """Send a single message to Mofka."""
-
         self.producer.push(metadata=message)  # using metadata to send data
         t1 = time()
         self.producer.flush()
@@ -96,20 +94,3 @@ class MQDaoMofka(MQDao):
     def liveness_test(self):
         """Test Mofka Liveness."""
         return True
-
-    def stop(self,interceptor_instance_id: str, bundle_exec_id: int = None):
-        t1 = time()
-        super().stop(interceptor_instance_id, bundle_exec_id)
-        t2 = time()
-        self.flush_events.append(["final", t1, t2, t2 - t1,'n/a'])
-
-        
-        with open(f"mofka_{interceptor_instance_id}_flush_events.csv", "w", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow(["type", "start","end","duration","size"])
-            writer.writerows(self.flush_events)
-        
-        # lets consumer know when to stop
-        self.producer.push(metadata={"message":"stop-now"})  # using metadata to send data
-        self.producer.flush()
-        

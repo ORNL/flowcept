@@ -3,7 +3,6 @@
 from typing import Callable
 
 import msgpack
-import csv
 from time import time
 
 from confluent_kafka import Producer, Consumer, KafkaError
@@ -109,20 +108,3 @@ class MQDaoKafka(MQDao):
         except Exception as e:
             self.logger.exception(e)
             return False
-    
-    def stop(self,interceptor_instance_id: str, bundle_exec_id: int = None):
-        t1 = time()
-        super().stop(interceptor_instance_id, bundle_exec_id)
-        t2 = time()
-        self.flush_events.append(["final", t1, t2, t2 - t1,'n/a'])
-
-        
-        with open(f"kafka_{interceptor_instance_id}_flush_events.csv", "w", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow(["type", "start","end","duration","size"])
-            writer.writerows(self.flush_events)
-        
-        # lets consumer know when to stop
-        
-        self._producer.produce(MQ_CHANNEL, key=MQ_CHANNEL, value=msgpack.dumps({"message":"stop-now"}))  # using metadata to send data
-        self._producer.flush()
