@@ -52,11 +52,9 @@ class DocumentInserter:
     def __init__(
         self,
         check_safe_stops=True,
-        mq_host=None,
-        mq_port=None,
         bundle_exec_id=None,
     ):
-        self._mq_dao = MQDao.build(mq_host, mq_port)
+        self._mq_dao = MQDao.build()
         self._doc_daos = []
         if MONGO_ENABLED:
             from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
