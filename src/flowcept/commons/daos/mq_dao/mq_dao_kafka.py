@@ -3,6 +3,7 @@
 from typing import Callable
 
 import msgpack
+import csv
 from time import time
 
 from confluent_kafka import Producer, Consumer, KafkaError
@@ -29,6 +30,7 @@ class MQDaoKafka(MQDao):
         }
         self._producer = Producer(self._kafka_conf)
         self._consumer = None
+        self.flush_events = []
 
     def subscribe(self):
         """Subscribe to the interception channel."""
@@ -67,13 +69,18 @@ class MQDaoKafka(MQDao):
     def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         """Send the message."""
         self._producer.produce(channel, key=channel, value=serializer(message))
+        t1 = time()
         self._producer.flush()
+        t2 = time()
+        self.flush_events.append(["single",t1,t2,t2 - t1, len(str(message).encode())])
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        total = 0
         for message in buffer:
             try:
                 self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t")
                 self._producer.produce(channel, key=channel, value=serializer(message))
+                total += len(str(message).encode())
             except Exception as e:
                 self.logger.exception(e)
                 self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
@@ -82,7 +89,11 @@ class MQDaoKafka(MQDao):
         if PERF_LOG:
             t0 = time()
         try:
+            t1 = time()
             self._producer.flush()
+            t2 = time()
+            self.flush_events.append(["bulk", t1,t2,t2 - t1,total])
+
             self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)
@@ -98,3 +109,20 @@ class MQDaoKafka(MQDao):
         except Exception as e:
             self.logger.exception(e)
             return False
+    
+    def stop(self,interceptor_instance_id: str, bundle_exec_id: int = None):
+        t1 = time()
+        super().stop(interceptor_instance_id, bundle_exec_id)
+        t2 = time()
+        self.flush_events.append(["final", t1, t2, t2 - t1,'n/a'])
+
+        
+        with open(f"kafka_{interceptor_instance_id}_flush_events.csv", "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["type", "start","end","duration","size"])
+            writer.writerows(self.flush_events)
+        
+        # lets consumer know when to stop
+        
+        self._producer.produce(MQ_CHANNEL, key=MQ_CHANNEL, value=msgpack.dumps({"message":"stop-now"}))  # using metadata to send data
+        self._producer.flush()

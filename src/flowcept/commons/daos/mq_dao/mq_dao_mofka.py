@@ -4,6 +4,7 @@ from typing import Callable
 import msgpack
 from time import time
 import json
+import csv
 
 import mochi.mofka.client as mofka
 from mochi.mofka.client import ThreadPool, AdaptiveBatchSize
@@ -22,6 +23,7 @@ class MQDaoMofka(MQDao):
     def __init__(self, adapter_settings=None, with_producer=True):
         super().__init__(adapter_settings=adapter_settings)
         self.producer = None
+        self.flush_events = []
         if with_producer:
             print("Starting producer")
             self.producer = MQDaoMofka._topic.producer(
@@ -55,13 +57,23 @@ class MQDaoMofka(MQDao):
 
     def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         """Send a single message to Mofka."""
+
         self.producer.push(metadata=message)  # using metadata to send data
+        t1 = time()
         self.producer.flush()
+        t2 = time()
+        self.flush_events.append(["single",t1,t2,t2 - t1, len(str(message).encode())])
+        
+    
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        total = 0
         try:
             self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t")
-            [self.producer.push(m) for m in buffer]
+           
+            for m in buffer:
+                self.producer.push(m)
+                total += len(str(m).encode())
 
         except Exception as e:
             self.logger.exception(e)
@@ -71,7 +83,11 @@ class MQDaoMofka(MQDao):
         if PERF_LOG:
             t0 = time()
         try:
+            t1 = time()
             self.producer.flush()
+            t2 = time()
+            self.flush_events.append(["bulk", t1,t2,t2 - t1,total])
+
             self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)
@@ -80,3 +96,20 @@ class MQDaoMofka(MQDao):
     def liveness_test(self):
         """Test Mofka Liveness."""
         return True
+
+    def stop(self,interceptor_instance_id: str, bundle_exec_id: int = None):
+        t1 = time()
+        super().stop(interceptor_instance_id, bundle_exec_id)
+        t2 = time()
+        self.flush_events.append(["final", t1, t2, t2 - t1,'n/a'])
+
+        
+        with open(f"mofka_{interceptor_instance_id}_flush_events.csv", "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["type", "start","end","duration","size"])
+            writer.writerows(self.flush_events)
+        
+        # lets consumer know when to stop
+        self.producer.push(metadata={"message":"stop-now"})  # using metadata to send data
+        self.producer.flush()
+        
