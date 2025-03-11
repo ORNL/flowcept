@@ -6,7 +6,8 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
     KVDB_HOST,
     KVDB_PORT,
-    KVDB_PASSWORD, KVDB_URI,
+    KVDB_PASSWORD,
+    KVDB_URI,
 )
 
 
@@ -37,7 +38,7 @@ class KeyValueDAO:
             retry_on_timeout=True,
         )
         return Redis(connection_pool=pool)
-        #return Redis()
+        # return Redis()
 
     def __init__(self):
         if not hasattr(self, "_initialized"):

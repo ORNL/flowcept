@@ -21,8 +21,8 @@ from flowcept.configs import (
 class MQDaoKafka(MQDao):
     """MQ kafka class."""
 
-    def __init__(self, kv_host=None, kv_port=None, adapter_settings=None):
-        super().__init__(kv_host, kv_port, adapter_settings)
+    def __init__(self, adapter_settings=None):
+        super().__init__(adapter_settings)
 
         self._kafka_conf = {
             "bootstrap.servers": f"{MQ_HOST}:{MQ_PORT}",

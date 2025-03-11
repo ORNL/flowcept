@@ -19,8 +19,8 @@ class MQDaoMofka(MQDao):
     _driver = mofka.MofkaDriver(MQ_SETTINGS.get("group_file", None), use_progress_thread=True)
     _topic = _driver.open_topic(MQ_SETTINGS["channel"])
 
-    def __init__(self, kv_host=None, kv_port=None, adapter_settings=None, with_producer=True):
-        super().__init__(kv_host=kv_host, kv_port=kv_port, adapter_settings=adapter_settings)
+    def __init__(self, adapter_settings=None, with_producer=True):
+        super().__init__(adapter_settings=adapter_settings)
         self.producer = None
         if with_producer:
             print("Starting producer")
