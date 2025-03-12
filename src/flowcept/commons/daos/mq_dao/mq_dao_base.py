@@ -212,10 +212,12 @@ class MQDao(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def liveness_test(self):
-        """Get livelyness of it."""
+    def liveness_test(self) -> bool:
+        """Check whether the base KV store's connection is ready. This is enough for Redis MQ too. Other MQs need
+        further liveness implementation.
+        """
         try:
-            response = self._kv_conn.ping()
+            response = self._keyvalue_dao.redis_conn.ping()
             if response:
                 return True
             else:

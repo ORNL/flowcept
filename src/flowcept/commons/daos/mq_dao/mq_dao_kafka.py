@@ -100,7 +100,9 @@ class MQDaoKafka(MQDao):
     def liveness_test(self):
         """Get the livelyness of it."""
         try:
-            super().liveness_test()
+            if not super().liveness_test():
+                self.logger.error("KV Store not alive!")
+                return False
             admin_client = AdminClient(self._kafka_conf)
             kafka_metadata = admin_client.list_topics(timeout=5)
             return MQ_CHANNEL in kafka_metadata.topics
