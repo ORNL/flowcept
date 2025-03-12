@@ -29,3 +29,5 @@ launch.json
 **/*.err
 **/*.out
 core.*
+*.csv
+
