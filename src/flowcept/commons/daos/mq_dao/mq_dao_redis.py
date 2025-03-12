@@ -84,8 +84,7 @@ class MQDaoRedis(MQDao):
     def liveness_test(self):
         """Get the livelyness of it."""
         try:
-            super().liveness_test()
-            return True
+            return super().liveness_test()
         except Exception as e:
             self.logger.exception(e)
             return False

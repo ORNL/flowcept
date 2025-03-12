@@ -32,6 +32,11 @@ def mult_two_(y):
 
 
 class FlowceptAPITest(unittest.TestCase):
+
+    def test_is_alive(self):
+        assert Flowcept.services_alive()
+
+
     def test_configs(self):
         current_configs = get_current_config_values()
         assert "LOG_FILE_PATH" in current_configs
