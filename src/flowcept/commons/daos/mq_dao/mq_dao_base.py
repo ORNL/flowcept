@@ -70,7 +70,6 @@ class MQDao(ABC):
         self._keyvalue_dao = KeyValueDAO()
         self._time_based_flushing_started = False
         self.buffer: Union[AutoflushBuffer, List] = None
-
         self._flush_events = []
 
     @abstractmethod

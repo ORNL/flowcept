@@ -29,7 +29,6 @@ class MQDaoKafka(MQDao):
         }
         self._producer = Producer(self._kafka_conf)
         self._consumer = None
-        self.flush_events = []
 
     def subscribe(self):
         """Subscribe to the interception channel."""
@@ -71,7 +70,7 @@ class MQDaoKafka(MQDao):
         t1 = time()
         self._producer.flush()
         t2 = time()
-        self.flush_events.append(["single",t1,t2,t2 - t1, len(str(message).encode())])
+        self._flush_events.append(["single",t1,t2,t2 - t1, len(str(message).encode())])
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         total = 0
@@ -91,7 +90,7 @@ class MQDaoKafka(MQDao):
             t1 = time()
             self._producer.flush()
             t2 = time()
-            self.flush_events.append(["bulk", t1,t2,t2 - t1,total])
+            self._flush_events.append(["bulk", t1,t2,t2 - t1,total])
 
             self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
