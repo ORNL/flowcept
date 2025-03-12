@@ -22,7 +22,6 @@ class MQDaoMofka(MQDao):
     def __init__(self, adapter_settings=None, with_producer=True):
         super().__init__(adapter_settings=adapter_settings)
         self.producer = None
-        self.flush_events = []
         if with_producer:
             print("Starting producer")
             self.producer = MQDaoMofka._topic.producer(
@@ -60,7 +59,7 @@ class MQDaoMofka(MQDao):
         t1 = time()
         self.producer.flush()
         t2 = time()
-        self.flush_events.append(["single",t1,t2,t2 - t1, len(str(message).encode())])
+        self._flush_events.append(["single",t1,t2,t2 - t1, len(str(message).encode())])
         
     
 
@@ -84,7 +83,7 @@ class MQDaoMofka(MQDao):
             t1 = time()
             self.producer.flush()
             t2 = time()
-            self.flush_events.append(["bulk", t1,t2,t2 - t1,total])
+            self._flush_events.append(["bulk", t1,t2,t2 - t1,total])
 
             self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
