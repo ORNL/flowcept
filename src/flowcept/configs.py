@@ -3,8 +3,6 @@
 import os
 import socket
 import getpass
-import random
-
 
 PROJECT_NAME = "flowcept"
 USE_DEFAULT = os.getenv("FLOWCEPT_USE_DEFAULT", "False").lower() == "true"
@@ -78,10 +76,6 @@ MQ_PORT = int(os.getenv("MQ_PORT", settings["mq"].get("port", "6379")))
 
 MQ_BUFFER_SIZE = int(settings["mq"].get("buffer_size", 50))
 MQ_INSERTION_BUFFER_TIME = int(settings["mq"].get("insertion_buffer_time_secs", 5))
-MQ_INSERTION_BUFFER_TIME = random.randint(
-    int(MQ_INSERTION_BUFFER_TIME * 0.9),
-    int(MQ_INSERTION_BUFFER_TIME * 1.4),
-)
 MQ_CHUNK_SIZE = int(settings["mq"].get("chunk_size", -1))
 
 #####################
@@ -129,16 +123,11 @@ if not LMDB_ENABLED and not MONGO_ENABLED:
     LMDB_ENABLED = True
 
 ##########################
-# Buffer Settings        #
+# DB Buffer Settings        #
 ##########################
 db_buffer_settings = settings["db_buffer"]
 # In seconds:
 INSERTION_BUFFER_TIME = int(db_buffer_settings.get("insertion_buffer_time_secs", 5))
-INSERTION_BUFFER_TIME = random.randint(
-    int(INSERTION_BUFFER_TIME * 0.9),
-    int(INSERTION_BUFFER_TIME * 1.4),
-)
-
 ADAPTIVE_DB_BUFFER_SIZE = db_buffer_settings.get("adaptive_buffer_size", True)
 DB_MAX_BUFFER_SIZE = int(db_buffer_settings.get("max_buffer_size", 50))
 DB_MIN_BUFFER_SIZE = max(1, int(db_buffer_settings.get("min_buffer_size", 10)))
