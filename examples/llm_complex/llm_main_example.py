@@ -187,7 +187,7 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
 def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _flowcept=None):
     if start_dask_cluster or scheduler_file:
         print("Closing dask...")
-        sleep(10)
+        #sleep(10)
         client.shutdown()
         print("Dask closed.")
         if _flowcept:
