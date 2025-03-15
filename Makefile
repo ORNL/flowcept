@@ -94,4 +94,4 @@ tests:
 
 .PHONY: tests-notebooks
 tests-notebooks:
-	pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb,notebooks/tensorboard.ipynb
+	pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb --ignore=notebooks/tensorboard.ipynb
