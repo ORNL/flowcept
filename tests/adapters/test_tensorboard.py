@@ -2,10 +2,10 @@ import unittest
 from time import sleep
 from uuid import uuid4
 
-from flowcept.configs import INSERTION_BUFFER_TIME
+from flowcept.configs import settings
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept import TensorboardInterceptor, Flowcept
+from flowcept import Flowcept
 from flowcept.commons.utils import (
     assert_by_querying_tasks_until,
     evaluate_until,
@@ -15,14 +15,15 @@ from flowcept.commons.utils import (
 class TestTensorboard(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestTensorboard, self).__init__(*args, **kwargs)
-        # TODO: we are adding this sleep here to try to avoid errors in the CI
-        # tests that are only caused with this test.
+        # TODO: we are adding this sleep here to try to avoid errors in the CI that are only caused with this test.
+        # For local dev, comment this sleep out.
         sleep(30)
+        self.file_path = settings["adapters"]["tensorboard"]["file_path"]
+        self.watch_interval_sec = settings["adapters"]["tensorboard"]["watch_interval_sec"]
         self.logger = FlowceptLogger()
-        self.interceptor = TensorboardInterceptor()
 
     def reset_log_dir(self):
-        logdir = self.interceptor.settings.file_path
+        logdir = self.file_path
         import os
         import shutil
 
@@ -32,18 +33,18 @@ class TestTensorboard(unittest.TestCase):
             sleep(1)
         os.mkdir(logdir)
         self.logger.debug("Exists?" + str(os.path.exists(logdir)))
-        watch_interval_sec = self.interceptor.settings.watch_interval_sec
         # Making sure we'll wait until next watch cycle
-        sleep(watch_interval_sec * 3)
+        sleep(self.watch_interval_sec * 3)
 
-    def run_tensorboard_hparam_tuning(self):
+    def run_tensorboard_hparam_tuning(self, wf_id=None):
         """
         Code based on
          https://www.tensorflow.org/tensorboard/hyperparameter_tuning_with_hparams
         :return:
         """
-        logdir = self.interceptor.settings.file_path
-        wf_id = str(uuid4())
+        logdir = self.file_path
+        if not wf_id:
+            wf_id = str(uuid4())
         import tensorflow as tf
         from tensorboard.plugins.hparams import api as hp
 
@@ -130,14 +131,13 @@ class TestTensorboard(unittest.TestCase):
                         # These two added ids below are optional and useful
                         # just to contextualize this run.
                         hparams = {
-                            "workflow_id": wf_id,
                             "activity_id": "hyperparam_evaluation",
                             HP_NUM_UNITS: num_units,
                             HP_DROPOUT: dropout_rate,
                             HP_OPTIMIZER: optimizer,
                             HP_BATCHSIZES: batch_size,
                         }
-                        run_name = f"wf_id_{wf_id}_{session_num}"
+                        run_name = f"wf_{wf_id}_{session_num}"
                         self.logger.debug("--- Starting trial: %s" % run_name)
                         self.logger.debug(f"{hparams}")
                         run(f"{logdir}/" + run_name, hparams)
@@ -146,18 +146,20 @@ class TestTensorboard(unittest.TestCase):
         return wf_id
 
     def test_observer_and_consumption(self):
+        wf_id = str(uuid4())
         self.reset_log_dir()
-        with Flowcept(self.interceptor):
-            wf_id = self.run_tensorboard_hparam_tuning()
+        with Flowcept(interceptors="tensorboard", workflow_id=wf_id) as f:
+            self.run_tensorboard_hparam_tuning(wf_id)
             self.logger.debug("Done training. Sleeping some time...")
-            watch_interval_sec = INSERTION_BUFFER_TIME
+
             # Making sure we'll wait until next watch cycle
-            sleep(watch_interval_sec * 20)
+            sleep(self.watch_interval_sec * 20)
+
         assert evaluate_until(
-            lambda: self.interceptor.state_manager.count() == 4,
+            lambda: f._interceptor_instances[0].state_manager.count() == 4,
             msg="Checking if state count == 4",
         )
-        assert assert_by_querying_tasks_until({"workflow_id": wf_id})
+        assert assert_by_querying_tasks_until({"workflow_id": f.current_workflow_id})
 
     @unittest.skip("This test is useful only for developing. No need to run in CI")
     def test_read_tensorboard_hparam_tuning(self):
@@ -165,8 +167,7 @@ class TestTensorboard(unittest.TestCase):
         self.run_tensorboard_hparam_tuning()
         from tbparse import SummaryReader
 
-        logdir = self.interceptor.settings.file_path
-        reader = SummaryReader(logdir)
+        reader = SummaryReader(self.file_path)
 
         TRACKED_TAGS = {"scalars", "hparams", "tensors"}
         TRACKED_METRICS = {"accuracy"}

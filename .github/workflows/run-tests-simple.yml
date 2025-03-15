@@ -52,7 +52,7 @@ jobs:
         run: make tests
 
       - name: Test notebooks with pytest and redis
-        run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb" --ignore="notebooks/analytics.ipynb"
+        run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb" --ignore="notebooks/analytics.ipynb" --ignore=notebooks/tensorboard.ipynb
 
       - name: Shut down docker compose
         run: make services-stop

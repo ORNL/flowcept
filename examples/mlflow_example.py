@@ -4,26 +4,27 @@ import uuid
 from time import sleep
 import mlflow
 
-from flowcept import MLFlowInterceptor, Flowcept
+from flowcept import Flowcept
+from flowcept.configs import settings
 
 
 if __name__ == "__main__":
     # Starting the interceptor
-    interceptor = MLFlowInterceptor()
-    print(f"SQLITE DB path: {interceptor.settings.file_path}")
+    file_path = settings["adapters"]["mlflow"]["file_path"]
+    print(f"SQLITE DB path: {file_path}")
 
     # Clean up previous runs if they exist
-    if os.path.exists(interceptor.settings.file_path):
-        os.remove(interceptor.settings.file_path)
-    with open(interceptor.settings.file_path, "w") as f:
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    with open(file_path, "w") as f:
         f.write("")
     sleep(1)
-    mlflow.set_tracking_uri(f"sqlite:///{interceptor.settings.file_path}")
+    mlflow.set_tracking_uri(f"sqlite:///{file_path}")
     mlflow.delete_experiment(mlflow.create_experiment("starter"))
     sleep(1)
 
     # Starting the workflow
-    with Flowcept(interceptor):
+    with Flowcept("mlflow"):
         experiment_name = "experiment_test"
         experiment_id = mlflow.create_experiment(experiment_name + str(uuid.uuid4()))
         with mlflow.start_run(experiment_id=experiment_id) as run:

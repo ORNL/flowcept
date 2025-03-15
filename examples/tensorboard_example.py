@@ -2,7 +2,8 @@
 import uuid
 from time import sleep
 
-from flowcept import TensorboardInterceptor, Flowcept
+from flowcept import Flowcept
+from flowcept.configs import settings
 
 
 def run_tensorboard_hparam_tuning(logdir):
@@ -11,7 +12,6 @@ def run_tensorboard_hparam_tuning(logdir):
      https://www.tensorflow.org/tensorboard/hyperparameter_tuning_with_hparams
     :return:
     """
-    wf_id = str(uuid.uuid4())
     import tensorflow as tf
     from tensorboard.plugins.hparams import api as hp
 
@@ -98,7 +98,6 @@ def run_tensorboard_hparam_tuning(logdir):
                     # These two added ids below are optional and useful
                     # just to contextualize this run.
                     hparams = {
-                        "workflow_id": wf_id,
                         "activity_id": "hyperparam_evaluation",
                         HP_NUM_UNITS: num_units,
                         HP_DROPOUT: dropout_rate,
@@ -130,13 +129,12 @@ def reset_tensorboard_dir(logdir, watch_interval_sec):
 
 if __name__ == "__main__":
     # Starting the interceptor
-    interceptor = TensorboardInterceptor()
-    logdir = interceptor.settings.file_path
+    logdir = settings["adapters"]["tensorboard"]["file_path"]
     print(f"Tensorboard dir: {logdir}")
-
+    wf_id = str(uuid.uuid4())
     reset_tensorboard_dir(logdir, 10)
 
-    with Flowcept(interceptor):
+    with Flowcept("tensorboard", workflow_id=wf_id):
         wf_id = run_tensorboard_hparam_tuning(logdir)
         wait_time = 10
         print(f"Done training. Waiting {wait_time} seconds.")

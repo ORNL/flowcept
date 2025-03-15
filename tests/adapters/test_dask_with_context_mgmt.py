@@ -8,7 +8,7 @@ from flowcept import Flowcept
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.flowceptor.adapters.dask.dask_plugins import (
-    save_dask_workflow,
+    set_workflow_info_on_workers,
     FlowceptDaskWorkerAdapter,
 )
 from tests.adapters.dask_test_utils import (

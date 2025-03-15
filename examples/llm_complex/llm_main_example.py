@@ -100,7 +100,7 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
         # Start Flowcept's Dask observer
         prov_args = workflow_params.copy()
         prov_args["n_configs"] = len(configs)
-        f = Flowcept(["dask", "instrumentation"], campaign_id=campaign_id, start_persistence=with_persistence, workflow_args=prov_args, dask_client=client).start()
+        f = Flowcept("dask", campaign_id=campaign_id, start_persistence=with_persistence, workflow_args=prov_args, dask_client=client).start()
         search_wf_id = Flowcept.current_workflow_id
         print(f"search_workflow_id={search_wf_id}")
 
