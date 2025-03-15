@@ -1,6 +1,8 @@
 """MQ base module."""
 
+import csv
 from abc import ABC, abstractmethod
+from time import time
 from typing import Union, List, Callable
 
 import msgpack
@@ -69,6 +71,7 @@ class MQDao(ABC):
         self._keyvalue_dao = KeyValueDAO()
         self._time_based_flushing_started = False
         self.buffer: Union[AutoflushBuffer, List] = None
+        self._flush_events = []
 
     @abstractmethod
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
@@ -157,6 +160,7 @@ class MQDao(ABC):
 
     def stop(self, interceptor_instance_id: str, bundle_exec_id: int = None):
         """Stop it."""
+        t1 = time()
         msg0 = "MQ publisher received stop signal! bundle: "
         self.logger.debug(msg0 + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
         self._close_buffer()
@@ -164,6 +168,20 @@ class MQDao(ABC):
         self.logger.debug(msg + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
         self._send_mq_dao_time_thread_stop(interceptor_instance_id, bundle_exec_id)
         self.started = False
+
+        t2 = time()
+
+        self._flush_events.append(["final", t1, t2, t2 - t1, "n/a"])
+
+        with open(f"{MQ_TYPE}_{interceptor_instance_id}_{MQ_TYPE}_flush_events.csv", "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["type", "start", "end", "duration", "size"])
+            writer.writerows(self._flush_events)
+
+        # lets consumer know when to stop
+        # TODO: See if line 167 does this already. If not consider using self.send_document_inserter_stop.
+        # self._producer.publish(MQ_CHANNEL, msgpack.dumps({"message": "stop-now"}))
+
 
     def _send_mq_dao_time_thread_stop(self, interceptor_instance_id, exec_bundle_id=None):
         # These control_messages are handled by the document inserter
