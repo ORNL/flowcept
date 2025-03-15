@@ -2,7 +2,7 @@ import unittest
 from time import sleep
 from uuid import uuid4
 
-from flowcept.configs import INSERTION_BUFFER_TIME, settings
+from flowcept.configs import settings
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import Flowcept
