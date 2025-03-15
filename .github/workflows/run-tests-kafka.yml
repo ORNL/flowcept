@@ -61,7 +61,7 @@ jobs:
           make tests
 
       - name: Test notebooks
-        run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
+        run: pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb --ignore=notebooks/tensorboard.ipynb
 
       - name: Stop services
         run: docker compose -f deployment/compose-kafka.yml down

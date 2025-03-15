@@ -85,7 +85,7 @@ def get_times_from_task_state(task_msg, ts):
 
 
 class DaskWorkerInterceptor(BaseInterceptor):
-    """Dask worker."""
+    """Dask worker interceptor."""
 
     def __init__(self, plugin_key="dask", kind="dask"):
         self._plugin_key = plugin_key
@@ -101,21 +101,15 @@ class DaskWorkerInterceptor(BaseInterceptor):
         """
         self._worker = worker
         super().__init__(plugin_key=self._plugin_key, kind=self.kind)
-        # TODO: :refactor: This is just to avoid the auto-generation of
-        # workflow id, which doesnt make sense in Dask case.
+        # TODO: :refactor: Below is just to avoid the auto-generation of workflow id, which doesnt make sense in Dask.
         self._generated_workflow_id = True
         super().start(bundle_exec_id=self._worker.scheduler.address)
 
         instrumentation = INSTRUMENTATION.get("enabled", False)
         if instrumentation:
             InstrumentationInterceptor.get_instance().start(
-                bundle_exec_id="instrumentation" + self._worker.scheduler.address
+                bundle_exec_id=f"instrumentation_worker{self._worker.scheduler.address}"
             )
-
-        # Note that both scheduler and worker get the exact same input.
-        # Worker does not resolve intermediate inputs, just like the scheduler.
-        # But careful: we are only able to capture inputs in client.map on
-        # workers.
 
     def callback(self, task_id, start, finish, *args, **kwargs):
         """Implement the callback."""
