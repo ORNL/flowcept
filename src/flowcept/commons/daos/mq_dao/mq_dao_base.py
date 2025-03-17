@@ -1,4 +1,5 @@
 """MQ base module."""
+
 import csv
 from abc import ABC, abstractmethod
 from time import time
@@ -166,7 +167,7 @@ class MQDao(ABC):
         self._send_mq_dao_time_thread_stop(interceptor_instance_id, bundle_exec_id)
         t2 = time()
 
-        self._flush_events.append(["final", t1, t2, t2 - t1, 'n/a'])
+        self._flush_events.append(["final", t1, t2, t2 - t1, "n/a"])
 
         with open(f"{MQ_TYPE}_{interceptor_instance_id}_{MQ_TYPE}_flush_events.csv", "w", newline="") as file:
             writer = csv.writer(file)
@@ -211,10 +212,12 @@ class MQDao(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def liveness_test(self):
-        """Get livelyness of it."""
+    def liveness_test(self) -> bool:
+        """Check whether the base KV store's connection is ready. This is enough for Redis MQ too. Other MQs need
+        further liveness implementation.
+        """
         try:
-            response = self._kv_conn.ping()
+            response = self._keyvalue_dao.redis_conn.ping()
             if response:
                 return True
             else:

@@ -70,7 +70,7 @@ class MQDaoKafka(MQDao):
         t1 = time()
         self._producer.flush()
         t2 = time()
-        self._flush_events.append(["single",t1,t2,t2 - t1, len(str(message).encode())])
+        self._flush_events.append(["single", t1, t2, t2 - t1, len(str(message).encode())])
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         total = 0
@@ -90,7 +90,7 @@ class MQDaoKafka(MQDao):
             t1 = time()
             self._producer.flush()
             t2 = time()
-            self._flush_events.append(["bulk", t1,t2,t2 - t1,total])
+            self._flush_events.append(["bulk", t1, t2, t2 - t1, total])
 
             self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
@@ -100,7 +100,9 @@ class MQDaoKafka(MQDao):
     def liveness_test(self):
         """Get the livelyness of it."""
         try:
-            super().liveness_test()
+            if not super().liveness_test():
+                self.logger.error("KV Store not alive!")
+                return False
             admin_client = AdminClient(self._kafka_conf)
             kafka_metadata = admin_client.list_topics(timeout=5)
             return MQ_CHANNEL in kafka_metadata.topics

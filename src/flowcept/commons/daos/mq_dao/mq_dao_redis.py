@@ -23,7 +23,7 @@ class MQDaoRedis(MQDao):
         super().__init__(adapter_settings)
         self._producer = self._keyvalue_dao.redis_conn  # if MQ is redis, we use the same KV for the MQ
         self._consumer = None
-        
+
     def subscribe(self):
         """
         Subscribe to interception channel.
@@ -63,7 +63,7 @@ class MQDaoRedis(MQDao):
         t1 = time()
         self._producer.publish(channel, serializer(message))
         t2 = time()
-        self._flush_events.append(["single",t1,t2,t2 - t1, len(str(message).encode())])
+        self._flush_events.append(["single", t1, t2, t2 - t1, len(str(message).encode())])
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         total = 0
@@ -83,7 +83,7 @@ class MQDaoRedis(MQDao):
             t1 = time()
             pipe.execute()
             t2 = time()
-            self._flush_events.append(["bulk", t1,t2,t2 - t1,total])
+            self._flush_events.append(["bulk", t1, t2, t2 - t1, total])
             self.logger.debug(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)
@@ -92,8 +92,7 @@ class MQDaoRedis(MQDao):
     def liveness_test(self):
         """Get the livelyness of it."""
         try:
-            super().liveness_test()
-            return True
+            return super().liveness_test()
         except Exception as e:
             self.logger.exception(e)
             return False

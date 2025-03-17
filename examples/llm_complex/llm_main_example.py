@@ -103,6 +103,7 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
         f = Flowcept(["dask", "instrumentation"], campaign_id=campaign_id, start_persistence=with_persistence, workflow_args=prov_args, dask_client=client).start()
         search_wf_id = Flowcept.current_workflow_id
         print(f"search_workflow_id={search_wf_id}")
+
     
     t1 = time()
     tasks = []
@@ -181,10 +182,11 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
 def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _flowcept=None):
     if start_dask_cluster or scheduler_file:
         print("Closing dask...")
+        sleep(10)
         client.shutdown()
         print("Dask closed.")
         if _flowcept:
-            print("Now closing flowcept consumer.")
+            print("Now closing flowcept consumer...")
             _flowcept.stop()
             print("Flowcept consumer closed.")
     else:
@@ -193,7 +195,7 @@ def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _
         cluster.close()
         print("Dask closed.")
         if _flowcept:
-            print("Now closing flowcept consumer.")
+            print("Now closing flowcept consumer...")
             _flowcept.stop()
             print("Flowcept consumer closed.")
 
@@ -327,7 +329,7 @@ def run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs):
 
 def save_files(db_stats_at_start, mongo_dao, campaign_id, model_search_wf_id, output_dir="output_data"):
     os.makedirs(output_dir, exist_ok=True)
-    best_task = Flowcept.db.query({"workflow_id": model_search_wf_id, "activity_id": "model_train"}, limit=1,
+    best_task = Flowcept.db.query({"workflow_id": model_search_wf_id, "activity_id": "model_train", "status": "FINISHED"}, limit=1,
                                   sort=[("generated.test_loss", Flowcept.db.ASCENDING)])[0]
     replace_non_serializable_times(best_task)
     db_stats_at_end = mongo_dao.get_db_stats()
@@ -586,6 +588,7 @@ def main():
 
         try:
             n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs)
+            # Commenting out this because for very large workloads, generating these files is taking WAY too much time.
             # TODO: 4 is the number of modules of the current model. We should get it dynamically.
             # asserts_on_saved_dfs(workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
             #                     workflow_params["epochs"], n_configs, n_batches_train, n_batches_eval,
@@ -602,7 +605,6 @@ def main():
 
 
 if __name__ == "__main__":
-
     main()
     sys.exit(0)
 
