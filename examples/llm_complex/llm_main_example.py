@@ -103,12 +103,6 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
         f = Flowcept(["dask", "instrumentation"], campaign_id=campaign_id, start_persistence=with_persistence, workflow_args=prov_args, dask_client=client).start()
         search_wf_id = Flowcept.current_workflow_id
         print(f"search_workflow_id={search_wf_id}")
-
-
-    while True:
-        if len(client.scheduler_info()['workers']) == 4:
-            print("4 workers detected", flush=True)
-            break
     
     t1 = time()
     tasks = []
