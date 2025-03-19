@@ -182,7 +182,6 @@ class MQDao(ABC):
         # TODO: See if line 167 does this already. If not consider using self.send_document_inserter_stop.
         # self._producer.publish(MQ_CHANNEL, msgpack.dumps({"message": "stop-now"}))
 
-
     def _send_mq_dao_time_thread_stop(self, interceptor_instance_id, exec_bundle_id=None):
         # These control_messages are handled by the document inserter
         # TODO: these should be constants

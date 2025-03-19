@@ -104,12 +104,6 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
         search_wf_id = Flowcept.current_workflow_id
         print(f"search_workflow_id={search_wf_id}")
 
-
-    # while True:
-    #     if len(client.scheduler_info()['workers']) == 4:
-    #         print("4 workers detected", flush=True)
-    #         break
-    
     t1 = time()
     tasks = []
     for conf in configs:  # Edit here to enable more runs
