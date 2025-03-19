@@ -179,24 +179,27 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
 
 
 def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _flowcept=None):
-    if start_dask_cluster or scheduler_file:
-        print("Closing dask...")
-        sleep(10)
-        client.shutdown()
-        print("Dask closed.")
-        if _flowcept:
-            print("Now closing flowcept consumer...")
-            _flowcept.stop()
-            print("Flowcept consumer closed.")
-    else:
-        print("Closing dask...")
-        client.close()
-        cluster.close()
-        print("Dask closed.")
-        if _flowcept:
-            print("Now closing flowcept consumer...")
-            _flowcept.stop()
-            print("Flowcept consumer closed.")
+    try:
+        if start_dask_cluster or scheduler_file:
+            print("Closing dask...")
+            sleep(10)
+            client.shutdown()
+            print("Dask closed.")
+            if _flowcept:
+                print("Now closing flowcept consumer...")
+                _flowcept.stop()
+                print("Flowcept consumer closed.")
+        else:
+            print("Closing dask...")
+            client.close()
+            cluster.close()
+            print("Dask closed.")
+            if _flowcept:
+                print("Now closing flowcept consumer...")
+                _flowcept.stop()
+                print("Flowcept consumer closed.")
+    except Exception as e:
+        print(e)
 
 
 def run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs):
