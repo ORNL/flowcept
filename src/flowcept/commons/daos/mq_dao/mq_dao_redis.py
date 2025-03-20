@@ -4,14 +4,10 @@ from typing import Callable
 import redis
 
 import msgpack
-from time import time, sleep
+from time import sleep
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.commons.utils import perf_log
-from flowcept.configs import (
-    MQ_CHANNEL,
-    PERF_LOG,
-)
+from flowcept.configs import MQ_CHANNEL
 
 
 class MQDaoRedis(MQDao):
@@ -63,25 +59,19 @@ class MQDaoRedis(MQDao):
         self._producer.publish(channel, serializer(message))
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
-        total = 0
         pipe = self._producer.pipeline()
         for message in buffer:
             try:
-                total += len(str(message).encode())
                 pipe.publish(MQ_CHANNEL, serializer(message))
             except Exception as e:
                 self.logger.exception(e)
                 self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
                 self.logger.error(f"Message that caused error: {message}")
-        t0 = 0
-        if PERF_LOG:
-            t0 = time()
         try:
             pipe.execute()
             self.logger.debug(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)
-        perf_log("mq_pipe_execute", t0)
 
     def liveness_test(self):
         """Get the livelyness of it."""

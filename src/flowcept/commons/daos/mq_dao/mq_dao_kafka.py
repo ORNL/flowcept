@@ -3,16 +3,13 @@
 from typing import Callable
 
 import msgpack
-from time import time
 
 from confluent_kafka import Producer, Consumer, KafkaError
 from confluent_kafka.admin import AdminClient
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.commons.utils import perf_log
 from flowcept.configs import (
     MQ_CHANNEL,
-    PERF_LOG,
     MQ_HOST,
     MQ_PORT,
 )
@@ -70,25 +67,18 @@ class MQDaoKafka(MQDao):
         self._producer.flush()
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
-        total = 0
         for message in buffer:
             try:
-                self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t")
                 self._producer.produce(channel, key=channel, value=serializer(message))
-                total += len(str(message).encode())
             except Exception as e:
                 self.logger.exception(e)
                 self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
                 self.logger.error(f"Message that caused error: {message}")
-        t0 = 0
-        if PERF_LOG:
-            t0 = time()
         try:
             self._producer.flush()
             self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)
-        perf_log("mq_pipe_flush", t0)
 
     def liveness_test(self):
         """Get the livelyness of it."""
