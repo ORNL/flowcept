@@ -1,7 +1,7 @@
 """MQ kafka module."""
 
 from typing import Callable
-
+from time import time
 import msgpack
 
 from confluent_kafka import Producer, Consumer, KafkaError
