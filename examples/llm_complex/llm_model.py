@@ -181,10 +181,10 @@ def model_train(
 ):
     print("Starting model_train!")
     try:
-        from distributed.worker import thread_state
-        main_task_id = thread_state.key if hasattr(thread_state, "key") else None
         if with_flowcept:
-            assert get_flowcept_task(main_task_id)
+            main_task_id = get_flowcept_task().task_id
+        else:
+            main_task_id = None
     except:
         main_task_id = None
     torch.manual_seed(random_seed)

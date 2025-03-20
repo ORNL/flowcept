@@ -21,31 +21,6 @@ from flowcept.flowceptor.adapters.instrumentation_interceptor import Instrumenta
 
 def get_run_spec_data(task_msg: TaskObject, run_spec):
     """Get the run specs."""
-    # def _get_arg(arg_name):
-    #     if type(run_spec) == dict:
-    #         return run_spec.get(arg_name, None)
-    #     elif hasattr(run_spec, arg_name):
-    #         return getattr(run_spec, arg_name)
-    #     return None
-    #
-    # def _parse_dask_tuple(_tuple: tuple):
-    #     forth_elem = None
-    #     if len(_tuple) == 3:
-    #         _, _, value_tuple = _tuple
-    #     elif len(_tuple) == 4:
-    #         _, _, value_tuple, forth_elem = _tuple
-    #
-    #     _, value = value_tuple
-    #     if len(value) == 1:  # Value is always an array here
-    #         value = value[0]
-    #     ret_obj = {"value": value}
-    #
-    #     if forth_elem is not None and type(forth_elem) == dict:
-    #         ret_obj.update(forth_elem)
-    #     else:
-    #         pass  # We don't know yet what to do if this happens. So just pass.
-    #
-    #     return ret_obj
 
     func = run_spec[0]
     task_msg.activity_id = func.__name__
@@ -91,7 +66,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
         self._plugin_key = plugin_key
         self._worker = None
         self.kind = kind
-        # super().__init__ goes to setup_worker.
+        # super().__init__ goes to setup_worker. I'm leaving this commented here as a reminder.
 
     def setup_worker(self, worker):
         """Set the worker.
@@ -102,7 +77,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
         self._worker = worker
         super().__init__(plugin_key=self._plugin_key, kind=self.kind)
         self._worker.flowcept_tasks = {}
-        # TODO: :refactor: Below is just to avoid the auto-generation of workflow id, which doesnt make sense in Dask.
+        # TODO: :refactor: Below is just to avoid the auto-generation of workflow id, which doesn't make sense in Dask.
         self._generated_workflow_id = True
         super().start(bundle_exec_id=self._worker.scheduler.address)
 
