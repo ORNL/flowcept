@@ -1,10 +1,10 @@
 project:
-  debug: true
+  debug: false
   json_serializer: default # or complex. If "complex", Flowcept will deal with complex python dicts that may contain JSON unserializable values
   replace_non_json_serializable: true
   performance_logging: false
   register_workflow: true
-  enrich_messages: true
+  enrich_messages: false
   db_flush_mode: online   # or offline
 
 log:
@@ -12,23 +12,23 @@ log:
   log_file_level: error # use 'disable' to disable logs
   log_stream_level: error
 
-telemetry_capture:
-  gpu: ~ # ~ means None. This is a list with GPU metrics. AMD=[activity,used,power,temperature,others]; NVIDIA=[used,temperature,power,name,ix]
-  cpu: true
-  per_cpu: true
-  process_info: true
-  mem: true
-  disk: true
-  network: true
-  machine_info: true
+telemetry_capture: ~
+  # gpu: [used,temperature,power,name,ix]  # ~ means None. This is a list with GPU metrics. AMD=[activity,used,power,temperature,others]; NVIDIA=[used,temperature,power,name,ix]
+  # cpu: true
+  # per_cpu: true
+  # process_info: true
+  # mem: true
+  # disk: true
+  # network: true
+  # machine_info: true
 
 instrumentation:
-  enabled: true
+  enabled: false
   torch:
     what: parent_and_children # parent_only, parent_and_children, ~
     children_mode: telemetry_and_tensor_inspection   # tensor_inspection, telemetry, telemetry_and_tensor_inspection
-    epoch_loop: lightweight # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    batch_loop: lightweight # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
+    epoch_loop: default # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
+    batch_loop: default # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
     capture_epochs_at_every: 1 #epochs; please use a value that is multiple of #epochs
     # enable to set between train, evaluate, and test
 
@@ -36,21 +36,19 @@ experiment:
   user: root
 
 mq:
-  type: redis  # or kafka or mofka; Please adjust the port (kafka's default is 9092; redis is 6379). If mofka, adjust the group_file.
+  type: mofka  # or kafka or mofka; Please adjust the port (kafka's default is 9092; redis is 6379). If mofka, adjust the group_file.
   host: localhost
   # instances: ["localhost:6379"] # We can have multiple redis instances being accessed by the consumers but each interceptor will currently access one single redis.
-  port: 6379
-  # group_file: mofka.json
+  # port: 6379
+  group_file: mofka.json
   channel: interception
-  buffer_size: 50
-  insertion_buffer_time_secs: 5
-  timing: false
+  buffer_size: PLACEHOLDER
+  insertion_buffer_time_secs: 99999999
   chunk_size: -1  # use 0 or -1 to disable this. Or simply omit this from the config file.
 
 kv_db:
   host: localhost
   port: 6379
-  # uri: use Redis connection uri here
 
 web_server:
   host: 0.0.0.0
@@ -73,8 +71,6 @@ db_buffer:
   max_buffer_size: 50
   min_buffer_size: 10
   remove_empty_fields: false
-  stop_max_trials: 240
-  stop_trials_sleep: 0.01
 
 databases:
 
@@ -123,3 +119,11 @@ adapters:
     worker_should_get_output: true
     scheduler_create_timestamps: true
     worker_create_timestamps: false
+
+
+
+   
+  # enrich_messages: false
+  # telemetry_capture: ~
+  # instrumentation:
+  # enabled: false
