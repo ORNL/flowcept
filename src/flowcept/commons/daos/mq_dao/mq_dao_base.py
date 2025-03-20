@@ -20,7 +20,8 @@ from flowcept.configs import (
     MQ_BUFFER_SIZE,
     MQ_INSERTION_BUFFER_TIME,
     MQ_CHUNK_SIZE,
-    MQ_TYPE, MQ_TIMING,
+    MQ_TYPE,
+    MQ_TIMING,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder

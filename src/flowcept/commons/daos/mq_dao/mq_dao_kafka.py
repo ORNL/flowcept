@@ -9,10 +9,8 @@ from confluent_kafka import Producer, Consumer, KafkaError
 from confluent_kafka.admin import AdminClient
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.commons.utils import perf_log
 from flowcept.configs import (
     MQ_CHANNEL,
-    PERF_LOG,
     MQ_HOST,
     MQ_PORT,
 )

@@ -9,8 +9,7 @@ import mochi.mofka.client as mofka
 from mochi.mofka.client import ThreadPool, AdaptiveBatchSize
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.commons.utils import perf_log
-from flowcept.configs import PERF_LOG, MQ_SETTINGS, MQ_CHANNEL
+from flowcept.configs import MQ_SETTINGS, MQ_CHANNEL
 
 
 class MQDaoMofka(MQDao):
