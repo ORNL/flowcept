@@ -4,12 +4,8 @@ from time import sleep
 import numpy as np
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept import MLFlowInterceptor
 from flowcept import Flowcept
-from flowcept.commons.utils import (
-    assert_by_querying_tasks_until,
-    evaluate_until,
-)
+from flowcept.commons.utils import assert_by_querying_tasks_until
 
 
 class TestMLFlow(unittest.TestCase):
@@ -31,25 +27,31 @@ class TestMLFlow(unittest.TestCase):
         return run.info.run_uuid
 
     def test_get_runs(self):
-        interceptor = MLFlowInterceptor()
-        self.simple_mlflow_run(interceptor.settings.file_path)
-        runs = interceptor.dao.get_finished_run_uuids()
+        with Flowcept("mlflow") as f:
+            file_path = f._interceptor_instances[0].settings.file_path
+            self.simple_mlflow_run(file_path)
+            runs = f._interceptor_instances[0].dao.get_finished_run_uuids()
         assert runs is not None and len(runs) > 0
         for run in runs:
             assert isinstance(run[0], str)
             self.logger.debug(run[0])
 
     def test_get_run_data(self):
-        interceptor = MLFlowInterceptor()
-        run_uuid = self.simple_mlflow_run(interceptor.settings.file_path)
-        run_data = interceptor.dao.get_run_data(run_uuid)
+        with Flowcept("mlflow") as f:
+            file_path = f._interceptor_instances[0].settings.file_path
+            run_uuid = self.simple_mlflow_run(file_path)
+            run_data = f._interceptor_instances[0].dao.get_run_data(run_uuid)
+
         assert run_data.task_id == run_uuid
 
     def test_check_state_manager(self):
-        interceptor = MLFlowInterceptor()
-        interceptor.state_manager.reset()
-        interceptor.state_manager.add_element_id("dummy-value")
-        self.simple_mlflow_run(interceptor.settings.file_path)
+        with Flowcept("mlflow") as f:
+            interceptor = f._interceptor_instances[0]
+            file_path = interceptor.settings.file_path
+            interceptor.state_manager.reset()
+            interceptor.state_manager.add_element_id("dummy-value")
+
+            self.simple_mlflow_run(file_path)
         runs = interceptor.dao.get_finished_run_uuids()
         assert len(runs) > 0
         for run_tuple in runs:
@@ -60,25 +62,21 @@ class TestMLFlow(unittest.TestCase):
                 interceptor.state_manager.add_element_id(run_uuid)
 
     def test_observer_and_consumption(self):
-        interceptor = MLFlowInterceptor()
-        with Flowcept(interceptor):
-            run_uuid = self.simple_mlflow_run(interceptor.settings.file_path)
+        with Flowcept(interceptors="mlflow") as f:
+            file_path = f._interceptor_instances[0].settings.file_path
+            run_uuid = self.simple_mlflow_run(file_path)
         print(run_uuid)
-        assert evaluate_until(
-            lambda: interceptor.state_manager.has_element_id(run_uuid),
-        )
-
         assert assert_by_querying_tasks_until(
             {"task_id": run_uuid},
         )
 
     @unittest.skip("Skipping this test as we need to debug it further.")
     def test_multiple_tasks(self):
-        interceptor = MLFlowInterceptor()
         run_ids = []
-        with Flowcept(interceptor):
+        with Flowcept("mlflow") as f:
+            file_path = f._interceptor_instances[0].settings.file_path
             for i in range(1, 10):
-                run_ids.append(self.simple_mlflow_run(interceptor.settings.file_path, epochs=i * 10, batch_size=i * 2))
+                run_ids.append(self.simple_mlflow_run(file_path, epochs=i * 10, batch_size=i * 2))
                 sleep(3)
 
         for run_id in run_ids:

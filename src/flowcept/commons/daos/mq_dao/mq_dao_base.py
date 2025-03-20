@@ -66,7 +66,7 @@ class MQDao(ABC):
 
     def __init__(self, adapter_settings=None):
         self.logger = FlowceptLogger()
-
+        self.started = False
         self._adapter_settings = adapter_settings
         self._keyvalue_dao = KeyValueDAO()
         self._time_based_flushing_started = False
@@ -132,18 +132,20 @@ class MQDao(ABC):
 
     def init_buffer(self, interceptor_instance_id: str, exec_bundle_id=None):
         """Create the buffer."""
-        if flowcept.configs.DB_FLUSH_MODE == "online":
-            # msg = "Starting MQ time-based flushing! bundle: "
-            # self.logger.debug(msg+f"{exec_bundle_id}; interceptor id: {interceptor_instance_id}")
-            self.buffer = AutoflushBuffer(
-                max_size=MQ_BUFFER_SIZE,
-                flush_interval=MQ_INSERTION_BUFFER_TIME,
-                flush_function=self.bulk_publish,
-            )
-            self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
-            self._time_based_flushing_started = True
-        else:
-            self.buffer = list()
+        if not self.started:
+            if flowcept.configs.DB_FLUSH_MODE == "online":
+                # msg = "Starting MQ time-based flushing! bundle: "
+                # self.logger.debug(msg+f"{exec_bundle_id}; interceptor id: {interceptor_instance_id}")
+                self.buffer = AutoflushBuffer(
+                    max_size=MQ_BUFFER_SIZE,
+                    flush_interval=MQ_INSERTION_BUFFER_TIME,
+                    flush_function=self.bulk_publish,
+                )
+                self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
+                self._time_based_flushing_started = True
+            else:
+                self.buffer = list()
+            self.started = True
 
     def _close_buffer(self):
         if flowcept.configs.DB_FLUSH_MODE == "online":
@@ -165,6 +167,8 @@ class MQDao(ABC):
         msg = "Flushed MQ for last time! Send stop msg. bundle: "
         self.logger.debug(msg + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
         self._send_mq_dao_time_thread_stop(interceptor_instance_id, bundle_exec_id)
+        self.started = False
+
         t2 = time()
 
         self._flush_events.append(["final", t1, t2, t2 - t1, "n/a"])

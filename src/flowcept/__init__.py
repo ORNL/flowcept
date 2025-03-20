@@ -43,25 +43,13 @@ def __getattr__(name):
 
         return lightweight_flowcept_task
 
-    if name == "MLFlowInterceptor":
-        from flowcept.flowceptor.adapters.mlflow.mlflow_interceptor import (
-            MLFlowInterceptor,
-        )
-
-        return MLFlowInterceptor
-
     elif name == "FlowceptDaskWorkerAdapter":
         from flowcept.flowceptor.adapters.dask.dask_plugins import (
             FlowceptDaskWorkerAdapter,
         )
 
         return FlowceptDaskWorkerAdapter
-    elif name == "TensorboardInterceptor":
-        from flowcept.flowceptor.adapters.tensorboard.tensorboard_interceptor import (
-            TensorboardInterceptor,
-        )
 
-        return TensorboardInterceptor
     elif name == "SETTINGS_PATH":
         from configs import SETTINGS_PATH
 
@@ -75,10 +63,6 @@ def __getattr__(name):
 
 __all__ = [
     "FlowceptDaskWorkerAdapter",
-    "FlowceptDaskSchedulerAdapter",
-    "MLFlowInterceptor",
-    "TensorboardInterceptor",
-    "ZambezeInterceptor",
     "TaskQueryAPI",
     "flowcept_task",
     "FlowceptLoop",
