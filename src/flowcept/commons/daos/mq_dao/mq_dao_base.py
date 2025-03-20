@@ -1,8 +1,6 @@
 """MQ base module."""
 
-import csv
 from abc import ABC, abstractmethod
-from time import time
 from typing import Union, List, Callable
 
 import msgpack
@@ -144,12 +142,10 @@ class MQDao(ABC):
         """Create the buffer."""
         if not self.started:
             if flowcept.configs.DB_FLUSH_MODE == "online":
-                # msg = "Starting MQ time-based flushing! bundle: "
-                # self.logger.debug(msg+f"{exec_bundle_id}; interceptor id: {interceptor_instance_id}")
                 self.buffer = AutoflushBuffer(
+                    flush_function=self.bulk_publish,
                     max_size=MQ_BUFFER_SIZE,
                     flush_interval=MQ_INSERTION_BUFFER_TIME,
-                    flush_function=self.bulk_publish,
                 )
                 self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
                 self._time_based_flushing_started = True
@@ -167,9 +163,6 @@ class MQDao(ABC):
         else:
             self.bulk_publish(self.buffer)
             self.buffer = list()
-
-    # def stop(self, interceptor_instance_id: str, bundle_exec_id: int = None):
-    #     self._stop(interceptor_instance_id, bundle_exec_id)
 
     def _stop_timed(self, interceptor_instance_id: str, bundle_exec_id: int = None):
         t1 = time()

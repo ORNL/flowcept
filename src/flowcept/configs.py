@@ -73,9 +73,9 @@ MQ_CHANNEL = settings["mq"].get("channel", "interception")
 MQ_PASSWORD = settings["mq"].get("password", None)
 MQ_HOST = os.getenv("MQ_HOST", settings["mq"].get("host", "localhost"))
 MQ_PORT = int(os.getenv("MQ_PORT", settings["mq"].get("port", "6379")))
+MQ_BUFFER_SIZE = settings["mq"].get("buffer_size", None)
+MQ_INSERTION_BUFFER_TIME = settings["mq"].get("insertion_buffer_time_secs", None)
 MQ_TIMING = settings["mq"].get("timing", False)
-MQ_BUFFER_SIZE = int(settings["mq"].get("buffer_size", 50))
-MQ_INSERTION_BUFFER_TIME = int(settings["mq"].get("insertion_buffer_time_secs", 5))
 MQ_CHUNK_SIZE = int(settings["mq"].get("chunk_size", -1))
 
 #####################
@@ -127,7 +127,7 @@ if not LMDB_ENABLED and not MONGO_ENABLED:
 ##########################
 db_buffer_settings = settings["db_buffer"]
 # In seconds:
-INSERTION_BUFFER_TIME = int(db_buffer_settings.get("insertion_buffer_time_secs", 5))
+INSERTION_BUFFER_TIME = db_buffer_settings.get("insertion_buffer_time_secs", None)
 ADAPTIVE_DB_BUFFER_SIZE = db_buffer_settings.get("adaptive_buffer_size", True)
 DB_MAX_BUFFER_SIZE = int(db_buffer_settings.get("max_buffer_size", 50))
 DB_MIN_BUFFER_SIZE = max(1, int(db_buffer_settings.get("min_buffer_size", 10)))

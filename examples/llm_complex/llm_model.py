@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.nn import Embedding, Linear, TransformerEncoder, TransformerEncoderLayer, Dropout
 
+from flowcept.flowceptor.adapters.dask.dask_plugins import get_flowcept_task
 from llm_dataprep import get_wiki_text_dataset
 from flowcept import Flowcept, flowcept_torch
 from flowcept.instrumentation.flowcept_torch import FlowceptEpochLoop, FlowceptBatchLoop
@@ -182,6 +183,8 @@ def model_train(
     try:
         from distributed.worker import thread_state
         main_task_id = thread_state.key if hasattr(thread_state, "key") else None
+        if with_flowcept:
+            assert get_flowcept_task(main_task_id)
     except:
         main_task_id = None
     torch.manual_seed(random_seed)
@@ -215,10 +218,10 @@ def model_train(
         print(f"Starting training for epoch {epoch}/{epochs}")
         # Train the model on the training data and calculate the training loss
         train_loss = train_epoch(ntokens, model, train_data, criterion, optimizer, batch_size, epochs_loop=epochs_loop)
-
+        print(f"... train loss: {train_loss}. Starting val...")
         # Evaluate the model on the validation data and calculate the validation loss
         val_loss = evaluate(ntokens, model, val_data, criterion, eval_batch_size, epochs_loop=epochs_loop)
-
+        print(f"... val loss: {val_loss}.")
         # Print the training and validation losses for the current epoch
         print(f"Epoch: {epoch}, Train loss: {train_loss:.2f}, Validation loss: {val_loss:.2f}") # TODO revisit loop because var epoch here is none?
 

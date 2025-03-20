@@ -101,6 +101,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
         """
         self._worker = worker
         super().__init__(plugin_key=self._plugin_key, kind=self.kind)
+        self._worker.flowcept_tasks = {}
         # TODO: :refactor: Below is just to avoid the auto-generation of workflow id, which doesnt make sense in Dask.
         self._generated_workflow_id = True
         super().start(bundle_exec_id=self._worker.scheduler.address)
@@ -129,6 +130,8 @@ class DaskWorkerInterceptor(BaseInterceptor):
                 task_msg.address = self._worker.worker_address
                 if self.settings.worker_create_timestamps:
                     task_msg.started_at = get_utc_now()
+
+                self._worker.flowcept_tasks[task_id] = task_msg
             elif ts.state == "memory":
                 task_msg.status = Status.FINISHED
                 if self.settings.worker_create_timestamps:

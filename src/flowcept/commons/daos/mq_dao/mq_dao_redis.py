@@ -7,9 +7,7 @@ import msgpack
 from time import time, sleep
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.configs import (
-    MQ_CHANNEL,
-)
+from flowcept.configs import MQ_CHANNEL
 
 
 class MQDaoRedis(MQDao):

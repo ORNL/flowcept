@@ -1,0 +1,47 @@
+name: flowcept
+services:
+  flowcept_redis:
+    container_name: flowcept_redis
+    image: redis
+    ports:
+      - 6379:6379
+
+  flowcept_mongo:
+    container_name: flowcept_mongo
+    image: mongo:latest
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data:/data/db
+
+  flowcept_grafana:
+    container_name: flowcept_grafana
+    image: renanfs/mongodb-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=complex_user
+      - GF_SECURITY_ADMIN_PASSWORD=SuperComplexPassword54321
+    command: [ "/bin/bash", "-c", "bash /custom-run.sh & sleep 10 && cd /usr/share/grafana && npm run server" ]
+    volumes:
+      - grafana_data:/var/lib/grafana
+    # To create a new MongoDB data-source connection:
+    # HTTP: URL: http://localhost:3333
+    # MongoDB: mongodb://flowcept_mongo:27017
+
+networks:
+  flowcept:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  grafana_data:
+
+# This is just for the cases where one does not want to use the same Redis instance for caching and messaging, but
+# it's not required to have separate instances.
+#  local_interceptor_cache:
+#    container_name: local_interceptor_cache
+#    image: redis
+#    ports:
+#      - 60379:6379
+

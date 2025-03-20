@@ -3,7 +3,6 @@
 from typing import Callable
 
 import msgpack
-from time import time
 
 from confluent_kafka import Producer, Consumer, KafkaError
 from confluent_kafka.admin import AdminClient
