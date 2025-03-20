@@ -3,6 +3,7 @@
 from distributed import Client, WorkerPlugin
 
 from flowcept import WorkflowObject
+from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.configs import INSTRUMENTATION
 from flowcept.flowceptor.adapters.dask.dask_interceptor import (
     DaskWorkerInterceptor,
@@ -51,6 +52,17 @@ def _set_workflow_on_workers(dask_worker, workflow_id, campaign_id=None):
 def set_workflow_info_on_workers(dask_client: Client, wf_obj: WorkflowObject):
     """Register the workflow."""
     dask_client.run(_set_workflow_on_workers, workflow_id=wf_obj.workflow_id, campaign_id=wf_obj.campaign_id)
+
+
+def get_flowcept_task(task_id) -> TaskObject:
+    """Get Flowcept Task inside a Worker."""
+    from dask.distributed import get_worker
+
+    worker = get_worker()
+    if hasattr(worker, "flowcept_tasks") and task_id in worker.flowcept_tasks:
+        return worker.flowcept_tasks[task_id]
+    else:
+        return None
 
 
 class FlowceptDaskWorkerAdapter(WorkerPlugin):
