@@ -37,7 +37,6 @@ class DBAPI(object):
         """Insert or update workflow."""
         if workflow_obj.workflow_id is None:
             workflow_obj.workflow_id = str(uuid.uuid4())
-        self.logger.debug(f"DB API going to save workflow {workflow_obj}")
         ret = DBAPI._dao().insert_or_update_workflow(workflow_obj)
         if not ret:
             self.logger.error("Sorry, couldn't update or insert workflow.")

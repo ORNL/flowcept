@@ -60,17 +60,12 @@ class MQDaoRedis(MQDao):
 
     def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         """Send the message."""
-        t1 = time()
         self._producer.publish(channel, serializer(message))
-        t2 = time()
-        self._flush_events.append(["single", t1, t2, t2 - t1, len(str(message).encode())])
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
-        total = 0
         pipe = self._producer.pipeline()
         for message in buffer:
             try:
-                total += len(str(message).encode())
                 pipe.publish(MQ_CHANNEL, serializer(message))
             except Exception as e:
                 self.logger.exception(e)
@@ -80,11 +75,8 @@ class MQDaoRedis(MQDao):
         if PERF_LOG:
             t0 = time()
         try:
-            t1 = time()
             pipe.execute()
-            t2 = time()
-            self._flush_events.append(["bulk", t1, t2, t2 - t1, total])
-            self.logger.debug(f"Flushed {len(buffer)} msgs to MQ!")
+            # self.logger.debug(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)
         perf_log("mq_pipe_execute", t0)

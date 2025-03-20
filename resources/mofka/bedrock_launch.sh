@@ -16,7 +16,5 @@ mofkactl partition add interception --type memory --rank 0 --groupfile mofka.jso
                        
 sleep 1
 
-touch flag.txt
-
 echo "Created topic."
 while true; do sleep 3600; done

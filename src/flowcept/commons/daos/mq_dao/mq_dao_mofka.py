@@ -56,19 +56,12 @@ class MQDaoMofka(MQDao):
     def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         """Send a single message to Mofka."""
         self.producer.push(metadata=message)  # using metadata to send data
-        t1 = time()
         self.producer.flush()
-        t2 = time()
-        self._flush_events.append(["single", t1, t2, t2 - t1, len(str(message).encode())])
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
-        total = 0
         try:
             self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t")
-
-            for m in buffer:
-                self.producer.push(m)
-                total += len(str(m).encode())
+            [self.producer.push(m) for m in buffer]
 
         except Exception as e:
             self.logger.exception(e)
@@ -78,11 +71,7 @@ class MQDaoMofka(MQDao):
         if PERF_LOG:
             t0 = time()
         try:
-            t1 = time()
             self.producer.flush()
-            t2 = time()
-            self._flush_events.append(["bulk", t1, t2, t2 - t1, total])
-
             self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)

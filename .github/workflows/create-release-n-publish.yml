@@ -131,7 +131,7 @@ jobs:
           # export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
           python src/flowcept/flowcept_webserver/app.py &
           sleep 3
-          pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb --ignore=notebooks/tensorboard.ipynb
+          pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb
 
       - name: Stop services
         run: make services-stop

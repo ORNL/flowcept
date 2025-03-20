@@ -67,18 +67,13 @@ class MQDaoKafka(MQDao):
     def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         """Send the message."""
         self._producer.produce(channel, key=channel, value=serializer(message))
-        t1 = time()
         self._producer.flush()
-        t2 = time()
-        self._flush_events.append(["single", t1, t2, t2 - t1, len(str(message).encode())])
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
-        total = 0
         for message in buffer:
             try:
                 self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{message}\n[END_MSG]\t")
                 self._producer.produce(channel, key=channel, value=serializer(message))
-                total += len(str(message).encode())
             except Exception as e:
                 self.logger.exception(e)
                 self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
@@ -87,11 +82,7 @@ class MQDaoKafka(MQDao):
         if PERF_LOG:
             t0 = time()
         try:
-            t1 = time()
             self._producer.flush()
-            t2 = time()
-            self._flush_events.append(["bulk", t1, t2, t2 - t1, total])
-
             self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)
