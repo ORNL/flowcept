@@ -15,8 +15,8 @@ class AutoflushBuffer:
         flush_function_args=[],
         flush_function_kwargs={},
     ):
-        self._max_size = max_size or float('inf')
-        self._flush_interval = flush_interval or float('inf')
+        self._max_size = max_size or float("inf")
+        self._flush_interval = flush_interval or float("inf")
         self._flush_interval = flush_interval
         self._buffers = [[], []]
         self._current_buffer_index = 0
