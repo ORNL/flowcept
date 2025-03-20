@@ -1,6 +1,7 @@
 import mochi.mofka.client as mofka
 from mochi.mofka.client import ThreadPool, AdaptiveBatchSize
 import json
+import os
 import time
 import csv
 print("about to start", flush=True)
@@ -18,7 +19,12 @@ consumer = topic.consumer(name=consumer_name,
 pulls = []
 events = []
 count = 0
-print("about to start", flush=True)
+
+
+# Get the list of files in the current directory
+csv_files = [file for file in os.listdir() if file.endswith('.csv')]
+threshold = len(csv_files)
+print("about to start with breakpoint ",threshold, flush=True)
 while True:
     data = []
     metadata = []
@@ -35,16 +41,18 @@ while True:
     
     # break
 
-    if "message" in e.keys():
-        print(e['message'],flush=True)
-        count += 1
-        with open("data.json", 'w') as f:
-            json.dump(events, f, indent=4)
-        with open("pulls.csv", "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(pulls)
+    if "type" in e.keys() and 'info' in e.keys():
+        if e['type'] == 'flowcept_control':
+            if e['info'] == "mq_dao_thread_stopped":
+                print(e,flush=True)
+                count += 1
+                with open("data.json", 'w') as f:
+                    json.dump(events, f, indent=4)
+                with open("pulls.csv", "w", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(pulls)
         
-    if count == 4:
+    if count == threshold:
         break
 
 

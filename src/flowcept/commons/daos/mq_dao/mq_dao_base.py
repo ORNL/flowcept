@@ -2,9 +2,9 @@
 
 from abc import ABC, abstractmethod
 from typing import Union, List, Callable
-
+import csv
 import msgpack
-
+from time import time
 import flowcept.commons
 from flowcept.commons.autoflush_buffer import AutoflushBuffer
 
@@ -19,6 +19,7 @@ from flowcept.configs import (
     MQ_INSERTION_BUFFER_TIME,
     MQ_CHUNK_SIZE,
     MQ_TYPE,
+    MQ_TIMING,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -69,10 +70,19 @@ class MQDao(ABC):
         self._keyvalue_dao = KeyValueDAO()
         self._time_based_flushing_started = False
         self.buffer: Union[AutoflushBuffer, List] = None
-        self._flush_events = []
+        if MQ_TIMING:
+            self._flush_events = []
+            self.stop = self._stop_timed
+            self.send_message = self._send_message_timed
+            self._bulk_publish = self._bulk_publish_timed
+        else:
+            self.stop = self._stop
 
     @abstractmethod
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        raise NotImplementedError()
+
+    def _bulk_publish_timed(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         raise NotImplementedError()
 
     def bulk_publish(self, buffer):
@@ -132,8 +142,6 @@ class MQDao(ABC):
         """Create the buffer."""
         if not self.started:
             if flowcept.configs.DB_FLUSH_MODE == "online":
-                # msg = "Starting MQ time-based flushing! bundle: "
-                # self.logger.debug(msg+f"{exec_bundle_id}; interceptor id: {interceptor_instance_id}")
                 self.buffer = AutoflushBuffer(
                     flush_function=self.bulk_publish,
                     max_size=MQ_BUFFER_SIZE,
@@ -156,7 +164,18 @@ class MQDao(ABC):
             self.bulk_publish(self.buffer)
             self.buffer = list()
 
-    def stop(self, interceptor_instance_id: str, bundle_exec_id: int = None):
+    def _stop_timed(self, interceptor_instance_id: str, bundle_exec_id: int = None):
+        t1 = time()
+        self._stop(interceptor_instance_id, bundle_exec_id)
+        t2 = time()
+        self._flush_events.append(["final", t1, t2, t2 - t1, "n/a"])
+
+        with open(f"{MQ_TYPE}_{interceptor_instance_id}_{MQ_TYPE}_flush_events.csv", "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["type", "start", "end", "duration", "size"])
+            writer.writerows(self._flush_events)
+
+    def _stop(self, interceptor_instance_id: str, bundle_exec_id: int = None):
         """Stop it."""
         msg0 = "MQ publisher received stop signal! bundle: "
         self.logger.debug(msg0 + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
@@ -186,6 +205,11 @@ class MQDao(ABC):
 
     @abstractmethod
     def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        """Send a message."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def _send_message_timed(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         """Send a message."""
         raise NotImplementedError()
 
