@@ -1,4 +1,5 @@
 """Dask plugin module."""
+
 from typing import Optional
 
 from distributed import Client, WorkerPlugin
@@ -27,6 +28,7 @@ def get_flowcept_task() -> Optional[TaskObject]:
     """Get the Flowcept Task Object inside a Worker's task."""
     from distributed import get_worker
     from distributed.worker import thread_state
+
     worker = get_worker()
     try:
         task_id = thread_state.key if hasattr(thread_state, "key") else None

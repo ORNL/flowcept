@@ -21,7 +21,6 @@ from flowcept.flowceptor.adapters.instrumentation_interceptor import Instrumenta
 
 def get_run_spec_data(task_msg: TaskObject, run_spec):
     """Get the run specs."""
-
     func = run_spec[0]
     task_msg.activity_id = func.__name__
     args = run_spec[1]
