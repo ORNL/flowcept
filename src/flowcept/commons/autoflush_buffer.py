@@ -9,13 +9,14 @@ class AutoflushBuffer:
 
     def __init__(
         self,
-        max_size,
-        flush_interval,
         flush_function: Callable,
+        max_size=None,
+        flush_interval=None,
         flush_function_args=[],
         flush_function_kwargs={},
     ):
-        self._max_size = max_size
+        self._max_size = max_size or float('inf')
+        self._flush_interval = flush_interval or float('inf')
         self._flush_interval = flush_interval
         self._buffers = [[], []]
         self._current_buffer_index = 0

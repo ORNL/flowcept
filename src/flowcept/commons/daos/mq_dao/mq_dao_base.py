@@ -135,9 +135,9 @@ class MQDao(ABC):
                 # msg = "Starting MQ time-based flushing! bundle: "
                 # self.logger.debug(msg+f"{exec_bundle_id}; interceptor id: {interceptor_instance_id}")
                 self.buffer = AutoflushBuffer(
+                    flush_function=self.bulk_publish,
                     max_size=MQ_BUFFER_SIZE,
                     flush_interval=MQ_INSERTION_BUFFER_TIME,
-                    flush_function=self.bulk_publish,
                 )
                 self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
                 self._time_based_flushing_started = True
