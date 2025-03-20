@@ -11,6 +11,7 @@ from flowcept.commons.flowcept_dataclasses.task_object import (
 )
 from flowcept.commons.vocabulary import Status
 from flowcept.commons.utils import get_utc_now
+from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.interceptor_state_manager import (
     InterceptorStateManager,
 )
@@ -65,6 +66,8 @@ class TensorboardInterceptor(BaseInterceptor):
                 hparams = tracked_tags.get("hparams")
                 if "workflow_id" in hparams:
                     task_msg.workflow_id = hparams.pop("workflow_id")
+                else:
+                    task_msg.workflow_id = Flowcept.current_workflow_id
                 if "activity_id" in hparams:
                     task_msg.activity_id = hparams.pop("activity_id")
 

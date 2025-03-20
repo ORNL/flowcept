@@ -100,11 +100,10 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
         # Start Flowcept's Dask observer
         prov_args = workflow_params.copy()
         prov_args["n_configs"] = len(configs)
-        f = Flowcept(["dask", "instrumentation"], campaign_id=campaign_id, start_persistence=with_persistence, workflow_args=prov_args, dask_client=client).start()
+        f = Flowcept("dask", campaign_id=campaign_id, start_persistence=with_persistence, workflow_args=prov_args, dask_client=client).start()
         search_wf_id = Flowcept.current_workflow_id
         print(f"search_workflow_id={search_wf_id}")
 
-    
     t1 = time()
     tasks = []
     for conf in configs:  # Edit here to enable more runs
@@ -180,24 +179,27 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
 
 
 def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _flowcept=None):
-    if start_dask_cluster or scheduler_file:
-        print("Closing dask...")
-        sleep(10)
-        client.shutdown()
-        print("Dask closed.")
-        if _flowcept:
-            print("Now closing flowcept consumer...")
-            _flowcept.stop()
-            print("Flowcept consumer closed.")
-    else:
-        print("Closing dask...")
-        client.close()
-        cluster.close()
-        print("Dask closed.")
-        if _flowcept:
-            print("Now closing flowcept consumer...")
-            _flowcept.stop()
-            print("Flowcept consumer closed.")
+    try:
+        if start_dask_cluster or scheduler_file:
+            print("Closing dask...")
+            sleep(10)
+            client.shutdown()
+            print("Dask closed.")
+            if _flowcept:
+                print("Now closing flowcept consumer...")
+                _flowcept.stop()
+                print("Flowcept consumer closed.")
+        else:
+            print("Closing dask...")
+            client.close()
+            cluster.close()
+            print("Dask closed.")
+            if _flowcept:
+                print("Now closing flowcept consumer...")
+                _flowcept.stop()
+                print("Flowcept consumer closed.")
+    except Exception as e:
+        print(e)
 
 
 def run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs):
