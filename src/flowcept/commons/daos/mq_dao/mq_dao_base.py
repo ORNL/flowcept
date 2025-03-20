@@ -1,8 +1,6 @@
 """MQ base module."""
 
-import csv
 from abc import ABC, abstractmethod
-from time import time
 from typing import Union, List, Callable
 
 import msgpack
