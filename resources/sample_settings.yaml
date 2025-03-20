@@ -44,6 +44,7 @@ mq:
   channel: interception
   buffer_size: 50
   insertion_buffer_time_secs: 5
+  timing: false
   chunk_size: -1  # use 0 or -1 to disable this. Or simply omit this from the config file.
 
 kv_db:

@@ -9,8 +9,7 @@ import mochi.mofka.client as mofka
 from mochi.mofka.client import ThreadPool, AdaptiveBatchSize
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.commons.utils import perf_log
-from flowcept.configs import PERF_LOG, MQ_SETTINGS, MQ_CHANNEL
+from flowcept.configs import MQ_SETTINGS, MQ_CHANNEL
 
 
 class MQDaoMofka(MQDao):
@@ -58,7 +57,29 @@ class MQDaoMofka(MQDao):
         self.producer.push(metadata=message)  # using metadata to send data
         self.producer.flush()
 
+    def _send_message_timed(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        t1 = time()
+        self.send_message(message, channel, serializer)
+        t2 = time()
+        self._flush_events.append(["single", t1, t2, t2 - t1, len(str(message).encode())])
+
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        try:
+            self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t")
+            for m in buffer:
+                self.producer.push(m)
+
+        except Exception as e:
+            self.logger.exception(e)
+            self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
+            self.logger.error(f"Message that caused error: {buffer}")
+        try:
+            self.producer.flush()
+            self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
+        except Exception as e:
+            self.logger.exception(e)
+
+    def _bulk_publish_timed(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         total = 0
         try:
             self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t")
@@ -71,15 +92,14 @@ class MQDaoMofka(MQDao):
             self.logger.exception(e)
             self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
             self.logger.error(f"Message that caused error: {buffer}")
-        t0 = 0
-        if PERF_LOG:
-            t0 = time()
         try:
+            t1 = time()
             self.producer.flush()
+            t2 = time()
+            self._flush_events.append(["bulk", t1, t2, t2 - t1, total])
             self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)
-        perf_log("mq_pipe_flush", t0)
 
     def liveness_test(self):
         """Test Mofka Liveness."""

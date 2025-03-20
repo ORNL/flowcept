@@ -71,10 +71,10 @@ class DocumentInserter:
         self._bundle_exec_id = bundle_exec_id
         self.check_safe_stops = check_safe_stops
         self.buffer: AutoflushBuffer = AutoflushBuffer(
-            max_size=self._curr_max_buffer_size,
-            flush_interval=INSERTION_BUFFER_TIME,
             flush_function=DocumentInserter.flush_function,
             flush_function_kwargs={"logger": self.logger, "doc_daos": self._doc_daos},
+            max_size=self._curr_max_buffer_size,
+            flush_interval=INSERTION_BUFFER_TIME,
         )
 
     def _set_buffer_size(self):
