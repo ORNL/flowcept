@@ -2,6 +2,7 @@ import uuid
 from typing import Callable
 
 import msgpack
+from time import time
 import json
 
 import mochi.mofka.client as mofka
@@ -15,7 +16,7 @@ class MQDaoMofka(MQDao):
     """Main class to communicate with Mofka."""
 
     _driver = mofka.MofkaDriver(MQ_SETTINGS.get("group_file", None), use_progress_thread=True)
-    _topic = _driver.open_topic(MQ_CHANNEL)
+    _topic = _driver.open_topic(MQ_SETTINGS["channel"])
 
     def __init__(self, adapter_settings=None, with_producer=True):
         super().__init__(adapter_settings=adapter_settings)
@@ -56,8 +57,15 @@ class MQDaoMofka(MQDao):
         self.producer.push(metadata=message)  # using metadata to send data
         self.producer.flush()
 
+    def _send_message_timed(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        t1 = time()
+        self.send_message(message, channel, serializer)
+        t2 = time()
+        self._flush_events.append(["single", t1, t2, t2 - t1, len(str(message).encode())])
+
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         try:
+            self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t")
             for m in buffer:
                 self.producer.push(m)
 
@@ -67,6 +75,28 @@ class MQDaoMofka(MQDao):
             self.logger.error(f"Message that caused error: {buffer}")
         try:
             self.producer.flush()
+            self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
+        except Exception as e:
+            self.logger.exception(e)
+
+    def _bulk_publish_timed(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        total = 0
+        try:
+            self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t")
+
+            for m in buffer:
+                self.producer.push(m)
+                total += len(str(m).encode())
+
+        except Exception as e:
+            self.logger.exception(e)
+            self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
+            self.logger.error(f"Message that caused error: {buffer}")
+        try:
+            t1 = time()
+            self.producer.flush()
+            t2 = time()
+            self._flush_events.append(["bulk", t1, t2, t2 - t1, total])
             self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)

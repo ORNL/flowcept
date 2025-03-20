@@ -4,7 +4,7 @@ from typing import Callable
 import redis
 
 import msgpack
-from time import sleep
+from time import time, sleep
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.configs import MQ_CHANNEL
@@ -58,17 +58,44 @@ class MQDaoRedis(MQDao):
         """Send the message."""
         self._producer.publish(channel, serializer(message))
 
+    def _send_message_timed(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        """Send the message using timing for performance evaluation."""
+        t1 = time()
+        self.send_message(message, channel, serializer)
+        t2 = time()
+        self._flush_events.append(["single", t1, t2, t2 - t1, len(str(message).encode())])
+
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         pipe = self._producer.pipeline()
         for message in buffer:
             try:
-                pipe.publish(MQ_CHANNEL, serializer(message))
+                pipe.publish(channel, serializer(message))
             except Exception as e:
                 self.logger.exception(e)
                 self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
                 self.logger.error(f"Message that caused error: {message}")
         try:
             pipe.execute()
+            self.logger.debug(f"Flushed {len(buffer)} msgs to MQ!")
+        except Exception as e:
+            self.logger.exception(e)
+
+    def _bulk_publish_timed(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
+        total = 0
+        pipe = self._producer.pipeline()
+        for message in buffer:
+            try:
+                total += len(str(message).encode())
+                pipe.publish(channel, serializer(message))
+            except Exception as e:
+                self.logger.exception(e)
+                self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
+                self.logger.error(f"Message that caused error: {message}")
+        try:
+            t1 = time()
+            pipe.execute()
+            t2 = time()
+            self._flush_events.append(["bulk", t1, t2, t2 - t1, total])
             self.logger.debug(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)
