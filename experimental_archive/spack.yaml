@@ -1,0 +1,156 @@
+# This is a Spack Environment file.
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+spack:
+  # add package specs to the `specs` list
+  specs:
+  - py-redis@4.5.1 #@4.4.2
+  - py-psutil@5.9.5
+  - py-py-cpuinfo@9.0.0
+  - py-pymongo@4.2.0 #@4.3.3
+  - py-pandas
+  - py-omegaconf
+  - py-flask
+  - py-requests
+  - py-flask-restful
+  - py-werkzeug
+  - py-msgpack
+  - py-pip
+  - mochi-margo@0.19.1
+  - mofka@0.6.0
+  view: true
+  concretizer:
+    unify: true
+  mirrors:
+    mochi-buildcache:
+      url: oci://ghcr.io/mochi-hpc/mochi-spack-buildcache
+      signed: false
+  modules:
+    prefix_inspections:
+      lib: [LD_LIBRARY_PATH]
+      lib64: [LD_LIBRARY_PATH]
+  compilers:
+  - compiler:
+      spec: gcc@=12.3.0
+      paths:
+        cc: /usr/bin/gcc-12
+        cxx: /usr/bin/g++-12
+        f77: /usr/bin/gfortran-12
+        fc: /usr/bin/gfortran-12
+      flags: {}
+      operating_system: sles15
+      target: x86_64
+      modules:
+      - PrgEnv-gnu
+      - gcc-native/12.3
+      - libfabric
+      environment: {}
+      extra_rpaths: []
+  packages:
+    all:
+      require:
+      - '%gcc@12.3.0'
+      - target=zen3
+    mpi:
+      require:
+      - cray-mpich
+    json-c:
+      require:
+      - '@0.13.0'
+    pkgconfig:
+      require:
+      - pkg-config
+    cray-mpich:
+      buildable: false
+      externals:
+      - spec: cray-mpich@8.1.28
+        #prefix: /opt/cray/pe/mpich/8.1.28/ofi/gnu/12.3
+        modules:
+        - cray-mpich/8.1.28
+        - libfabric/1.15.2.0
+    netcdf-c:
+      buildable: false
+      externals:
+      - spec: netcdf-c@4.9.0.9
+        prefix: /opt/cray/pe/netcdf/4.9.0.9/gnu/12.3/
+        modules:
+        - cray-netcdf/4.9.0.9
+        - cce/17.0.0
+        - cray-mpich/8.1.28
+        - cray-hdf5/1.12.2.9
+    hdf5:
+      buildable: false
+      externals:
+      - spec: hdf5@1.12.2.9
+        prefix: /opt/cray/pe/hdf5-parallel/1.12.2.9/gnu/12.3
+        modules:
+        - cray-hdf5-parallel/1.12.2.9
+    mercury:
+      buildable: true
+      variants: ~boostsys ~checksum
+    libfabric:
+      buildable: false
+      externals:
+      - spec: libfabric@1.15.2.0
+        prefix: /opt/cray/libfabric/1.15.2.0
+        modules:
+        - libfabric/1.15.2.0
+    autoconf:
+      buildable: false
+      externals:
+      - spec: autoconf@2.69
+        prefix: /usr
+    automake:
+      buildable: false
+      externals:
+      - spec: automake@1.15.1
+        prefix: /usr
+    gmake:
+      buildable: false
+      externals:
+      - spec: gmake@4.2.1
+        prefix: /usr
+    cmake:
+      buildable: false
+      externals:
+      - spec: cmake@3.27.7
+        prefix: /soft/spack/gcc/0.6.1/install/linux-sles15-x86_64/gcc-12.3.0/cmake-3.27.7-a435jtzvweeos2es6enirbxdjdqhqgdp
+    libtool:
+      buildable: false
+      externals:
+      - spec: libtool@2.4.6
+        prefix: /usr
+    openssl:
+      buildable: false
+      externals:
+      - spec: openssl@1.1.1d
+        prefix: /usr
+    m4:
+      buildable: false
+      externals:
+      - spec: m4@1.4.18
+        prefix: /usr
+    zlib:
+      buildable: false
+      externals:
+      - spec: zlib@1.2.11
+        prefix: /usr
+    pkg-config:
+      buildable: false
+      externals:
+      - spec: pkg-config@0.29.2
+        prefix: /usr
+    git:
+      buildable: false
+      externals:
+      - spec: git@2.35.3
+        prefix: /usr
+    tar:
+      buildable: false
+      externals:
+      - spec: tar@1.34
+        prefix: /usr
+  repos: # clone mochi spack-packages-repo from https://github.com/mochi-hpc/mochi-spack-packages
+  - /lus/eagle/projects/radix-io/sockerman/flowcept_mofka/mochi-spack-packages
+  - /eagle/projects/radix-io/sockerman/flowcept_mofka/mochi-spack-packages
