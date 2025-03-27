@@ -156,13 +156,13 @@ class FlowceptLoop:
             "used": {"i": self._next_counter, self._item_name: self._current_item},
             "parent_task_id": self._parent_task_id,
         }
-        tel = FlowceptLoop._interceptor.telemetry_capture.capture()
-        if tel:
-            iteration_task["telemetry_at_start"] = tel.to_dict()
         return iteration_task
 
-    def _end_iteration_task(self, iteration_task):
-        iteration_task["status"] = Status.FINISHED.value
+    def _end_iteration_task(self, _):
+        self._last_iteration_task["status"] = Status.FINISHED.value
+        tel = FlowceptLoop._interceptor.telemetry_capture.capture()
+        if tel:
+            self._last_iteration_task["telemetry_at_end"] = tel.to_dict()
         FlowceptLoop._interceptor.intercept(self._last_iteration_task)
 
     def _do_nothing_in_end_iter(self, *args, **kwargs):

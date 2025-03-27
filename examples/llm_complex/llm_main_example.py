@@ -127,12 +127,13 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
     if start_dask_cluster:
         import subprocess
 
-        def run_command(command, out_file="./cmd.out", err_file="./cmd.err"):
+        def run_command(command, out_file="./cmd.out", err_file="./cmd.err", env:dict = None):
             with open(out_file, "w") as out, open(err_file, "w") as err:
                 process = subprocess.Popen(
                     ["/bin/bash", "-c", command],
                     stdout=out,
                     stderr=err,
+                    env=env
                 )
 
             return process
@@ -144,19 +145,23 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
         os.environ["PYTHONPATH"] = llm_complex_dir
         run_command(f"dask scheduler --host localhost --no-dashboard --no-show --scheduler-file {scheduler_file}")
         sleep(5)
-        print("Starting worker, then sleeping some...")
-        run_command(
-            f"dask worker --nthreads 1 --nworkers 1 --no-dashboard  --scheduler-file {scheduler_file}",
-            "worker.out",
-            "worker.err"
-        )
+        
+        
+        print("Starting workers, then sleeping some...")
+        for i in range(8):
+            print(f"Starting Worker {i}")
+            command=f"ROCR_VISIBLE_DEVICES={i} && dask worker --nthreads 1 --nworkers 1 --no-dashboard  --scheduler-file {scheduler_file}"
+            print(command)
+            run_command(
+                command=command,
+            )
         sleep(5)
         assert os.path.exists(scheduler_file)
         print(f"{scheduler_file} created!")
 
     if scheduler_file is None:
         from distributed import LocalCluster
-        cluster = LocalCluster(n_workers=1)
+        cluster = LocalCluster(n_workers=8)
         scheduler = cluster.scheduler
         client = Client(scheduler.address)
         client.forward_logging()

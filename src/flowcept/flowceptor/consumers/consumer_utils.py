@@ -51,7 +51,7 @@ def curate_task_msg(task_msg_dict: dict, convert_times=True):
                 has_time_fields = True
                 task_msg_dict[time_field] = datetime.fromtimestamp(task_msg_dict[time_field], pytz.utc)
 
-        if not has_time_fields:
+        if "registered_at" not in task_msg_dict:
             task_msg_dict["registered_at"] = datetime.fromtimestamp(time(), pytz.utc)
 
 
