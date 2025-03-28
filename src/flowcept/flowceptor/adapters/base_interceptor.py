@@ -28,8 +28,6 @@ from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 class BaseInterceptor(object):
     """Base interceptor class."""
 
-    # KINDS_TO_NOT_EXPLICITLY_CONTROL = {"dask"}
-
     @staticmethod
     def build(kind: str) -> "BaseInterceptor":
         """Build the Interceptor."""
@@ -42,6 +40,11 @@ class BaseInterceptor(object):
             from flowcept.flowceptor.adapters.tensorboard.tensorboard_interceptor import TensorboardInterceptor
 
             return TensorboardInterceptor()
+
+        elif kind == "broker_mqtt":
+            from flowcept.flowceptor.adapters.brokers.mqtt_interceptor import MQTTBrokerInterceptor
+
+            return MQTTBrokerInterceptor()
         elif kind == "dask_worker":
             from flowcept.flowceptor.adapters.dask.dask_interceptor import DaskWorkerInterceptor
 

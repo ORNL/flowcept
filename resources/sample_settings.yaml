@@ -91,16 +91,26 @@ databases:
 
 adapters:
   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2. Use an empty dict, {}, if you won't use any adapter.
-  zambeze:
-    kind: zambeze
-    host: localhost
-    port: 5672
-    queue_names:
-      - hello
-      - hello2
-#    key_values_to_filter:
-#      - key: activity_status
-#        value: CREATED
+  broker_mqtt:
+    kind: broker
+    host: ??
+    port: 30011
+    protocol: mqtt3.1.1
+    queues: ["s3m-org/s3m-facility/s3m-system/s3m-subsystem/s3m-service/request"]
+    username: ??
+    password: ??
+    qos: 2
+    task_subtype: intersect_msg
+    tracked_keys:
+      used: payload
+      generated: ~
+      custom_metadata: [headers]
+      task_id: messageId
+      activity_id: operationId
+      submitted_at: ~
+      started_at: ~
+      ended_at: ~
+      registered_at: ~
 
   mlflow:
     kind: mlflow

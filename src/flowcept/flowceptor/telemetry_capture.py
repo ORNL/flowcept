@@ -168,7 +168,7 @@ class GPUCapture:
             }
 
         if "id" in gpu_conf:
-            flowcept_gpu_info["id"] = amdsmi_get_gpu_device_uuid(device),
+            flowcept_gpu_info["id"] = amdsmi_get_gpu_device_uuid(device)
 
         return flowcept_gpu_info
 
@@ -194,8 +194,9 @@ elif GPUCapture.GPU_VENDOR == "nvidia":
         nvmlShutdown,
         nvmlDeviceGetTemperature,
         nvmlDeviceGetPowerUsage,
-        NVML_TEMPERATURE_GPU, nvmlDeviceGetUUID,
-)
+        NVML_TEMPERATURE_GPU,
+        nvmlDeviceGetUUID,
+    )
 
     FlowceptLogger().debug("Imported Nvidia modules!")
 
