@@ -89,6 +89,7 @@ all = [
     "flowcept[dask]",
     "flowcept[kafka]",
     "flowcept[mlflow]",
+    "flowcept[mqtt]",
     "flowcept[tensorboard]",
     "flowcept[dev]",
 ]

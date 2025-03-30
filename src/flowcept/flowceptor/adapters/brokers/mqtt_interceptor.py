@@ -6,6 +6,7 @@ import paho.mqtt.client as mqtt
 import json
 from typing import Dict
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
+from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.base_interceptor import (
     BaseInterceptor,
 )
@@ -35,7 +36,7 @@ class MQTTBrokerInterceptor(BaseInterceptor):
     def _connect(self):
         """Establish a connection to the MQTT broker."""
         try:
-            self._client = mqtt.Client(client_id=self._id, clean_session=True, protocol=mqtt.MQTTv311)
+            self._client = mqtt.Client(client_id=self._id, clean_session=False, protocol=mqtt.MQTTv311)
             self._client.username_pw_set(self._username, self._password)
 
             self._client.on_message = self.callback
@@ -57,9 +58,15 @@ class MQTTBrokerInterceptor(BaseInterceptor):
 
     def callback(self, _, __, msg):
         """Implement the callback."""
-        self.logger.debug(f"Received message: '{msg.payload.decode()}' on topic '{msg.topic}'")
-        body_obj = msg.payload.decode()
-        self._intercept(body_obj)
+        msg_str = msg.payload.decode()
+        topic = msg.topic
+        self.logger.debug(f"Received message: '{msg_str}' on topic '{topic}'")
+
+        msg_dict = json.loads(msg_str)
+        msg_dict["topic"] = topic
+
+        task_msg = self.prepare_task_msg(msg_dict)
+        self.intercept(task_msg.to_dict())
 
     def _on_disconnect(self, *_):
         """Handle disconnections and attempt reconnection."""
@@ -80,6 +87,7 @@ class MQTTBrokerInterceptor(BaseInterceptor):
     def prepare_task_msg(self, msg: Dict) -> TaskObject:
         """Prepare a task."""
         task_dict = {}
+        custom_metadata = {"topic": msg.get("topic", None)}
         for key in self._tracked_keys:
             if key != "custom_metadata":
                 if self._tracked_keys.get(key):
@@ -87,7 +95,6 @@ class MQTTBrokerInterceptor(BaseInterceptor):
             else:
                 cm = self._tracked_keys.get("custom_metadata", None)
                 if cm and len(cm):
-                    custom_metadata = {}
                     for k in cm:
                         custom_metadata[k] = msg[k]
                     task_dict["custom_metadata"] = custom_metadata
@@ -97,6 +104,13 @@ class MQTTBrokerInterceptor(BaseInterceptor):
 
         task_obj = TaskObject.from_dict(task_dict)
         task_obj.subtype = self._task_subtype
+
+        if task_obj.campaign_id is None:
+            task_obj.campaign_id = Flowcept.campaign_id
+
+        if task_obj.workflow_id is None:
+            task_obj.workflow_id = Flowcept.current_workflow_id
+
         print(task_obj)
         return task_obj
 
@@ -113,8 +127,3 @@ class MQTTBrokerInterceptor(BaseInterceptor):
         self.logger.debug("Interceptor stopped.")
         return True
 
-    def _intercept(self, msg_str):
-        msg_dict = json.loads(msg_str)
-        self.logger.debug(f"Interceptor needs to intercept this:\n\t{msg_dict}")
-        task_msg = self.prepare_task_msg(msg_dict)
-        self.intercept(task_msg.to_dict())

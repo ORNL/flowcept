@@ -6,8 +6,11 @@ import redis
 import msgpack
 from time import time, sleep
 
+from redis import Redis
+
+from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.configs import MQ_CHANNEL
+from flowcept.configs import MQ_CHANNEL, MQ_URI, MQ_HOST, MQ_PORT, MQ_PASSWORD
 
 
 class MQDaoRedis(MQDao):
@@ -17,14 +20,22 @@ class MQDaoRedis(MQDao):
 
     def __init__(self, adapter_settings=None):
         super().__init__(adapter_settings)
-        self._producer = self._keyvalue_dao.redis_conn  # if MQ is redis, we use the same KV for the MQ
+
+        if MQ_URI is not None:
+            # If a URI is provided, use it for connection
+            self.redis_conn = Redis.from_url(MQ_URI)
+        else:
+            # Otherwise, use the host, port, and password settings
+            self.redis_conn = KeyValueDAO.build_redis_conn_pool(MQ_HOST, MQ_PORT, MQ_PASSWORD)
+
+        self._producer = self.redis_conn  # if MQ is redis, we use the same KV for the MQ
         self._consumer = None
 
     def subscribe(self):
         """
         Subscribe to interception channel.
         """
-        self._consumer = self._keyvalue_dao.redis_conn.pubsub()
+        self._consumer = self.redis_conn.pubsub()
         self._consumer.psubscribe(MQ_CHANNEL)
 
     def message_listener(self, message_handler: Callable):
@@ -103,7 +114,15 @@ class MQDaoRedis(MQDao):
     def liveness_test(self):
         """Get the livelyness of it."""
         try:
-            return super().liveness_test()
+            if not super().liveness_test():
+                self.logger.error("KV Store not alive!")
+                return False
+
+            response = self.redis_conn.ping()
+            if response:
+                return True
+            else:
+                return False
         except Exception as e:
             self.logger.exception(e)
             return False
