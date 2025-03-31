@@ -1,5 +1,5 @@
 """Zambeze interceptor module."""
-
+import uuid
 from threading import Thread
 from time import sleep
 import paho.mqtt.client as mqtt
@@ -101,6 +101,9 @@ class MQTTBrokerInterceptor(BaseInterceptor):
 
         if isinstance(task_dict.get("used"), str):
             task_dict["used"] = {"payload": task_dict.get("used")}
+
+        if "task_id" not in task_dict:
+            task_dict["task_id"] = str(uuid.uuid4())
 
         task_obj = TaskObject.from_dict(task_dict)
         task_obj.subtype = self._task_subtype
