@@ -77,19 +77,20 @@ class MQDaoRedis(MQDao):
         self._flush_events.append(["single", t1, t2, t2 - t1, len(str(message).encode())])
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
-        pipe = self._producer.pipeline()
+        # pipe = self._producer.pipeline()
+        # TODO: DO NOT USE INDIVIDUAL PUBLISHES!!!
         for message in buffer:
             try:
-                pipe.publish(channel, serializer(message))
+                self.redis_conn.publish(channel, serializer(message))
             except Exception as e:
                 self.logger.exception(e)
                 self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
                 self.logger.error(f"Message that caused error: {message}")
-        try:
-            pipe.execute()
-            self.logger.debug(f"Flushed {len(buffer)} msgs to MQ!")
-        except Exception as e:
-            self.logger.exception(e)
+        # try:
+        #     pipe.execute()
+        #     self.logger.debug(f"Flushed {len(buffer)} msgs to MQ!")
+        # except Exception as e:
+        #     self.logger.exception(e)
 
     def _bulk_publish_timed(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         total = 0
