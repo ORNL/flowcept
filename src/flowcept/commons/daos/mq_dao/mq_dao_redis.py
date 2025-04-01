@@ -10,7 +10,7 @@ from redis import Redis
 
 from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.configs import MQ_CHANNEL, MQ_URI, MQ_HOST, MQ_PORT, MQ_PASSWORD
+from flowcept.configs import MQ_CHANNEL, MQ_URI, MQ_HOST, MQ_PORT, MQ_PASSWORD, MQ_SETTINGS
 
 
 class MQDaoRedis(MQDao):
@@ -28,6 +28,7 @@ class MQDaoRedis(MQDao):
             # Otherwise, use the host, port, and password settings
             self.redis_conn = KeyValueDAO.build_redis_conn_pool(MQ_HOST, MQ_PORT, MQ_PASSWORD)
 
+        self._with_transaction = MQ_SETTINGS.get("transaction", True)
         self._producer = self.redis_conn  # if MQ is redis, we use the same KV for the MQ
         self._consumer = None
 
@@ -77,8 +78,7 @@ class MQDaoRedis(MQDao):
         self._flush_events.append(["single", t1, t2, t2 - t1, len(str(message).encode())])
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
-        # pipe = self._producer.pipeline()
-        # TODO: DO NOT USE INDIVIDUAL PUBLISHES!!!
+        pipe = self._producer.pipeline(transaction=self._with_transaction)
         for message in buffer:
             try:
                 self.redis_conn.publish(channel, serializer(message))
@@ -86,11 +86,11 @@ class MQDaoRedis(MQDao):
                 self.logger.exception(e)
                 self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
                 self.logger.error(f"Message that caused error: {message}")
-        # try:
-        #     pipe.execute()
-        #     self.logger.debug(f"Flushed {len(buffer)} msgs to MQ!")
-        # except Exception as e:
-        #     self.logger.exception(e)
+        try:
+            pipe.execute()
+            self.logger.debug(f"Flushed {len(buffer)} msgs to MQ!")
+        except Exception as e:
+            self.logger.exception(e)
 
     def _bulk_publish_timed(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         total = 0
