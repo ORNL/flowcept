@@ -38,8 +38,9 @@ experiment:
 mq:
   type: redis  # or kafka or mofka; Please adjust the port (kafka's default is 9092; redis is 6379). If mofka, adjust the group_file.
   host: localhost
+  #uri:
   # instances: ["localhost:6379"] # We can have multiple redis instances being accessed by the consumers but each interceptor will currently access one single redis.
-  port: 6379
+  # port: 6379
   # group_file: mofka.json
   channel: interception
   buffer_size: 50
@@ -93,19 +94,18 @@ adapters:
   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2. Use an empty dict, {}, if you won't use any adapter.
   broker_mqtt:
     kind: broker
-    host: ??
+    host: h
     port: 30011
     protocol: mqtt3.1.1
-    queues: ["s3m-org/s3m-facility/s3m-system/s3m-subsystem/s3m-service/request"]
-    username: ??
-    password: ??
+    queues: ["#"]
+    username: postman
+    password: p
     qos: 2
     task_subtype: intersect_msg
     tracked_keys:
       used: payload
       generated: ~
-      custom_metadata: [headers]
-      task_id: messageId
+      custom_metadata: [headers, msgId]
       activity_id: operationId
       submitted_at: ~
       started_at: ~
