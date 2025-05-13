@@ -259,8 +259,6 @@ class Flowcept(object):
         ...     print("One or more services are not ready.")
         """
         logger = FlowceptLogger()
-        mq_dao = MQDao.build()
-        mq_dao._keyvalue_dao.is_alive()
         if not MQDao.build().liveness_test():
             logger.error("MQ Not Ready!")
             return False
