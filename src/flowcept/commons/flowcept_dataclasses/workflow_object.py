@@ -11,7 +11,8 @@ from flowcept.configs import (
     FLOWCEPT_USER,
     SYS_NAME,
     EXTRA_METADATA,
-    ENVIRONMENT_ID, SETTINGS_PATH,
+    ENVIRONMENT_ID,
+    SETTINGS_PATH,
 )
 
 
@@ -71,9 +72,7 @@ class WorkflowObject:
         """Enrich it."""
         self.utc_timestamp = get_utc_now()
         self.flowcept_settings = OmegaConf.to_container(settings) if isinstance(settings, DictConfig) else settings
-        self.conf = {
-            "settings_path": SETTINGS_PATH
-        }
+        self.conf = {"settings_path": SETTINGS_PATH}
         if adapter_key is not None:
             # TODO :base-interceptor-refactor: :code-reorg: :usability:
             # revisit all times we assume settings is not none
