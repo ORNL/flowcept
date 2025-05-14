@@ -580,7 +580,6 @@ def main():
         
         from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
         mongo_dao = MongoDBDAO(create_indices=False)
-        db_stats_at_start = mongo_dao.get_db_stats()
         if delete_after_run:
             n_tasks, n_wfs, n_objects = verify_number_docs_in_db(mongo_dao)
     else:
@@ -589,19 +588,19 @@ def main():
     campaign_id, dataprep_wf_id, model_search_wf_id, n_batches_train, n_batches_eval, n_configs = run_campaign(workflow_params, campaign_id=args.campaign_id, scheduler_file=args.scheduler_file, start_dask_cluster=args.start_dask_cluster, with_persistence=args.with_persistence, with_flowcept=args.with_flowcept, dask_map_gpus=args.dask_map_gpus)
 
     if args.with_persistence and args.with_flowcept:
-
-        workflows_file, tasks_file = save_files(db_stats_at_start, mongo_dao, campaign_id, model_search_wf_id,
-                                                    output_dir=args.rep_dir)
-
-        try:
-            n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs)
-            # Commenting out this because for very large workloads, generating these files is taking WAY too much time.
-            # TODO: 4 is the number of modules of the current model. We should get it dynamically.
-            # asserts_on_saved_dfs(workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
-            #                     workflow_params["epochs"], n_configs, n_batches_train, n_batches_eval,
-            #                     n_modules=4)
-        except Exception as e:
-            print(e)
+        # Commenting out this because for very large workloads, generating these files is taking WAY too much time.
+        # TODO: 4 is the number of modules of the current model. We should get it dynamically.
+        # workflows_file, tasks_file = save_files(db_stats_at_start, mongo_dao, campaign_id, model_search_wf_id,
+        #                                             output_dir=args.rep_dir)
+        #
+        # try:
+        #     n_workflows_expected, n_tasks_expected = run_asserts_and_exports(campaign_id, model_search_wf_id, n_configs)
+        #
+        #     asserts_on_saved_dfs(workflows_file, tasks_file, n_workflows_expected, n_tasks_expected,
+        #                         workflow_params["epochs"], n_configs, n_batches_train, n_batches_eval,
+        #                         n_modules=4)
+        # except Exception as e:
+        #     print(e)
 
         if delete_after_run:
             delete_mongo_data(mongo_dao, campaign_id)
