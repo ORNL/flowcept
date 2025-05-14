@@ -90,7 +90,7 @@ jobs:
       - name: Clean up
         run: |
           make clean
-          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
+          test -d /home/runner/runners/ && find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
           docker image prune -a -f
 
       - name: List large files
