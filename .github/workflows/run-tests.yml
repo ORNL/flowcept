@@ -59,11 +59,10 @@ jobs:
 
       - name: Shut down docker compose
         run: make services-stop-mongo
-
       - name: Clean up
         run: |
           make clean
-          find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \;
+          test -d /home/runner/runners/ && find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
 
       - name: Start docker compose with kafka
         run: docker compose -f deployment/compose-kafka.yml up -d
