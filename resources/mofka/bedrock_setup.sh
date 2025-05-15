@@ -2,7 +2,7 @@ export HG_LOG_LEVEL=error
 export FI_LOG_LEVEL=Trace
 rm -rf mofka.json
 
-
+pkill -9 bedrock
 bedrock cxi -c resources/mofka/mofka_config.json &
 
 FILE="mofka.json"
@@ -20,3 +20,4 @@ touch flag.txt
 
 echo "Created topic."
 while true; do sleep 3600; done
+

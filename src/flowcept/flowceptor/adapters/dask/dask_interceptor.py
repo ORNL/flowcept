@@ -80,6 +80,8 @@ class DaskWorkerInterceptor(BaseInterceptor):
         self._generated_workflow_id = True
         super().start(bundle_exec_id=self._worker.scheduler.address)
 
+        self._worker._interceptor = self
+
         instrumentation = INSTRUMENTATION.get("enabled", False)
         if instrumentation:
             InstrumentationInterceptor.get_instance().start(

@@ -13,7 +13,7 @@ log:
   log_stream_level: error
 
 telemetry_capture:
-  gpu: ~ # ~ means None. This is a list with GPU metrics. AMD=[activity,used,power,temperature,others]; NVIDIA=[used,temperature,power,name,ix]
+  gpu: ~ # ~ means None. This is a list with GPU metrics. AMD=[activity,used,power,temperature,others,id]; NVIDIA=[used,temperature,power,name,id]
   cpu: true
   per_cpu: true
   process_info: true

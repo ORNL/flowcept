@@ -45,13 +45,11 @@ def curate_task_msg(task_msg_dict: dict, convert_times=True):
         task_msg_dict["workflow_id"] = task_msg_dict["used"].pop("workflow_id")
 
     if convert_times:
-        has_time_fields = False
         for time_field in TaskObject.get_time_field_names():
             if time_field in task_msg_dict:
-                has_time_fields = True
                 task_msg_dict[time_field] = datetime.fromtimestamp(task_msg_dict[time_field], pytz.utc)
 
-        if not has_time_fields:
+        if "registered_at" not in task_msg_dict:
             task_msg_dict["registered_at"] = datetime.fromtimestamp(time(), pytz.utc)
 
 

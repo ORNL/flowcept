@@ -75,6 +75,7 @@ def dask_map_gpus_to_worker():
     print(f"Name-rank: {w_name}-{gpu_id}",flush=True)
     return gpu_id
 
+
 def get_wiki_text_dataset(train_data_path, val_data_path, test_data_path, dask_map_gpus=False):
     # Load the WikiText2 dataset
     t0 = time()
@@ -127,7 +128,7 @@ def save_workflow(campaign_id, used, generated, with_persistence=True):
     dataset_prep_wf = WorkflowObject()
     dataset_prep_wf.used = used
     dataset_prep_wf.campaign_id = campaign_id
-    dataset_prep_wf.name = "generate_wikitext_dataset"
+    dataset_prep_wf.name = "DataPrepWorkflow"
     dataset_prep_wf.generated = generated
     if with_persistence:
         Flowcept.db.insert_or_update_workflow(dataset_prep_wf)
