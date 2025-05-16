@@ -24,6 +24,7 @@ telemetry_capture:
 
 instrumentation:
   enabled: true
+  singleton: true # default is true
   torch:
     what: parent_and_children # parent_only, parent_and_children, ~
     children_mode: telemetry_and_tensor_inspection   # tensor_inspection, telemetry, telemetry_and_tensor_inspection
