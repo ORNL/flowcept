@@ -49,9 +49,6 @@ class FlowceptTask(object):
     are no-ops, and no data is captured.
     """
 
-    if INSTRUMENTATION_ENABLED:
-        _interceptor = InstrumentationInterceptor.get_instance()
-
     def __init__(
         self,
         task_id: str = None,
@@ -60,12 +57,18 @@ class FlowceptTask(object):
         activity_id: str = None,
         used: Dict = None,
         custom_metadata: Dict = None,
+        flowcept: 'Flowcept' = None
     ):
         if not INSTRUMENTATION_ENABLED:
             self._ended = True
             return
+        if flowcept is not None and flowcept._interceptor_instances[0].kind == "instrumentation":
+            self._interceptor = flowcept._interceptor_instances[0]
+        else:
+            self._interceptor = InstrumentationInterceptor.get_instance()
+
         self._task = TaskObject()
-        self._task.telemetry_at_start = FlowceptTask._interceptor.telemetry_capture.capture()
+        self._task.telemetry_at_start = self._interceptor.telemetry_capture.capture()
         self._task.activity_id = activity_id
         self._task.started_at = time()
         self._task.task_id = task_id or str(self._task.started_at)
@@ -117,11 +120,11 @@ class FlowceptTask(object):
         """
         if not INSTRUMENTATION_ENABLED:
             return
-        self._task.telemetry_at_end = FlowceptTask._interceptor.telemetry_capture.capture()
+        self._task.telemetry_at_end = self._interceptor.telemetry_capture.capture()
         self._task.ended_at = ended_at or time()
         self._task.status = status
         self._task.stderr = stderr
         self._task.stdout = stdout
         self._task.generated = generated
-        FlowceptTask._interceptor.intercept(self._task.to_dict())
+        self._interceptor.intercept(self._task.to_dict())
         self._ended = True

@@ -17,7 +17,6 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 )
 from flowcept.commons.vocabulary import Status
 from flowcept.configs import (
-    REGISTER_WORKFLOW,
     INSTRUMENTATION,
     TELEMETRY_CAPTURE,
     REPLACE_NON_JSON_SERIALIZABLE,
@@ -30,6 +29,7 @@ from flowcept.instrumentation.flowcept_task import get_current_context_task_id
 
 TORCH_CONFIG = INSTRUMENTATION.get("torch")
 
+REGISTER_WORKFLOW = TORCH_CONFIG.get("register_workflow", True)
 
 def flowcept_torch(cls):
     """

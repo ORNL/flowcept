@@ -262,6 +262,7 @@ class Flowcept(object):
         if not MQDao.build().liveness_test():
             logger.error("MQ Not Ready!")
             return False
+
         if MONGO_ENABLED:
             from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 

@@ -1,18 +1,19 @@
+flowcept_version: 0.8.0 # Version of the Flowcept package. This setting file is compatible with this version.
+
 project:
-  debug: true
-  json_serializer: default # or complex. If "complex", Flowcept will deal with complex python dicts that may contain JSON unserializable values
-  replace_non_json_serializable: true
-  performance_logging: false
-  register_workflow: true
-  enrich_messages: true
-  db_flush_mode: online   # or offline
+  debug: true # Toggle debug mode. This will add a property `debug: true` to all saved data, making it easier to retrieve/delete them later.
+  json_serializer: default # JSON serialization mode: default or complex. If "complex", Flowcept will deal with complex python dicts that may contain JSON unserializable values
+  replace_non_json_serializable: true # Replace values that can't be JSON serialized
+  performance_logging: false # Enable performance logging if true. Particularly useful for MQ flushes.
+  enrich_messages: true # Add extra metadata to task messages, such as IP addresses and UTC timestamps.
+  db_flush_mode: online # Mode for flushing DB entries: "online" or "offline". If online, flushes to the DB will happen before the workflow ends.
 
 log:
-  log_path: "default"
-  log_file_level: error # use 'disable' to disable logs
-  log_stream_level: error
+  log_path: "default" # Path for log file output; "default" will write the log in the directory where the main executable is running from.
+  log_file_level: error # Logging level (error, debug, info, critical) for file logs; use "disable" to turn off.
+  log_stream_level: error # Logging level (error, debug, info, critical) for console/stream logs; use "disable" to turn off.
 
-telemetry_capture:
+telemetry_capture: # This toggles each individual type of telemetry capture. GPU capture is treated different depending on the vendor (AMD or NVIDIA).
   gpu: ~ # ~ means None. This is a list with GPU metrics. AMD=[activity,used,power,temperature,others,id]; NVIDIA=[used,temperature,power,name,id]
   cpu: true
   per_cpu: true
@@ -23,17 +24,18 @@ telemetry_capture:
   machine_info: true
 
 instrumentation:
-  enabled: true
+  enabled: true # This toggles data capture for instrumentation.
+  singleton: true # Use a single instrumentation instance per process. Defaults to true
   torch:
-    what: parent_and_children # parent_only, parent_and_children, ~
-    children_mode: telemetry_and_tensor_inspection   # tensor_inspection, telemetry, telemetry_and_tensor_inspection
+    what: parent_and_children # Scope of instrumentation: "parent_only" -- will capture only at the main model level, "parent_and_children" -- will capture the inner layers, or ~ (disable).
+    children_mode: telemetry_and_tensor_inspection   # What to capture if parent_and_children is chosen in the scope. Possible values: "tensor_inspection" (i.e., tensor metadata), "telemetry", "telemetry_and_tensor_inspection"
     epoch_loop: lightweight # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
     batch_loop: lightweight # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    capture_epochs_at_every: 1 #epochs; please use a value that is multiple of #epochs
-    # enable to set between train, evaluate, and test
+    capture_epochs_at_every: 1 # Will capture data at every N epochs; please use a value that is multiple of the total number of #epochs.
+    register_workflow: true # Will store the parent model forward as a workflow itself in the database.
 
 experiment:
-  user: root
+  user: root  # Optionally identify the user running the experiment. The logged username will be captured anyways.
 
 mq:
   type: redis  # or kafka or mofka; Please adjust the port (kafka's default is 9092; redis is 6379). If mofka, adjust the group_file.
