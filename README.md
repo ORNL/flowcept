@@ -6,20 +6,34 @@
 
 # Flowcept
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+- [Setup and the Settings File](#setup)
+- [Running with Containers](#running-with-containers)
+- [Examples](#examples)
+- [Data Persistence](#data-persistence)
+- [Performance Tuning](#performance-tuning-for-performance-evaluation)
+- [AMD GPU Setup](#install-amd-gpu-lib)
+
+## Overview
+
 Flowcept is a runtime data integration system that captures and queries workflow provenance with minimal or no code changes. It unifies data across diverse workflows and tools, enabling integrated analysis and insights, especially in federated environments. Designed for scenarios involving critical data from multiple workflows, Flowcept seamlessly integrates data at runtime, providing a unified view for end-to-end monitoring and analysis, and enhanced support for Machine Learning (ML) workflows.
 
-Other capabilities include:
+## Features
 
-- Automatic multi-workflow provenance data capture;
-- Data observability, enabling minimal intrusion to user workflows;
-- Explicit user workflow instrumentation, if this is preferred over implicit data observability;
-- ML data capture in various levels of details: workflow, model fitting or evaluation task, epoch iteration, layer forwarding;
-- ML model management;
-- Adapter-based, loosely-coupled system architecture, making it easy to plug and play with different data processing systems and backend database (e.g., MongoDB) or MQ services (e.g., Redis, Kafka);
-- Low-overhead focused system architecture, to avoid adding performance overhead particularly to workloads that run on HPC machines;
-- Telemetry data capture (e.g., CPU, GPU, Memory consumption) linked to the application dataflow;
-- Highly customizable to multiple use cases, enabling easy toggle between settings (e.g., with/without provenance capture; with/without telemetry and which telemetry type to capture; which adapters or backend services to run with); 
-- [W3C PROV](https://www.w3.org/TR/prov-overview/) adherence;
+- Automatic workflow provenance data capture from heterogeneous workflows
+- Data observability with no or minimal intrusion to application workflows
+- Explicit application instrumentation, if this is preferred over data observability
+- ML data capture in various levels of details: workflow, model fitting or evaluation task, epoch iteration, layer forwarding
+- ML model management (e.g., model storage and retrieval, along with their metadata and provenance)
+- Adapter-based, loosely-coupled system architecture, making it easy to plug and play with different data processing systems and backend database (e.g., MongoDB) or MQ services (e.g., Redis, Kafka)
+- Low-overhead focused system architecture, to avoid adding performance overhead particularly to workloads that run on HPC machines
+- Telemetry data capture (e.g., CPU, GPU, Memory consumption) linked to the application dataflow
+- Highly customizable to multiple use cases, enabling easy toggle between settings (e.g., with/without provenance capture; with/without telemetry and which telemetry type to capture; which adapters or backend services to run with) 
+- [W3C PROV](https://www.w3.org/TR/prov-overview/) adherence
  
 Notes:
 
@@ -102,7 +116,8 @@ To use Flowcept, one needs to start a MQ system `$> make services`. This will st
 
 ### Flowcept Settings File
 
-Flowcept requires a settings file for configuration. You can find an example [here](resources/sample_settings.yaml).
+Flowcept requires a settings file for configuration. 
+You can find an example configuration file [here](resources/sample_settings.yaml), with documentation for each parameter provided as inline comments.
 
 #### What You Can Configure:
 
@@ -123,7 +138,6 @@ export FLOWCEPT_SETTINGS_PATH=/absolute/path/to/your/settings.yaml
 ```
 
 If this variable is not set, Flowcept will use the default values from the [example](resources/sample_settings.yaml) file.
-
 
 # Running with Containers
 
