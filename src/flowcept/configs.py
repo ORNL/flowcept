@@ -146,7 +146,7 @@ PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get("replace_non_json_serializable", True)
 ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
-REGISTER_WORKFLOW = settings["project"].get("register_workflow", True)
+
 
 TELEMETRY_CAPTURE = settings.get("telemetry_capture", None)
 
