@@ -1,4 +1,4 @@
-"""Workflow module."""
+"""Workflow Object module."""
 
 from typing import Dict, AnyStr, List
 import msgpack
