@@ -1,5 +1,4 @@
 import re
-import yaml
 
 version_file_path = "src/flowcept/version.py"
 with open(version_file_path) as f:
@@ -23,12 +22,12 @@ new_code_str = code_str.replace(version, new_version)
 with open(version_file_path, "w") as f:
     f.write(new_code_str)
 
-# Update version in sample_settings.yaml
+# Update version in sample_settings.yaml using str.replace()
 yaml_file_path = "resources/sample_settings.yaml"
 with open(yaml_file_path) as f:
-    yaml_data = yaml.safe_load(f)
+    yaml_text = f.read()
 
-yaml_data["flowcept_version"] = new_version
+new_yaml_text = yaml_text.replace(f"flowcept_version: {version}", f"flowcept_version: {new_version}")
 
 with open(yaml_file_path, "w") as f:
-    yaml.dump(yaml_data, f, default_flow_style=False)
+    f.write(new_yaml_text)

@@ -18,5 +18,6 @@ with Flowcept():
     print(o2)
 docs = Flowcept.db.get_tasks_from_current_workflow()
 print(len(docs))
+print(f"Workflow_id={Flowcept.current_workflow_id}")
 assert len(docs) == 2
 
