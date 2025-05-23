@@ -8,7 +8,8 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 from flowcept.configs import (
-    ENRICH_MESSAGES, INSTRUMENTATION,
+    ENRICH_MESSAGES,
+    INSTRUMENTATION,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao

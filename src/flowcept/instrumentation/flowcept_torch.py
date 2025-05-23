@@ -31,6 +31,7 @@ TORCH_CONFIG = INSTRUMENTATION.get("torch")
 
 REGISTER_WORKFLOW = TORCH_CONFIG.get("register_workflow", True)
 
+
 def flowcept_torch(cls):
     """
     A wrapper function that instruments PyTorch modules for workflow monitoring.

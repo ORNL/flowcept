@@ -61,18 +61,22 @@ class MongoDBDAO(DocumentDBDAO):
         self.logger = FlowceptLogger()
 
         if MONGO_URI is not None:
-            self._client = MongoClient(MONGO_URI,   
-                                       maxPoolSize=1000,  # TODO: conf file
-                                       socketTimeoutMS=60000,  
-                                       connectTimeoutMS=60000, 
-                                       serverSelectionTimeoutMS=60000
-                )
+            self._client = MongoClient(
+                MONGO_URI,
+                maxPoolSize=1000,  # TODO: conf file
+                socketTimeoutMS=60000,
+                connectTimeoutMS=60000,
+                serverSelectionTimeoutMS=60000,
+            )
         else:
-            self._client = MongoClient(MONGO_HOST, MONGO_PORT, maxPoolSize=1000,  
-                                       socketTimeoutMS=60000,  
-                                       connectTimeoutMS=60000, 
-                                       serverSelectionTimeoutMS=60000
-                )
+            self._client = MongoClient(
+                MONGO_HOST,
+                MONGO_PORT,
+                maxPoolSize=1000,
+                socketTimeoutMS=60000,
+                connectTimeoutMS=60000,
+                serverSelectionTimeoutMS=60000,
+            )
         self._db = self._client[MONGO_DB]
 
         self._tasks_collection = self._db["tasks"]
