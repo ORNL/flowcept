@@ -25,9 +25,11 @@ jobs:
 
       - name: Update version.py
         run: |
+          pip install .[dev]
           export PYTHONPATH=$PYTHONPATH:flowcept
           cat resources/sample_settings.yaml
           python .github/workflows/version_bumper.py
+          echo "After version_bumper.py"
           cat src/flowcept/version.py
           cat resources/sample_settings.yaml
           git status
