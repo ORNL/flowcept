@@ -57,7 +57,7 @@ class FlowceptTask(object):
         activity_id: str = None,
         used: Dict = None,
         custom_metadata: Dict = None,
-        flowcept: 'Flowcept' = None
+        flowcept: "Flowcept" = None,
     ):
         if not INSTRUMENTATION_ENABLED:
             self._ended = True

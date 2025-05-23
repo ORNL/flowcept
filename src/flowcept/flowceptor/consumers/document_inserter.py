@@ -77,7 +77,6 @@ class DocumentInserter:
             flush_interval=INSERTION_BUFFER_TIME,
         )
 
-
     def _set_buffer_size(self):
         if not ADAPTIVE_DB_BUFFER_SIZE:
             return
@@ -216,7 +215,10 @@ class DocumentInserter:
         if self.check_safe_stops:
             trial = 0
             while not self._mq_dao.all_time_based_threads_ended(bundle_exec_id):
-                self.logger.debug(f"# time_based_threads for bundle_exec_id {bundle_exec_id} is {self._mq_dao._keyvalue_dao.set_count(bundle_exec_id)}")
+                self.logger.debug(
+                    f"# time_based_threads for bundle_exec_id {bundle_exec_id} is"
+                    f"{self._mq_dao._keyvalue_dao.set_count(bundle_exec_id)}"
+                )
                 trial += 1
                 self.logger.info(
                     f"Doc Inserter {id(self)}: It's still not safe to stop DocInserter. "

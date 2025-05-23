@@ -65,7 +65,7 @@ class MQDaoMofka(MQDao):
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         try:
-            #self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t")
+            # self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t")
             for m in buffer:
                 self.producer.push(m)
 
@@ -75,14 +75,14 @@ class MQDaoMofka(MQDao):
             self.logger.error(f"Message that caused error: {buffer}")
         try:
             self.producer.flush()
-            #self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
+            # self.logger.info(f"Flushed {len(buffer)} msgs to MQ!")
         except Exception as e:
             self.logger.exception(e)
 
     def _bulk_publish_timed(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         total = 0
         try:
-            #self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t")
+            # self.logger.debug(f"Going to send Message:\n\t[BEGIN_MSG]{buffer}\n[END_MSG]\t")
 
             for m in buffer:
                 self.producer.push(m)
