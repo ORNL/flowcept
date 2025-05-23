@@ -84,9 +84,10 @@ If telemetry data capture is enabled, telemetry data is captured both at the sta
   GPU telemetry data, if available, is stored in the `gpu` field. Its structure varies based on the vendor:
 
   - **Common Fields**
+
     - **gpu_ix**: Index of the GPU used (int)
     - **used**: Memory used (bytes)
-    - **temperature**: Dictionary of temperature data
+    - **temperature**: Dictionary of temperature data or int (see below)
     - **power**: Dictionary or value representing power usage
     - **id**: Device UUID
     - **name** (NVIDIA only): GPU name
@@ -94,18 +95,20 @@ If telemetry data capture is enabled, telemetry data is captured both at the sta
     - **others** (AMD only): Additional clock and performance data
 
   - **AMD GPU**:
+
     - **temperature**:
-      - **edge**, **hotspot**, **mem**, **vrgfx**, **vrmem**, **hbm**, **fan_speed**
+      - edge, hotspot, mem, vrgfx, vrmem, hbm, fan_speed
     - **power**:
-      - **average_socket_power**, **energy_accumulator**
+      - average_socket_power, energy_accumulator
     - **others**:
-      - **current_gfxclk**, **current_socclk**, **current_uclk**, **current_vclk0**, **current_dclk0**
+      - current_gfxclk, current_socclk, current_uclk, current_vclk0, current_dclk0
 
   - **NVIDIA GPU**:
+
     - **temperature**: GPU temperature in Celsius
     - **power**: Power usage in milliwatts
     - **used**: Memory used in bytes
     - **name**: GPU model name
     - **id**: Device UUID
 
-Telemetry values may vary depending on system capabilities, permissions, and configuration.
+Telemetry values may vary depending on system capabilities, what is available in the GPU API, and what is enable in the settings.yaml file.

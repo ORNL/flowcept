@@ -2,7 +2,7 @@ Getting Started
 ===============
 
 Quick Install
-=============
+----------------------------------------------------------------------------------------------
 
 To install Flowcept with its default dependencies, simply run:
 
@@ -15,7 +15,7 @@ This will install the core Flowcept package. For additional adapters or features
 
 
 Start Up Services
-=================
+----------------------------------------------------------------------------------------------
 
 To start required services like the default Redis MQ system, use the provided Makefile target:
 
@@ -35,13 +35,13 @@ If you need MongoDB, you'll run:
 For more options, see the `deployment directory <https://github.com/ORNL/flowcept/tree/main/deployment>`_.
 
 Customizing Settings
-====================
+----------------------------------------------------------------------------------------------
 
 Flowcept allows extensive configuration via a YAML file. To use a custom configuration, set the environment variable
 ``FLOWCEPT_SETTINGS_PATH`` to point to the absolute path of your settings file. A sample file is provided at For more options, see the `sample_settings.yaml <https://github.com/ORNL/flowcept/blob/main/resources/sample_settings.yaml>`_.
 
-Key Settings to Adjust
-----------------------
+ **Key Settings to Adjust**
+
 
 - **Service Connections:** Set host, port, and credentials for MQ (`mq:`), key-value DB (`kv_db:`), and optionally MongoDB (`mongodb:`).
 - **Telemetry:** Toggle `cpu`, `mem`, `gpu`, `disk`, `network`, and `process_info` under `telemetry_capture:`.
@@ -53,7 +53,7 @@ Note that if using Redis, MQ and KV_DB are have same host. Refer to the sample s
 
 
 Usage Example with Instrumentation
-==================================
+----------------------------------------------------------------------------------------------
 
 Flowcept supports decorator-based instrumentation for capturing workflow execution data. Here's a simple example:
 
@@ -79,15 +79,15 @@ Flowcept supports decorator-based instrumentation for capturing workflow executi
 
 
 Usage with Data Observability Adapters
-======================================
+----------------------------------------------------------------------------------------------
 
 Flowcept includes adapters for MLFlow, Dask, and TensorBoard that can automatically capture provenance data.
 
 For detailed usage and example configurations, refer to the `examples directory <https://github.com/ORNL/flowcept/tree/main/examples>`_.
 
 
-Querying with Flowcept.db.query
-===============================
+Querying
+----------------------------------------------------------------------------------------------
 
 Once data is captured and persisted (e.g., to MongoDB), you can use Flowcept’s query interface:
 
