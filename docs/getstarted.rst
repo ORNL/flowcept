@@ -40,7 +40,8 @@ Customizing Settings
 Flowcept allows extensive configuration via a YAML file. To use a custom configuration, set the environment variable
 ``FLOWCEPT_SETTINGS_PATH`` to point to the absolute path of your settings file. A sample file is provided at For more options, see the `sample_settings.yaml <https://github.com/ORNL/flowcept/blob/main/resources/sample_settings.yaml>`_.
 
- **Key Settings to Adjust**
+Key Settings to Adjust
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 - **Service Connections:** Set host, port, and credentials for MQ (`mq:`), key-value DB (`kv_db:`), and optionally MongoDB (`mongodb:`).

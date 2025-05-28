@@ -1,3 +1,4 @@
+[![Documentation](https://img.shields.io/badge/docs-readthedocs.io-green.svg)](https://flowcept.readthedocs.io/)
 [![Build](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml)
 [![PyPI](https://badge.fury.io/py/flowcept.svg)](https://pypi.org/project/flowcept)
 [![Tests](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml)
@@ -17,6 +18,7 @@
 - [Data Persistence](#data-persistence)
 - [Performance Tuning](#performance-tuning-for-performance-evaluation)
 - [AMD GPU Setup](#install-amd-gpu-lib)
+- [Further Documentation](#documentation)
 
 ## Overview
 
@@ -268,6 +270,10 @@ Which was installed using Frontier's /opt/rocm-6.3.1/share/amd_smi
 ## Torch Dependencies
 
 Some unit tests utilize `torch==2.2.2`, `torchtext=0.17.2`, and `torchvision==0.17.2`. They are only really needed to run some tests and will be installed if you run `pip install flowcept[ml_dev]` or `pip install flowcept[all]`. If you want to use Flowcept with Torch, please adapt torch dependencies according to your project's dependencies.
+
+## Documentation
+
+Full documentation is available on [Read the Docs](https://myproject.readthedocs.io/en/latest/).
 
 ## Cite us
 
