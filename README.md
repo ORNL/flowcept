@@ -22,7 +22,7 @@
 
 ## Overview
 
-Flowcept is a runtime data integration system that captures and queries workflow provenance with minimal or no code changes. It unifies data across diverse workflows and tools, enabling integrated analysis and insights, especially in federated environments. Designed for scenarios involving critical data from multiple workflows, Flowcept seamlessly integrates data at runtime, providing a unified view for end-to-end monitoring and analysis, and enhanced support for Machine Learning (ML) workflows.
+Flowcept is a runtime data integration system that captures and queries workflow provenance with minimal or no code changes. It unifies data from diverse workflows and tools, enabling integrated analysis and insights, especially in federated environments. Designed for scenarios involving critical data from multiple workflows, Flowcept supports end-to-end monitoring, analysis, querying, and enhanced support for Machine Learning (ML) workflows.
 
 ## Features
 
@@ -45,8 +45,9 @@ Notes:
   - TensorBoard
 - Python scripts can be easily instrumented via `@decorators` using `@flowcept_task` (for generic Python method) or `@torch_task` (for methods that encapsulate PyTorch model manipulation, such as training or evaluation). 
 - Currently supported MQ systems:
-  - Kafka
-  - Redis
+  - [Kafka](https://kafka.apache.org)
+  - [Redis](https://redis.io)
+  - [Mofka](https://mofka.readthedocs.io)
 - Currently supported database systems:
   - MongoDB
   - Lightning Memory-Mapped Database (lightweight file-only database system)
@@ -91,7 +92,7 @@ If you want to install all optional dependencies, use:
 pip install flowcept[all]
 ```
 
-This is a convenient way to ensure all adapters are available, but it may install dependencies you don't need.
+This is useful mostly for Flowcept developers. Please avoid installing like this if you can, as it may install several dependencies you will never use.
 
 ### 4. Installing from Source
 To install Flowcept from the source repository:
