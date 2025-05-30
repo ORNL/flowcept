@@ -25,7 +25,6 @@ telemetry_capture: # This toggles each individual type of telemetry capture. GPU
 
 instrumentation:
   enabled: true # This toggles data capture for instrumentation.
-  singleton: true # Use a single instrumentation instance per process. Defaults to true
   torch:
     what: parent_and_children # Scope of instrumentation: "parent_only" -- will capture only at the main model level, "parent_and_children" -- will capture the inner layers, or ~ (disable).
     children_mode: telemetry_and_tensor_inspection   # What to capture if parent_and_children is chosen in the scope. Possible values: "tensor_inspection" (i.e., tensor metadata), "telemetry", "telemetry_and_tensor_inspection"
