@@ -276,7 +276,7 @@ Some unit tests utilize `torch==2.2.2`, `torchtext=0.17.2`, and `torchvision==0.
 
 ## Documentation
 
-Full documentation is available on [Read the Docs](https://myproject.readthedocs.io/en/latest/).
+Full documentation is available on [Read the Docs](https://flowcept.readthedocs.io/).
 
 ## Cite us
 
