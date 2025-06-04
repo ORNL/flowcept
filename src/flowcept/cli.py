@@ -116,8 +116,8 @@ def workflow_count(workflow_id: str):
     result = {
         "workflow_id": workflow_id,
         "tasks": len(Flowcept.db.query({"workflow_id": workflow_id})),
-        "workflows": len(Flowcept.db.query({"workflow_id": workflow_id}), collection="workflows"),
-        "objects": len(Flowcept.db.query({"workflow_id": workflow_id}), collection="objects")
+        "workflows": len(Flowcept.db.query({"workflow_id": workflow_id}, collection="workflows")),
+        "objects": len(Flowcept.db.query({"workflow_id": workflow_id}, collection="objects"))
     }
     print(json.dumps(result, indent=2))
 
