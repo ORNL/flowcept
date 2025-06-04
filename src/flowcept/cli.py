@@ -104,16 +104,22 @@ def stop_services():
     print("Not implemented yet.")
 
 
-def task_count(workflow_id: str):
+def workflow_count(workflow_id: str):
     """
-    Count number of tasks in the Document DB.
+    Count number of documents in the DB.
 
     Parameters
     ----------
     workflow_id : str
         The ID of the workflow to count tasks for.
     """
-    print(Flowcept.db.query({"workflow_id": workflow_id}))
+    result = {
+        "workflow_id": workflow_id,
+        "tasks": len(Flowcept.db.query({"workflow_id": workflow_id})),
+        "workflows": len(Flowcept.db.query({"workflow_id": workflow_id}), collection="workflows"),
+        "objects": len(Flowcept.db.query({"workflow_id": workflow_id}), collection="objects")
+    }
+    print(json.dumps(result, indent=2))
 
 
 def query(query_str: str):
@@ -132,7 +138,7 @@ def query(query_str: str):
 COMMAND_GROUPS = [
     ("Basic Commands", [show_config, start_services, stop_services]),
     ("Consumption Commands", [start_consumption_services, stop_consumption_services]),
-    ("Database Commands", [task_count, query]),
+    ("Database Commands", [workflow_count, query]),
 ]
 
 COMMANDS = set(f for _, fs in COMMAND_GROUPS for f in fs)
