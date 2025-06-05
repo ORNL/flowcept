@@ -9,7 +9,6 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 )
 from flowcept.configs import (
     ENRICH_MESSAGES,
-    INSTRUMENTATION,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
@@ -50,23 +49,15 @@ class BaseInterceptor(object):
         elif kind in "dask":
             # This is dask's client interceptor. We essentially use it to store the dask workflow.
             # That's why we don't need another special interceptor and we can reuse the instrumentation one.
-            return BaseInterceptor._build_instrumentation_interceptor()
-        elif kind == "instrumentation":
-            return BaseInterceptor._build_instrumentation_interceptor()
-        else:
-            raise NotImplementedError
+            from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
-    @staticmethod
-    def _build_instrumentation_interceptor():
-        # By using singleton, we lose the thread safety for the Interceptor, particularly, its MQ buffer.
-        # Since some use cases need threads, this allows disabling the singleton for more thread safety.
-        is_singleton = INSTRUMENTATION.get("singleton", True)
-        if is_singleton:
+            return InstrumentationInterceptor.get_instance()
+        elif kind == "instrumentation":
             from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
             return InstrumentationInterceptor.get_instance()
         else:
-            return BaseInterceptor(kind="instrumentation")
+            raise NotImplementedError
 
     def __init__(self, plugin_key=None, kind=None):
         self.logger = FlowceptLogger()

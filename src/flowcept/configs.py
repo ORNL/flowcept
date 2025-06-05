@@ -126,11 +126,9 @@ if not LMDB_ENABLED and not MONGO_ENABLED:
 # DB Buffer Settings        #
 ##########################
 db_buffer_settings = settings["db_buffer"]
-# In seconds:
-INSERTION_BUFFER_TIME = db_buffer_settings.get("insertion_buffer_time_secs", None)
-ADAPTIVE_DB_BUFFER_SIZE = db_buffer_settings.get("adaptive_buffer_size", True)
-DB_MAX_BUFFER_SIZE = int(db_buffer_settings.get("max_buffer_size", 50))
-DB_MIN_BUFFER_SIZE = max(1, int(db_buffer_settings.get("min_buffer_size", 10)))
+
+INSERTION_BUFFER_TIME = db_buffer_settings.get("insertion_buffer_time_secs", None)  # In seconds:
+DB_BUFFER_SIZE = int(db_buffer_settings.get("buffer_size", 50))
 REMOVE_EMPTY_FIELDS = db_buffer_settings.get("remove_empty_fields", False)
 DB_INSERTER_MAX_TRIALS_STOP = db_buffer_settings.get("stop_max_trials", 240)
 DB_INSERTER_SLEEP_TRIALS_STOP = db_buffer_settings.get("stop_trials_sleep", 0.01)

@@ -16,11 +16,9 @@ from flowcept.commons.utils import GenericJSONDecoder
 from flowcept.commons.vocabulary import Status
 from flowcept.configs import (
     INSERTION_BUFFER_TIME,
-    DB_MAX_BUFFER_SIZE,
-    DB_MIN_BUFFER_SIZE,
+    DB_BUFFER_SIZE,
     DB_INSERTER_MAX_TRIALS_STOP,
     DB_INSERTER_SLEEP_TRIALS_STOP,
-    ADAPTIVE_DB_BUFFER_SIZE,
     REMOVE_EMPTY_FIELDS,
     JSON_SERIALIZER,
     ENRICH_MESSAGES,
@@ -67,27 +65,15 @@ class DocumentInserter:
         self._previous_time = time()
         self.logger = FlowceptLogger()
         self._main_thread: Thread = None
-        self._curr_max_buffer_size = DB_MAX_BUFFER_SIZE
+        self._curr_db_buffer_size = DB_BUFFER_SIZE
         self._bundle_exec_id = bundle_exec_id
         self.check_safe_stops = check_safe_stops
         self.buffer: AutoflushBuffer = AutoflushBuffer(
             flush_function=DocumentInserter.flush_function,
             flush_function_kwargs={"logger": self.logger, "doc_daos": self._doc_daos},
-            max_size=self._curr_max_buffer_size,
+            max_size=self._curr_db_buffer_size,
             flush_interval=INSERTION_BUFFER_TIME,
         )
-
-    def _set_buffer_size(self):
-        if not ADAPTIVE_DB_BUFFER_SIZE:
-            return
-        else:
-            self._curr_max_buffer_size = max(
-                DB_MIN_BUFFER_SIZE,
-                min(
-                    DB_MAX_BUFFER_SIZE,
-                    int(self._curr_max_buffer_size * 1.1),
-                ),
-            )
 
     @staticmethod
     def flush_function(buffer, doc_daos, logger):

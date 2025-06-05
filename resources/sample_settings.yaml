@@ -25,7 +25,6 @@ telemetry_capture: # This toggles each individual type of telemetry capture. GPU
 
 instrumentation:
   enabled: true # This toggles data capture for instrumentation.
-  singleton: true # Use a single instrumentation instance per process. Defaults to true
   torch:
     what: parent_and_children # Scope of instrumentation: "parent_only" -- will capture only at the main model level, "parent_and_children" -- will capture the inner layers, or ~ (disable).
     children_mode: telemetry_and_tensor_inspection   # What to capture if parent_and_children is chosen in the scope. Possible values: "tensor_inspection" (i.e., tensor metadata), "telemetry", "telemetry_and_tensor_inspection"
@@ -49,7 +48,7 @@ mq:
   timing: false
   chunk_size: -1  # use 0 or -1 to disable this. Or simply omit this from the config file.
 
-kv_db:
+kv_db:  # You can optionally use KV == MQ if MQ is Redis. Otherwise, these will be the Redis instance credentials.
   host: localhost
   port: 6379
   # uri: use Redis connection uri here
@@ -59,9 +58,9 @@ web_server:
   port: 5000
 
 sys_metadata:
-  environment_id: "laptop"
+  environment_id: "laptop"   # We use this to keep track of the environment used to run an experiment. Typical values include the cluster name, but it can be anything that you think will help identify your experimentation environment.
 
-extra_metadata:
+extra_metadata: # We use this to store any extra metadata you want to keep track of during an experiment.
   place_holder: ""
 
 analytics:
@@ -70,13 +69,11 @@ analytics:
     generated.accuracy: maximum_first
 
 db_buffer:
-  adaptive_buffer_size: true
-  insertion_buffer_time_secs: 5
-  max_buffer_size: 50
-  min_buffer_size: 10
-  remove_empty_fields: false
-  stop_max_trials: 240
-  stop_trials_sleep: 0.01
+  insertion_buffer_time_secs: 5   # Time interval (in seconds) to buffer incoming records before flushing to the database
+  buffer_size: 50    # Maximum number of records to hold in the buffer before forcing a flush
+  remove_empty_fields: false    # If true, fields with null/empty values will be removed before insertion
+  stop_max_trials: 240    # Maximum number of trials before giving up when waiting for a fully safe stop (i.e., all records have been inserted as expected).
+  stop_trials_sleep: 0.01   # Sleep duration (in seconds) between trials when waiting for a fully safe stop.
 
 databases:
 
@@ -89,7 +86,7 @@ databases:
     host: localhost
     port: 27017
     db: flowcept
-    create_collection_index: true
+    create_collection_index: true  # Whether flowcept should create collection indices if they haven't been created yet. This is done only at the Flowcept start up.
 
 adapters:
   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2. Use an empty dict, {}, if you won't use any adapter.
