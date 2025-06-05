@@ -20,7 +20,6 @@ import sys
 import json
 import textwrap
 import inspect
-import yaml
 from functools import wraps
 from typing import List
 
@@ -117,7 +116,7 @@ def workflow_count(workflow_id: str):
         "workflow_id": workflow_id,
         "tasks": len(Flowcept.db.query({"workflow_id": workflow_id})),
         "workflows": len(Flowcept.db.query({"workflow_id": workflow_id}, collection="workflows")),
-        "objects": len(Flowcept.db.query({"workflow_id": workflow_id}, collection="objects"))
+        "objects": len(Flowcept.db.query({"workflow_id": workflow_id}, collection="objects")),
     }
     print(json.dumps(result, indent=2))
 
