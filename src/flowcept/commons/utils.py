@@ -26,7 +26,7 @@ def get_utc_now() -> float:
 
 def get_utc_now_str() -> str:
     """Get UTC string."""
-    format_string = "%Y-%m-%dT%H:%M:%S.%f"
+    format_string = "%Y-%m-%dT%H:%M:%S.%f%z"
     now = datetime.now(timezone.utc)
     return now.strftime(format_string)
 

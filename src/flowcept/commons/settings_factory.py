@@ -30,6 +30,8 @@ SETTINGS_CLASSES = {
 
 
 def _build_base_settings(kind: str, settings_dict: dict) -> BaseSettings:
+    if kind not in SETTINGS_CLASSES:
+        return settings_dict
     settings_obj = SETTINGS_CLASSES[kind](**settings_dict)
     return settings_obj
 

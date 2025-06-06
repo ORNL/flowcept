@@ -25,13 +25,13 @@ class KeyValueDAO:
         return cls._instance
 
     @staticmethod
-    def build_redis_conn_pool():
+    def build_redis_conn_pool(host=KVDB_HOST, port=KVDB_PORT, password=KVDB_PASSWORD):
         """Utility function to build Redis connection."""
         pool = ConnectionPool(
-            host=KVDB_HOST,
-            port=KVDB_PORT,
+            host=host,
+            port=port,
             db=0,
-            password=KVDB_PASSWORD,
+            password=password,
             decode_responses=False,
             max_connections=10000,  # TODO: Config file
             socket_keepalive=True,
