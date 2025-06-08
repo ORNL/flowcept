@@ -6,6 +6,7 @@ from langchain.chains.retrieval_qa.base import BaseRetrievalQA
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from flowcept.flowceptor.consumers.abstract_consumer import BaseConsumer
+from flowcept.flowceptor.consumers.agent import client_agent
 from flowcept.flowceptor.consumers.agent.flowcept_qa_manager import FlowceptQAManager
 from flowcept.commons.task_data_preprocess import summarize_task
 
@@ -45,36 +46,42 @@ class FlowceptAgentContextManager(BaseConsumer):
                 self.context.critical_tasks.append(task_summary)
 
             if self.msgs_counter > 0 and self.msgs_counter % self.context_size == 0:
-                self.logger.debug(f"Going to begin QA Build! {self.msgs_counter}")
-                try:
-                    qa_chain_result = self.qa_manager.build_qa(docs=self.context.task_summaries)
+                self.build_qa_index()
 
-                    self.context.qa_chain = qa_chain_result.get("qa_chain")
-                    self.context.vectorstore_path = qa_chain_result.get("path")
-
-                    self.logger.debug(f"Built QA! {self.msgs_counter}")
-                    assert self.context.qa_chain is not None
-                    self.logger.debug(f"This is QA! {self.context.qa_chain}")
-                    self.logger.debug(f"This is QA path! {self.context.vectorstore_path}")
-                except Exception as e:
-                    self.logger.exception(e)
-
-                #self.logger.debug(f"Going to begin LLM job! {self.msgs_counter}")
-                #result = FlowceptAgentContextManager.run_tool("analyze_task_chunk")
-                # if len(result):
-                #     content = result[0].text
-                #     if content != "Error executing tool":
-                #         msg = {
-                #             "type": "flowcept_agent",
-                #             "info": "response",
-                #             "content": content
-                #         }
-                #         self._mq_dao.send_message(msg)
-                #         self.logger.debug(str(content))
-                #     else:
-                #         self.logger.error(content)
+                self.monitor_chunk()
 
         return True
+
+    def monitor_chunk(self):
+        self.logger.debug(f"Going to begin LLM job! {self.msgs_counter}")
+        result = client_agent.run_tool("analyze_task_chunk")
+        if len(result):
+            content = result[0].text
+            if content != "Error executing tool":
+                msg = {
+                    "type": "flowcept_agent",
+                    "info": "monitor",
+                    "content": content
+                }
+                self._mq_dao.send_message(msg)
+                self.logger.debug(str(content))
+            else:
+                self.logger.error(content)
+
+    def build_qa_index(self):
+        self.logger.debug(f"Going to begin QA Build! {self.msgs_counter}")
+        try:
+            qa_chain_result = self.qa_manager.build_qa(docs=self.context.task_summaries)
+
+            self.context.qa_chain = qa_chain_result.get("qa_chain")
+            self.context.vectorstore_path = qa_chain_result.get("path")
+
+            self.logger.debug(f"Built QA! {self.msgs_counter}")
+            assert self.context.qa_chain is not None
+            self.logger.debug(f"This is QA! {self.context.qa_chain}")
+            self.logger.debug(f"This is QA path! {self.context.vectorstore_path}")
+        except Exception as e:
+            self.logger.exception(e)
 
     @asynccontextmanager
     async def lifespan(self, app):
