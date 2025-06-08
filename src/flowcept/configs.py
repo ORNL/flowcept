@@ -219,6 +219,8 @@ ANALYTICS = settings.get("analytics", None)
 INSTRUMENTATION = settings.get("instrumentation", {})
 INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", False)
 
+AGENT = settings.get("agent", {})
+
 ####################
 # Enabled ADAPTERS #
 ####################

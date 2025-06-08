@@ -39,6 +39,7 @@ class Flowcept(object):
         workflow_name: str = None,
         workflow_args: str = None,
         start_persistence=True,
+        check_safe_stops=True,  # TODO add to docstring
         save_workflow=True,
         *args,
         **kwargs,
@@ -86,6 +87,7 @@ class Flowcept(object):
         self.logger.debug(f"Using settings file: {SETTINGS_PATH}")
         self._enable_persistence = start_persistence
         self._db_inserters: List = []
+        self._check_safe_stops = check_safe_stops
         if bundle_exec_id is None:
             self._bundle_exec_id = id(self)
         else:
@@ -199,7 +201,7 @@ class Flowcept(object):
 
         self._db_inserters.append(
             DocumentInserter(
-                check_safe_stops=True,
+                check_safe_stops=self._check_safe_stops,
                 bundle_exec_id=self._bundle_exec_id,
             ).start()
         )
@@ -214,7 +216,7 @@ class Flowcept(object):
             for interceptor in self._interceptor_instances:
                 if interceptor is None:
                     continue
-                interceptor.stop()
+                interceptor.stop(check_safe_stops=self._check_safe_stops)
 
         if len(self._db_inserters):
             self.logger.info("Stopping DB Inserters...")

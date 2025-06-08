@@ -59,6 +59,7 @@ class FlowceptTask(object):
         campaign_id: str = None,
         activity_id: str = None,
         used: Dict = None,
+        subtype: str = None,
         custom_metadata: Dict = None,
     ):
         if not INSTRUMENTATION_ENABLED:
@@ -73,6 +74,7 @@ class FlowceptTask(object):
         self._task.workflow_id = workflow_id or Flowcept.current_workflow_id
         self._task.campaign_id = campaign_id or Flowcept.campaign_id
         self._task.used = used
+        self._task.subtype = subtype
         self._task.custom_metadata = custom_metadata
         self._ended = False
 

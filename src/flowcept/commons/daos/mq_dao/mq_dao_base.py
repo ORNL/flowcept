@@ -1,7 +1,7 @@
 """MQ base module."""
 
 from abc import ABC, abstractmethod
-from typing import Union, List, Callable
+from typing import Union, List, Callable, Dict
 import csv
 import msgpack
 from time import time
@@ -164,9 +164,9 @@ class MQDao(ABC):
             self.bulk_publish(self.buffer)
             self.buffer = list()
 
-    def _stop_timed(self, interceptor_instance_id: str, bundle_exec_id: int = None):
+    def _stop_timed(self, interceptor_instance_id: str, check_safe_stops: bool=True, bundle_exec_id: int = None):
         t1 = time()
-        self._stop(interceptor_instance_id, bundle_exec_id)
+        self._stop(interceptor_instance_id, check_safe_stops, bundle_exec_id)
         t2 = time()
         self._flush_events.append(["final", t1, t2, t2 - t1, "n/a"])
 
@@ -175,14 +175,14 @@ class MQDao(ABC):
             writer.writerow(["type", "start", "end", "duration", "size"])
             writer.writerows(self._flush_events)
 
-    def _stop(self, interceptor_instance_id: str, bundle_exec_id: int = None):
-        """Stop it."""
-        msg0 = "MQ publisher received stop signal! bundle: "
-        self.logger.debug(msg0 + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
+    def _stop(self, interceptor_instance_id: str, check_safe_stops: bool = True, bundle_exec_id: int = None):
+        """Stop MQ publisher."""
+        self.logger.debug(f"MQ pub received stop sign: bundle={bundle_exec_id}, interceptor={interceptor_instance_id}")
         self._close_buffer()
-        msg = "Flushed MQ for last time! Send stop msg. bundle: "
-        self.logger.debug(msg + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
-        self._send_mq_dao_time_thread_stop(interceptor_instance_id, bundle_exec_id)
+        self.logger.debug("Flushed MQ for the last time!")
+        if check_safe_stops:
+            self.logger.debug(f"Sending stop msg. Bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}")
+            self._send_mq_dao_time_thread_stop(interceptor_instance_id, bundle_exec_id)
         self.started = False
 
     def _send_mq_dao_time_thread_stop(self, interceptor_instance_id, exec_bundle_id=None):
@@ -220,6 +220,11 @@ class MQDao(ABC):
 
     @abstractmethod
     def subscribe(self):
+        """Subscribe to the interception channel."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def unsubscribe(self):
         """Subscribe to the interception channel."""
         raise NotImplementedError()
 

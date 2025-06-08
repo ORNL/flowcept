@@ -2,11 +2,12 @@
 
 from threading import Thread
 from time import time, sleep
-from typing import Dict
+from typing import Dict, Callable, Tuple
 from uuid import uuid4
 
+from flowcept.commons.task_data_preprocess import summarize_telemetry, tag_critical_task
+from flowcept.flowceptor.consumers.abstract_consumer import BaseConsumer
 from flowcept.commons.autoflush_buffer import AutoflushBuffer
-from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
@@ -30,7 +31,7 @@ from flowcept.flowceptor.consumers.consumer_utils import (
 )
 
 
-class DocumentInserter:
+class DocumentInserter(BaseConsumer):
     """Document class."""
 
     DECODER = GenericJSONDecoder if JSON_SERIALIZER == "complex" else None
@@ -52,7 +53,8 @@ class DocumentInserter:
         check_safe_stops=True,
         bundle_exec_id=None,
     ):
-        self._mq_dao = MQDao.build()
+        super().__init__()
+
         self._doc_daos = []
         if MONGO_ENABLED:
             from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
@@ -113,6 +115,12 @@ class DocumentInserter:
 
         if ENRICH_MESSAGES:
             TaskObject.enrich_task_dict(message)
+            telemetry_summary = summarize_telemetry(message)
+            message["telemetry_summary"] = telemetry_summary
+            tags = tag_critical_task(generated=message.get("generated", {}), telemetry_summary=telemetry_summary,
+                              thresholds=None)
+            if tags:
+                message["tags"] = tags
 
         if REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
@@ -153,22 +161,16 @@ class DocumentInserter:
             self.logger.info("Document Inserter is stopping...")
             return "stop"
 
-    def start(self, threaded=True) -> "DocumentInserter":
-        """Start it."""
-        self._mq_dao.subscribe()
-        if threaded:
-            self._main_thread = Thread(target=self._start)
-            self._main_thread.start()
-        else:
-            self._start()
+    def start(self, target: Callable = None, args: Tuple = (), threaded: bool = True, daemon=True):
+        super().start(target=self.thread_target, threaded=threaded, daemon=daemon)
         return self
 
-    def _start(self):
-        self._mq_dao.message_listener(self._message_handler)
+    def thread_target(self):
+        super().default_thread_target()
         self.buffer.stop()
         self.logger.info("Ok, we broke the doc inserter message listen loop!")
 
-    def _message_handler(self, msg_obj: dict):
+    def message_handler(self, msg_obj: Dict):
         msg_type = msg_obj.get("type")
         if msg_type == "flowcept_control":
             r = self._handle_control_message(msg_obj)

@@ -27,6 +27,12 @@ class MQDaoRedis(MQDao):
         self._consumer = self._keyvalue_dao.redis_conn.pubsub()
         self._consumer.psubscribe(MQ_CHANNEL)
 
+    def unsubscribe(self):
+        """
+        Unsubscribe to interception channel.
+        """
+        self._consumer.unsubscribe(MQ_CHANNEL)
+
     def message_listener(self, message_handler: Callable):
         """Get message listener with automatic reconnection."""
         max_retrials = 10
@@ -37,8 +43,14 @@ class MQDaoRedis(MQDao):
                 for message in self._consumer.listen():
                     if message and message["type"] in MQDaoRedis.MESSAGE_TYPES_IGNORE:
                         continue
+
+                    if not isinstance(message["data"], (bytes, bytearray)):
+                        self.logger.warning(f"Skipping message with unexpected data type: {type(message["data"])} - {message["data"]}")
+                        continue
+
                     try:
                         msg_obj = msgpack.loads(message["data"], strict_map_key=False)
+                        #self.logger.debug(f"In mq dao redis, received msg!  {msg_obj}")
                         if not message_handler(msg_obj):
                             should_continue = False  # Break While loop
                             break  # Break For loop

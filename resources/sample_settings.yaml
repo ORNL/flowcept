@@ -75,6 +75,12 @@ db_buffer:
   stop_max_trials: 240    # Maximum number of trials before giving up when waiting for a fully safe stop (i.e., all records have been inserted as expected).
   stop_trials_sleep: 0.01   # Sleep duration (in seconds) between trials when waiting for a fully safe stop.
 
+agent:
+  llm_server_url: '?'
+  api_key: '?'
+  model: '?'
+  model_kwargs: {}
+
 databases:
 
   lmdb:
@@ -122,3 +128,4 @@ adapters:
     worker_should_get_output: true
     scheduler_create_timestamps: true
     worker_create_timestamps: false
+

@@ -52,6 +52,7 @@ class TaskObject:
     address: AnyStr = None
     dependencies: List = None
     dependents: List = None
+    tags: List = None
 
     _DEFAULT_ENRICH_VALUES = {
         "node_name": NODE_NAME,

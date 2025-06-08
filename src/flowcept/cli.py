@@ -21,6 +21,8 @@ import json
 import textwrap
 import inspect
 from functools import wraps
+from importlib import resources
+from pathlib import Path
 from typing import List
 
 from flowcept import Flowcept, configs
@@ -50,6 +52,26 @@ def show_config():
         f"{config_data['env_FLOWCEPT_SETTINGS_PATH']}"
     )
 
+
+def init_settings():
+    """
+    Create a new settings.yaml file in your home directory under ~/.flowcept.
+    """
+    dest_path = Path(os.path.join(configs._SETTINGS_DIR, "settings.yaml"))
+
+    if dest_path.exists():
+        overwrite = input(f"{dest_path} already exists. Overwrite? (y/N): ").strip().lower()
+        if overwrite != "y":
+            print("Operation aborted.")
+            return
+
+    os.makedirs(configs._SETTINGS_DIR, exist_ok=True)
+
+    SAMPLE_SETTINGS_PATH = str(resources.files("resources").joinpath("sample_settings.yaml"))
+
+    with open(SAMPLE_SETTINGS_PATH, "rb") as src_file, open(dest_path, "wb") as dst_file:
+        dst_file.write(src_file.read())
+    print(f"Copied {configs.SETTINGS_PATH} to {dest_path}")
 
 def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: bool = False, consumers: List[str] = None):
     """
@@ -130,17 +152,103 @@ def query(query_str: str):
     query_str : str
         A JSON string representing the Mongo query.
     """
-    query = json.loads(query_str)
-    print(Flowcept.db.query(query))
+    _query = json.loads(query_str)
+    print(json.dumps(Flowcept.db.query(_query), indent=2, default=str))
+
+def get_task(task_id: str):
+    """
+    Query the Document DB to retrieve a task.
+
+    Parameters
+    ----------
+    task_id : str
+        The identifier of the task.
+    """
+    _query = {"task_id": task_id}
+    print(json.dumps(Flowcept.db.query(_query), indent=2, default=str))
+
+def start_agent():
+    """Start Flowcept agent
+    """
+    from flowcept.flowceptor.adapters.agents.flowcept_agent import main
+    main()
+
+
+def agent_client(tool_name: str, kwargs_str: str = None):
+    """Agent Client
+    Parameters
+    ----------
+    tool_name : str
+        Name of the tool
+    kwargs_str : str, optional
+        A stringfied JSON containing the kwargs for the tool, if needed.
+    """
+    kwargs = None
+    if kwargs_str:
+        kwargs = json.loads(kwargs_str)
+
+    print(f"Going to run agent tool '{tool_name}'.")
+    if kwargs:
+        print(f"Using kwargs: {kwargs}")
+    print("-----------------")
+    from flowcept.flowceptor.consumers.agent.client_agent import run_tool
+    result = run_tool(tool_name, kwargs)[0]
+
+    print(result.text)
 
 
 COMMAND_GROUPS = [
-    ("Basic Commands", [show_config, start_services, stop_services]),
+    ("Basic Commands", [show_config, init_settings, start_services, stop_services]),
     ("Consumption Commands", [start_consumption_services, stop_consumption_services]),
-    ("Database Commands", [workflow_count, query]),
+    ("Database Commands", [workflow_count, query, get_task]),
+    ("Agent Commands", [start_agent, agent_client]),
 ]
 
 COMMANDS = set(f for _, fs in COMMAND_GROUPS for f in fs)
+
+import subprocess
+from typing import Dict, Optional
+
+def _run_command(cmd_str: str, check_output: bool = True, popen_kwargs: Optional[Dict] = None) -> Optional[str]:
+    """
+    Run a shell command with optional output capture.
+
+    Parameters
+    ----------
+    cmd_str : str
+        The command to execute.
+    check_output : bool, optional
+        If True, capture and return the command's standard output.
+        If False, run interactively (stdout/stderr goes to terminal).
+    popen_kwargs : dict, optional
+        Extra keyword arguments to pass to subprocess.run.
+
+    Returns
+    -------
+    output : str or None
+        The standard output of the command if check_output is True, else None.
+
+    Raises
+    ------
+    subprocess.CalledProcessError
+        If the command exits with a non-zero status.
+    """
+    if popen_kwargs is None:
+        popen_kwargs = {}
+
+    kwargs = {
+        "shell": True,
+        "check": True,
+        **popen_kwargs
+    }
+
+    if check_output:
+        kwargs.update({"capture_output": True, "text": True})
+        result = subprocess.run(cmd_str, **kwargs)
+        return result.stdout.strip()
+    else:
+        subprocess.run(cmd_str, **kwargs)
+        return None
 
 
 def _parse_numpy_doc(docstring: str):

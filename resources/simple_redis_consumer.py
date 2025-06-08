@@ -1,5 +1,7 @@
 import redis
 import msgpack
+
+from flowcept.commons.daos.mq_dao.mq_dao_redis import MQDaoRedis
 from flowcept.configs import MQ_HOST, MQ_PORT, MQ_CHANNEL
 
 # Connect to Redis
@@ -13,12 +15,19 @@ print("Listening for messages...")
 
 
 for message in pubsub.listen():
-    print("Received a message!")
-    if message["type"] in {"psubscribe"}:
+    print()
+    print("Received a message!", end=' ')
+    if message and message["type"] in MQDaoRedis.MESSAGE_TYPES_IGNORE:
         continue
 
-    if isinstance(message["data"], int):
-        message["data"] = str(message["data"]).encode()  # Convert to string and encode to bytes
+    if not isinstance(message["data"], (bytes, bytearray)):
+        print(
+            f"Skipping message with unexpected data type: {type(message["data"])} - {message["data"]}")
+        continue
 
-    msg_obj = msgpack.loads(message["data"], strict_map_key=False)
-    print(msg_obj)
+    try:
+        msg_obj = msgpack.loads(message["data"], strict_map_key=False)
+        msg_type = msg_obj.get("type", None)
+        print(msg_type)
+    except Exception as e:
+        print(e)
