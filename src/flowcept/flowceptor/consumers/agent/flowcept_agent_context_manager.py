@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Dict, List
 
+from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager, BaseAppContext
 from langchain.chains.retrieval_qa.base import BaseRetrievalQA
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
@@ -12,8 +13,8 @@ from flowcept.commons.task_data_preprocess import summarize_task
 
 
 @dataclass
-class AppContext:
-    tasks: List[Dict]
+class FlowceptAppContext(BaseAppContext):
+
     task_summaries: List[Dict]
     critical_tasks: List[Dict]
     qa_chain: BaseRetrievalQA
@@ -21,11 +22,11 @@ class AppContext:
     embedding_model: HuggingFaceEmbeddings
 
 
-class FlowceptAgentContextManager(BaseConsumer):
+class FlowceptAgentContextManager(BaseAgentContextManager):
 
     def __init__(self):
         super().__init__()
-        self.context: AppContext = None
+        self.context: FlowceptAppContext = None
         self.reset_context()
         self.msgs_counter = 0
         self.context_size = 5
@@ -83,14 +84,6 @@ class FlowceptAgentContextManager(BaseConsumer):
         except Exception as e:
             self.logger.exception(e)
 
-    @asynccontextmanager
-    async def lifespan(self, app):
-        self.start()
-        try:
-            yield self.context
-        finally:
-            self.stop_consumption()
-
     def reset_context(self):
-        self.context = AppContext(tasks=[], task_summaries=[], critical_tasks=[], qa_chain=None, vectorstore_path=None,
-                                  embedding_model=FlowceptQAManager.embedding_model)
+        self.context = FlowceptAppContext(tasks=[], task_summaries=[], critical_tasks=[], qa_chain=None, vectorstore_path=None,
+                                          embedding_model=FlowceptQAManager.embedding_model)

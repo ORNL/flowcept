@@ -9,9 +9,10 @@ from mcp.server.fastmcp.prompts import base
 
 from flowcept.configs import AGENT
 from flowcept.flowcept_api.flowcept_controller import Flowcept
-from flowcept.flowceptor.adapters.agents.agents_utils import build_llm_model, convert_mcp_to_langchain, \
+from flowcept.flowceptor.adapters.agents.agents_utils import convert_mcp_to_langchain, \
     convert_mcp_messages_to_plain_text
-from flowcept.flowceptor.adapters.agents.flowcept_llm_prov_capture import invoke_llm, invoke_qa_question
+from flowcept.flowceptor.adapters.agents.flowcept_llm_prov_capture import invoke_llm, invoke_qa_question, \
+    add_preamble_to_response
 from flowcept.flowceptor.adapters.agents.prompts import get_question_prompt, BASE_MULTITASK_PROMPT, \
     BASE_SINGLETASK_PROMPT
 from flowcept.flowceptor.consumers.agent.flowcept_agent_context_manager import FlowceptAgentContextManager
@@ -71,7 +72,7 @@ def analyze_task_chunk() -> str:
     """
     Analyze a chunk of task summaries using an LLM.
     """
-    LAST_K = 5  # config
+    LAST_K = 5  # TODO make this dynamic from config
     ctx = mcp.get_context()
     task_list = ctx.request_context.lifespan_context.task_summaries[:-LAST_K]
     agent_controller.logger.debug(f"N Tasks = {len(task_list)}")
@@ -81,7 +82,7 @@ def analyze_task_chunk() -> str:
     messages = multi_task_summary_prompt(task_list)
     langchain_messages = convert_mcp_to_langchain(messages)
     response = invoke_llm(langchain_messages)
-    result = f"{response}"
+    result = add_preamble_to_response(response, mcp, task_data=None)
     agent_controller.logger.debug(f"Result={result}")
     return result
 
@@ -146,6 +147,20 @@ def check_liveness() -> str:
 
 
 @mcp.tool()
+def check_llm() -> str:
+    """
+    Check if the agent can talk to the LLM service.
+    """
+    messages = [base.UserMessage(f"Hi, are you working properly?")]
+
+    langchain_messages = convert_mcp_to_langchain(messages)
+    response = invoke_llm(langchain_messages)
+    result = add_preamble_to_response(response, mcp)
+
+    return result
+
+
+@mcp.tool()
 def ask_about_latest_task(question) -> str:
     """
     Ask a question about the latest task.
@@ -161,8 +176,7 @@ def ask_about_latest_task(question) -> str:
     langchain_messages = convert_mcp_to_langchain(messages)
 
     response = invoke_llm(langchain_messages)
-    result = f"workflow_id={task_data.get("workflow_id")}, task_id={task_data.get("task_id")}\n\n{response}"
-
+    result = add_preamble_to_response(response, mcp, task_data)
     return result
 
 
@@ -170,7 +184,9 @@ def main():
     """
     Start the MCP server.
     """
-    Flowcept(start_persistence=False, save_workflow=False, check_safe_stops=False).start()
+    f = Flowcept(start_persistence=False, save_workflow=False, check_safe_stops=False).start()
+    f.logger.info(f"This section's workflow_id={Flowcept.current_workflow_id}")
+    setattr(mcp, "workflow_id", f.current_workflow_id)
     uvicorn.run(mcp.streamable_http_app, host="0.0.0.0", port=8000, lifespan="on")
 
 

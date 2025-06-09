@@ -2,11 +2,11 @@ import redis
 import msgpack
 
 from flowcept.commons.daos.mq_dao.mq_dao_redis import MQDaoRedis
-from flowcept.configs import MQ_HOST, MQ_PORT, MQ_CHANNEL
-
+from flowcept.configs import MQ_HOST, MQ_PORT, MQ_CHANNEL, KVDB_URI
 # Connect to Redis
-redis_client = redis.Redis(host=MQ_HOST, port=MQ_PORT, db=0)
-
+redis_client = (
+    redis.from_url(KVDB_URI) if KVDB_URI else redis.Redis(host=MQ_HOST, port=MQ_PORT, db=0)
+)
 # Subscribe to a channel
 pubsub = redis_client.pubsub()
 pubsub.subscribe(MQ_CHANNEL)

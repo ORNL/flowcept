@@ -269,7 +269,7 @@ class Flowcept(object):
             from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 
             if not MongoDBDAO(create_indices=False).liveness_test():
-                logger.error("DocDB Not Ready!")
+                logger.error("MongoDB is enabled but DocDB is not Ready!")
                 return False
         logger.info("MQ and DocDB are alive!")
         return True

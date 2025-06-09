@@ -28,6 +28,7 @@ from typing import List
 from flowcept import Flowcept, configs
 
 
+
 def no_docstring(func):
     """Decorator to silence linter for missing docstrings."""
 
@@ -72,6 +73,7 @@ def init_settings():
     with open(SAMPLE_SETTINGS_PATH, "rb") as src_file, open(dest_path, "wb") as dst_file:
         dst_file.write(src_file.read())
     print(f"Copied {configs.SETTINGS_PATH} to {dest_path}")
+
 
 def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: bool = False, consumers: List[str] = None):
     """
@@ -143,17 +145,20 @@ def workflow_count(workflow_id: str):
     print(json.dumps(result, indent=2))
 
 
-def query(query_str: str):
+def query(filter: str, project: str=None, sort: str=None, limit:int=0): # TODO add to docstring
     """
-    Query the Document DB.
+    Query Mongo DB.
 
     Parameters
     ----------
     query_str : str
         A JSON string representing the Mongo query.
     """
-    _query = json.loads(query_str)
-    print(json.dumps(Flowcept.db.query(_query), indent=2, default=str))
+    _filter = json.loads(filter)
+    _project = json.loads(project) or None
+    _sort = list(sort) or None
+    print(json.dumps(Flowcept.db.query(filter=_filter, project=_project, sort=_sort, limit=limit), indent=2, default=str))
+
 
 def get_task(task_id: str):
     """
@@ -197,8 +202,62 @@ def agent_client(tool_name: str, kwargs_str: str = None):
     print(result.text)
 
 
+def check_services():
+    if Flowcept.services_alive():
+        print("Services are listening!")
+        return
+    print("One or more service is not working properly.")
+
+
+def test():
+    print(f"Testing with settings at: {configs.SETTINGS_PATH}")
+    from flowcept.configs import MONGO_ENABLED, AGENT
+
+    if not Flowcept.services_alive():
+        print("Some of the required services are not alive!")
+        return
+
+    from uuid import uuid4
+    from flowcept.instrumentation.flowcept_task import flowcept_task
+
+    workflow_id = str(uuid4())
+
+    @flowcept_task
+    def test_function(n: int)->Dict[str, int]:
+        return {"output": n+1}
+
+    with Flowcept(workflow_id=workflow_id):
+
+        test_function(2)
+
+    if MONGO_ENABLED:
+        print("MongoDB is enabled, so we are testing it too.")
+        tasks = Flowcept.db.query({"workflow_id": workflow_id})
+        if len(tasks) != 1:
+            print(f"The query result, {len(tasks)}, is not what we expected.")
+            return
+
+    if AGENT.get("enabled", False):
+        print("Agent is enabled, so we are testing it too.")
+        from flowcept.flowceptor.consumers.agent.client_agent import run_tool
+        try:
+            print(run_tool("check_liveness"))
+        except Exception as e:
+            print(e)
+            return
+
+        print("Testing LLM connectivity")
+        check_llm_result = run_tool("check_llm")[0]
+        print(check_llm_result.text)
+        if "error" in check_llm_result.text.lower():
+            print("There is an error with the LLM communication.")
+            return
+
+    print("\n\nAll expected services seem to be working properly!")
+    return
+
 COMMAND_GROUPS = [
-    ("Basic Commands", [show_config, init_settings, start_services, stop_services]),
+    ("Basic Commands", [test, check_services, show_config, init_settings, start_services, stop_services]),
     ("Consumption Commands", [start_consumption_services, stop_consumption_services]),
     ("Database Commands", [workflow_count, query, get_task]),
     ("Agent Commands", [start_agent, agent_client]),

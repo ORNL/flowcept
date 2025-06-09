@@ -76,6 +76,7 @@ db_buffer:
   stop_trials_sleep: 0.01   # Sleep duration (in seconds) between trials when waiting for a fully safe stop.
 
 agent:
+  enabled: false
   llm_server_url: '?'
   api_key: '?'
   model: '?'

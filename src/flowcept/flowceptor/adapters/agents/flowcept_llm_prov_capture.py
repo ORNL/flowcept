@@ -6,9 +6,20 @@ from langchain_community.callbacks import get_openai_callback
 from langchain_core.language_models import LLM
 from langchain_core.messages import HumanMessage, AIMessage
 
-from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.agents.agents_utils import build_llm_model
 from flowcept.instrumentation.task_capture import FlowceptTask
+
+
+def add_preamble_to_response(response, mcp, task_data=None):
+    agent_id_str = ''
+    if hasattr(mcp, "workflow_id"):
+        agent_id = getattr(mcp, "workflow_id")
+        agent_id_str = f'agent_id={agent_id}, '
+    task_data_str = ''
+    if task_data:
+        task_data_str = f"workflow_id={task_data.get("workflow_id")}, task_id={task_data.get("task_id")}\n"
+    result = f"{agent_id_str}{task_data_str}Response:\n\n{response}"
+    return result
 
 
 def invoke_llm(messages: List[Union[HumanMessage, AIMessage]], llm: LLM=None, activity_id=None) -> str:
@@ -59,6 +70,7 @@ def invoke_qa_question(qa_chain: RetrievalQA, query_str: str, activity_id=None) 
             }
             t.end(generated)
             return text_response
+
 
 def extract_llm_metadata(llm: LLM) -> Dict:
     llm_metadata = {
