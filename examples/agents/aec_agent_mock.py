@@ -100,32 +100,13 @@ def check_llm() -> str:
     """
     Check if the agent can talk to the LLM service.
     """
+
     messages = [base.UserMessage(f"Hi, are you working properly?")]
 
     langchain_messages = convert_mcp_to_langchain(messages)
     response = invoke_llm(langchain_messages)
     result = add_preamble_to_response(response, mcp)
 
-    return result
-
-
-@mcp.tool()
-def ask_about_latest_task(question) -> str:
-    """
-    Ask a question about the latest task.
-    """
-    ctx = mcp.get_context()
-    tasks = ctx.request_context.lifespan_context.task_summaries
-    if not tasks:
-        return "No tasks available."
-    task_data = tasks[-1]
-
-    messages = single_task_used_generated_prompt(task_data, question)
-
-    langchain_messages = convert_mcp_to_langchain(messages)
-
-    response = invoke_llm(langchain_messages)
-    result = add_preamble_to_response(response, mcp, task_data)
     return result
 
 
