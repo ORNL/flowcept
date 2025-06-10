@@ -55,7 +55,8 @@ class MQDaoRedis(MQDao):
                             should_continue = False  # Break While loop
                             break  # Break For loop
                     except Exception as e:
-                        self.logger.error(f"Failed to process message: {e}")
+                        self.logger.error(f"Failed to process message {message}")
+                        self.logger.exception(e)
 
                     current_trials = 0
             except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:

@@ -115,12 +115,14 @@ class DocumentInserter(BaseConsumer):
 
         if ENRICH_MESSAGES:
             TaskObject.enrich_task_dict(message)
-            telemetry_summary = summarize_telemetry(message)
-            message["telemetry_summary"] = telemetry_summary
-            tags = tag_critical_task(generated=message.get("generated", {}), telemetry_summary=telemetry_summary,
-                              thresholds=None)
-            if tags:
-                message["tags"] = tags
+            if "telemetry_at_start" in message and "telemetry_at_end" in message:
+                telemetry_summary = summarize_telemetry(message)
+                message["telemetry_summary"] = telemetry_summary
+                # TODO: make this dynamic
+                tags = tag_critical_task(generated=message.get("generated", {}), telemetry_summary=telemetry_summary,
+                                  thresholds=None)
+                if tags:
+                    message["tags"] = tags
 
         if REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
