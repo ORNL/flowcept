@@ -32,7 +32,17 @@ from flowcept.flowceptor.consumers.consumer_utils import (
 
 
 class DocumentInserter(BaseConsumer):
-    """Document class."""
+    """
+    DocumentInserter is a message consumer in Flowcept.
+
+    It handles messages related to tasks, workflows, and control signals, processes them
+    (e.g., adds metadata, sanitizes fields), and then inserts them into one or more configured
+    document databases (e.g., MongoDB, LMDB). It buffers incoming messages to reduce insertion
+    overhead and supports both time-based and size-based flushing.
+
+    The inserter is intended to run in a thread or process alongside other Flowcept consumers,
+    ensuring provenance data is persisted reliably and in a structured format.
+    """
 
     DECODER = GenericJSONDecoder if JSON_SERIALIZER == "complex" else None
 
@@ -79,7 +89,18 @@ class DocumentInserter(BaseConsumer):
 
     @staticmethod
     def flush_function(buffer, doc_daos, logger):
-        """Flush it."""
+        """
+        Flush the buffer contents to all configured document databases.
+
+        Parameters
+        ----------
+        buffer : list
+            List of messages to be flushed to the databases.
+        doc_daos : list
+            List of DAO instances to insert data into (e.g., MongoDBDAO, LMDBDAO).
+        logger : FlowceptLogger
+            Logger instance for debug and info logging.
+        """
         logger.info(f"Current Doc buffer size: {len(buffer)}, Gonna flush {len(buffer)} msgs to DocDBs!")
         for dao in doc_daos:
             dao.insert_and_update_many_tasks(buffer, TaskObject.task_id_field())
@@ -164,15 +185,48 @@ class DocumentInserter(BaseConsumer):
             return "stop"
 
     def start(self, target: Callable = None, args: Tuple = (), threaded: bool = True, daemon=True):
+        """
+        Start the DocumentInserter thread.
+
+        Parameters
+        ----------
+        target : Callable, optional
+            Target function to run. Defaults to `self.thread_target`.
+        args : tuple, optional
+            Arguments to pass to the target function. Defaults to empty tuple.
+        threaded : bool, optional
+            Whether to run the inserter in a separate thread. Defaults to True.
+        daemon : bool, optional
+            Whether the thread should be a daemon. Defaults to True.
+
+        Returns
+        -------
+        DocumentInserter
+            The current instance of the DocumentInserter.
+        """
         super().start(target=self.thread_target, threaded=threaded, daemon=daemon)
         return self
 
     def thread_target(self):
+        """Function to be used in the self.start method."""
         super().default_thread_target()
         self.buffer.stop()
         self.logger.info("Ok, we broke the doc inserter message listen loop!")
 
     def message_handler(self, msg_obj: Dict):
+        """
+        Overrides the message_handler method by determining message's type and dispatching to the appropriate handler.
+
+        Parameters
+        ----------
+        msg_obj : dict
+            The message object received from the message queue.
+
+        Returns
+        -------
+        bool
+            False if a stop control message is received, True otherwise.
+        """
         msg_type = msg_obj.get("type")
         if msg_type == "flowcept_control":
             r = self._handle_control_message(msg_obj)
@@ -201,7 +255,19 @@ class DocumentInserter(BaseConsumer):
             return True
 
     def stop(self, bundle_exec_id=None):
-        """Stop document inserter."""
+        """
+        Stop the DocumentInserter safely, waiting for all time-based threads to end.
+
+        Parameters
+        ----------
+        bundle_exec_id : str, optional
+            The execution bundle ID to check for safe stopping. If None, will not use it as a filter.
+
+        Notes
+        -----
+        This method flushes remaining buffered data, stops internal threads,
+        closes database connections, and clears campaign state from the key-value store.
+        """
         if self.check_safe_stops:
             trial = 0
             while not self._mq_dao.all_time_based_threads_ended(bundle_exec_id):
