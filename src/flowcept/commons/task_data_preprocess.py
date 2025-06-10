@@ -8,27 +8,41 @@ Here I have a list containing one real task.
 <Paste one real task here>
 
 I want to create a list of summarized task data, per task, containing:
-activity_id,
-task_id,
-used,
-generated
-task_duration (ended_at - started_at),
-hostname,
-cpu_info,
-disk_info
-mem_info,
-network_info
+- activity_id
+- task_id
+- used
+- generated
+- task_duration (ended_at - started_at)
+- hostname
+- cpu_info
+- disk_info
+- mem_info
+- network_info
 <Consider adding GPU info too, if you have gpu in your task data>
 
-where Info about cpu, disk, mem, and network must consider telemetry_at_end and telemetry_at_start.
+Where info about cpu, disk, mem, and network must consider telemetry_at_end and telemetry_at_start.
 
-We will use this summarized data as input for LLM questions to find patterns in the resource usage and how they related to input (used) and output (generated) of each task.
-
+We will use this summarized data as input for LLM questions to find patterns in the resource usage and how they relate
+to input (used) and output (generated) of each task.
 """
+
 from typing import Dict, List
 
 
 def summarize_telemetry(task: Dict) -> Dict:
+    """
+    Extract and compute the telemetry summary for a task based on start and end telemetry snapshots.
+
+    Parameters
+    ----------
+    task : dict
+        The task dictionary containing telemetry_at_start and telemetry_at_end.
+
+    Returns
+    -------
+    dict
+        A summary of telemetry differences including CPU, disk, memory, and network metrics, and task duration.
+    """
 
     def extract_cpu_info(start: Dict, end: Dict) -> Dict:
         return {
@@ -70,7 +84,7 @@ def summarize_telemetry(task: Dict) -> Dict:
 
     started_at = task["started_at"]
     ended_at = task["ended_at"]
-    duration = (ended_at - started_at)
+    duration = ended_at - started_at
 
     telemetry_summary = {
         "duration_sec": duration,
@@ -82,7 +96,23 @@ def summarize_telemetry(task: Dict) -> Dict:
 
     return telemetry_summary
 
-def summarize_task(task: Dict, thresholds: Dict=None) -> Dict:
+
+def summarize_task(task: Dict, thresholds: Dict = None) -> Dict:
+    """
+    Summarize key metadata and telemetry for a task, optionally tagging critical conditions.
+
+    Parameters
+    ----------
+    task : dict
+        The task dictionary containing metadata and telemetry snapshots.
+    thresholds : dict, optional
+        Threshold values used to tag abnormal resource usage.
+
+    Returns
+    -------
+    dict
+        Summary of the task including identifiers, telemetry summary, and optional critical tags.
+    """
     telemetry_summary = summarize_telemetry(task)
     task_summary = {
         "workflow_id": task.get("workflow_id"),
@@ -94,13 +124,43 @@ def summarize_task(task: Dict, thresholds: Dict=None) -> Dict:
         "status": task.get("status"),
         "telemetry_summary": telemetry_summary,
     }
-    tags = tag_critical_task(generated=task.get("generated", {}), telemetry_summary=telemetry_summary,
-                             thresholds=thresholds)
+
+    tags = tag_critical_task(
+        generated=task.get("generated", {}),
+        telemetry_summary=telemetry_summary,
+        thresholds=thresholds
+    )
     if tags:
         task_summary["tags"] = tags
+
     return task_summary
 
-def tag_critical_task(generated: Dict, telemetry_summary: Dict, generated_keywords=['result'], thresholds: Dict=None) -> List:
+
+def tag_critical_task(
+    generated: Dict,
+    telemetry_summary: Dict,
+    generated_keywords: List[str] = ['result'],
+    thresholds: Dict = None
+) -> List[str]:
+    """
+    Tag a task with labels indicating abnormal or noteworthy resource usage or result anomalies.
+
+    Parameters
+    ----------
+    generated : dict
+        Dictionary of generated output values (e.g., results).
+    telemetry_summary : dict
+        Telemetry summary produced from summarize_telemetry().
+    generated_keywords : list of str, optional
+        List of keys in the generated output to check for anomalies.
+    thresholds : dict, optional
+        Custom thresholds for tagging high CPU, memory, disk, etc.
+
+    Returns
+    -------
+    list of str
+        Tags indicating abnormal patterns (e.g., "high_cpu", "low_output").
+    """
     if thresholds is None:
         thresholds = {
             "high_cpu": 80,
@@ -110,9 +170,13 @@ def tag_critical_task(generated: Dict, telemetry_summary: Dict, generated_keywor
             "low_output": 0.1,
             "high_output": 0.9,
         }
+
     cpu = abs(telemetry_summary["cpu_info"].get("percent_all_diff", 0))
     mem = telemetry_summary["mem_info"].get("used_mem_diff", 0)
-    disk = telemetry_summary["disk_info"].get("read_bytes_diff", 0) + telemetry_summary["disk_info"].get("write_bytes_diff", 0)
+    disk = (
+        telemetry_summary["disk_info"].get("read_bytes_diff", 0)
+        + telemetry_summary["disk_info"].get("write_bytes_diff", 0)
+    )
     duration = telemetry_summary["duration_sec"]
 
     tags = []
@@ -125,9 +189,12 @@ def tag_critical_task(generated: Dict, telemetry_summary: Dict, generated_keywor
         tags.append("high_disk")
     if duration > thresholds["long_duration"]:
         tags.append("long_duration")
-    if generated.get("result", 0) < thresholds["low_output"]: # Make all these dynamic # Use generated_keywords=['result'],
-        tags.append("low_output")
-    if generated.get("result", 0) > thresholds["high_output"]: # Make all these dynamic
-        tags.append("high_output")
+
+    for key in generated_keywords:
+        value = generated.get(key, 0)
+        if value < thresholds["low_output"]:
+            tags.append("low_output")
+        if value > thresholds["high_output"]:
+            tags.append("high_output")
 
     return tags
