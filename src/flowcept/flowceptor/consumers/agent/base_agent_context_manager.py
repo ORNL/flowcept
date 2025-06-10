@@ -15,6 +15,7 @@ class BaseAppContext:
     tasks : list of dict
         A list of task messages received from the message queue. Each task message is stored as a dictionary.
     """
+
     tasks: List[Dict]
 
 

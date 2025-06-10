@@ -71,10 +71,10 @@ class MLFlowInterceptor(BaseInterceptor):
         self._observer_thread.start()
         return self
 
-    def stop(self) -> bool:
+    def stop(self, check_safe_stops: bool = True) -> bool:
         """Stop it."""
         sleep(1)
-        super().stop()
+        super().stop(check_safe_stops)
         self.logger.debug("Interceptor stopping...")
         self._observer.stop()
         self._observer_thread.join()

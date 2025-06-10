@@ -173,15 +173,16 @@ def get_task(task_id: str):
     print(json.dumps(Flowcept.db.query(_query), indent=2, default=str))
 
 def start_agent():
-    """Start Flowcept agent
+    """Start Flowcept agent.
     """
     from flowcept.flowceptor.adapters.agents.flowcept_agent import main
     main()
 
 
 def agent_client(tool_name: str, kwargs_str: str = None):
-    """Agent Client
-    Parameters
+    """Agent Client.
+
+    Parameters.
     ----------
     tool_name : str
         Name of the tool

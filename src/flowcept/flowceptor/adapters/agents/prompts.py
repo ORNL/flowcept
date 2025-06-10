@@ -9,7 +9,8 @@ DATA_SCHEMA_PROMPT = (
 
 QUESTION_PROMPT = "I am particularly more interested in the following question: %QUESTION%."
 
-get_question_prompt = lambda question: base.UserMessage(QUESTION_PROMPT.replace('%QUESTION%', question))
+def get_question_prompt(question):
+    return base.UserMessage(QUESTION_PROMPT.replace("%QUESTION%", question))
 
 SINGLE_TASK_PROMPT = {
     "role": f"{BASE_ROLE}. You are focusing now on a particular task object which I will provide below. ",

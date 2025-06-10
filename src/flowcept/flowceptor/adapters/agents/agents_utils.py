@@ -1,6 +1,5 @@
 from typing import List, Union
 
-from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain_community.llms.sambanova import SambaStudio
 from mcp.server.fastmcp.prompts import base
 from langchain_core.language_models import LLM

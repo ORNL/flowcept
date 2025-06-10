@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from threading import Thread
 from typing import Callable, Dict, Tuple, Optional
 

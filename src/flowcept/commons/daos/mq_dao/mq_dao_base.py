@@ -1,7 +1,7 @@
 """MQ base module."""
 
 from abc import ABC, abstractmethod
-from typing import Union, List, Callable, Dict
+from typing import Union, List, Callable
 import csv
 import msgpack
 from time import time

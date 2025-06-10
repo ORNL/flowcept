@@ -142,7 +142,6 @@ def check_liveness() -> str:
     """
     Check if the agent is running.
     """
-
     return f"I'm {mcp.name} and I'm ready!"
 
 
@@ -151,7 +150,7 @@ def check_llm() -> str:
     """
     Check if the agent can talk to the LLM service.
     """
-    messages = [base.UserMessage(f"Hi, are you working properly?")]
+    messages = [base.UserMessage("Hi, are you working properly?")]
 
     langchain_messages = convert_mcp_to_langchain(messages)
     response = invoke_llm(langchain_messages)

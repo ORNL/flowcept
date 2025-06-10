@@ -97,11 +97,11 @@ class TensorboardInterceptor(BaseInterceptor):
         self.observe()
         return self
 
-    def stop(self) -> bool:
+    def stop(self, check_safe_stops: bool = True) -> bool:
         """Stop it."""
         sleep(1)
         self.logger.debug("Interceptor stopping...")
-        super().stop()
+        super().stop(check_safe_stops)
         self._observer.stop()
         self.logger.debug("Interceptor stopped.")
         return True

@@ -1,4 +1,3 @@
-from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Dict, List
 
@@ -6,7 +5,6 @@ from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseA
 from langchain.chains.retrieval_qa.base import BaseRetrievalQA
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
-from flowcept.flowceptor.consumers.abstract_consumer import BaseConsumer
 from flowcept.flowceptor.consumers.agent import client_agent
 from flowcept.flowceptor.consumers.agent.flowcept_qa_manager import FlowceptQAManager
 from flowcept.commons.task_data_preprocess import summarize_task
@@ -36,7 +34,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         msg_type = msg_obj.get("type", None)
         if msg_type == "task":
             self.msgs_counter += 1
-            self.logger.debug(f"Received task msg!")
+            self.logger.debug("Received task msg!")
             self.context.tasks.append(msg_obj)
 
             self.logger.debug(f"This is QA! {self.context.qa_chain}")

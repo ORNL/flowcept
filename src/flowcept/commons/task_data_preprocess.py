@@ -1,5 +1,5 @@
 """
-The base of this code was generated using ChatGPT
+The base of this code was generated using ChatGPT.
 
 Prompt:
 
