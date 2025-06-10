@@ -164,7 +164,7 @@ class MQDao(ABC):
             self.bulk_publish(self.buffer)
             self.buffer = list()
 
-    def _stop_timed(self, interceptor_instance_id: str, check_safe_stops: bool=True, bundle_exec_id: int = None):
+    def _stop_timed(self, interceptor_instance_id: str, check_safe_stops: bool = True, bundle_exec_id: int = None):
         t1 = time()
         self._stop(interceptor_instance_id, check_safe_stops, bundle_exec_id)
         t2 = time()

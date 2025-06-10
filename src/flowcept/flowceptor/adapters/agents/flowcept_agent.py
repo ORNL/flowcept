@@ -9,12 +9,20 @@ from mcp.server.fastmcp.prompts import base
 
 from flowcept.configs import AGENT
 from flowcept.flowcept_api.flowcept_controller import Flowcept
-from flowcept.flowceptor.adapters.agents.agents_utils import convert_mcp_to_langchain, \
-    convert_mcp_messages_to_plain_text
-from flowcept.flowceptor.adapters.agents.flowcept_llm_prov_capture import invoke_llm, invoke_qa_question, \
-    add_preamble_to_response
-from flowcept.flowceptor.adapters.agents.prompts import get_question_prompt, BASE_MULTITASK_PROMPT, \
-    BASE_SINGLETASK_PROMPT
+from flowcept.flowceptor.adapters.agents.agents_utils import (
+    convert_mcp_to_langchain,
+    convert_mcp_messages_to_plain_text,
+)
+from flowcept.flowceptor.adapters.agents.flowcept_llm_prov_capture import (
+    invoke_llm,
+    invoke_qa_question,
+    add_preamble_to_response,
+)
+from flowcept.flowceptor.adapters.agents.prompts import (
+    get_question_prompt,
+    BASE_MULTITASK_PROMPT,
+    BASE_SINGLETASK_PROMPT,
+)
 from flowcept.flowceptor.consumers.agent.flowcept_agent_context_manager import FlowceptAgentContextManager
 from flowcept.flowceptor.consumers.agent.flowcept_qa_manager import FlowceptQAManager
 
@@ -28,10 +36,23 @@ mcp = FastMCP("FlowceptAgent", require_session=True, lifespan=agent_controller.l
 # PROMPTS
 #################################################
 
+
 @mcp.prompt()
 def single_task_used_generated_prompt(task_data: Dict, question: str) -> list[base.Message]:
     """
-    Generates a prompt to ask about one particular task.
+    Generate a prompt for analyzing a single task's provenance and resource usage.
+
+    Parameters
+    ----------
+    task_data : dict
+        The task object containing provenance and telemetry fields.
+    question : str
+        A specific question to ask about the task.
+
+    Returns
+    -------
+    list of base.Message
+        The structured prompt messages for LLM analysis.
     """
     msgs = BASE_SINGLETASK_PROMPT.copy()
     msgs.append(get_question_prompt(question))
@@ -42,21 +63,38 @@ def single_task_used_generated_prompt(task_data: Dict, question: str) -> list[ba
 @mcp.prompt()
 def multi_task_summary_prompt(task_list: List[Dict]) -> List[base.Message]:
     """
-    Generates a structured prompt for analyzing a list of task summaries.
+    Generate a prompt for analyzing multiple task objects in a workflow.
+
+    Parameters
+    ----------
+    task_list : list of dict
+        A list of task objects with provenance and telemetry data.
+
+    Returns
+    -------
+    list of base.Message
+        The structured prompt messages for the LLM.
     """
     messages = BASE_MULTITASK_PROMPT.copy()
     pretty_tasks = json.dumps(task_list, indent=2, default=str)
-    messages.append(base.UserMessage(
-        f"These are the tasks I need you to reason about:\n\n"
-        f"{pretty_tasks}\n\n"
-    ))
+    messages.append(base.UserMessage(f"These are the tasks I need you to reason about:\n\n" f"{pretty_tasks}\n\n"))
     return messages
 
 
 @mcp.prompt()
 def multi_task_qa_prompt(question: str) -> List[base.Message]:
     """
-    Generates a structured prompt for analyzing a list of task summaries.
+    Generate a prompt for asking a specific question about multiple tasks.
+
+    Parameters
+    ----------
+    question : str
+        The user's query about task data.
+
+    Returns
+    -------
+    list of base.Message
+        Prompt messages structured for the LLM.
     """
     messages = BASE_MULTITASK_PROMPT.copy()
     messages.append(get_question_prompt(question))
@@ -67,10 +105,16 @@ def multi_task_qa_prompt(question: str) -> List[base.Message]:
 # TOOLS
 #################################################
 
+
 @mcp.tool()
 def analyze_task_chunk() -> str:
     """
-    Analyze a chunk of task summaries using an LLM.
+    Analyze a recent chunk of tasks using an LLM to detect patterns or anomalies.
+
+    Returns
+    -------
+    str
+        LLM-generated analysis of the selected task chunk.
     """
     LAST_K = 5  # TODO make this dynamic from config
     ctx = mcp.get_context()
@@ -90,7 +134,17 @@ def analyze_task_chunk() -> str:
 @mcp.tool()
 def ask_about_tasks_buffer(question: str) -> str:
     """
-    Answer a question about the current buffer of tasks using the QA chain.
+    Use a QA chain to answer a question about the current task buffer.
+
+    Parameters
+    ----------
+    question : str
+        The question to ask about the buffered tasks.
+
+    Returns
+    -------
+    str
+        Answer from the QA chain or an error message.
     """
     ctx = mcp.get_context()
     qa_chain = build_qa_chain_from_ctx(ctx)
@@ -111,6 +165,19 @@ def ask_about_tasks_buffer(question: str) -> str:
 
 
 def build_qa_chain_from_ctx(ctx) -> RetrievalQA:
+    """
+    Build or retrieve a QA chain from the current request context.
+
+    Parameters
+    ----------
+    ctx : RequestContext
+        The current MCP request context.
+
+    Returns
+    -------
+    RetrievalQA or None
+        A QA chain built from vectorstore metadata, or None if unavailable.
+    """
     qa_chain = ctx.request_context.lifespan_context.qa_chain
     if not qa_chain:
         vectorstore_path = ctx.request_context.lifespan_context.vectorstore_path
@@ -126,7 +193,17 @@ def build_qa_chain_from_ctx(ctx) -> RetrievalQA:
 @mcp.tool()
 def get_latest(n: int = None) -> str:
     """
-    Return the latest task(s) as a JSON string.
+    Return the most recent task(s) from the task buffer.
+
+    Parameters
+    ----------
+    n : int, optional
+        Number of most recent tasks to return. If None, return only the latest.
+
+    Returns
+    -------
+    str
+        JSON-encoded task(s).
     """
     ctx = mcp.get_context()
     tasks = ctx.request_context.lifespan_context.tasks
@@ -140,7 +217,12 @@ def get_latest(n: int = None) -> str:
 @mcp.tool()
 def check_liveness() -> str:
     """
-    Check if the agent is running.
+    Confirm the agent is alive and responding.
+
+    Returns
+    -------
+    str
+        Liveness status string.
     """
     return f"I'm {mcp.name} and I'm ready!"
 
@@ -148,7 +230,12 @@ def check_liveness() -> str:
 @mcp.tool()
 def check_llm() -> str:
     """
-    Check if the agent can talk to the LLM service.
+    Check connectivity and response from the LLM backend.
+
+    Returns
+    -------
+    str
+        LLM response, formatted with MCP metadata.
     """
     messages = [base.UserMessage("Hi, are you working properly?")]
 
@@ -162,7 +249,17 @@ def check_llm() -> str:
 @mcp.tool()
 def ask_about_latest_task(question) -> str:
     """
-    Ask a question about the latest task.
+    Ask a question specifically about the latest task in the buffer.
+
+    Parameters
+    ----------
+    question : str
+        A user-defined question to analyze the latest task.
+
+    Returns
+    -------
+    str
+        Response from the LLM based on the latest task.
     """
     ctx = mcp.get_context()
     tasks = ctx.request_context.lifespan_context.task_summaries

@@ -90,8 +90,11 @@ class BaseInterceptor(object):
 
     def stop(self, check_safe_stops: bool = True):
         """Stop an interceptor."""
-        self._mq_dao.stop(interceptor_instance_id=self._interceptor_instance_id, check_safe_stops=check_safe_stops,
-                          bundle_exec_id=self._bundle_exec_id)
+        self._mq_dao.stop(
+            interceptor_instance_id=self._interceptor_instance_id,
+            check_safe_stops=check_safe_stops,
+            bundle_exec_id=self._bundle_exec_id,
+        )
         self.started = False
 
     def observe(self, *args, **kwargs):

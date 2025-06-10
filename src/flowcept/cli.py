@@ -14,6 +14,8 @@ Supports:
 - `flowcept --help --command` for command-specific help
 """
 
+import subprocess
+from typing import Dict, Optional
 import argparse
 import os
 import sys
@@ -26,7 +28,6 @@ from pathlib import Path
 from typing import List
 
 from flowcept import Flowcept, configs
-
 
 
 def no_docstring(func):
@@ -145,19 +146,32 @@ def workflow_count(workflow_id: str):
     print(json.dumps(result, indent=2))
 
 
-def query(filter: str, project: str=None, sort: str=None, limit:int=0): # TODO add to docstring
+def query(filter: str, project: str = None, sort: str = None, limit: int = 0):
     """
-    Query Mongo DB.
+    Query the MongoDB task collection with an optional projection, sort, and limit.
 
     Parameters
     ----------
-    query_str : str
-        A JSON string representing the Mongo query.
+    filter : str
+        A JSON string representing the MongoDB filter query.
+    project : str, optional
+        A JSON string specifying fields to include or exclude in the result (MongoDB projection).
+    sort : str, optional
+        A JSON string specifying sorting criteria (e.g., '[["started_at", -1]]').
+    limit : int, optional
+        Maximum number of documents to return. Default is 0 (no limit).
+
+    Returns
+    -------
+    List[dict]
+        A list of task documents matching the query.
     """
     _filter = json.loads(filter)
     _project = json.loads(project) or None
     _sort = list(sort) or None
-    print(json.dumps(Flowcept.db.query(filter=_filter, project=_project, sort=_sort, limit=limit), indent=2, default=str))
+    print(
+        json.dumps(Flowcept.db.query(filter=_filter, project=_project, sort=_sort, limit=limit), indent=2, default=str)
+    )
 
 
 def get_task(task_id: str):
@@ -172,38 +186,46 @@ def get_task(task_id: str):
     _query = {"task_id": task_id}
     print(json.dumps(Flowcept.db.query(_query), indent=2, default=str))
 
+
 def start_agent():
-    """Start Flowcept agent.
-    """
+    """Start Flowcept agent."""
     from flowcept.flowceptor.adapters.agents.flowcept_agent import main
+
     main()
 
 
-def agent_client(tool_name: str, kwargs_str: str = None):
+def agent_client(tool_name: str, kwargs: str = None):
     """Agent Client.
 
     Parameters.
     ----------
     tool_name : str
         Name of the tool
-    kwargs_str : str, optional
+    kwargs : str, optional
         A stringfied JSON containing the kwargs for the tool, if needed.
     """
     kwargs = None
-    if kwargs_str:
-        kwargs = json.loads(kwargs_str)
+    if kwargs:
+        kwargs = json.loads(kwargs)
 
     print(f"Going to run agent tool '{tool_name}'.")
     if kwargs:
         print(f"Using kwargs: {kwargs}")
     print("-----------------")
     from flowcept.flowceptor.consumers.agent.client_agent import run_tool
+
     result = run_tool(tool_name, kwargs)[0]
 
     print(result.text)
 
 
 def check_services():
+    """
+    Check if all required Flowcept services are alive and listening.
+
+    If all services are operational, prints a success message.
+    Otherwise, reports a service issue.
+    """
     if Flowcept.services_alive():
         print("Services are listening!")
         return
@@ -211,6 +233,21 @@ def check_services():
 
 
 def test():
+    """
+    Run a full diagnostic test on the Flowcept system and its dependencies.
+
+    This function:
+    - Prints the current configuration path.
+    - Checks if required services (e.g., MongoDB, agent) are alive.
+    - Runs a test function wrapped with Flowcept instrumentation.
+    - Verifies MongoDB insertion (if enabled).
+    - Verifies agent communication and LLM connectivity (if enabled).
+
+    Returns
+    -------
+    None
+        Prints diagnostics to stdout; returns nothing.
+    """
     print(f"Testing with settings at: {configs.SETTINGS_PATH}")
     from flowcept.configs import MONGO_ENABLED, AGENT
 
@@ -224,11 +261,10 @@ def test():
     workflow_id = str(uuid4())
 
     @flowcept_task
-    def test_function(n: int)->Dict[str, int]:
-        return {"output": n+1}
+    def test_function(n: int) -> Dict[str, int]:
+        return {"output": n + 1}
 
     with Flowcept(workflow_id=workflow_id):
-
         test_function(2)
 
     if MONGO_ENABLED:
@@ -241,6 +277,7 @@ def test():
     if AGENT.get("enabled", False):
         print("Agent is enabled, so we are testing it too.")
         from flowcept.flowceptor.consumers.agent.client_agent import run_tool
+
         try:
             print(run_tool("check_liveness"))
         except Exception as e:
@@ -257,6 +294,7 @@ def test():
     print("\n\nAll expected services seem to be working properly!")
     return
 
+
 COMMAND_GROUPS = [
     ("Basic Commands", [test, check_services, show_config, init_settings, start_services, stop_services]),
     ("Consumption Commands", [start_consumption_services, stop_consumption_services]),
@@ -266,8 +304,6 @@ COMMAND_GROUPS = [
 
 COMMANDS = set(f for _, fs in COMMAND_GROUPS for f in fs)
 
-import subprocess
-from typing import Dict, Optional
 
 def _run_command(cmd_str: str, check_output: bool = True, popen_kwargs: Optional[Dict] = None) -> Optional[str]:
     """
@@ -296,11 +332,7 @@ def _run_command(cmd_str: str, check_output: bool = True, popen_kwargs: Optional
     if popen_kwargs is None:
         popen_kwargs = {}
 
-    kwargs = {
-        "shell": True,
-        "check": True,
-        **popen_kwargs
-    }
+    kwargs = {"shell": True, "check": True, **popen_kwargs}
 
     if check_output:
         kwargs.update({"capture_output": True, "text": True})

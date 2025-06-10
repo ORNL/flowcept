@@ -140,8 +140,9 @@ class DocumentInserter(BaseConsumer):
                 telemetry_summary = summarize_telemetry(message)
                 message["telemetry_summary"] = telemetry_summary
                 # TODO: make this dynamic
-                tags = tag_critical_task(generated=message.get("generated", {}), telemetry_summary=telemetry_summary,
-                                  thresholds=None)
+                tags = tag_critical_task(
+                    generated=message.get("generated", {}), telemetry_summary=telemetry_summary, thresholds=None
+                )
                 if tags:
                     message["tags"] = tags
 

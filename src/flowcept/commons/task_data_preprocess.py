@@ -126,9 +126,7 @@ def summarize_task(task: Dict, thresholds: Dict = None) -> Dict:
     }
 
     tags = tag_critical_task(
-        generated=task.get("generated", {}),
-        telemetry_summary=telemetry_summary,
-        thresholds=thresholds
+        generated=task.get("generated", {}), telemetry_summary=telemetry_summary, thresholds=thresholds
     )
     if tags:
         task_summary["tags"] = tags
@@ -137,10 +135,7 @@ def summarize_task(task: Dict, thresholds: Dict = None) -> Dict:
 
 
 def tag_critical_task(
-    generated: Dict,
-    telemetry_summary: Dict,
-    generated_keywords: List[str] = ['result'],
-    thresholds: Dict = None
+    generated: Dict, telemetry_summary: Dict, generated_keywords: List[str] = ["result"], thresholds: Dict = None
 ) -> List[str]:
     """
     Tag a task with labels indicating abnormal or noteworthy resource usage or result anomalies.
@@ -173,9 +168,8 @@ def tag_critical_task(
 
     cpu = abs(telemetry_summary["cpu_info"].get("percent_all_diff", 0))
     mem = telemetry_summary["mem_info"].get("used_mem_diff", 0)
-    disk = (
-        telemetry_summary["disk_info"].get("read_bytes_diff", 0)
-        + telemetry_summary["disk_info"].get("write_bytes_diff", 0)
+    disk = telemetry_summary["disk_info"].get("read_bytes_diff", 0) + telemetry_summary["disk_info"].get(
+        "write_bytes_diff", 0
     )
     duration = telemetry_summary["duration_sec"]
 

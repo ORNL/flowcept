@@ -38,7 +38,7 @@ class BaseConsumer(object):
         """
         pass
 
-    def start(self, target: Callable=None, args: Tuple = (), threaded: bool = True, daemon=False):
+    def start(self, target: Callable = None, args: Tuple = (), threaded: bool = True, daemon=False):
         """
         Start the consumer by subscribing and launching the message handler.
 
@@ -68,6 +68,18 @@ class BaseConsumer(object):
         return self
 
     def default_thread_target(self):
+        """
+        The default message consumption loop.
+
+        This method is used as the default thread target when starting the consumer. It listens for
+        messages from the message queue and passes them to the consumer's `message_handler`.
+
+        Typically run in a background thread when `start()` is called without a custom target.
+
+        See Also
+        --------
+        start : Starts the consumer and optionally spawns a background thread to run this method.
+        """
         self._mq_dao.message_listener(self.message_handler)
 
     def stop_consumption(self):

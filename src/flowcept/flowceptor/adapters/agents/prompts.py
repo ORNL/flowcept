@@ -30,7 +30,7 @@ SINGLE_TASK_PROMPT = {
         "So are relationships between (used or generated) data and resource metrics. "
         "Highlight outliers or critical information and give actionable insights or recommendations. "
         "Explain what this task may be doing, using the data provided."
-    )
+    ),
 }
 
 MULTITASK_PROMPTS = {
@@ -44,7 +44,7 @@ MULTITASK_PROMPTS = {
         "Try to infer the purpose of the workflow. "
         "Highlight outliers or critical tasks and give actionable insights or recommendations. "
         "Use the data provided to justify your analysis."
-    )
+    ),
 }
 
 BASE_SINGLETASK_PROMPT = [base.UserMessage(SINGLE_TASK_PROMPT[k]) for k in ("role", "data_schema", "job")]

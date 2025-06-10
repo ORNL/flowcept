@@ -45,12 +45,15 @@ class MQDaoRedis(MQDao):
                         continue
 
                     if not isinstance(message["data"], (bytes, bytearray)):
-                        self.logger.warning(f"Skipping message with unexpected data type: {type(message['data'])} - {message['data']}")
+                        self.logger.warning(
+                            f"Skipping message with unexpected data type:"
+                            f" {type(message['data'])} - {message['data']}"
+                        )
                         continue
 
                     try:
                         msg_obj = msgpack.loads(message["data"], strict_map_key=False)
-                        #self.logger.debug(f"In mq dao redis, received msg!  {msg_obj}")
+                        # self.logger.debug(f"In mq dao redis, received msg!  {msg_obj}")
                         if not message_handler(msg_obj):
                             should_continue = False  # Break While loop
                             break  # Break For loop
