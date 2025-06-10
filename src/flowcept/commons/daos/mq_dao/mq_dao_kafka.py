@@ -117,3 +117,6 @@ class MQDaoKafka(MQDao):
         except Exception as e:
             self.logger.exception(e)
             return False
+
+    def unsubscribe(self):
+        raise NotImplementedError()
