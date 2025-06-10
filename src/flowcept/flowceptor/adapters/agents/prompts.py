@@ -24,8 +24,8 @@ SINGLE_TASK_PROMPT = {
     "role": f"{BASE_ROLE} You are focusing now on a particular task object which I will provide below.",
     "data_schema": DATA_SCHEMA_PROMPT,
     "job": (
-        "Your job is to analyze this single task. Find any anomalies, relationships, or correlations between input, output, "
-        "resource usage metrics, task duration, and task placement. "
+        "Your job is to analyze this single task. Find any anomalies, relationships, or correlations between input,"
+        " output, resource usage metrics, task duration, and task placement. "
         "Correlations involving 'used' vs 'generated' data are especially important. "
         "So are relationships between (used or generated) data and resource metrics. "
         "Highlight outliers or critical information and give actionable insights or recommendations. "
