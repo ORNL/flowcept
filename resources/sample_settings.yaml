@@ -39,7 +39,8 @@ experiment:
 mq:
   type: redis  # or kafka or mofka; Please adjust the port (kafka's default is 9092; redis is 6379). If mofka, adjust the group_file.
   host: localhost
-  # instances: ["localhost:6379"] # We can have multiple redis instances being accessed by the consumers but each interceptor will currently access one single redis.
+  # uri: ?
+  # instances: ["localhost:6379"] # We can have multiple MQ instances being accessed by the consumers but each interceptor will currently access one single MQ..
   port: 6379
   # group_file: mofka.json
   channel: interception
