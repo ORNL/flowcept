@@ -6,11 +6,9 @@ import redis
 import msgpack
 from time import time, sleep
 
-from redis import Redis
-
-from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.configs import MQ_CHANNEL, MQ_URI, MQ_HOST, MQ_PORT, MQ_PASSWORD, MQ_SETTINGS
+from flowcept.commons.daos.redis_conn import RedisConn
+from flowcept.configs import MQ_CHANNEL, MQ_HOST, MQ_PORT, MQ_PASSWORD, MQ_URI, MQ_SETTINGS, KVDB_ENABLED
 
 
 class MQDaoRedis(MQDao):
@@ -21,23 +19,30 @@ class MQDaoRedis(MQDao):
     def __init__(self, adapter_settings=None):
         super().__init__(adapter_settings)
 
-        if MQ_URI is not None:
-            # If a URI is provided, use it for connection
-            self.redis_conn = Redis.from_url(MQ_URI)
-        else:
-            # Otherwise, use the host, port, and password settings
-            self.redis_conn = KeyValueDAO.build_redis_conn_pool(MQ_HOST, MQ_PORT, MQ_PASSWORD)
-
-        self._with_transaction = MQ_SETTINGS.get("transaction", True)
-        self._producer = self.redis_conn  # if MQ is redis, we use the same KV for the MQ
         self._consumer = None
+        use_same_as_kv = MQ_SETTINGS.get("same_as_kvdb", False)
+        if use_same_as_kv:
+            if KVDB_ENABLED:
+                self._producer = self._keyvalue_dao.redis_conn
+            else:
+                raise Exception("You have same_as_kvdb in your settings, but kvdb is disabled.")
+        else:
+            self._producer = RedisConn.build_redis_conn_pool(
+                host=MQ_HOST, port=MQ_PORT, password=MQ_PASSWORD, uri=MQ_URI
+            )
 
     def subscribe(self):
         """
         Subscribe to interception channel.
         """
-        self._consumer = self.redis_conn.pubsub()
+        self._consumer = self._producer.pubsub()
         self._consumer.psubscribe(MQ_CHANNEL)
+
+    def unsubscribe(self):
+        """
+        Unsubscribe to interception channel.
+        """
+        self._consumer.unsubscribe(MQ_CHANNEL)
 
     def message_listener(self, message_handler: Callable):
         """Get message listener with automatic reconnection."""
@@ -49,13 +54,22 @@ class MQDaoRedis(MQDao):
                 for message in self._consumer.listen():
                     if message and message["type"] in MQDaoRedis.MESSAGE_TYPES_IGNORE:
                         continue
+
+                    if not isinstance(message["data"], (bytes, bytearray)):
+                        self.logger.warning(
+                            f"Skipping message with unexpected data type: {type(message['data'])} - {message['data']}"
+                        )
+                        continue
+
                     try:
                         msg_obj = msgpack.loads(message["data"], strict_map_key=False)
+                        # self.logger.debug(f"In mq dao redis, received msg!  {msg_obj}")
                         if not message_handler(msg_obj):
                             should_continue = False  # Break While loop
                             break  # Break For loop
                     except Exception as e:
-                        self.logger.error(f"Failed to process message: {e}")
+                        self.logger.error(f"Failed to process message {message}")
+                        self.logger.exception(e)
 
                     current_trials = 0
             except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
@@ -78,10 +92,10 @@ class MQDaoRedis(MQDao):
         self._flush_events.append(["single", t1, t2, t2 - t1, len(str(message).encode())])
 
     def _bulk_publish(self, buffer, channel=MQ_CHANNEL, serializer=msgpack.dumps):
-        pipe = self._producer.pipeline(transaction=self._with_transaction)
+        pipe = self._producer.pipeline()
         for message in buffer:
             try:
-                self.redis_conn.publish(channel, serializer(message))
+                pipe.publish(channel, serializer(message))
             except Exception as e:
                 self.logger.exception(e)
                 self.logger.error("Some messages couldn't be flushed! Check the messages' contents!")
@@ -115,15 +129,14 @@ class MQDaoRedis(MQDao):
     def liveness_test(self):
         """Get the livelyness of it."""
         try:
-            if not super().liveness_test():
-                self.logger.error("KV Store not alive!")
-                return False
-
-            response = self.redis_conn.ping()
+            response = self._producer.ping()
             if response:
                 return True
             else:
                 return False
+        except ConnectionError as e:
+            self.logger.exception(e)
+            return False
         except Exception as e:
             self.logger.exception(e)
             return False

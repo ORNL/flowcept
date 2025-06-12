@@ -69,7 +69,7 @@ FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 MQ_INSTANCES = settings["mq"].get("instances", None)
 MQ_SETTINGS = settings["mq"]
 MQ_TYPE = os.getenv("MQ_TYPE", settings["mq"].get("type", "redis"))
-MQ_CHANNEL = settings["mq"].get("channel", "interception")
+MQ_CHANNEL = os.getenv("MQ_CHANNEL", settings["mq"].get("channel", "interception"))
 MQ_PASSWORD = settings["mq"].get("password", None)
 MQ_HOST = os.getenv("MQ_HOST", settings["mq"].get("host", "localhost"))
 MQ_PORT = int(os.getenv("MQ_PORT", settings["mq"].get("port", "6379")))
@@ -87,6 +87,7 @@ KVDB_PASSWORD = settings["kv_db"].get("password", None)
 KVDB_HOST = os.getenv("KVDB_HOST", settings["kv_db"].get("host", "localhost"))
 KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
 KVDB_URI = os.getenv("KVDB_URI", settings["kv_db"].get("uri", None))
+KVDB_ENABLED = settings["kv_db"].get("enabled", True)
 
 
 DATABASES = settings.get("databases", {})
@@ -119,19 +120,17 @@ if LMDB_SETTINGS:
     else:
         LMDB_ENABLED = LMDB_SETTINGS.get("enabled", False)
 
-if not LMDB_ENABLED and not MONGO_ENABLED:
-    # At least one of these variables need to be enabled.
-    LMDB_ENABLED = True
+# if not LMDB_ENABLED and not MONGO_ENABLED:
+#     # At least one of these variables need to be enabled.
+#     LMDB_ENABLED = True
 
 ##########################
 # DB Buffer Settings        #
 ##########################
 db_buffer_settings = settings["db_buffer"]
-# In seconds:
-INSERTION_BUFFER_TIME = db_buffer_settings.get("insertion_buffer_time_secs", None)
-ADAPTIVE_DB_BUFFER_SIZE = db_buffer_settings.get("adaptive_buffer_size", True)
-DB_MAX_BUFFER_SIZE = int(db_buffer_settings.get("max_buffer_size", 50))
-DB_MIN_BUFFER_SIZE = max(1, int(db_buffer_settings.get("min_buffer_size", 10)))
+
+INSERTION_BUFFER_TIME = db_buffer_settings.get("insertion_buffer_time_secs", None)  # In seconds:
+DB_BUFFER_SIZE = int(db_buffer_settings.get("buffer_size", 50))
 REMOVE_EMPTY_FIELDS = db_buffer_settings.get("remove_empty_fields", False)
 DB_INSERTER_MAX_TRIALS_STOP = db_buffer_settings.get("stop_max_trials", 240)
 DB_INSERTER_SLEEP_TRIALS_STOP = db_buffer_settings.get("stop_trials_sleep", 0.01)
@@ -147,7 +146,7 @@ PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get("replace_non_json_serializable", True)
 ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
-REGISTER_WORKFLOW = settings["project"].get("register_workflow", True)
+
 
 TELEMETRY_CAPTURE = settings.get("telemetry_capture", None)
 
@@ -221,6 +220,8 @@ ANALYTICS = settings.get("analytics", None)
 
 INSTRUMENTATION = settings.get("instrumentation", {})
 INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", False)
+
+AGENT = settings.get("agent", {})
 
 ####################
 # Enabled ADAPTERS #

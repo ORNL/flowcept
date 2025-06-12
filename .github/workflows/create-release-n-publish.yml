@@ -25,8 +25,14 @@ jobs:
 
       - name: Update version.py
         run: |
+          pip install .[dev]
           export PYTHONPATH=$PYTHONPATH:flowcept
+          cat resources/sample_settings.yaml
           python .github/workflows/version_bumper.py
+          echo "After version_bumper.py"
+          cat src/flowcept/version.py
+          cat resources/sample_settings.yaml
+          git status
 
       - name: Commit new version
         run: |
@@ -34,6 +40,7 @@ jobs:
           git config --global user.email 'flowcept@users.noreply.github.com'
           git branch
           git add src/flowcept/version.py
+          git add resources/sample_settings.yaml
           git commit -m "Flowcept CI Bot: bumping master version"
           git push --force
 

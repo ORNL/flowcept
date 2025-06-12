@@ -1,6 +1,6 @@
 """Key value module."""
 
-from redis import Redis, ConnectionPool
+from flowcept.commons.daos.redis_conn import RedisConn
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
@@ -24,32 +24,13 @@ class KeyValueDAO:
             cls._instance = super(KeyValueDAO, cls).__new__(cls)
         return cls._instance
 
-    @staticmethod
-    def build_redis_conn_pool(host=KVDB_HOST, port=KVDB_PORT, password=KVDB_PASSWORD):
-        """Utility function to build Redis connection."""
-        pool = ConnectionPool(
-            host=host,
-            port=port,
-            db=0,
-            password=password,
-            decode_responses=False,
-            max_connections=10000,  # TODO: Config file
-            socket_keepalive=True,
-            retry_on_timeout=True,
-        )
-        return Redis(connection_pool=pool)
-        # return Redis()
-
     def __init__(self):
         if not hasattr(self, "_initialized"):
             self._initialized = True
             self.logger = FlowceptLogger()
-            if KVDB_URI is not None:
-                # If a URI is provided, use it for connection
-                self.redis_conn = Redis.from_url(KVDB_URI)
-            else:
-                # Otherwise, use the host, port, and password settings
-                self.redis_conn = KeyValueDAO.build_redis_conn_pool()
+            self.redis_conn = RedisConn.build_redis_conn_pool(
+                host=KVDB_HOST, port=KVDB_PORT, password=KVDB_PASSWORD, uri=KVDB_URI
+            )
 
     def delete_set(self, set_name: str):
         """Delete it."""
@@ -133,3 +114,18 @@ class KeyValueDAO:
         None
         """
         self.redis_conn.delete(key)
+
+    def liveness_test(self):
+        """Get the livelyness of it."""
+        try:
+            response = self.redis_conn.ping()
+            if response:
+                return True
+            else:
+                return False
+        except ConnectionError as e:
+            self.logger.exception(e)
+            return False
+        except Exception as e:
+            self.logger.exception(e)
+            return False

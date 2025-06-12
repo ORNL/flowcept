@@ -1,5 +1,8 @@
 from time import time
 from typing import Dict
+import os
+import threading
+import random
 
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
@@ -49,9 +52,6 @@ class FlowceptTask(object):
     are no-ops, and no data is captured.
     """
 
-    if INSTRUMENTATION_ENABLED:
-        _interceptor = InstrumentationInterceptor.get_instance()
-
     def __init__(
         self,
         task_id: str = None,
@@ -59,19 +59,24 @@ class FlowceptTask(object):
         campaign_id: str = None,
         activity_id: str = None,
         used: Dict = None,
+        subtype: str = None,
         custom_metadata: Dict = None,
     ):
         if not INSTRUMENTATION_ENABLED:
             self._ended = True
             return
         self._task = TaskObject()
-        self._task.telemetry_at_start = FlowceptTask._interceptor.telemetry_capture.capture()
+        self._interceptor = InstrumentationInterceptor.get_instance()
+        tel = self._interceptor.telemetry_capture.capture()
+        if tel:
+            self._task.telemetry_at_start = tel
         self._task.activity_id = activity_id
         self._task.started_at = time()
-        self._task.task_id = task_id or str(self._task.started_at)
+        self._task.task_id = task_id or self._gen_task_id()
         self._task.workflow_id = workflow_id or Flowcept.current_workflow_id
         self._task.campaign_id = campaign_id or Flowcept.campaign_id
         self._task.used = used
+        self._task.subtype = subtype
         self._task.custom_metadata = custom_metadata
         self._ended = False
 
@@ -81,6 +86,12 @@ class FlowceptTask(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not self._ended:
             self.end()
+
+    def _gen_task_id(self):
+        pid = os.getpid()
+        tid = threading.get_ident()
+        rand = random.getrandbits(32)
+        return f"{self._task.started_at}_{pid}_{tid}_{rand}"
 
     def end(
         self,
@@ -117,11 +128,13 @@ class FlowceptTask(object):
         """
         if not INSTRUMENTATION_ENABLED:
             return
-        self._task.telemetry_at_end = FlowceptTask._interceptor.telemetry_capture.capture()
+        tel = self._interceptor.telemetry_capture.capture()
+        if tel:
+            self._task.telemetry_at_end = tel
         self._task.ended_at = ended_at or time()
         self._task.status = status
         self._task.stderr = stderr
         self._task.stdout = stdout
         self._task.generated = generated
-        FlowceptTask._interceptor.intercept(self._task.to_dict())
+        self._interceptor.intercept(self._task.to_dict())
         self._ended = True

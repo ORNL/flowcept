@@ -1,3 +1,4 @@
+[![Documentation](https://img.shields.io/badge/docs-readthedocs.io-green.svg)](https://flowcept.readthedocs.io/)
 [![Build](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml)
 [![PyPI](https://badge.fury.io/py/flowcept.svg)](https://pypi.org/project/flowcept)
 [![Tests](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml)
@@ -6,20 +7,37 @@
 
 # Flowcept
 
-Flowcept is a runtime data integration system that captures and queries workflow provenance with minimal or no code changes. It unifies data across diverse workflows and tools, enabling integrated analysis and insights, especially in federated environments. Designed for scenarios involving critical data from multiple workflows, Flowcept seamlessly integrates data at runtime, providing a unified view for end-to-end monitoring and analysis, and enhanced support for Machine Learning (ML) workflows.
+## Table of Contents
 
-Other capabilities include:
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+- [Setup and the Settings File](#setup)
+- [Running with Containers](#running-with-containers)
+- [Examples](#examples)
+- [Data Persistence](#data-persistence)
+- [Performance Tuning](#performance-tuning-for-performance-evaluation)
+- [AMD GPU Setup](#install-amd-gpu-lib)
+- [Further Documentation](#documentation)
 
-- Automatic multi-workflow provenance data capture;
-- Data observability, enabling minimal intrusion to user workflows;
-- Explicit user workflow instrumentation, if this is preferred over implicit data observability;
-- ML data capture in various levels of details: workflow, model fitting or evaluation task, epoch iteration, layer forwarding;
-- ML model management;
-- Adapter-based, loosely-coupled system architecture, making it easy to plug and play with different data processing systems and backend database (e.g., MongoDB) or MQ services (e.g., Redis, Kafka);
-- Low-overhead focused system architecture, to avoid adding performance overhead particularly to workloads that run on HPC machines;
-- Telemetry data capture (e.g., CPU, GPU, Memory consumption) linked to the application dataflow;
-- Highly customizable to multiple use cases, enabling easy toggle between settings (e.g., with/without provenance capture; with/without telemetry and which telemetry type to capture; which adapters or backend services to run with); 
-- [W3C PROV](https://www.w3.org/TR/prov-overview/) adherence;
+## Overview
+
+Flowcept is a runtime data integration system that captures and queries workflow provenance with minimal or no code changes. It unifies data from diverse workflows and tools, enabling integrated analysis and insights, especially in federated environments. 
+
+Designed for scenarios involving critical data from multiple workflows, Flowcept supports end-to-end monitoring, analysis, querying, and enhanced support for Machine Learning (ML) workflows.
+
+## Features
+
+- Automatic workflow provenance data capture from heterogeneous workflows
+- Data observability with no or minimal intrusion to application workflows
+- Explicit application instrumentation, if this is preferred over data observability
+- ML data capture in various levels of details: workflow, model fitting or evaluation task, epoch iteration, layer forwarding
+- ML model management (e.g., model storage and retrieval, along with their metadata and provenance)
+- Adapter-based, loosely-coupled system architecture, making it easy to plug and play with different data processing systems and backend database (e.g., MongoDB) or MQ services (e.g., Redis, Kafka)
+- Low-overhead focused system architecture, to avoid adding performance overhead particularly to workloads that run on HPC machines
+- Telemetry data capture (e.g., CPU, GPU, Memory consumption) linked to the application dataflow
+- Highly customizable to multiple use cases, enabling easy toggle between settings (e.g., with/without provenance capture; with/without telemetry and which telemetry type to capture; which adapters or backend services to run with) 
+- [W3C PROV](https://www.w3.org/TR/prov-overview/) adherence
  
 Notes:
 
@@ -29,8 +47,9 @@ Notes:
   - TensorBoard
 - Python scripts can be easily instrumented via `@decorators` using `@flowcept_task` (for generic Python method) or `@torch_task` (for methods that encapsulate PyTorch model manipulation, such as training or evaluation). 
 - Currently supported MQ systems:
-  - Kafka
-  - Redis
+  - [Kafka](https://kafka.apache.org)
+  - [Redis](https://redis.io)
+  - [Mofka](https://mofka.readthedocs.io)
 - Currently supported database systems:
   - MongoDB
   - Lightning Memory-Mapped Database (lightweight file-only database system)
@@ -75,7 +94,7 @@ If you want to install all optional dependencies, use:
 pip install flowcept[all]
 ```
 
-This is a convenient way to ensure all adapters are available, but it may install dependencies you don't need.
+This is useful mostly for Flowcept developers. Please avoid installing like this if you can, as it may install several dependencies you will never use.
 
 ### 4. Installing from Source
 To install Flowcept from the source repository:
@@ -102,7 +121,8 @@ To use Flowcept, one needs to start a MQ system `$> make services`. This will st
 
 ### Flowcept Settings File
 
-Flowcept requires a settings file for configuration. You can find an example [here](resources/sample_settings.yaml).
+Flowcept requires a settings file for configuration. 
+You can find an example configuration file [here](resources/sample_settings.yaml), with documentation for each parameter provided as inline comments.
 
 #### What You Can Configure:
 
@@ -123,7 +143,6 @@ export FLOWCEPT_SETTINGS_PATH=/absolute/path/to/your/settings.yaml
 ```
 
 If this variable is not set, Flowcept will use the default values from the [example](resources/sample_settings.yaml) file.
-
 
 # Running with Containers
 
@@ -254,6 +273,10 @@ Which was installed using Frontier's /opt/rocm-6.3.1/share/amd_smi
 ## Torch Dependencies
 
 Some unit tests utilize `torch==2.2.2`, `torchtext=0.17.2`, and `torchvision==0.17.2`. They are only really needed to run some tests and will be installed if you run `pip install flowcept[ml_dev]` or `pip install flowcept[all]`. If you want to use Flowcept with Torch, please adapt torch dependencies according to your project's dependencies.
+
+## Documentation
+
+Full documentation is available on [Read the Docs](https://flowcept.readthedocs.io/).
 
 ## Cite us
 

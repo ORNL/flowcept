@@ -1,51 +1,62 @@
 Getting Started
 ===============
 
-Installation and usage instructions are detailed in the following sections.
+Quick Install
+----------------------------------------------------------------------------------------------
 
-Installation
-------------
+To install Flowcept with its default dependencies, simply run:
 
-Installing flowcept can be accomplished by cloning the GitHub repository and installing with pip using the following terminal commands:
-
-.. code-block:: text
-
-   git clone https://github.com/ORNL/flowcept.git
-   cd flowcept
-   pip install .
-
-Or it can be installed directly from `PyPI <https://pypi.org/project/flowcept/>`_ with:
-
-.. code-block:: text
+.. code-block:: bash
 
    pip install flowcept
 
-Use ``pip install flowcept[all]`` to install all dependencies for all the adapters. Alternatively, dependencies for a particular adapter can be installed; for example, ``pip install flowcept[dask]`` will install only the dependencies for the Dask adapter. The optional dependencies currently available are:
+On your Python environment.
+This will install the core Flowcept package. For additional adapters or features (e.g., MongoDB, Kafka, MLFlow, Dask), see the `README.md <https://github.com/ORNL/flowcept#installation>`_ for instructions on installing extra dependencies.
 
-.. code-block:: text
 
-   pip install flowcept[mlflow]        # To install mlflow's adapter
-   pip install flowcept[dask]          # To install dask's adapter
-   pip install flowcept[tensorboard]   # To install tensorboaard's adapter
-   pip install flowcept[kafka]         # To utilize Kafka as the MQ, instead of Redis
-   pip install flowcept[nvidia]        # To capture NVIDIA GPU runtime information
-   pip install flowcept[analytics]     # For extra analytics features
-   pip install flowcept[dev]           # To install dev dependencies
+Start Up Services
+----------------------------------------------------------------------------------------------
 
-You do not need to install any optional dependencies to run FlowCept without an adapter; for example, if you want to use simple instrumentation. In this case, you need to remove the adapter part from the settings.yaml file.
+To start required services like the default Redis MQ system, use the provided Makefile target:
 
-Usage
------
+.. code-block:: bash
 
-To use FlowCept, one needs to start a database and a MQ system. FlowCept currently supports MongoDB as its database and it supports both Redis and Kafka as the MQ system. For convenience, the default needed services can be started using the Docker compose deployment file from the GitHub repository:
+   make services
 
-.. code-block:: text
+This will launch the necessary message queue services for running Flowcept.
 
-   git clone https://github.com/ORNL/flowcept.git
-   cd flowcept
-   docker compose -f deployment/compose.yml up -d
+If you need MongoDB, you'll run:
 
-A simple example of using FlowCept without any adapters is given here:
+.. code-block:: bash
+
+   make services-mongo
+
+
+For more options, see the `deployment directory <https://github.com/ORNL/flowcept/tree/main/deployment>`_.
+
+Customizing Settings
+----------------------------------------------------------------------------------------------
+
+Flowcept allows extensive configuration via a YAML file. To use a custom configuration, set the environment variable
+``FLOWCEPT_SETTINGS_PATH`` to point to the absolute path of your settings file. A sample file is provided at For more options, see the `sample_settings.yaml <https://github.com/ORNL/flowcept/blob/main/resources/sample_settings.yaml>`_.
+
+Key Settings to Adjust
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+- **Service Connections:** Set host, port, and credentials for MQ (`mq:`), key-value DB (`kv_db:`), and optionally MongoDB (`mongodb:`).
+- **Telemetry:** Toggle `cpu`, `mem`, `gpu`, `disk`, `network`, and `process_info` under `telemetry_capture:`.
+- **Instrumentation:** Enable and control ML model tracing under `instrumentation:` (especially `torch:` for PyTorch).
+- **Debug & Logging:** Use `project.debug`, `log.log_file_level`, and `log.log_stream_level` to control output and verbosity.
+
+Note that if using Redis, MQ and KV_DB are have same host. Refer to the sample settings file for full options and examples.
+
+
+
+Usage Example with Instrumentation
+----------------------------------------------------------------------------------------------
+
+Flowcept supports decorator-based instrumentation for capturing workflow execution data. Here's a simple example:
 
 .. code-block:: python
 
@@ -55,11 +66,9 @@ A simple example of using FlowCept without any adapters is given here:
    def sum_one(n):
        return n + 1
 
-
    @flowcept_task
    def mult_two(n):
        return n * 2
-
 
    with Flowcept(workflow_name='test_workflow'):
        n = 3
@@ -68,3 +77,29 @@ A simple example of using FlowCept without any adapters is given here:
        print(o2)
 
    print(Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id}))
+
+
+Usage with Data Observability Adapters
+----------------------------------------------------------------------------------------------
+
+Flowcept includes adapters for MLFlow, Dask, and TensorBoard that can automatically capture provenance data.
+
+For detailed usage and example configurations, refer to the `examples directory <https://github.com/ORNL/flowcept/tree/main/examples>`_.
+
+
+Querying
+----------------------------------------------------------------------------------------------
+
+Once data is captured and persisted (e.g., to MongoDB), you can use Flowcept’s query interface:
+
+.. code-block:: python
+
+   from flowcept import Flowcept
+
+   results = Flowcept.db.query({"workflow_id": "<some_workflow_id>"})
+   print(results)
+
+The query API enables flexible inspection of captured data. Note: MongoDB must be enabled for this feature.
+
+
+Installation and usage instructions are detailed in the following sections.
