@@ -215,7 +215,7 @@ class TelemetryCapture:
 
     def capture(self) -> Telemetry:
         """Capture it."""
-        if self.conf is None:
+        if not self.conf:
             return None
         tel = Telemetry()
         if self.conf.get("process_info", False):

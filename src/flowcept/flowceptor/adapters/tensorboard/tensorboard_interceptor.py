@@ -91,17 +91,17 @@ class TensorboardInterceptor(BaseInterceptor):
                 self.intercept(task_msg.to_dict())
                 self.state_manager.add_element_id(child_event.log_path)
 
-    def start(self, bundle_exec_id) -> "TensorboardInterceptor":
+    def start(self, bundle_exec_id, check_safe_stops: bool = True) -> "TensorboardInterceptor":
         """Start it."""
         super().start(bundle_exec_id)
         self.observe()
         return self
 
-    def stop(self) -> bool:
+    def stop(self, check_safe_stops: bool = True) -> bool:
         """Stop it."""
         sleep(1)
         self.logger.debug("Interceptor stopping...")
-        super().stop()
+        super().stop(check_safe_stops)
         self._observer.stop()
         self.logger.debug("Interceptor stopped.")
         return True
