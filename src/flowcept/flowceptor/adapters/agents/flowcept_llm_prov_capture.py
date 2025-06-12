@@ -66,7 +66,7 @@ def invoke_llm(messages: List[Union[HumanMessage, AIMessage]], llm: LLM = None, 
 
     llm_metadata = _extract_llm_metadata(llm)
 
-    with FlowceptTask(activity_id=activity_id, used=used, custom_metadata={"llm_metadata": llm_metadata}) as t:
+    with FlowceptTask(activity_id=activity_id, used=used, custom_metadata={"llm_metadata": llm_metadata}, subtype="llm_query") as t:
         with get_openai_callback() as cb:
             response = llm.invoke(messages)
             generated = {
@@ -103,7 +103,7 @@ def invoke_qa_question(qa_chain: RetrievalQA, query_str: str, activity_id=None) 
     with FlowceptTask(
         activity_id=activity_id,
         used=used,
-        subtype="llm_qa_chain_query",
+        subtype="llm_query",
         custom_metadata={"qa_chain_metadata": qa_chain_metadata},
     ) as t:
         with get_openai_callback() as cb:

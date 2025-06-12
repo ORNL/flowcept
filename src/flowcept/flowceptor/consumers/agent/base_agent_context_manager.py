@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Dict, List
 
-from flowcept.flowceptor.consumers.abstract_consumer import BaseConsumer
+from flowcept.flowceptor.consumers.base_consumer import BaseConsumer
 
 
 @dataclass
@@ -63,9 +63,11 @@ class BaseAgentContextManager(BaseConsumer):
         Override this method in a subclass to handle other message types or implement custom logic.
         """
         msg_type = msg_obj.get("type", None)
+        msg_subtype = msg_obj.get("subtype", "")
         if msg_type == "task":
             self.logger.debug("Received task msg!")
-            self.context.tasks.append(msg_obj)
+            if msg_subtype not in {"llm_query"}:
+                self.context.tasks.append(msg_obj)
 
         return True
 

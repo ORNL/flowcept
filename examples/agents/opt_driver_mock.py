@@ -7,8 +7,8 @@ from flowcept.instrumentation.flowcept_task import flowcept_task
 
 @flowcept_task
 def simulate_layer(layer_number: int):
-    power_arr = [100, 150, 200, 250, 300, 350]
-    dwell_arr = [30, 60]
+    power_arr = [0, 15, 25, 50, 75, 100, 125, 150, 175, 200, 250, 300, 350]  # floating number from 0 to 350
+    dwell_arr = list(range(10, 121, 5))
 
     control_options = [
         f"{power_arr[random.randint(0, len(power_arr)-1)]}W power reheat pass, {power_arr[random.randint(0, len(power_arr)-1)]}s dwell",

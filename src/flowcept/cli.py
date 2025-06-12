@@ -204,8 +204,8 @@ def agent_client(tool_name: str, kwargs: str = None):
     kwargs : str, optional
         A stringfied JSON containing the kwargs for the tool, if needed.
     """
-    kwargs = None
-    if kwargs:
+    print(kwargs)
+    if kwargs is not None:
         kwargs = json.loads(kwargs)
 
     print(f"Going to run agent tool '{tool_name}'.")

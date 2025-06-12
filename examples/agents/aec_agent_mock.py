@@ -118,7 +118,7 @@ def adamantine_ask_about_latest_iteration(question) -> str:
         return "No tasks available."
     task_data = tasks[-1]
 
-    layer = task_data.get('used').get('layer_number')
+    layer = task_data.get('used').get('layer_number', 0)
     simulation_output = task_data.get('generated')
 
     messages = adamantine_prompt(layer, simulation_output, question)

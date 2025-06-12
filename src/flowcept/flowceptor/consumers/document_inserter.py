@@ -6,7 +6,7 @@ from typing import Dict, Callable, Tuple
 from uuid import uuid4
 
 from flowcept.commons.task_data_preprocess import summarize_telemetry, tag_critical_task
-from flowcept.flowceptor.consumers.abstract_consumer import BaseConsumer
+from flowcept.flowceptor.consumers.base_consumer import BaseConsumer
 from flowcept.commons.autoflush_buffer import AutoflushBuffer
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
@@ -136,7 +136,7 @@ class DocumentInserter(BaseConsumer):
 
         if ENRICH_MESSAGES:
             TaskObject.enrich_task_dict(message)
-            if "telemetry_at_start" in message and "telemetry_at_end" in message:
+            if "telemetry_at_start" in message and message["telemetry_at_start"] and "telemetry_at_end" in message and message["telemetry_at_end"]:
                 telemetry_summary = summarize_telemetry(message)
                 message["telemetry_summary"] = telemetry_summary
                 # TODO: make this dynamic
