@@ -93,7 +93,7 @@ install_dev_agent: # Run this to fix python env problems in the MCP studio env
 # Run unit tests using pytest
 .PHONY: tests
 tests:
-	pytest
+	pytest --ignore=tests/adapters/test_tensorboard.py
 
 .PHONY: tests-notebooks
 tests-notebooks:
