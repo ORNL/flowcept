@@ -34,7 +34,7 @@ def add_preamble_to_response(response, mcp, task_data=None):
         agent_id_str = f"agent_id={agent_id}, "
     task_data_str = ""
     if task_data:
-        task_data_str = f"workflow_id={task_data.get("workflow_id")}, task_id={task_data.get("task_id")}\n"
+        task_data_str = f"workflow_id={task_data.get('workflow_id')}, task_id={task_data.get('task_id')}\n"
     result = f"{agent_id_str}{task_data_str}Response:\n\n{response}"
     return result
 

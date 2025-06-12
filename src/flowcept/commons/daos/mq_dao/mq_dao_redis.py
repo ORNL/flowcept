@@ -57,8 +57,7 @@ class MQDaoRedis(MQDao):
 
                     if not isinstance(message["data"], (bytes, bytearray)):
                         self.logger.warning(
-                            f"Skipping message with unexpected data type:"
-                            f" {type(message['data'])} - {message['data']}"
+                            f"Skipping message with unexpected data type: {type(message['data'])} - {message['data']}"
                         )
                         continue
 

@@ -50,8 +50,7 @@ def show_config():
     }
     print(f"This is the settings path in this session: {configs.SETTINGS_PATH}")
     print(
-        f"This is your FLOWCEPT_SETTINGS_PATH environment variable value: "
-        f"{config_data['env_FLOWCEPT_SETTINGS_PATH']}"
+        f"This is your FLOWCEPT_SETTINGS_PATH environment variable value: {config_data['env_FLOWCEPT_SETTINGS_PATH']}"
     )
 
 

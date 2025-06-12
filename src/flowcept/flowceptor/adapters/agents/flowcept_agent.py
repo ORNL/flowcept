@@ -77,7 +77,7 @@ def multi_task_summary_prompt(task_list: List[Dict]) -> List[base.Message]:
     """
     messages = BASE_MULTITASK_PROMPT.copy()
     pretty_tasks = json.dumps(task_list, indent=2, default=str)
-    messages.append(base.UserMessage(f"These are the tasks I need you to reason about:\n\n" f"{pretty_tasks}\n\n"))
+    messages.append(base.UserMessage(f"These are the tasks I need you to reason about:\n\n{pretty_tasks}\n\n"))
     return messages
 
 
