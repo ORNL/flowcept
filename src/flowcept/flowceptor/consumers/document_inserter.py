@@ -120,9 +120,12 @@ class DocumentInserter(BaseConsumer):
                 message["workflow_id"] = wf_id
 
         if "campaign_id" not in message:
-            campaign_id = self._mq_dao._keyvalue_dao.get_key("current_campaign_id")
-            if campaign_id:
-                message["campaign_id"] = campaign_id
+            try:
+                campaign_id = self._mq_dao._keyvalue_dao.get_key("current_campaign_id")
+                if campaign_id:
+                    message["campaign_id"] = campaign_id
+            except Exception as e:
+                self.logger.error(e)
 
         if "subtype" not in message and "group_id" in message:
             message["subtype"] = "iteration"
@@ -306,6 +309,8 @@ class DocumentInserter(BaseConsumer):
                     msg = f"DocInserter {id(self)} gave up waiting for signal. "
                     self.logger.critical(msg + "Safe to stop now.")
                     break
+            self._mq_dao.delete_current_campaign_id()
+
         self.logger.info("Sending message to stop document inserter.")
         self._mq_dao.send_document_inserter_stop()
         self.logger.info(f"Doc Inserter {id(self)} Sent message to stop itself.")
@@ -313,5 +318,5 @@ class DocumentInserter(BaseConsumer):
         for dao in self._doc_daos:
             self.logger.info(f"Closing document_inserter {dao.__class__.__name__} connection.")
             dao.close()
-        self._mq_dao.delete_current_campaign_id()
+
         self.logger.info("Document Inserter is stopped.")

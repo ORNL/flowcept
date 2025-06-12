@@ -31,7 +31,7 @@ if __name__ == "__main__":
             mlflow.log_params({"param1": 1})
             mlflow.log_params({"param2": 2})
             mlflow.log_metric("metric1", 10)
-            run_id = run.info.run_uuid
+            run_id = run.info.run_id
     task = Flowcept.db.query(filter={"task_id": run_id})[0]
     assert task["status"] == "FINISHED"
     assert "param1" in task["used"]

@@ -24,7 +24,7 @@ class TestMLFlow(unittest.TestCase):
             # Actual training code would come here
             self.logger.debug("\nTrained model")
             mlflow.log_metric("loss", np.random.random())
-        return run.info.run_uuid
+        return run.info.run_id
 
     def test_get_runs(self):
         with Flowcept("mlflow") as f:
