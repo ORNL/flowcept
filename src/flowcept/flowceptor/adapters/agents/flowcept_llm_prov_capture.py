@@ -1,4 +1,5 @@
 import inspect
+import json
 from typing import List, Union, Dict
 
 from langchain.chains.retrieval_qa.base import RetrievalQA
@@ -28,14 +29,17 @@ def add_preamble_to_response(response, mcp, task_data=None):
     str
         The response string prefixed with workflow/task metadata.
     """
-    agent_id_str = ""
+    preamb_obj = {}
     if hasattr(mcp, "workflow_id"):
         agent_id = getattr(mcp, "workflow_id")
-        agent_id_str = f"agent_id={agent_id}, "
-    task_data_str = ""
+        preamb_obj["agent_id"] = agent_id
     if task_data:
-        task_data_str = f"workflow_id={task_data.get('workflow_id')}, task_id={task_data.get('task_id')}\n"
-    result = f"{agent_id_str}{task_data_str}Response:\n\n{response}"
+        preamb_obj["workflow_id"] = task_data.get("workflow_id")
+        preamb_obj["task_id"] = task_data.get("task_id")
+    result = ""
+    if preamb_obj:
+        result = f"{json.dumps(preamb_obj)}\n\n"
+    result += f"Response:\n{response}"
     return result
 
 
@@ -67,7 +71,10 @@ def invoke_llm(messages: List[Union[HumanMessage, AIMessage]], llm: LLM = None, 
     llm_metadata = _extract_llm_metadata(llm)
 
     with FlowceptTask(
-        activity_id=activity_id, used=used, custom_metadata={"llm_metadata": llm_metadata}, subtype="llm_query"
+        activity_id=activity_id,
+        used=used,
+        custom_metadata={"llm_metadata": llm_metadata, "query_type": "llm_invoke"},
+        subtype="llm_query",
     ) as t:
         with get_openai_callback() as cb:
             response = llm.invoke(messages)
@@ -106,7 +113,7 @@ def invoke_qa_question(qa_chain: RetrievalQA, query_str: str, activity_id=None) 
         activity_id=activity_id,
         used=used,
         subtype="llm_query",
-        custom_metadata={"qa_chain_metadata": qa_chain_metadata},
+        custom_metadata={"qa_chain_metadata": qa_chain_metadata, "query_type": "qa_chain"},
     ) as t:
         with get_openai_callback() as cb:
             response = dict(qa_chain({"query": f"{query_str}"}))  # TODO bug?
@@ -140,7 +147,6 @@ def _extract_llm_metadata(llm: LLM) -> Dict:
     llm_metadata = {
         "class_name": llm.__class__.__name__,
         "module": llm.__class__.__module__,
-        "model_name": getattr(llm, "model_name", None),
         "config": llm.dict() if hasattr(llm, "dict") else {},
     }
     return llm_metadata

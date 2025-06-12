@@ -97,7 +97,7 @@ def summarize_telemetry(task: Dict) -> Dict:
     return telemetry_summary
 
 
-def summarize_task(task: Dict, thresholds: Dict = None) -> Dict:
+def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
     """
     Summarize key metadata and telemetry for a task, optionally tagging critical conditions.
 
@@ -113,7 +113,6 @@ def summarize_task(task: Dict, thresholds: Dict = None) -> Dict:
     dict
         Summary of the task including identifiers, telemetry summary, and optional critical tags.
     """
-    telemetry_summary = summarize_telemetry(task)
     task_summary = {
         "workflow_id": task.get("workflow_id"),
         "task_id": task.get("task_id"),
@@ -122,14 +121,21 @@ def summarize_task(task: Dict, thresholds: Dict = None) -> Dict:
         "generated": task.get("generated"),
         "hostname": task.get("hostname"),
         "status": task.get("status"),
-        "telemetry_summary": telemetry_summary,
     }
 
-    tags = tag_critical_task(
-        generated=task.get("generated", {}), telemetry_summary=telemetry_summary, thresholds=thresholds
-    )
-    if tags:
-        task_summary["tags"] = tags
+    try:
+        telemetry_summary = summarize_telemetry(task)
+        tags = tag_critical_task(
+            generated=task.get("generated", {}), telemetry_summary=telemetry_summary, thresholds=thresholds
+        )
+        if tags:
+            task_summary["tags"] = tags
+        task_summary["telemetry_summary"] = telemetry_summary
+    except Exception as e:
+        if logger:
+            logger.exception(e)
+        else:
+            print(e)
 
     return task_summary
 

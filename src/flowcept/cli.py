@@ -15,6 +15,7 @@ Supports:
 """
 
 import subprocess
+from time import sleep
 from typing import Dict, Optional
 import argparse
 import os
@@ -235,7 +236,7 @@ def check_services():
         Prints diagnostics to stdout; returns nothing.
     """
     print(f"Testing with settings at: {configs.SETTINGS_PATH}")
-    from flowcept.configs import MONGO_ENABLED, AGENT, KVDB_ENABLED
+    from flowcept.configs import MONGO_ENABLED, AGENT, KVDB_ENABLED, INSERTION_BUFFER_TIME
 
     if not Flowcept.services_alive():
         print("Some of the enabled services are not alive!")
@@ -275,10 +276,20 @@ def check_services():
         print("Testing LLM connectivity")
         check_llm_result = run_tool("check_llm")[0]
         print(check_llm_result.text)
+
         if "error" in check_llm_result.text.lower():
             print("There is an error with the LLM communication.")
             return
-
+        elif MONGO_ENABLED:
+            print("Testing if llm chat was stored in MongoDB.")
+            response_metadata = json.loads(check_llm_result.text.split("\n")[0])
+            print(response_metadata)
+            sleep(INSERTION_BUFFER_TIME * 1.05)
+            chats = Flowcept.db.query({"workflow_id": response_metadata["agent_id"]})
+            if chats:
+                print(chats)
+            else:
+                print("Could not find chat history. Make sure that the DB Inserter service is on.")
     print("\n\nAll expected services seem to be working properly!")
     return
 
@@ -446,3 +457,4 @@ def main():  # noqa: D103
 
 if __name__ == "__main__":
     main()
+    # check_services()

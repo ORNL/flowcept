@@ -17,8 +17,6 @@ dependencies = [
     "requests",
     "lmdb",
     "pyarrow",
-    "mcp[cli]>=1.9.3",
-    "sentence-transformers>=4.1.0",
 ]
 authors = [{name = "Oak Ridge National Laboratory"}]
 description = "Capture and query workflow provenance data using data observability"
@@ -66,6 +64,7 @@ mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog"]
 nvidia = ["nvidia-ml-py"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
 llm_agent = ["mcp[cli]", "langchain_community", "sentence-transformers", "tiktoken", "faiss-cpu"]
+
 dev = [
     "flowcept[docs]",
     "jupyterlab",

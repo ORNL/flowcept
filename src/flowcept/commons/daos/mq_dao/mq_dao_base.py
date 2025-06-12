@@ -199,10 +199,10 @@ class MQDao(ABC):
         # self.logger.info("Control msg sent: " + str(msg))
         self.send_message(msg)
 
-    def send_document_inserter_stop(self):
+    def send_document_inserter_stop(self, exec_bundle_id=None):
         """Send the document."""
         # These control_messages are handled by the document inserter
-        msg = {"type": "flowcept_control", "info": "stop_document_inserter"}
+        msg = {"type": "flowcept_control", "info": "stop_document_inserter", "exec_bundle_id": exec_bundle_id}
         self.send_message(msg)
 
     @abstractmethod

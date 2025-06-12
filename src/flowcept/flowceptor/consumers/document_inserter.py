@@ -198,8 +198,12 @@ class DocumentInserter(BaseConsumer):
                 )
             return "continue"
         elif message["info"] == "stop_document_inserter":
-            self.logger.info("Document Inserter is stopping...")
-            return "stop"
+            exec_bundle_id = message.get("exec_bundle_id", None)
+            if self._bundle_exec_id == exec_bundle_id:
+                self.logger.info(f"Document Inserter for exec_id {exec_bundle_id} is stopping...")
+                return "stop"
+            else:
+                return "continue"
 
     def start(self, target: Callable = None, args: Tuple = (), threaded: bool = True, daemon=True):
         """
@@ -312,7 +316,7 @@ class DocumentInserter(BaseConsumer):
             self._mq_dao.delete_current_campaign_id()
 
         self.logger.info("Sending message to stop document inserter.")
-        self._mq_dao.send_document_inserter_stop()
+        self._mq_dao.send_document_inserter_stop(exec_bundle_id=self._bundle_exec_id)
         self.logger.info(f"Doc Inserter {id(self)} Sent message to stop itself.")
         self._main_thread.join()
         for dao in self._doc_daos:
