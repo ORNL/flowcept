@@ -9,7 +9,14 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import ClassProperty
-from flowcept.configs import MQ_INSTANCES, INSTRUMENTATION_ENABLED, MONGO_ENABLED, SETTINGS_PATH
+from flowcept.configs import (
+    MQ_INSTANCES,
+    INSTRUMENTATION_ENABLED,
+    MONGO_ENABLED,
+    SETTINGS_PATH,
+    LMDB_ENABLED,
+    KVDB_ENABLED,
+)
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 
@@ -142,7 +149,7 @@ class Flowcept(object):
                 Flowcept.current_workflow_id = self.current_workflow_id
 
                 interceptor_inst = BaseInterceptor.build(interceptor)
-                interceptor_inst.start(bundle_exec_id=self._bundle_exec_id)
+                interceptor_inst.start(bundle_exec_id=self._bundle_exec_id, check_safe_stops=self._check_safe_stops)
                 self._interceptor_instances.append(interceptor_inst)
 
                 if self._should_save_workflow and not self._workflow_saved:
@@ -192,19 +199,20 @@ class Flowcept(object):
             else:
                 raise Exception("You must provide the argument `dask_client` so we can correctly link the workflow.")
 
-        interceptor_instance._mq_dao.set_campaign_id(Flowcept.campaign_id)
+        if KVDB_ENABLED:
+            interceptor_instance._mq_dao.set_campaign_id(Flowcept.campaign_id)
         interceptor_instance.send_workflow_message(wf_obj)
         self._workflow_saved = True
 
     def _init_persistence(self, mq_host=None, mq_port=None):
+        if not LMDB_ENABLED and not MONGO_ENABLED:
+            return
+
         from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 
-        self._db_inserters.append(
-            DocumentInserter(
-                check_safe_stops=self._check_safe_stops,
-                bundle_exec_id=self._bundle_exec_id,
-            ).start()
-        )
+        doc_inserter = DocumentInserter(check_safe_stops=self._check_safe_stops, bundle_exec_id=self._bundle_exec_id)
+        doc_inserter.start()
+        self._db_inserters.append(doc_inserter)
 
     def stop(self):
         """Stop it."""
@@ -261,17 +269,24 @@ class Flowcept(object):
         ...     print("One or more services are not ready.")
         """
         logger = FlowceptLogger()
-        if not MQDao.build().liveness_test():
+        mq = MQDao.build()
+        if not mq.liveness_test():
             logger.error("MQ Not Ready!")
             return False
 
+        if KVDB_ENABLED:
+            if not mq._keyvalue_dao.liveness_test():
+                logger.error("KVBD is enabled but is not ready!")
+                return False
+
+        logger.info("MQ is alive!")
         if MONGO_ENABLED:
             from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 
             if not MongoDBDAO(create_indices=False).liveness_test():
                 logger.error("MongoDB is enabled but DocDB is not Ready!")
                 return False
-        logger.info("MQ and DocDB are alive!")
+            logger.info("DocDB is alive!")
         return True
 
     @staticmethod

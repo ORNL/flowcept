@@ -63,9 +63,8 @@ class DocumentInserter(BaseConsumer):
         check_safe_stops=True,
         bundle_exec_id=None,
     ):
-        super().__init__()
-
         self._doc_daos = []
+        self.logger = FlowceptLogger()
         if MONGO_ENABLED:
             from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 
@@ -74,8 +73,13 @@ class DocumentInserter(BaseConsumer):
             from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
 
             self._doc_daos.append(LMDBDAO())
+        self._should_start = True
+        if not len(self._doc_daos):
+            self._should_start = False
+            return
+
+        super().__init__()
         self._previous_time = time()
-        self.logger = FlowceptLogger()
         self._main_thread: Thread = None
         self._curr_db_buffer_size = DB_BUFFER_SIZE
         self._bundle_exec_id = bundle_exec_id
@@ -136,15 +140,23 @@ class DocumentInserter(BaseConsumer):
 
         if ENRICH_MESSAGES:
             TaskObject.enrich_task_dict(message)
-            if "telemetry_at_start" in message and message["telemetry_at_start"] and "telemetry_at_end" in message and message["telemetry_at_end"]:
-                telemetry_summary = summarize_telemetry(message)
-                message["telemetry_summary"] = telemetry_summary
-                # TODO: make this dynamic
-                tags = tag_critical_task(
-                    generated=message.get("generated", {}), telemetry_summary=telemetry_summary, thresholds=None
-                )
-                if tags:
-                    message["tags"] = tags
+            if (
+                "telemetry_at_start" in message
+                and message["telemetry_at_start"]
+                and "telemetry_at_end" in message
+                and message["telemetry_at_end"]
+            ):
+                try:
+                    telemetry_summary = summarize_telemetry(message)
+                    message["telemetry_summary"] = telemetry_summary
+                    # TODO: make this dynamic
+                    tags = tag_critical_task(
+                        generated=message.get("generated", {}), telemetry_summary=telemetry_summary, thresholds=None
+                    )
+                    if tags:
+                        message["tags"] = tags
+                except Exception as e:
+                    self.logger.error(e)  # TODO: check if cpu, etc is in the fields in for the telemetry_summary
 
         if REMOVE_EMPTY_FIELDS:
             remove_empty_fields_from_dict(message)
@@ -171,15 +183,16 @@ class DocumentInserter(BaseConsumer):
                 f"in DocInserter from the interceptor "
                 f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
             )
-            self.logger.info(
-                f"Begin register_time_based_thread_end "
-                f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
-            )
-            self._mq_dao.register_time_based_thread_end(interceptor_instance_id, exec_bundle_id)
-            self.logger.info(
-                f"Done register_time_based_thread_end "
-                f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
-            )
+            if self.check_safe_stops:
+                self.logger.info(
+                    f"Begin register_time_based_thread_end "
+                    f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
+                )
+                self._mq_dao.register_time_based_thread_end(interceptor_instance_id, exec_bundle_id)
+                self.logger.info(
+                    f"Done register_time_based_thread_end "
+                    f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
+                )
             return "continue"
         elif message["info"] == "stop_document_inserter":
             self.logger.info("Document Inserter is stopping...")
@@ -205,6 +218,9 @@ class DocumentInserter(BaseConsumer):
         DocumentInserter
             The current instance of the DocumentInserter.
         """
+        if not self._should_start:
+            self.logger.info("Doc Inserter cannot start as all DocDBs are disabled.")
+            return self
         super().start(target=self.thread_target, threaded=threaded, daemon=daemon)
         return self
 
@@ -269,6 +285,9 @@ class DocumentInserter(BaseConsumer):
         This method flushes remaining buffered data, stops internal threads,
         closes database connections, and clears campaign state from the key-value store.
         """
+        if not self._should_start:
+            self.logger.info("Doc Inserter has not been started, so it can't stop.")
+            return self
         if self.check_safe_stops:
             trial = 0
             while not self._mq_dao.all_time_based_threads_ended(bundle_exec_id):

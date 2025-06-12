@@ -106,4 +106,5 @@ class MQDaoMofka(MQDao):
         return True
 
     def unsubscribe(self):
+        """Unsubscribes from Mofka topic."""
         raise NotImplementedError()

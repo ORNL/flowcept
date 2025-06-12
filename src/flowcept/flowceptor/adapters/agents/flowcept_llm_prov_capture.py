@@ -66,7 +66,9 @@ def invoke_llm(messages: List[Union[HumanMessage, AIMessage]], llm: LLM = None, 
 
     llm_metadata = _extract_llm_metadata(llm)
 
-    with FlowceptTask(activity_id=activity_id, used=used, custom_metadata={"llm_metadata": llm_metadata}, subtype="llm_query") as t:
+    with FlowceptTask(
+        activity_id=activity_id, used=used, custom_metadata={"llm_metadata": llm_metadata}, subtype="llm_query"
+    ) as t:
         with get_openai_callback() as cb:
             response = llm.invoke(messages)
             generated = {

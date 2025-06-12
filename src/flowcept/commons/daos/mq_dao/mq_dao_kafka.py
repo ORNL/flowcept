@@ -119,4 +119,5 @@ class MQDaoKafka(MQDao):
             return False
 
     def unsubscribe(self):
+        """Unsubscribes from Kafka topic."""
         raise NotImplementedError()

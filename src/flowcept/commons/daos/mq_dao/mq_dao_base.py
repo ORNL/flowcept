@@ -20,6 +20,7 @@ from flowcept.configs import (
     MQ_CHUNK_SIZE,
     MQ_TYPE,
     MQ_TIMING,
+    KVDB_ENABLED,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -67,7 +68,7 @@ class MQDao(ABC):
         self.logger = FlowceptLogger()
         self.started = False
         self._adapter_settings = adapter_settings
-        self._keyvalue_dao = KeyValueDAO()
+        self._keyvalue_dao = KeyValueDAO() if KVDB_ENABLED else None
         self._time_based_flushing_started = False
         self.buffer: Union[AutoflushBuffer, List] = None
         if MQ_TIMING:
@@ -138,7 +139,7 @@ class MQDao(ABC):
         """
         self._keyvalue_dao.delete_key("current_campaign_id")
 
-    def init_buffer(self, interceptor_instance_id: str, exec_bundle_id=None):
+    def init_buffer(self, interceptor_instance_id: str, exec_bundle_id=None, check_safe_stops=True):
         """Create the buffer."""
         if not self.started:
             if flowcept.configs.DB_FLUSH_MODE == "online":
@@ -147,7 +148,8 @@ class MQDao(ABC):
                     max_size=MQ_BUFFER_SIZE,
                     flush_interval=MQ_INSERTION_BUFFER_TIME,
                 )
-                self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
+                if check_safe_stops:
+                    self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
                 self._time_based_flushing_started = True
             else:
                 self.buffer = list()
@@ -230,18 +232,5 @@ class MQDao(ABC):
 
     @abstractmethod
     def liveness_test(self) -> bool:
-        """Check whether the base KV store's connection is ready. This is enough for Redis MQ too. Other MQs need
-        further liveness implementation.
-        """
-        try:
-            response = self._keyvalue_dao.redis_conn.ping()
-            if response:
-                return True
-            else:
-                return False
-        except ConnectionError as e:
-            self.logger.exception(e)
-            return False
-        except Exception as e:
-            self.logger.exception(e)
-            return False
+        """Checks if the MQ system is alive."""
+        raise NotImplementedError()

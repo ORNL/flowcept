@@ -7,7 +7,8 @@ import msgpack
 from time import time, sleep
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-from flowcept.configs import MQ_CHANNEL
+from flowcept.commons.daos.redis_conn import RedisConn
+from flowcept.configs import MQ_CHANNEL, MQ_HOST, MQ_PORT, MQ_PASSWORD, MQ_URI, MQ_SETTINGS, KVDB_ENABLED
 
 
 class MQDaoRedis(MQDao):
@@ -17,14 +18,24 @@ class MQDaoRedis(MQDao):
 
     def __init__(self, adapter_settings=None):
         super().__init__(adapter_settings)
-        self._producer = self._keyvalue_dao.redis_conn  # if MQ is redis, we use the same KV for the MQ
+
         self._consumer = None
+        use_same_as_kv = MQ_SETTINGS.get("same_as_kvdb", False)
+        if use_same_as_kv:
+            if KVDB_ENABLED:
+                self._producer = self._keyvalue_dao.redis_conn
+            else:
+                raise Exception("You have same_as_kvdb in your settings, but kvdb is disabled.")
+        else:
+            self._producer = RedisConn.build_redis_conn_pool(
+                host=MQ_HOST, port=MQ_PORT, password=MQ_PASSWORD, uri=MQ_URI
+            )
 
     def subscribe(self):
         """
         Subscribe to interception channel.
         """
-        self._consumer = self._keyvalue_dao.redis_conn.pubsub()
+        self._consumer = self._producer.pubsub()
         self._consumer.psubscribe(MQ_CHANNEL)
 
     def unsubscribe(self):
@@ -119,7 +130,14 @@ class MQDaoRedis(MQDao):
     def liveness_test(self):
         """Get the livelyness of it."""
         try:
-            return super().liveness_test()
+            response = self._producer.ping()
+            if response:
+                return True
+            else:
+                return False
+        except ConnectionError as e:
+            self.logger.exception(e)
+            return False
         except Exception as e:
             self.logger.exception(e)
             return False

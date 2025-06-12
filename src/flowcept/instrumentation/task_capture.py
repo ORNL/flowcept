@@ -67,7 +67,9 @@ class FlowceptTask(object):
             return
         self._task = TaskObject()
         self._interceptor = InstrumentationInterceptor.get_instance()
-        self._task.telemetry_at_start = self._interceptor.telemetry_capture.capture()
+        tel = self._interceptor.telemetry_capture.capture()
+        if tel:
+            self._task.telemetry_at_start = tel
         self._task.activity_id = activity_id
         self._task.started_at = time()
         self._task.task_id = task_id or self._gen_task_id()
@@ -126,7 +128,9 @@ class FlowceptTask(object):
         """
         if not INSTRUMENTATION_ENABLED:
             return
-        self._task.telemetry_at_end = self._interceptor.telemetry_capture.capture()
+        tel = self._interceptor.telemetry_capture.capture()
+        if tel:
+            self._task.telemetry_at_end = tel
         self._task.ended_at = ended_at or time()
         self._task.status = status
         self._task.stderr = stderr

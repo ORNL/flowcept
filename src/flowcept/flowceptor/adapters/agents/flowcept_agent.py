@@ -283,7 +283,9 @@ def main():
     f = Flowcept(start_persistence=False, save_workflow=False, check_safe_stops=False).start()
     f.logger.info(f"This section's workflow_id={Flowcept.current_workflow_id}")
     setattr(mcp, "workflow_id", f.current_workflow_id)
-    uvicorn.run(mcp.streamable_http_app, host="0.0.0.0", port=8000, lifespan="on")
+    uvicorn.run(
+        mcp.streamable_http_app, host=AGENT.get("mcp_host", "0.0.0.0"), port=AGENT.get("mcp_port", 8000), lifespan="on"
+    )
 
 
 if __name__ == "__main__":

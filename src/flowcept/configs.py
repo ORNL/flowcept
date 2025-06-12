@@ -73,6 +73,7 @@ MQ_CHANNEL = settings["mq"].get("channel", "interception")
 MQ_PASSWORD = settings["mq"].get("password", None)
 MQ_HOST = os.getenv("MQ_HOST", settings["mq"].get("host", "localhost"))
 MQ_PORT = int(os.getenv("MQ_PORT", settings["mq"].get("port", "6379")))
+MQ_URI = os.getenv("MQ_URI", settings["mq"].get("uri", None))
 MQ_BUFFER_SIZE = settings["mq"].get("buffer_size", None)
 MQ_INSERTION_BUFFER_TIME = settings["mq"].get("insertion_buffer_time_secs", None)
 MQ_TIMING = settings["mq"].get("timing", False)
@@ -86,6 +87,7 @@ KVDB_PASSWORD = settings["kv_db"].get("password", None)
 KVDB_HOST = os.getenv("KVDB_HOST", settings["kv_db"].get("host", "localhost"))
 KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
 KVDB_URI = os.getenv("KVDB_URI", settings["kv_db"].get("uri", None))
+KVDB_ENABLED = settings["kv_db"].get("enabled", True)
 
 
 DATABASES = settings.get("databases", {})
@@ -118,9 +120,9 @@ if LMDB_SETTINGS:
     else:
         LMDB_ENABLED = LMDB_SETTINGS.get("enabled", False)
 
-if not LMDB_ENABLED and not MONGO_ENABLED:
-    # At least one of these variables need to be enabled.
-    LMDB_ENABLED = True
+# if not LMDB_ENABLED and not MONGO_ENABLED:
+#     # At least one of these variables need to be enabled.
+#     LMDB_ENABLED = True
 
 ##########################
 # DB Buffer Settings        #

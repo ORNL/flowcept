@@ -221,19 +221,6 @@ def agent_client(tool_name: str, kwargs: str = None):
 
 def check_services():
     """
-    Check if all required Flowcept services are alive and listening.
-
-    If all services are operational, prints a success message.
-    Otherwise, reports a service issue.
-    """
-    if Flowcept.services_alive():
-        print("Services are listening!")
-        return
-    print("One or more service is not working properly.")
-
-
-def test():
-    """
     Run a full diagnostic test on the Flowcept system and its dependencies.
 
     This function:
@@ -249,11 +236,13 @@ def test():
         Prints diagnostics to stdout; returns nothing.
     """
     print(f"Testing with settings at: {configs.SETTINGS_PATH}")
-    from flowcept.configs import MONGO_ENABLED, AGENT
+    from flowcept.configs import MONGO_ENABLED, AGENT, KVDB_ENABLED
 
     if not Flowcept.services_alive():
-        print("Some of the required services are not alive!")
+        print("Some of the enabled services are not alive!")
         return
+
+    check_safe_stops = KVDB_ENABLED
 
     from uuid import uuid4
     from flowcept.instrumentation.flowcept_task import flowcept_task
@@ -264,7 +253,7 @@ def test():
     def test_function(n: int) -> Dict[str, int]:
         return {"output": n + 1}
 
-    with Flowcept(workflow_id=workflow_id):
+    with Flowcept(workflow_id=workflow_id, check_safe_stops=check_safe_stops):
         test_function(2)
 
     if MONGO_ENABLED:
@@ -296,7 +285,7 @@ def test():
 
 
 COMMAND_GROUPS = [
-    ("Basic Commands", [test, check_services, show_config, init_settings, start_services, stop_services]),
+    ("Basic Commands", [check_services, show_config, init_settings, start_services, stop_services]),
     ("Consumption Commands", [start_consumption_services, stop_consumption_services]),
     ("Database Commands", [workflow_count, query, get_task]),
     ("Agent Commands", [start_agent, agent_client]),
