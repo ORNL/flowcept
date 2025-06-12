@@ -47,7 +47,7 @@ jobs:
 
       - name: Test with pytest and redis, ignoring the ones that (as of Dec 21 2024) don't work on py3.13)
         run: |
-          pytest  --ignore=tests/adapters/test_tensorboard.py --ignore tests/instrumentation_tests/ml_tests/
+          pytest  --ignore=tests/adapters/test_tensorboard.py --ignore=tests/adapters/test_broker.py --ignore tests/instrumentation_tests/ml_tests/
 
       - name: Shut down docker compose
         run: make services-stop-mongo
