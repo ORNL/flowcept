@@ -1,4 +1,5 @@
 """Zambeze interceptor module."""
+
 import uuid
 from threading import Thread
 from time import sleep
@@ -129,4 +130,3 @@ class MQTTBrokerInterceptor(BaseInterceptor):
         self._observer_thread.join()
         self.logger.debug("Interceptor stopped.")
         return True
-
