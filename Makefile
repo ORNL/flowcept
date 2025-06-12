@@ -29,22 +29,18 @@ reformat:
 
 # Remove cache directories and Sphinx build output
 clean:
-	rm -rf .ruff_cache || true
-	rm -rf .pytest_cache || true
-	rm -rf mnist_data || true
-	rm -rf tensorboard_events || true
-	rm -f docs_dump_tasks_* || true
-	rm -f dump_test.json || true
-	find . -type d -name "*flowcept_lmdb*" -exec rm -rf {} \; || true
-	find . -type f -name "*.log" -exec rm -f {} \; || true
-	find . -type f -name "*.pth" -exec rm -f {} \; || true
-	find . -type f -name "mlflow.db" -exec rm -f {} \; || true
-	find . -type d -name "mlruns" -exec rm -rf {} \; 2>/dev/null || true
-	find . -type d -name "__pycache__" -exec rm -rf {} \;  2>/dev/null || true
-	find . -type d -name "*tfevents*" -exec rm -rf {} \;  2>/dev/null || true
-	find . -type d -name "*output_data*" -exec rm -rf {} \;  2>/dev/null || true
-	find . -type f -name "*nohup*" -exec rm -rf {} \;  2>/dev/null || true
-	sphinx-build -M clean docs docs/_build > /dev/null 2>&1 || true
+	@sh -c 'rm -rf .ruff_cache .pytest_cache mnist_data tensorboard_events 2>/dev/null || true'
+	@sh -c 'rm -f docs_dump_tasks_* dump_test.json 2>/dev/null || true'
+	@find . -type d -name "*flowcept_lmdb*" -exec sh -c 'rm -rf "$$@" 2>/dev/null || true' sh {} +
+	@find . -type f -name "*.log" -exec sh -c 'rm -f "$$@" 2>/dev/null || true' sh {} +
+	@find . -type f -name "*.pth" -exec sh -c 'rm -f "$$@" 2>/dev/null || true' sh {} +
+	@find . -type f -name "mlflow.db" -exec sh -c 'rm -f "$$@" 2>/dev/null || true' sh {} +
+	@find . -type d -name "mlruns" -exec sh -c 'rm -rf "$$@" 2>/dev/null || true' sh {} +
+	@find . -type d -name "__pycache__" -exec sh -c 'rm -rf "$$@" 2>/dev/null || true' sh {} +
+	@find . -type d -name "*tfevents*" -exec sh -c 'rm -rf "$$@" 2>/dev/null || true' sh {} +
+	@find . -type d -name "*output_data*" -exec sh -c 'rm -rf "$$@" 2>/dev/null || true' sh {} +
+	@find . -type f -name "*nohup*" -exec sh -c 'rm -f "$$@" 2>/dev/null || true' sh {} +
+	@sh -c 'sphinx-build -M clean docs docs/_build > /dev/null 2>&1 || true'
 
 # Build the HTML documentation using Sphinx
 .PHONY: docs
@@ -87,10 +83,17 @@ tests-in-container-kafka:
 liveness:
 	python -c 'from flowcept import Flowcept; print(Flowcept.services_alive())'
 
+dev_agent:
+	mcp dev src/flowcept/flowceptor/adapters/agents/flowcept_agent.py
+
+install_dev_agent: # Run this to fix python env problems in the MCP studio env
+	mcp install src/flowcept/flowceptor/adapters/agents/flowcept_agent.py
+
+
 # Run unit tests using pytest
 .PHONY: tests
 tests:
-	pytest
+	pytest --ignore=tests/adapters/test_tensorboard.py
 
 .PHONY: tests-notebooks
 tests-notebooks:

@@ -64,17 +64,17 @@ class MLFlowInterceptor(BaseInterceptor):
                 task_msg = self.prepare_task_msg(run_data).to_dict()
                 self.intercept(task_msg)
 
-    def start(self, bundle_exec_id) -> "MLFlowInterceptor":
+    def start(self, bundle_exec_id, check_safe_stops) -> "MLFlowInterceptor":
         """Start it."""
         super().start(bundle_exec_id)
         self._observer_thread = Thread(target=self.observe, daemon=True)
         self._observer_thread.start()
         return self
 
-    def stop(self) -> bool:
+    def stop(self, check_safe_stops: bool = True) -> bool:
         """Stop it."""
         sleep(1)
-        super().stop()
+        super().stop(check_safe_stops)
         self.logger.debug("Interceptor stopping...")
         self._observer.stop()
         self._observer_thread.join()

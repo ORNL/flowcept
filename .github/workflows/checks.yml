@@ -1,4 +1,4 @@
-name: Linter, formatter, and docs checks
+name: Code and doc checks
 
 on: pull_request
 

@@ -20,6 +20,7 @@ from flowcept.configs import (
     MQ_CHUNK_SIZE,
     MQ_TYPE,
     MQ_TIMING,
+    KVDB_ENABLED,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -67,7 +68,13 @@ class MQDao(ABC):
         self.logger = FlowceptLogger()
         self.started = False
         self._adapter_settings = adapter_settings
-        self._keyvalue_dao = KeyValueDAO()
+        if KVDB_ENABLED:
+            self._keyvalue_dao = KeyValueDAO()
+        else:
+            self._keyvalue_dao = None
+            self.logger.warning(
+                "We are going to run without KVDB. If you are running a workflow, this may lead to errors."
+            )
         self._time_based_flushing_started = False
         self.buffer: Union[AutoflushBuffer, List] = None
         if MQ_TIMING:
@@ -138,7 +145,7 @@ class MQDao(ABC):
         """
         self._keyvalue_dao.delete_key("current_campaign_id")
 
-    def init_buffer(self, interceptor_instance_id: str, exec_bundle_id=None):
+    def init_buffer(self, interceptor_instance_id: str, exec_bundle_id=None, check_safe_stops=True):
         """Create the buffer."""
         if not self.started:
             if flowcept.configs.DB_FLUSH_MODE == "online":
@@ -147,7 +154,8 @@ class MQDao(ABC):
                     max_size=MQ_BUFFER_SIZE,
                     flush_interval=MQ_INSERTION_BUFFER_TIME,
                 )
-                self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
+                if check_safe_stops:
+                    self.register_time_based_thread_init(interceptor_instance_id, exec_bundle_id)
                 self._time_based_flushing_started = True
             else:
                 self.buffer = list()
@@ -164,9 +172,9 @@ class MQDao(ABC):
             self.bulk_publish(self.buffer)
             self.buffer = list()
 
-    def _stop_timed(self, interceptor_instance_id: str, bundle_exec_id: int = None):
+    def _stop_timed(self, interceptor_instance_id: str, check_safe_stops: bool = True, bundle_exec_id: int = None):
         t1 = time()
-        self._stop(interceptor_instance_id, bundle_exec_id)
+        self._stop(interceptor_instance_id, check_safe_stops, bundle_exec_id)
         t2 = time()
         self._flush_events.append(["final", t1, t2, t2 - t1, "n/a"])
 
@@ -175,14 +183,14 @@ class MQDao(ABC):
             writer.writerow(["type", "start", "end", "duration", "size"])
             writer.writerows(self._flush_events)
 
-    def _stop(self, interceptor_instance_id: str, bundle_exec_id: int = None):
-        """Stop it."""
-        msg0 = "MQ publisher received stop signal! bundle: "
-        self.logger.debug(msg0 + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
+    def _stop(self, interceptor_instance_id: str, check_safe_stops: bool = True, bundle_exec_id: int = None):
+        """Stop MQ publisher."""
+        self.logger.debug(f"MQ pub received stop sign: bundle={bundle_exec_id}, interceptor={interceptor_instance_id}")
         self._close_buffer()
-        msg = "Flushed MQ for last time! Send stop msg. bundle: "
-        self.logger.debug(msg + f"{bundle_exec_id}; interceptor id: {interceptor_instance_id}")
-        self._send_mq_dao_time_thread_stop(interceptor_instance_id, bundle_exec_id)
+        self.logger.debug("Flushed MQ for the last time!")
+        if check_safe_stops:
+            self.logger.debug(f"Sending stop msg. Bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}")
+            self._send_mq_dao_time_thread_stop(interceptor_instance_id, bundle_exec_id)
         self.started = False
 
     def _send_mq_dao_time_thread_stop(self, interceptor_instance_id, exec_bundle_id=None):
@@ -197,10 +205,10 @@ class MQDao(ABC):
         # self.logger.info("Control msg sent: " + str(msg))
         self.send_message(msg)
 
-    def send_document_inserter_stop(self):
+    def send_document_inserter_stop(self, exec_bundle_id=None):
         """Send the document."""
         # These control_messages are handled by the document inserter
-        msg = {"type": "flowcept_control", "info": "stop_document_inserter"}
+        msg = {"type": "flowcept_control", "info": "stop_document_inserter", "exec_bundle_id": exec_bundle_id}
         self.send_message(msg)
 
     @abstractmethod
@@ -224,19 +232,11 @@ class MQDao(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    def unsubscribe(self):
+        """Subscribe to the interception channel."""
+        raise NotImplementedError()
+
+    @abstractmethod
     def liveness_test(self) -> bool:
-        """Check whether the base KV store's connection is ready. This is enough for Redis MQ too. Other MQs need
-        further liveness implementation.
-        """
-        try:
-            response = self._keyvalue_dao.redis_conn.ping()
-            if response:
-                return True
-            else:
-                return False
-        except ConnectionError as e:
-            self.logger.exception(e)
-            return False
-        except Exception as e:
-            self.logger.exception(e)
-            return False
+        """Checks if the MQ system is alive."""
+        raise NotImplementedError()

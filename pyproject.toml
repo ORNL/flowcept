@@ -16,7 +16,7 @@ dependencies = [
     "redis",
     "requests",
     "lmdb",
-    "pyarrow"
+    "pyarrow",
 ]
 authors = [{name = "Oak Ridge National Laboratory"}]
 description = "Capture and query workflow provenance data using data observability"
@@ -64,6 +64,8 @@ mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog"]
 nvidia = ["nvidia-ml-py"]
 mqtt = ["paho-mqtt"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
+llm_agent = ["mcp[cli]", "langchain_community", "sentence-transformers", "tiktoken", "faiss-cpu"]
+
 dev = [
     "flowcept[docs]",
     "jupyterlab",
@@ -107,8 +109,17 @@ ignore = ["D200", "D212", "D105", "D401", "D205", "D100"]
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
+[tool.uv.workspace]
+members = [
+    "tmp_tests/mcp-server-demo",
+    "tmp_tests/mcp-server-demo/mcp-server-demo",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/flowcept"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "resources/sample_settings.yaml" = "resources/sample_settings.yaml"
+
+[project.scripts]
+flowcept = "flowcept.cli:main"
