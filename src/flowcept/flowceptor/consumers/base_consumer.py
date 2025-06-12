@@ -61,7 +61,7 @@ class BaseConsumer(object):
             target = self.default_thread_target
         self._mq_dao.subscribe()
         if threaded:
-            self._main_thread = Thread(target=target, args=args, daemon=True)
+            self._main_thread = Thread(target=target, args=args, daemon=daemon)
             self._main_thread.start()
         else:
             target(*args)
@@ -80,6 +80,7 @@ class BaseConsumer(object):
         --------
         start : Starts the consumer and optionally spawns a background thread to run this method.
         """
+        self.logger.debug("Going to wait for new messages!")
         self._mq_dao.message_listener(self.message_handler)
 
     def stop_consumption(self):

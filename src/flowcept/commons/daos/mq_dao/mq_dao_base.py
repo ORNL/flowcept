@@ -68,7 +68,12 @@ class MQDao(ABC):
         self.logger = FlowceptLogger()
         self.started = False
         self._adapter_settings = adapter_settings
-        self._keyvalue_dao = KeyValueDAO() if KVDB_ENABLED else None
+        if KVDB_ENABLED:
+            self._keyvalue_dao = KeyValueDAO()
+        else:
+            self._keyvalue_dao = None
+            self.logger.warning("We are going to run without KVDB. "
+                                "If you are running a workflow, this may lead to errors.")
         self._time_based_flushing_started = False
         self.buffer: Union[AutoflushBuffer, List] = None
         if MQ_TIMING:
