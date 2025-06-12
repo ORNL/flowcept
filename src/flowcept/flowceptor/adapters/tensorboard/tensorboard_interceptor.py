@@ -91,7 +91,7 @@ class TensorboardInterceptor(BaseInterceptor):
                 self.intercept(task_msg.to_dict())
                 self.state_manager.add_element_id(child_event.log_path)
 
-    def start(self, bundle_exec_id) -> "TensorboardInterceptor":
+    def start(self, bundle_exec_id, check_safe_stops: bool = True) -> "TensorboardInterceptor":
         """Start it."""
         super().start(bundle_exec_id)
         self.observe()
