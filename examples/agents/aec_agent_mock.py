@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict
+from typing import Dict, List
 import textwrap
 
 import uvicorn
@@ -71,6 +71,46 @@ def adamantine_prompt(layer: int, simulation_output: Dict, question: str) -> lis
 #################################################
 # TOOLS
 #################################################
+
+
+
+@mcp.tool()
+def generate_options_set(layer: int, planned_controls, number_of_options=4)->List[Dict]:
+    # search the whole history of options, scores, and choice
+    import random
+    power_arr = [0, 15, 25, 50, 75, 100, 125, 150, 175, 200, 250, 300, 350]  # floating number from 0 to 350
+    dwell_arr = list(range(10, 121, 5))
+
+    control_options = []
+    for k in range(number_of_options):
+        control_options.append({
+        "power": power_arr[random.randint(0, len(power_arr) - 1)],
+        "dwell_0": dwell_arr[random.randint(0, len(dwell_arr) - 1)],
+        "dwell_1": dwell_arr[random.randint(0, len(dwell_arr) - 1)],
+        })
+    return control_options
+
+@mcp.tool()
+def choose_option(l2_error: List[float], planned_controls):
+    # search the whole history of options, scores, and choice
+    import numpy as np
+    minimum_error_ix = int(np.argmin(l2_error))
+    return minimum_error_ix
+#
+# @mcp.tool()
+# def ask_agent(layer: int = None) -> str:
+#     """
+#     Return the latest task(s) as a JSON string.
+#     """
+#     ctx = mcp.get_context()
+#     tasks = ctx.request_context.lifespan_context.tasks
+#     if not tasks:
+#         return "No tasks available."
+#     if n is None:
+#         return json.dumps(tasks[-1])
+#     return json.dumps(tasks[-n])
+
+
 
 @mcp.tool()
 def get_latest(n: int = None) -> str:
