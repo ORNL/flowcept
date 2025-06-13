@@ -129,6 +129,8 @@ def flowcept_task(func=None, **decorator_kwargs):
                 return func(*args, **kwargs)
 
             args_handler = decorator_kwargs.get("args_handler", default_args_handler)
+            custom_metadata = decorator_kwargs.get("custom_metadata", None)
+            tags = decorator_kwargs.get("tags", None)
             task_obj = TaskObject()
 
             task_obj.activity_id = func.__name__
@@ -136,7 +138,9 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.workflow_id = handled_args.pop("workflow_id", Flowcept.current_workflow_id)
             task_obj.campaign_id = handled_args.pop("campaign_id", Flowcept.campaign_id)
             task_obj.used = handled_args
+            task_obj.tags = tags
             task_obj.started_at = time()
+            task_obj.custom_metadata = custom_metadata
             task_obj.task_id = str(task_obj.started_at)
             _thread_local._flowcept_current_context_task_id = task_obj.task_id
             task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()

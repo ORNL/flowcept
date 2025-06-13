@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict, List
 
 from flowcept.configs import AGENT
@@ -11,7 +12,7 @@ MCP_PORT = AGENT.get("mcp_port", 8000)
 MCP_URL = f"http://{MCP_HOST}:{MCP_PORT}/mcp"
 
 
-def run_tool(tool_name: str, kwargs: Dict = None) -> List[TextContent]:
+def run_tool(tool_name: str, kwargs: Dict = None) -> List[str]:
     """
     Run a tool using an MCP client session via a local streamable HTTP connection.
 
@@ -36,13 +37,15 @@ def run_tool(tool_name: str, kwargs: Dict = None) -> List[TextContent]:
     This function uses `asyncio.run`, so it must not be called from an already-running
     event loop (e.g., inside another async function in environments like Jupyter).
     """
-    import asyncio
-
     async def _run():
         async with streamablehttp_client(MCP_URL) as (read, write, _):
             async with ClientSession(read, write) as session:
                 await session.initialize()
-                result = await session.call_tool(tool_name, arguments=kwargs)
-                return result.content
+                result: List[TextContent] = await session.call_tool(tool_name, arguments=kwargs)
+                actual_result = []
+                for r in result.content:
+                    actual_result.append(r.text)
+
+                return actual_result
 
     return asyncio.run(_run())

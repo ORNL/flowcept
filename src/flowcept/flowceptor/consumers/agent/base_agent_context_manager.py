@@ -39,6 +39,7 @@ class BaseAgentContextManager(BaseConsumer):
         """
         Initializes the agent and resets its context state.
         """
+        self._started = False
         super().__init__()
         self.context = None
         self.reset_context()
@@ -94,7 +95,10 @@ class BaseAgentContextManager(BaseConsumer):
         BaseAppContext
             The current application context, including collected tasks.
         """
-        self.start()
+        if not self._started:
+            self.logger.info("Starting lifespan! :)")
+            self._started = True
+            self.start()
         try:
             yield self.context
         finally:

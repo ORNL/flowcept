@@ -1,6 +1,6 @@
 """Controller module."""
 
-from typing import List
+from typing import List, Dict
 from uuid import uuid4
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
@@ -44,7 +44,7 @@ class Flowcept(object):
         campaign_id: str = None,
         workflow_id: str = None,
         workflow_name: str = None,
-        workflow_args: str = None,
+        workflow_args: Dict = None,
         start_persistence=True,
         check_safe_stops=True,  # TODO add to docstring
         save_workflow=True,

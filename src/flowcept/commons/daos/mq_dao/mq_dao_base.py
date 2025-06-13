@@ -183,7 +183,7 @@ class MQDao(ABC):
             writer.writerow(["type", "start", "end", "duration", "size"])
             writer.writerows(self._flush_events)
 
-    def _stop(self, interceptor_instance_id: str, check_safe_stops: bool = True, bundle_exec_id: int = None):
+    def _stop(self, interceptor_instance_id: str = None, check_safe_stops: bool = True, bundle_exec_id: int = None):
         """Stop MQ publisher."""
         self.logger.debug(f"MQ pub received stop sign: bundle={bundle_exec_id}, interceptor={interceptor_instance_id}")
         self._close_buffer()

@@ -4,7 +4,7 @@ import random
 from typing import Dict, List
 
 from flowcept.flowcept_api.flowcept_controller import Flowcept
-from flowcept.flowceptor.consumers.agent.client_agent import run_tool, run_tool_async
+from flowcept.flowceptor.consumers.agent.client_agent import run_tool
 from flowcept.flowceptor.consumers.base_consumer import BaseConsumer
 from flowcept.instrumentation.flowcept_task import flowcept_task
 
@@ -14,39 +14,80 @@ except Exception as e:
     print(e)
     pass
 
+# import sys
+# sys.exit(0)
 
-# class AdamantineDriver(BaseConsumer):
-#
-#     def __init__(self, number_of_options, max_layers, planned_control: List[Dict], first_layer_ix: int = 2):
-#         super().__init__()
-#         self._layers_count = 0
-#         self._number_of_options = number_of_options
-#         self._max_layers = max_layers
-#         self._first_layer_ix = first_layer_ix
-#         self._planned_control = planned_control
-#
-#     def message_handler(self, msg_obj: Dict) -> bool:
-#         if msg_obj.get('type', '') == 'task':
-#             print(msg_obj)
-#
-#             if msg_obj.get("subtype", '') == "llm_query":
-#                 print("Msg from agent.")
-#
-#                 msg_output = msg_obj.get("generated", {})["response"]
-#
-#                 simulation_output = simulate_layer(self.layers_count, msg_output)
-#
-#                 run_tool_async("ask_agent", simulation_output)
-#
-#         else:
-#             print(f"We got a msg with different type: {msg_obj.get("type", None)}")
-#         return True
+class AdamantineDriver(BaseConsumer):
 
+    @flowcept_task(tags=["run_tool"])
+    @staticmethod
+    def generate_options_set(layer, planned_controls, number_of_options):
+        return
 
+    @flowcept_task(tags=["run_tool"])
+    @staticmethod
+    def choose_option(l2_error, planned_controls):
+        return
 
+    def __init__(self, number_of_options, max_layers, planned_controls: List[Dict], first_layer_ix: int = 2):
+        super().__init__()
+        self._layers_count = first_layer_ix
+        self._number_of_options = number_of_options
+        self._max_layers = max_layers
+        self._planned_controls = planned_controls
+        self._current_controls_options = None
+        AdamantineDriver.generate_options_set(
+            layer=self._layers_count,
+            planned_controls=self._planned_controls,
+            number_of_options=self._number_of_options
+        )
 
+    def message_handler(self, msg_obj: Dict) -> bool:
+        if msg_obj.get('type', '') == 'task':
+            print(msg_obj)
 
+            if msg_obj.get("tags", [''])[0] == 'tool_result':
+                tool_name = msg_obj.get("activity_id")
+                if tool_name == "generate_options_set":
+                    tool_output = msg_obj.get("generated")
+                    self._current_controls_options = tool_output.get("control_options")
+                    l2_error = simulate_layer(layer_number=self._layers_count, control_options=self._current_controls_options)
+                    AdamantineDriver.choose_option(
+                        l2_error=l2_error,
+                        planned_controls=self._planned_controls,
+                    )
+                elif tool_name == "choose_option":
+                    tool_output = msg_obj.get("generated")
+                    option = tool_output.get("option")
+                    reason = tool_output.get("reason")
+                    print(f"Agent chose option {option}: {self._current_controls_options[option]}. Reason: {reason}")
 
+                    self._layers_count += 1
+
+                    if self._layers_count == self._max_layers:
+                        print("All layers have been processed!")
+                        return False
+
+                    AdamantineDriver.generate_options_set(
+                        layer=self._layers_count,
+                        planned_controls=self._planned_controls,
+                        number_of_options=self._number_of_options
+                    )
+                print("IT worked!", msg_obj)
+            if msg_obj.get("subtype", '') == "llm_query":
+                print("Msg from agent.")
+                #
+                # msg_output = msg_obj.get("generated", {})["response"]
+                #
+                # simulation_output = simulate_layer(self._layers_count, msg_output)
+                #
+                # run_tool_async("ask_agent", simulation_output)
+
+        else:
+            print(f"We got a msg with different type: {msg_obj.get("type", None)}")
+        return True
+
+#
 def generate_mock_planned_control(config, number_of_options):
     planned_controls = []
     for i in range(config["max_layers"]):
@@ -95,12 +136,6 @@ def simulate_layer(layer_number: int, control_options: List[Dict]):
     return l2_error
 
 
-
-
-#
-
-
-
 def adaptive_control_workflow(config):
     number_of_options = config["number_of_options"]
     planned_controls = generate_mock_planned_control(config, number_of_options)
@@ -129,11 +164,26 @@ def adaptive_control_workflow(config):
 
 
 
+def main():
+    config = {"max_layers": 3, "number_of_options": 2}
 
+    fc = Flowcept(start_persistence=False, save_workflow=False, check_safe_stops=False, workflow_args=config)
+    fc.start()
+    # adaptive_control_workflow(config)
+    # with Flowcept(start_persistence=False, save_workflow=False, check_safe_stops=False, workflow_args=config):
+    #     adaptive_control_workflow(config)
+    #
+    number_of_options = config["number_of_options"]
+    planned_controls = generate_mock_planned_control(config, number_of_options)
+
+    driver = AdamantineDriver(
+        number_of_options=config["number_of_options"],
+        max_layers=config["max_layers"],
+        planned_controls=planned_controls,
+        first_layer_ix=2
+    )
+    driver.start(daemon=False)
 
 if __name__ == "__main__":
+    main()
 
-    config = {"max_layers": 5, "number_of_options": 4}
-
-    with Flowcept(start_persistence=False, save_workflow=False, check_safe_stops=False):
-        adaptive_control_workflow(config)

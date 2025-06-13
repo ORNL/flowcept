@@ -5,6 +5,8 @@ import textwrap
 
 import uvicorn
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
+from flowcept.flowceptor.consumers.agent.client_agent import run_tool
+from flowcept.instrumentation.flowcept_task import flowcept_task
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.prompts import base
 
@@ -18,7 +20,38 @@ from flowcept.commons.utils import get_utc_now
 os.environ["SAMBASTUDIO_URL"] = AGENT.get("llm_server_url")
 os.environ["SAMBASTUDIO_API_KEY"] = AGENT.get("api_key")
 
-agent_controller = BaseAgentContextManager()
+
+class AdamantineAeCContextManager(BaseAgentContextManager):
+
+    def __init__(self):
+        super().__init__()
+
+    def message_handler(self, msg_obj: Dict) -> bool:
+        if msg_obj.get('type', '') == 'task':
+            tag = msg_obj.get("tags", [''])[0]
+            if tag == 'run_tool':
+                print(msg_obj)
+                tool_name = msg_obj["activity_id"]
+                tool_args = msg_obj.get("used", {})
+                self.logger.debug(f"Going to run {tool_name}, {tool_args}")
+                run_tool(tool_name, kwargs=tool_args)
+            elif tag == 'tool_result':
+                print('Tool result', msg_obj["activity_id"])
+            if msg_obj.get("subtype", '') == "llm_query":
+                print("Msg from agent.")
+                #
+                # msg_output = msg_obj.get("generated", {})["response"]
+                #
+                # simulation_output = simulate_layer(self._layers_count, msg_output)
+                #
+                # run_tool_async("ask_agent", simulation_output)
+
+        else:
+            print(f"We got a msg with different type: {msg_obj.get("type", None)}")
+        return True
+
+
+agent_controller = AdamantineAeCContextManager()
 mcp = FastMCP("AnC_Agent_mock", require_session=True, lifespan=agent_controller.lifespan)
 
 
@@ -73,29 +106,30 @@ def adamantine_prompt(layer: int, simulation_output: Dict, question: str) -> lis
 #################################################
 
 
-
 @mcp.tool()
-def generate_options_set(layer: int, planned_controls, number_of_options=4)->List[Dict]:
-    # search the whole history of options, scores, and choice
+@flowcept_task(tags=["tool_result"])  # Must be in this order. @mcp.tool then @flowcept_task
+def generate_options_set(layer: int, planned_controls, number_of_options=4):
+    # search the whole history of options, scores, and choices
     import random
-    power_arr = [0, 15, 25, 50, 75, 100, 125, 150, 175, 200, 250, 300, 350]  # floating number from 0 to 350
     dwell_arr = list(range(10, 121, 5))
 
     control_options = []
     for k in range(number_of_options):
         control_options.append({
-        "power": power_arr[random.randint(0, len(power_arr) - 1)],
-        "dwell_0": dwell_arr[random.randint(0, len(dwell_arr) - 1)],
-        "dwell_1": dwell_arr[random.randint(0, len(dwell_arr) - 1)],
+            "power": random.randint(0, 350),
+            "dwell_0": dwell_arr[random.randint(0, len(dwell_arr) - 1)],
+            "dwell_1": dwell_arr[random.randint(0, len(dwell_arr) - 1)],
         })
-    return control_options
+    return {"control_options": control_options}
+
 
 @mcp.tool()
+@flowcept_task(tags=["tool_result"])  # Must be in this order. @mcp.tool then @flowcept_task
 def choose_option(l2_error: List[float], planned_controls):
     # search the whole history of options, scores, and choice
     import numpy as np
     minimum_error_ix = int(np.argmin(l2_error))
-    return minimum_error_ix
+    return {"option": minimum_error_ix, "reason": "argmin"}
 #
 # @mcp.tool()
 # def ask_agent(layer: int = None) -> str:
@@ -177,7 +211,9 @@ def main():
     f = Flowcept(start_persistence=False, save_workflow=False, check_safe_stops=False).start()
     f.logger.info(f"This section's workflow_id={Flowcept.current_workflow_id}")
     setattr(mcp, "workflow_id", f.current_workflow_id)
-    uvicorn.run(mcp.streamable_http_app, host="0.0.0.0", port=8000, lifespan="on")
+    uvicorn.run(
+        mcp.streamable_http_app, host=AGENT.get("mcp_host", "0.0.0.0"), port=AGENT.get("mcp_port", 8000), lifespan="on"
+    )
 
 
 if __name__ == "__main__":
