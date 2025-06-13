@@ -30,7 +30,7 @@ class TaskObject:
     submitted_at: float = None
     started_at: float = None
     ended_at: float = None
-    registered_at: float = None
+    registered_at: float = None  # Leave this for dates generated at the DocInserter
     telemetry_at_start: Telemetry = None
     telemetry_at_end: Telemetry = None
     workflow_name: AnyStr = None
@@ -52,6 +52,7 @@ class TaskObject:
     address: AnyStr = None
     dependencies: List = None
     dependents: List = None
+    tags: List = None
 
     _DEFAULT_ENRICH_VALUES = {
         "node_name": NODE_NAME,
@@ -145,10 +146,37 @@ class TaskObject:
             if (key not in task_dict or task_dict[key] is None) and fallback_value is not None:
                 task_dict[key] = fallback_value
 
-    # @staticmethod
-    # def deserialize(serialized_data) -> 'TaskObject':
-    #     dict_obj = msgpack.loads(serialized_data)
-    #     obj = TaskObject()
-    #     for k, v in dict_obj.items():
-    #         setattr(obj, k, v)
-    #     return obj
+    @staticmethod
+    def from_dict(task_obj_dict: Dict[AnyStr, Any]) -> "TaskObject":
+        """Create a TaskObject from a dictionary.
+
+        Parameters
+        ----------
+        task_obj_dict : Dict[AnyStr, Any]
+            Dictionary containing task attributes.
+
+        Returns
+        -------
+        TaskObject
+            A TaskObject instance populated with available data.
+        """
+        task = TaskObject()
+
+        for key, value in task_obj_dict.items():
+            if hasattr(task, key):
+                if key == "status" and isinstance(value, str):
+                    setattr(task, key, Status(value))
+                else:
+                    setattr(task, key, value)
+
+        return task
+
+    def __str__(self):
+        """Return a user-friendly string representation of the TaskObject."""
+        return self.__repr__()
+
+    def __repr__(self):
+        """Return an unambiguous string representation of the TaskObject."""
+        attrs = ["task_id", "workflow_id", "campaign_id", "activity_id", "custom_metadata", "started_at", "ended_at"]
+        attr_str = ", ".join(f"{attr}={repr(getattr(self, attr))}" for attr in attrs)
+        return f"TaskObject({attr_str})"

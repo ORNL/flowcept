@@ -104,3 +104,7 @@ class MQDaoMofka(MQDao):
     def liveness_test(self):
         """Test Mofka Liveness."""
         return True
+
+    def unsubscribe(self):
+        """Unsubscribes from Mofka topic."""
+        raise NotImplementedError()

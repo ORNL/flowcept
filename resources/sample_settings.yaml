@@ -39,18 +39,22 @@ experiment:
 mq:
   type: redis  # or kafka or mofka; Please adjust the port (kafka's default is 9092; redis is 6379). If mofka, adjust the group_file.
   host: localhost
-  # instances: ["localhost:6379"] # We can have multiple redis instances being accessed by the consumers but each interceptor will currently access one single redis.
+  # uri: ?
+  # instances: ["localhost:6379"] # We can have multiple MQ instances being accessed by the consumers but each interceptor will currently access one single MQ..
   port: 6379
   # group_file: mofka.json
   channel: interception
   buffer_size: 50
   insertion_buffer_time_secs: 5
   timing: false
+  # uri: use Redis connection uri here
   chunk_size: -1  # use 0 or -1 to disable this. Or simply omit this from the config file.
+  same_as_kvdb: false # Set this to true if you are using the same Redis instance both as an MQ and as the KV_DB. In that case, no need to repeat connection parameters in MQ. Use only what you define in KV_DB.
 
-kv_db:  # You can optionally use KV == MQ if MQ is Redis. Otherwise, these will be the Redis instance credentials.
+kv_db:
   host: localhost
   port: 6379
+  enabled: true
   # uri: use Redis connection uri here
 
 web_server:
@@ -75,6 +79,15 @@ db_buffer:
   stop_max_trials: 240    # Maximum number of trials before giving up when waiting for a fully safe stop (i.e., all records have been inserted as expected).
   stop_trials_sleep: 0.01   # Sleep duration (in seconds) between trials when waiting for a fully safe stop.
 
+agent:
+  enabled: false
+  mcp_host: localhost
+  mcp_port: 8000
+  llm_server_url: '?'
+  api_key: '?'
+  model: '?'
+  model_kwargs: {}
+
 databases:
 
   lmdb:
@@ -90,16 +103,26 @@ databases:
 
 adapters:
   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2. Use an empty dict, {}, if you won't use any adapter.
-  zambeze:
-    kind: zambeze
-    host: localhost
-    port: 5672
-    queue_names:
-      - hello
-      - hello2
-#    key_values_to_filter:
-#      - key: activity_status
-#        value: CREATED
+
+  broker_mqtt:
+    kind: broker
+    host: h
+    port: 30011
+    protocol: mqtt3.1.1
+    queues: ["#"]
+    username: postman
+    password: p
+    qos: 2
+    task_subtype: intersect_msg
+    tracked_keys:
+      used: payload
+      generated: ~
+      custom_metadata: [headers, msgId]
+      activity_id: operationId
+      submitted_at: ~
+      started_at: ~
+      ended_at: ~
+      registered_at: ~
 
   mlflow:
     kind: mlflow
@@ -122,3 +145,4 @@ adapters:
     worker_should_get_output: true
     scheduler_create_timestamps: true
     worker_create_timestamps: false
+

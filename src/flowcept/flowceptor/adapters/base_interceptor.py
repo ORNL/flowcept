@@ -28,8 +28,6 @@ from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 class BaseInterceptor(object):
     """Base interceptor class."""
 
-    # KINDS_TO_NOT_EXPLICITLY_CONTROL = {"dask"}
-
     @staticmethod
     def build(kind: str) -> "BaseInterceptor":
         """Build the Interceptor."""
@@ -42,6 +40,11 @@ class BaseInterceptor(object):
             from flowcept.flowceptor.adapters.tensorboard.tensorboard_interceptor import TensorboardInterceptor
 
             return TensorboardInterceptor()
+
+        elif kind == "broker_mqtt":
+            from flowcept.flowceptor.adapters.brokers.mqtt_interceptor import MQTTBrokerInterceptor
+
+            return MQTTBrokerInterceptor()
         elif kind == "dask_worker":
             from flowcept.flowceptor.adapters.dask.dask_interceptor import DaskWorkerInterceptor
 
@@ -80,17 +83,21 @@ class BaseInterceptor(object):
         """Prepare a task."""
         raise NotImplementedError()
 
-    def start(self, bundle_exec_id) -> "BaseInterceptor":
+    def start(self, bundle_exec_id, check_safe_stops: bool = True) -> "BaseInterceptor":
         """Start an interceptor."""
         if not self.started:
             self._bundle_exec_id = bundle_exec_id
-            self._mq_dao.init_buffer(self._interceptor_instance_id, bundle_exec_id)
+            self._mq_dao.init_buffer(self._interceptor_instance_id, bundle_exec_id, check_safe_stops)
             self.started = True
         return self
 
-    def stop(self):
+    def stop(self, check_safe_stops: bool = True):
         """Stop an interceptor."""
-        self._mq_dao.stop(self._interceptor_instance_id, self._bundle_exec_id)
+        self._mq_dao.stop(
+            interceptor_instance_id=self._interceptor_instance_id,
+            check_safe_stops=check_safe_stops,
+            bundle_exec_id=self._bundle_exec_id,
+        )
         self.started = False
 
     def observe(self, *args, **kwargs):

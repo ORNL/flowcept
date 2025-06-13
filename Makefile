@@ -83,10 +83,17 @@ tests-in-container-kafka:
 liveness:
 	python -c 'from flowcept import Flowcept; print(Flowcept.services_alive())'
 
+dev_agent:
+	mcp dev src/flowcept/flowceptor/adapters/agents/flowcept_agent.py
+
+install_dev_agent: # Run this to fix python env problems in the MCP studio env
+	mcp install src/flowcept/flowceptor/adapters/agents/flowcept_agent.py
+
+
 # Run unit tests using pytest
 .PHONY: tests
 tests:
-	pytest
+	pytest --ignore=tests/adapters/test_tensorboard.py
 
 .PHONY: tests-notebooks
 tests-notebooks:

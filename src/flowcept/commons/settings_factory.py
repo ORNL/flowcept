@@ -7,9 +7,6 @@ from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
     BaseSettings,
     KeyValue,
 )
-from flowcept.flowceptor.adapters.zambeze.zambeze_dataclasses import (
-    ZambezeSettings,
-)
 from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import (
     MLFlowSettings,
 )
@@ -22,7 +19,6 @@ from flowcept.flowceptor.adapters.dask.dask_dataclasses import (
 
 
 SETTINGS_CLASSES = {
-    Vocabulary.Settings.ZAMBEZE_KIND: ZambezeSettings,
     Vocabulary.Settings.MLFLOW_KIND: MLFlowSettings,
     Vocabulary.Settings.TENSORBOARD_KIND: TensorboardSettings,
     Vocabulary.Settings.DASK_KIND: DaskSettings,
@@ -30,6 +26,8 @@ SETTINGS_CLASSES = {
 
 
 def _build_base_settings(kind: str, settings_dict: dict) -> BaseSettings:
+    if kind not in SETTINGS_CLASSES:
+        return settings_dict
     settings_obj = SETTINGS_CLASSES[kind](**settings_dict)
     return settings_obj
 
