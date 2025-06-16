@@ -53,6 +53,7 @@ class TaskObject:
     dependencies: List = None
     dependents: List = None
     tags: List = None
+    agent_id: str = None
 
     _DEFAULT_ENRICH_VALUES = {
         "node_name": NODE_NAME,

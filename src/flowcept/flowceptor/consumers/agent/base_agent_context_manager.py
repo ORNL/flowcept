@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Dict, List
+from uuid import uuid4
 
+from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.consumers.base_consumer import BaseConsumer
 
 
@@ -34,6 +36,8 @@ class BaseAgentContextManager(BaseConsumer):
     - Override `message_handler()` if custom message handling is needed
     - Access shared state via `self.context` during execution
     """
+
+    agent_id = None
 
     def __init__(self):
         """
@@ -96,8 +100,15 @@ class BaseAgentContextManager(BaseConsumer):
             The current application context, including collected tasks.
         """
         if not self._started:
-            self.logger.info("Starting lifespan! :)")
+            BaseAgentContextManager.agent_id = str(uuid4())
+            self.logger.info(f"Starting lifespan for agent {BaseAgentContextManager.agent_id}.")
             self._started = True
+
+            f = Flowcept(start_persistence=False, save_workflow=True, check_safe_stops=False,
+                         workflow_name="agent_workflow",
+                         workflow_args={"agent_id": BaseAgentContextManager.agent_id})
+            f.start()
+            f.logger.info(f"This section's workflow_id={Flowcept.current_workflow_id}, campaign_id={Flowcept.campaign_id}")
             self.start()
         try:
             yield self.context

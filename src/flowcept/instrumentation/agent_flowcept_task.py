@@ -4,6 +4,8 @@ import threading
 from time import time
 from functools import wraps
 import argparse
+from typing import Dict
+
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
 )
@@ -17,6 +19,8 @@ from flowcept.configs import (
 )
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
+from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
+from langchain_core.language_models import LLM
 
 _thread_local = threading.local()
 
@@ -38,85 +42,7 @@ def default_args_handler(*args, **kwargs):
     return args_handled
 
 
-def telemetry_flowcept_task(func=None):
-    """Get telemetry task."""
-    if INSTRUMENTATION_ENABLED:
-        interceptor = InstrumentationInterceptor.get_instance()
-
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            task_obj = {}
-            task_obj["type"] = "task"
-            task_obj["started_at"] = time()
-            task_obj["activity_id"] = func.__qualname__
-            task_obj["task_id"] = str(task_obj["started_at"])
-            _thread_local._flowcept_current_context_task_id = task_obj["task_id"]
-            task_obj["workflow_id"] = kwargs.pop("workflow_id", Flowcept.current_workflow_id)
-            task_obj["used"] = kwargs
-            tel = interceptor.telemetry_capture.capture()
-            if tel is not None:
-                task_obj["telemetry_at_start"] = tel.to_dict()
-            try:
-                result = func(*args, **kwargs)
-                task_obj["status"] = Status.FINISHED.value
-            except Exception as e:
-                task_obj["status"] = Status.ERROR.value
-                result = None
-                task_obj["stderr"] = str(e)
-            # task_obj["ended_at"] = time()
-            tel = interceptor.telemetry_capture.capture()
-            if tel is not None:
-                task_obj["telemetry_at_end"] = tel.to_dict()
-            task_obj["generated"] = result
-            interceptor.intercept(task_obj)
-            return result
-
-        return wrapper
-
-    if func is None:
-        return decorator
-    else:
-        return decorator(func)
-
-
-def lightweight_flowcept_task(func=None):
-    """Get lightweight task."""
-    if INSTRUMENTATION_ENABLED:
-        interceptor = InstrumentationInterceptor.get_instance()
-
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            result = func(*args, **kwargs)
-            task_dict = dict(
-                type="task",
-                workflow_id=Flowcept.current_workflow_id,
-                activity_id=func.__name__,
-                used=kwargs,
-                generated=result,
-            )
-            interceptor.intercept(task_dict)
-            return result
-
-        return wrapper
-
-    if func is None:
-        return decorator
-    else:
-        return decorator(func)
-
-
-# def flowcept_task_switch(mode=None):
-#     if mode is None:
-#         return flowcept_task
-#     elif mode == "disable":
-#         return lambda _: _
-#     else:
-#         raise NotImplementedError
-
-
-def flowcept_task(func=None, **decorator_kwargs):
+def agent_flowcept_task(func=None, **decorator_kwargs):
     """Get flowcept task."""
     if INSTRUMENTATION_ENABLED:
         interceptor = InstrumentationInterceptor.get_instance()
@@ -131,8 +57,9 @@ def flowcept_task(func=None, **decorator_kwargs):
             args_handler = decorator_kwargs.get("args_handler", default_args_handler)
             custom_metadata = decorator_kwargs.get("custom_metadata", None)
             tags = decorator_kwargs.get("tags", None)
+
             task_obj = TaskObject()
-            task_obj.subtype = decorator_kwargs.get("subtype", None)
+            task_obj.subtype = decorator_kwargs.get("subtype", "agent_task")
             task_obj.activity_id = func.__name__
             handled_args = args_handler(*args, **kwargs)
             task_obj.workflow_id = handled_args.pop("workflow_id", Flowcept.current_workflow_id)
@@ -140,10 +67,12 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.used = handled_args
             task_obj.tags = tags
             task_obj.started_at = time()
-            task_obj.custom_metadata = custom_metadata
+            task_obj.custom_metadata = custom_metadata or {}
             task_obj.task_id = str(task_obj.started_at)
             _thread_local._flowcept_current_context_task_id = task_obj.task_id
             task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
+            task_obj.agent_id = BaseAgentContextManager.agent_id
+
             try:
                 result = func(*args, **kwargs)
                 task_obj.status = Status.FINISHED
@@ -153,11 +82,22 @@ def flowcept_task(func=None, **decorator_kwargs):
                 logger.exception(e)
                 task_obj.stderr = str(e)
             task_obj.ended_at = time()
+
             task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
             try:
                 if result is not None:
                     if isinstance(result, dict):
-                        task_obj.generated = args_handler(**result)
+                        task_obj.generated = {}
+                        if "llm" in result:
+                            llm = result.pop("llm")
+                            # TODO: assert type
+                            task_obj.used["llm"] = _extract_llm_metadata(llm)
+                        if "prompt" in result:
+                            parsed_prompt = [{"role": msg.type, "content": msg.content} for msg in result.pop("prompt")]
+                            task_obj.generated["prompt"] = parsed_prompt
+                        if "response" in result:
+                            task_obj.generated["response"] = result.pop("response")
+                        task_obj.generated.update(args_handler(**result))
                     else:
                         task_obj.generated = args_handler(result)
             except Exception as e:
@@ -177,3 +117,24 @@ def flowcept_task(func=None, **decorator_kwargs):
 def get_current_context_task_id():
     """Retrieve the current task object from thread-local storage."""
     return getattr(_thread_local, "_flowcept_current_context_task_id", None)
+
+def _extract_llm_metadata(llm: LLM) -> Dict:
+    """
+    Extract metadata from a LangChain LLM instance.
+
+    Parameters
+    ----------
+    llm : LLM
+        The language model instance.
+
+    Returns
+    -------
+    dict
+        Dictionary containing class name, module, model name, and configuration if available.
+    """
+    llm_metadata = {
+        "class_name": llm.__class__.__name__,
+        "module": llm.__class__.__module__,
+        "config": llm.dict() if hasattr(llm, "dict") else {},
+    }
+    return llm_metadata

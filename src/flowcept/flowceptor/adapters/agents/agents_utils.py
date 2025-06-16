@@ -1,9 +1,9 @@
-from typing import List, Union
+from typing import List, Union, Tuple
 
 from langchain_community.llms.sambanova import SambaStudio
 from mcp.server.fastmcp.prompts import base
 from langchain_core.language_models import LLM
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from flowcept.configs import AGENT
 
@@ -75,6 +75,8 @@ def convert_mcp_to_langchain(messages: list[base.Message]) -> List[Union[HumanMe
     """
     converted = []
     for m in messages:
+        if not hasattr(m, "content"):
+            raise ValueError(f"Message {m} does not have the expected format.")
         if hasattr(m.content, "text"):
             content = m.content.text
         else:
@@ -87,3 +89,29 @@ def convert_mcp_to_langchain(messages: list[base.Message]) -> List[Union[HumanMe
         else:
             raise ValueError(f"Unsupported role: {m.role}")
     return converted
+
+def tuples_to_langchain_messages(tuples: List[Tuple[str, str]]) -> List:
+    """
+    Convert a list of (role, message) tuples to LangChain messages.
+
+    Parameters
+    ----------
+    tuples : List[Tuple[str, str]]
+        List of tuples where the first element is the role ('human' or 'system'),
+        and the second element is the message string.
+
+    Returns
+    -------
+    List[HumanMessage | SystemMessage]
+        List of LangChain message objects corresponding to the input tuples.
+    """
+    messages = []
+    for role, text in tuples:
+        role_lower = role.lower()
+        if role_lower == "human":
+            messages.append(HumanMessage(content=text))
+        elif role_lower == "system":
+            messages.append(SystemMessage(content=text))
+        else:
+            raise ValueError(f"Unknown role: {role}. Expected 'human' or 'system'.")
+    return messages
