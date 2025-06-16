@@ -2,13 +2,14 @@ This simple example shows communication between two agents through Flowcept's pr
 
 ### Setup:
 
-- agent1 runs on localhost:8000
-- agent1 runs on localhost:8001
+- Agent1 runs on localhost:8000
+- Agent2 runs on localhost:8001
+- Client talks to agent1
 
 ### Running
 
-1. Run agent1
-2. Run agent2
+1. Run Agent1
+2. Run Agent2
 3. Activate agent2 (this step has to be skipped but couldn't find out how yet): curl -X POST http://localhost:8001/mcp/agent/Agent2/action/liveness      -H "Content-Type: application/json"
 
 The sequence begins by running
