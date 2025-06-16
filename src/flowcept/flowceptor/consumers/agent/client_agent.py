@@ -44,7 +44,10 @@ def run_tool(tool_name: str, kwargs: Dict = None) -> List[str]:
                 result: List[TextContent] = await session.call_tool(tool_name, arguments=kwargs)
                 actual_result = []
                 for r in result.content:
-                    actual_result.append(r.text)
+                    if isinstance(r, str):
+                        actual_result.append(r)
+                    else:
+                        actual_result.append(r.text)
 
                 return actual_result
 

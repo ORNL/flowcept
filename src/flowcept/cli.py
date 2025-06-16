@@ -166,11 +166,15 @@ def query(filter: str, project: str = None, sort: str = None, limit: int = 0):
     List[dict]
         A list of task documents matching the query.
     """
-    _filter = json.loads(filter)
-    _project = json.loads(project) or None
-    _sort = list(sort) or None
+    _filter, _project, _sort = None, None, None
+    if filter:
+        _filter = json.loads(filter)
+    if project:
+        _project = json.loads(project)
+    if sort:
+        _sort = list(sort)
     print(
-        json.dumps(Flowcept.db.query(filter=_filter, project=_project, sort=_sort, limit=limit), indent=2, default=str)
+        json.dumps(Flowcept.db.query(filter=_filter, projection=_project, sort=_sort, limit=limit), indent=2, default=str)
     )
 
 
@@ -216,7 +220,7 @@ def agent_client(tool_name: str, kwargs: str = None):
 
     result = run_tool(tool_name, kwargs)[0]
 
-    print(result.text)
+    print(result)
 
 
 def check_services():
