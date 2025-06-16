@@ -9,10 +9,7 @@ from mcp.types import TextContent
 MCP_HOST = AGENT.get("mcp_host", "0.0.0.0")
 MCP_PORT = AGENT.get("mcp_port", 8000)
 
-MCP_URL = f"http://{MCP_HOST}:{MCP_PORT}/mcp"
-
-
-def run_tool(tool_name: str, kwargs: Dict = None) -> List[str]:
+def run_tool(tool_name: str, kwargs: Dict = None, host: str = MCP_HOST, port:int = MCP_PORT) -> List[str]:
     """
     Run a tool using an MCP client session via a local streamable HTTP connection.
 
@@ -38,7 +35,9 @@ def run_tool(tool_name: str, kwargs: Dict = None) -> List[str]:
     event loop (e.g., inside another async function in environments like Jupyter).
     """
     async def _run():
-        async with streamablehttp_client(MCP_URL) as (read, write, _):
+        mcp_url = f"http://{host}:{port}/mcp"
+        print(mcp_url)
+        async with streamablehttp_client(mcp_url) as (read, write, _):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 result: List[TextContent] = await session.call_tool(tool_name, arguments=kwargs)

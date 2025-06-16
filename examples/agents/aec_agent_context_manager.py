@@ -18,6 +18,7 @@ class AeCContext:
 
     history: List[Dict]
 
+
 class AdamantineAeCContextManager(BaseAgentContextManager):
 
     def __init__(self):

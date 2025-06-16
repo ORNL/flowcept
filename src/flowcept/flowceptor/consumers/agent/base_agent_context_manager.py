@@ -110,6 +110,7 @@ class BaseAgentContextManager(BaseConsumer):
             f.start()
             f.logger.info(f"This section's workflow_id={Flowcept.current_workflow_id}, campaign_id={Flowcept.campaign_id}")
             self.start()
+
         try:
             yield self.context
         finally:
