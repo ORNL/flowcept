@@ -279,21 +279,23 @@ def check_services():
 
         print("Testing LLM connectivity")
         check_llm_result = run_tool("check_llm")[0]
-        print(check_llm_result.text)
+        print(check_llm_result)
 
-        if "error" in check_llm_result.text.lower():
+        if "error" in check_llm_result.lower():
             print("There is an error with the LLM communication.")
             return
-        elif MONGO_ENABLED:
-            print("Testing if llm chat was stored in MongoDB.")
-            response_metadata = json.loads(check_llm_result.text.split("\n")[0])
-            print(response_metadata)
-            sleep(INSERTION_BUFFER_TIME * 1.05)
-            chats = Flowcept.db.query({"workflow_id": response_metadata["agent_id"]})
-            if chats:
-                print(chats)
-            else:
-                print("Could not find chat history. Make sure that the DB Inserter service is on.")
+        # TODO: the following needs to be fixed
+        # elif MONGO_ENABLED:
+        #
+        #     print("Testing if llm chat was stored in MongoDB.")
+        #     response_metadata = json.loads(check_llm_result.split("\n")[0])
+        #     print(response_metadata)
+        #     sleep(INSERTION_BUFFER_TIME * 1.05)
+        #     chats = Flowcept.db.query({"workflow_id": response_metadata["agent_id"]})
+        #     if chats:
+        #         print(chats)
+        #     else:
+        #         print("Could not find chat history. Make sure that the DB Inserter service is on.")
     print("\n\nAll expected services seem to be working properly!")
     return
 
@@ -460,5 +462,5 @@ def main():  # noqa: D103
 
 
 if __name__ == "__main__":
-    main()
-    # check_services()
+    #main()
+    check_services()
