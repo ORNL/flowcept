@@ -91,12 +91,13 @@ def agent_flowcept_task(func=None, **decorator_kwargs):
                         if "llm" in result:
                             llm = result.pop("llm")
                             # TODO: assert type
-                            task_obj.used["llm"] = _extract_llm_metadata(llm)
+
+                            task_obj.custom_metadata["llm"] = _extract_llm_metadata(llm)
                         if "prompt" in result:
                             parsed_prompt = [{"role": msg.type, "content": msg.content} for msg in result.pop("prompt")]
-                            task_obj.generated["prompt"] = parsed_prompt
+                            task_obj.custom_metadata["prompt"] = parsed_prompt
                         if "response" in result:
-                            task_obj.generated["response"] = result.pop("response")
+                            task_obj.custom_metadata["llm_response"] = result.pop("response")
                         task_obj.generated.update(args_handler(**result))
                     else:
                         task_obj.generated = args_handler(result)

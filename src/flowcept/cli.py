@@ -15,7 +15,6 @@ Supports:
 """
 
 import subprocess
-from time import sleep
 from typing import Dict, Optional
 import argparse
 import os
@@ -193,7 +192,7 @@ def get_task(task_id: str):
 
 def start_agent():
     """Start Flowcept agent."""
-    from flowcept.flowceptor.adapters.agents.flowcept_agent import main
+    from flowcept.flowceptor.agents import main
 
     main()
 
@@ -216,7 +215,7 @@ def agent_client(tool_name: str, kwargs: str = None):
     if kwargs:
         print(f"Using kwargs: {kwargs}")
     print("-----------------")
-    from flowcept.flowceptor.consumers.agent.client_agent import run_tool
+    from flowcept.flowceptor.agents.agent_client import run_tool
 
     result = run_tool(tool_name, kwargs)[0]
 
@@ -240,7 +239,7 @@ def check_services():
         Prints diagnostics to stdout; returns nothing.
     """
     print(f"Testing with settings at: {configs.SETTINGS_PATH}")
-    from flowcept.configs import MONGO_ENABLED, AGENT, KVDB_ENABLED, INSERTION_BUFFER_TIME
+    from flowcept.configs import MONGO_ENABLED, AGENT, KVDB_ENABLED
 
     if not Flowcept.services_alive():
         print("Some of the enabled services are not alive!")
@@ -269,7 +268,7 @@ def check_services():
 
     if AGENT.get("enabled", False):
         print("Agent is enabled, so we are testing it too.")
-        from flowcept.flowceptor.consumers.agent.client_agent import run_tool
+        from flowcept.flowceptor.agents.agent_client import run_tool
 
         try:
             print(run_tool("check_liveness"))
