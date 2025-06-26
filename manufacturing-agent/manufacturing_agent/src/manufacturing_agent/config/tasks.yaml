@@ -1,0 +1,24 @@
+analysis_task:
+  description: >
+    Analyze the provided control options for layer {layer_number}.
+    The options are available in the `{planned_controls}` input variable.
+    The simulated scores for these options are in the `{scores}` input variable.
+    Your analysis must consider both the control options and their corresponding scores.
+    Summarize your findings for the decision_maker.
+  expected_output: >
+    A summary of the control options and their potential outcomes based on the provided scores.
+
+decision_task:
+  description: >
+    Based on the analysis from the manufacturing_analyst, which includes a list of control options and their scores, decide on the best control action for layer {layer_number}.
+    Your decision must be the *index* of the best option from the list of control options provided in the analysis.
+  expected_output: >
+    A JSON string with two keys: "best_option" (the integer index of the chosen option) and "reasoning" (a string explaining the choice). For example: '{"best_option": 1, "reasoning": "This option was chosen because..."}'
+
+output_task:
+  description: >
+    Take the JSON string output from the decision_maker. Parse it to extract the "best_option" index and the "reasoning" text.
+    You also have access to the original `{planned_controls}`, `{scores}`, and `{campaign_id}` from the run.
+    Return a JSON string that contains keys `best_option`, `reasoning`, and any other metadata you find useful. Flowcept will persist this information.
+  expected_output: >
+    A JSON string confirming the chosen option and reasoning has been returned.
