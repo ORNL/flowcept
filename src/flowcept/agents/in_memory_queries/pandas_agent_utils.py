@@ -1,8 +1,9 @@
+import json
 import re
 from typing import Tuple
 
 import textwrap
-from flowcept.flowceptor.agents.agents_utils import build_llm_model, count_tokens, tuples_to_langchain_messages, \
+from flowcept.agents.agents_utils import build_llm_model, count_tokens, tuples_to_langchain_messages, \
     flatten_prompt_messages
 
 # ------------------ LLM Setup ------------------
@@ -68,6 +69,7 @@ def summarize_result(code, result, original_cols: list[str], query: str) -> str:
         df = result.copy()
         summary_reason = ""
         MAX_COLS = 10
+        MAX_ROWS = 5
 
         if df.shape[1] > MAX_COLS:
             numeric_cols = df.select_dtypes(include=[np.number])
@@ -94,11 +96,9 @@ def summarize_result(code, result, original_cols: list[str], query: str) -> str:
                 f"{len(top_cat_cols)} categorical columns by uniqueness.)"
             )
             summary_reason = f"Summary reason: {summary_reason}"
-        else:
-            summary_reason = "" # (No column reduction applied.)
 
         # Preview rows
-        if len(df) > 5:
+        if len(df) > MAX_ROWS:
             preview = pd.concat([
                 df.head(),
                 pd.DataFrame([["..."] * df.shape[1]], columns=df.columns)
@@ -109,32 +109,17 @@ def summarize_result(code, result, original_cols: list[str], query: str) -> str:
         summary_text = preview.to_string(index=False)
         cols_str = ", ".join(original_cols)
         prompt = (
-            f"The DataFrame result below is a result of the user query '{query}'. "
-            f"It is a reduction of a larger DataFrame obtained by executing the following code:\n"
+            f"You are a Workflow Provenance Specialist analyzing a DataFrame that was generated to answer a user query."
+            f"This DataFrame is the result of the execution of the following code:\n"
             f"{code}\n"
-            f"on the original DataFrame `df` whose columns are: {cols_str}.\n"
+            f"where the original DataFrame `df` had these columns: {cols_str}.\n"
             f"{summary_reason}\n"
-            f"Result:\n{summary_text}\n"
-            "Given this result, formulate an answer to the user query. BE CONCISE!"
+            f"Result DataFrame:\n{summary_text}\n"
+            f"Given this result, create a concise answer to the following user query: {query}."
+            f"BE CONCISE!"
         )
         return llm(prompt)
 
-    # # Handle Series, list, and numpy array results
-    # if isinstance(result, (pd.Series, list, np.ndarray)):
-    #     text = summarize_series(result)
-    #
-    #     prompt = (
-    #         f"Summarize the following list result for query '{query}':\n"
-    #         f"{text}"
-    #     )
-    #     return llm(prompt)
-
-    # Fallback for other types
-    prompt = (
-        f"Summarize the following result for query '{query}':\n"
-        f"{result}"
-    )
-    return llm(prompt)
 
 
 def fix_code(original_prompt, original_code, error):
@@ -268,7 +253,12 @@ def generate_pandas_code2(query: str, dynamic_schema):
     6. Final Instructions
     Return only valid pandas code assigned to the variable result.
 
-    Do not include comments, explanations, or extra text.
+    Your response must be only the raw Python code in the format:
+        result = ...
+    
+    Do not include: Explanations, Markdown, Comments, Any text before or after the code block
+    
+    Your entire output must be only one line or block of valid Python code, without wrapping it in triple backticks or quotes.
 
     Strictly follow the constraints above.
 
@@ -288,18 +278,19 @@ def generate_pandas_code2(query: str, dynamic_schema):
 
 
 
-def clean_code(code):
-    # Clean fences
-    code = re.sub(r"^```(?:python)?", "", code, flags=re.MULTILINE)
-    code = code.replace("```", "")
-    code = textwrap.dedent(code)
-    return code
+# def clean_code(code):
+#     # Clean fences
+#     code = re.sub(r"^```(?:python)?", "", code, flags=re.MULTILINE)
+#     code = code.replace("```", "")
+#     code = textwrap.dedent(code)
+#     return code
 
 def safe_execute(df: pd.DataFrame, code: str):
     """
     Strip any leftover fences, then execute the code in a limited namespace.
     Returns (result, error).
     """
+    code = clean_code(code)
     local_env = {"df": df, "pd": pd, "np": np}
     try:
         exec(code, {}, local_env)
@@ -309,57 +300,128 @@ def safe_execute(df: pd.DataFrame, code: str):
 
 
 
-def generate_plot_code(query):
+def generate_plot_code(query, dynamic_schema):
     PLOT_PROMPT = f"""
     You are a Streamlit chart expert. The user has a pandas DataFrame called `df`, created from flattened task objects using `pd.json_normalize`.
 
-    Data structure:
-    - Task metadata: activity_id, task_id, workflow_id, started_at, hostname, etc.
-    - Input parameters: columns start with `used.`
-    - Output results: columns start with `generated.`
-    - Performance data: starts with `telemetry_summary.`
+    ## DATAFRAME STRUCTURE
+
+    Each row in `df` represents a single task.
+
+    ### 1. Structured task fields:
+
+    - **in**: input parameters (columns starting with `used.`)
+    - **out**: output metrics/results (columns starting with `generated.`)
+    - **tel**: telemetry (columns starting with `telemetry_summary.`)
+
+    The schema for these fields is defined in the `schema` dictionary below. Each key is an `activity_id` representing a task type, and the value lists the available fields:
+
+    {dynamic_schema}
+
+    Each field has:
+    - `n`: full column name
+    - `d`: data type (`int`, `float`, `str`, `bool`, or `list`)
+    - `v`: sample values
+
+    Use this schema to understand what inputs and outputs are valid for each activity.
+
+    ### 2. Additional fields for tasks 
+
+    | Column                        | Description |
+    |-------------------------------|-------------|
+    | `workflow_id`                 | Workflow the task belongs to |
+    | `task_id`                     | Unique identifier |
+    | `activity_id`                 | Type of task (e.g., 'choose_option') |
+    | `campaign_id`                 | Task group |
+    | `hostname`                    | Compute node name |
+    | `agent_id`                    | Set if executed by an agent |
+    | `started_at`                  | Start time |
+    | `tags`                        | List of descriptive tags |
+    | `telemetry_summary.duration_sec` | Task duration (seconds) |
+
+    ---
+    ### 3. Guidelines
+    
+    - When plotting from a grouped or aggregated result, set an appropriate column (like activity_id, started_at, etc.) as the index before plotting to ensure x-axis labels are correct.
+    
+    ### 4. Output Format
 
     You must write Python code using Streamlit (st) to visualize the requested data.
 
-    Allowed charting tools:
-    - st.line_chart, st.bar_chart, st.area_chart
-    - st.pyplot with matplotlib
-    - st.altair_chart with Altair
+    - Always assume `df` is already defined.
+    - First, assign the query result to a variable called `result` using pandas.
+    - Then, write the plotting code based on `result`.
+    - Return a Python dictionary with two fields:
+      - `"result_code"`: the pandas code that assigns `result`
+      - `"plot_code"`: the code that creates the Streamlit plot
+    ---
 
-    Always assume `df` is already defined.
+    ### 5. Few-Shot Examples
 
-    Only return valid Python code. No explanations.
-
-    ### Examples:
-
+    ```python
     # Q: Plot the number of tasks by activity
-    st.bar_chart(df['activity_id'].value_counts())
+    {{
+    "result_code": "result = df['activity_id'].value_counts().reset_index().rename(columns={{'index': 'activity_id', 'activity_id': 'count'}})",
+      "plot_code": "st.bar_chart(result.set_index('activity_id'))"
+    }}
 
     # Q: Show a line chart of task duration per task start time
-    st.line_chart(df.set_index('started_at')['telemetry_summary.duration_sec'])
+    {{
+    "result_code": "result = df[['started_at', 'telemetry_summary.duration_sec']].dropna().set_index('started_at')",
+      "plot_code": "st.line_chart(result)"
+    }}
 
     # Q: Plot average scores for simulate_layer tasks
-    st.bar_chart(df[df['activity_id'] == 'simulate_layer']['generated.scores'].apply(lambda x: sum(eval(str(x))) / len(eval(str(x))) if x else 0))
+    {{
+    "result_code": "result = df[df['activity_id'] == 'simulate_layer'][['generated.scores']].copy()\nresult['avg_score'] = result['generated.scores'].apply(lambda x: sum(eval(str(x))) / len(eval(str(x))) if x else 0)",
+      "plot_code": "st.bar_chart(result['avg_score'])"
+    }}
 
     # Q: Plot histogram of planned controls count for choose_option
-    import matplotlib.pyplot as plt
-    import streamlit as st
-
-    df_subset = df[df['activity_id'] == 'choose_option']
-    df_subset['n_controls'] = df_subset['used.planned_controls'].apply(lambda x: len(eval(str(x))) if x else 0)
-    plt.hist(df_subset['n_controls'])
-    st.pyplot(plt)
-
-    ### User request:
+    {{
+    "result_code": "result = df[df['activity_id'] == 'choose_option'][['used.planned_controls']].copy()\nresult['n_controls'] = result['used.planned_controls'].apply(lambda x: len(eval(str(x))) if x else 0)",
+      "plot_code": "import matplotlib.pyplot as plt\nplt.hist(result['n_controls'])\nst.pyplot(plt)"
+    }}
+    
+    User request:
     {query}
-    """
-    llm = build_llm_model()
-    response = llm.invoke(PLOT_PROMPT)
-    return response
+    
+    Do not include markdown, code fences, or any comments. ONLY GENERATE A VALID JSON WITH TWO KEYS.
 
-def exec_st_plot_code(code, df, st_module):
+"""
+    llm = build_llm_model()
     try:
-        exec(code, {'df': df, 'st': st_module, 'plt': __import__('matplotlib.pyplot'), 'alt': __import__('altair')})
+        response = llm(PLOT_PROMPT)
+        #response = clean_code(response)
+        result = safe_json_parse(response)
+        #estimated_tokens = count_tokens(PROMPT_TEMPLATE)
+        #max_tokens = 8192 - estimated_tokens
+        #_llm = build_llm_model(model_kwargs={"max_tokens": max_tokens}) # hack to avoid llama models max tokens issues
+        #response = _llm(PROMPT_TEMPLATE)
+        return PLOT_PROMPT, result, True
+    except Exception as e:
+        return PLOT_PROMPT, str(e), False
+
+def safe_json_parse(text):
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # Try to fix common issues
+        text = text.strip().strip('`')  # remove backticks or whitespace
+        if not text.startswith('{'):
+            text = '{' + text
+        if not text.endswith('}'):
+            text = text + '}'
+        try:
+            return json.loads(text)
+        except Exception as e:
+            raise ValueError(f"Still failed to parse JSON: {e}")
+
+def exec_st_plot_code(code, result_df, st_module):
+    try:
+        code = clean_code(code)
+        print("Code\n",code)
+        exec(code, {'result': result_df, 'st': st_module, 'plt': __import__('matplotlib.pyplot'), 'alt': __import__('altair')})
     except Exception as e:
         st_module.error(f"Plot execution error: {e}")
 
@@ -558,3 +620,68 @@ COMMON_FIELDS = {
 #
 #
 
+import re
+
+def clean_code(text):
+    """
+    Extracts the first valid Python code block or line that starts with 'result =' from a model response.
+
+    Parameters
+    ----------
+    text : str
+        The raw string response from the agent.
+
+    Returns
+    -------
+    str
+        The extracted Python code or an empty string if none found.
+    """
+    # Try to find code block with triple backticks first
+    block_match = re.search(r"```(?:python)?\s*(.*?)```", text, re.DOTALL)
+    if block_match:
+        return block_match.group(1).strip()
+
+    # Fallback: try to find a line that starts with "result ="
+    line_match = re.search(r"(result\s*=\s*.+)", text)
+    if line_match:
+        return line_match.group(1).strip()
+
+    return ""
+
+def extract_or_fix_python_code(raw_text):
+    PYTHON_FIX_PROMPT = f"""
+    You are a Python code extractor and fixer.
+    You are given a raw user message that may include explanations, markdown fences, or partial code.
+
+    Your task:
+    1. Check if the message contains Python code.
+    2. If it does, extract the code.
+    3. If there are any syntax errors, fix them.
+    4. Return only the corrected Python code — no explanations, no comments, no markdown.
+
+    The output must be valid Python code, and must not include any other text.
+    This output will be parsed by another program.
+
+    User message:
+    {raw_text}
+    """
+    return llm(PYTHON_FIX_PROMPT)
+
+def extract_or_fix_json_code(raw_text):
+    JSON_FIX_PROMPT = f"""
+    You are a JSON extractor and fixer.
+    You are given a raw message that may include explanations, markdown fences, or partial JSON.
+
+    Your task:
+    1. Check if the message contains a JSON object or array.
+    2. If it does, extract and fix the JSON if needed.
+    3. Ensure all keys and string values are properly quoted.
+    4. Return only valid, parseable JSON — no markdown, no explanations.
+
+    The output must be valid JSON, and must not include any other text.
+    This output will be parsed by another program.
+
+    User message:
+    {raw_text}
+    """
+    return llm(JSON_FIX_PROMPT)

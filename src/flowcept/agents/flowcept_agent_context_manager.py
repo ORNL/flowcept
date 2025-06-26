@@ -36,7 +36,6 @@ class FlowceptAppContext(BaseAppContext):
     condensed_schema: Tuple[str,str]  # TODO this we need in context
 
 
-
 class FlowceptAgentContextManager(BaseAgentContextManager):
     """
     Manages agent context and operations for Flowcept's intelligent task monitoring.

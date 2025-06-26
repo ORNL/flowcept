@@ -4,7 +4,7 @@ import threading
 from time import time
 from functools import wraps
 import argparse
-from typing import Dict
+from typing import Dict, Any
 
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
@@ -20,6 +20,7 @@ from flowcept.configs import (
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
+from flowcept.instrumentation.task_capture import FlowceptTask
 from langchain_core.language_models import LLM
 
 _thread_local = threading.local()
@@ -139,3 +140,55 @@ def _extract_llm_metadata(llm: LLM) -> Dict:
         "config": llm.dict() if hasattr(llm, "dict") else {},
     }
     return llm_metadata
+
+
+from langchain_core.language_models import LLM
+from langchain_core.runnables import RunnableConfig
+from typing import Optional, List
+
+
+class FlowceptLLM(LLM):
+    def __init__(self, wrapped_llm: LLM, agent_id=None):
+        super().__init__()
+        self._wrapped_llm = wrapped_llm
+        self._agent_id = agent_id
+
+    @property
+    def agent_id(self):
+        return self._agent_id
+
+    @agent_id.setter
+    def agent_id(self, value):
+        self._agent_id = value
+
+    @property
+    def _llm_type(self) -> str:
+        return f"flowcept_wrapper[{self._wrapped_llm._llm_type}]"
+
+    def _call(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[RunnableConfig] = None,
+        **kwargs: Any,
+    ) -> str:
+        used = {"prompt": prompt}
+        custom_metadata = _extract_llm_metadata(self._wrapped_llm)
+        with FlowceptTask(used=used, subtype="llm_task", custom_metadata=custom_metadata, agent_id=self.agent_id) as f:
+            response = self._wrapped_llm._call(prompt, stop=stop, run_manager=run_manager)
+            f.end(generated={"response": response})
+        return response
+
+    async def _acall(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[RunnableConfig] = None,
+        **kwargs: Any,
+    ) -> str:
+        used = {"prompt": prompt}
+        custom_metadata = _extract_llm_metadata(self._wrapped_llm)
+        with FlowceptTask(used=used, subtype="llm_task", custom_metadata=custom_metadata, agent_id=self.agent_id) as f:
+            response = await self._wrapped_llm._acall(prompt, stop=stop, run_manager=run_manager)
+            f.end(generated={"response": response})
+        return response

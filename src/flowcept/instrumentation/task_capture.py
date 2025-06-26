@@ -58,6 +58,7 @@ class FlowceptTask(object):
             workflow_id: str = None,
             campaign_id: str = None,
             activity_id: str = None,
+            agent_id: str = None,
             used: Dict = None,
             subtype: str = None,
             custom_metadata: Dict = None,
@@ -120,6 +121,7 @@ class FlowceptTask(object):
         self._task.campaign_id = campaign_id or Flowcept.campaign_id
         self._task.used = used
         self._task.subtype = subtype
+        self._task.agent_id = agent_id
         self._task.custom_metadata = custom_metadata
 
         self._ended = False

@@ -1,6 +1,8 @@
 import os
 from typing import List, Union, Tuple
 
+from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
+from flowcept.instrumentation.agent_flowcept_task import FlowceptLLM
 from langchain.chains.conversation.base import ConversationChain
 from langchain_community.llms.sambanova import SambaStudio
 from mcp.server.fastmcp.prompts import base
@@ -21,7 +23,7 @@ def count_tokens(prompt: str) -> int:
     return int(len(prompt) / 4)
 
 
-def build_llm_model(model_name=None, model_kwargs=None) -> LLM:
+def build_llm_model(model_name=None, model_kwargs=None, agent_id=BaseAgentContextManager.agent_id) -> LLM:
     """
     Build and return an LLM instance using agent configuration.
 
@@ -38,8 +40,11 @@ def build_llm_model(model_name=None, model_kwargs=None) -> LLM:
         for k in model_kwargs:
             _model_kwargs[k] = model_kwargs[k]
     _model_kwargs["model"] = AGENT.get("model", model_name)
-    llm = SambaStudio(model_kwargs=_model_kwargs)
 
+    llm = FlowceptLLM(SambaStudio(model_kwargs=_model_kwargs))
+    if agent_id is None:
+        agent_id = BaseAgentContextManager.agent_id
+    llm.agent_id = agent_id
     return llm
 
 

@@ -7,7 +7,7 @@ from langchain_community.callbacks import get_openai_callback
 from langchain_core.language_models import LLM
 from langchain_core.messages import HumanMessage, AIMessage
 
-from flowcept.flowceptor.agents.agents_utils import build_llm_model
+from flowcept.agents.agents_utils import build_llm_model
 from flowcept.instrumentation.task_capture import FlowceptTask
 
 
