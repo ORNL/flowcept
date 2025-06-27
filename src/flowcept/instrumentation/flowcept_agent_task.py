@@ -22,6 +22,9 @@ from flowcept.flowceptor.adapters.instrumentation_interceptor import Instrumenta
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
 from flowcept.instrumentation.task_capture import FlowceptTask
 from langchain_core.language_models import LLM
+from langchain_core.runnables import RunnableConfig
+from typing import Optional, List
+
 
 _thread_local = threading.local()
 
@@ -140,11 +143,6 @@ def _extract_llm_metadata(llm: LLM) -> Dict:
         "config": llm.dict() if hasattr(llm, "dict") else {},
     }
     return llm_metadata
-
-
-from langchain_core.language_models import LLM
-from langchain_core.runnables import RunnableConfig
-from typing import Optional, List
 
 
 class FlowceptLLM(LLM):

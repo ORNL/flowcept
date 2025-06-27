@@ -14,7 +14,6 @@ os.environ["SAMBASTUDIO_URL"] = AGENT.get("llm_server_url")
 os.environ["SAMBASTUDIO_API_KEY"] = AGENT.get("api_key")
 
 
-
 class ToolResult(BaseModel):
     code: int | None = None
     result: Union[str, Dict] = None
