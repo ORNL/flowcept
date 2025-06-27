@@ -1,26 +1,56 @@
 import os
-from typing import List, Union, Tuple
+from typing import List, Tuple, Union, Dict
 
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
-from flowcept.instrumentation.agent_flowcept_task import FlowceptLLM
-from langchain.chains.conversation.base import ConversationChain
+from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM
 from langchain_community.llms.sambanova import SambaStudio
-from mcp.server.fastmcp.prompts import base
 from langchain_core.language_models import LLM
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from flowcept.configs import AGENT
+from pydantic import BaseModel
 
 os.environ["SAMBASTUDIO_URL"] = AGENT.get("llm_server_url")
 os.environ["SAMBASTUDIO_API_KEY"] = AGENT.get("api_key")
 
 
-def count_tokens(prompt: str) -> int:
-    """
-    Rough estimate of token count based on average English word-to-token ratio.
-    Assumes 1 token ≈ 4 characters (common for LLaMA, GPT-like models).
-    """
-    return int(len(prompt) / 4)
+
+class ToolResult(BaseModel):
+    code: int | None = None
+    result: Union[str, Dict] = None
+    extra: Dict | str | None = None
+    tool_name: str | None = None
+    # Conventions:
+
+    # - code 2xx: Success
+    #     → result is the expected output, a string
+    #        201, all good
+    # - code 3xx: Success
+    #     → result is the expected output, a dict
+    #        301: all good
+    # - code 4xx: System or agent internal errors → result is a string with an error message
+    #        400: problem with llm call, like server connection or token issues
+    #        404: Empty or none result
+    #        405: llm responded but format was probably wrong
+    #        406: error executing python code
+    #        499: some other error
+    # - code 5xx: System or agent internal errors → result is a dict with structured error info
+    # - code None: result not yet set or tool didn't return anything
+
+    def result_is_str(self) -> bool:
+        return (200 <= self.code < 300) or (400 <= self.code < 500)
+
+    def is_success(self):
+        return self.is_success_string() or self.is_success_dict()
+
+    def is_success_string(self):
+        return 200 <= self.code < 300
+
+    def is_error_string(self):
+        return 400 <= self.code < 500
+
+    def is_success_dict(self) -> bool:
+        return 300 <= self.code < 400
 
 
 def build_llm_model(model_name=None, model_kwargs=None, agent_id=BaseAgentContextManager.agent_id) -> LLM:
@@ -46,91 +76,6 @@ def build_llm_model(model_name=None, model_kwargs=None, agent_id=BaseAgentContex
         agent_id = BaseAgentContextManager.agent_id
     llm.agent_id = agent_id
     return llm
-
-
-def get_llm_chain(memory) -> LLM:
-    """
-    Build and return an LLM instance using agent configuration.
-
-    This function retrieves the model name and keyword arguments from the AGENT configuration,
-    constructs a SambaStudio LLM instance, and returns it.
-
-    Returns
-    -------
-    LLM
-        An initialized LLM object configured using the `AGENT` settings.
-    """
-    llm = build_llm_model()
-    chain = ConversationChain(
-        llm=llm,
-        memory=memory,
-        verbose=True  # optional for debugging
-    )
-    return chain
-
-
-def convert_mcp_messages_to_plain_text(messages: list[base.Message]) -> str:
-    """
-    Convert a list of MCP base.Message objects into a plain text dialogue.
-
-    Parameters
-    ----------
-    messages : list of BaseMessage
-        The list of messages, typically from HumanMessage, AIMessage, SystemMessage, etc.
-
-    Returns
-    -------
-    str
-        A plain text version of the conversation, with roles labeled.
-    """
-    lines = []
-    for message in messages:
-        role = message.role.capitalize()  # e.g., "human" → "Human"
-        line = f"{role}: {message.content.text}"
-        lines.append(line)
-    return "\n".join(lines)
-
-
-def convert_mcp_to_langchain(messages: list[base.Message]) -> List[Union[HumanMessage, AIMessage]]:
-    """
-    Convert a list of MCP-style messages to LangChain-compatible message objects.
-
-    Parameters
-    ----------
-    messages : list of base.Message
-        A list of messages in the MCP message format, each with a `role` and `content`.
-
-    Returns
-    -------
-    list of Union[HumanMessage, AIMessage]
-        A list of LangChain message objects, converted from the original MCP format.
-
-    Raises
-    ------
-    ValueError
-        If a message has a role that is not 'user' or 'assistant'.
-
-    Notes
-    -----
-    This function extracts the `text` attribute from message content if present, falling back to `str(content)`
-    otherwise. It maps MCP 'user' roles to LangChain `HumanMessage` and 'assistant' roles to `AIMessage`.
-    """
-    converted = []
-    for m in messages:
-        if not hasattr(m, "content"):
-            raise ValueError(f"Message {m} does not have the expected format.")
-        if hasattr(m.content, "text"):
-            content = m.content.text
-        else:
-            content = str(m.content)  # fallback if it's already a string
-
-        if m.role == "user":
-            converted.append(HumanMessage(content=content))
-        elif m.role == "assistant":
-            converted.append(AIMessage(content=content))
-        else:
-            raise ValueError(f"Unsupported role: {m.role}")
-    return converted
 
 def tuples_to_langchain_messages(tuples: List[Tuple[str, str]]) -> List:
     """

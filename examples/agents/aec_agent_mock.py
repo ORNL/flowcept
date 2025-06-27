@@ -4,7 +4,7 @@ from typing import Dict, List
 
 import numpy as np
 import uvicorn
-from flowcept.instrumentation.agent_flowcept_task import agent_flowcept_task
+from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.prompts import base
 

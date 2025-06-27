@@ -3,7 +3,7 @@ from typing import Dict
 import uvicorn
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
 from flowcept.flowceptor.consumers.agent.client_agent import run_tool
-from flowcept.instrumentation.agent_flowcept_task import agent_flowcept_task
+from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task
 from mcp.server.fastmcp import FastMCP
 
 from flowcept.configs import AGENT

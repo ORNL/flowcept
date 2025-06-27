@@ -1,18 +1,17 @@
+from mcp.server.fastmcp import FastMCP
+
 import json
 import os.path
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import polars as pl
 import pandas as pd
-#from flowcept.flowceptor.agents.in_memory_queries.pandas_agent_utils import condense_schema
-# from langchain.chains.retrieval_qa.base import BaseRetrievalQA
 
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager, BaseAppContext
 
 
-from flowcept.flowceptor.agents import agent_client
-#from flowcept.flowceptor.agents.flowcept_qa_manager import FlowceptQAManager
+from flowcept.agents import agent_client
 from flowcept.commons.task_data_preprocess import summarize_task, update_tasks_summary_schema
 
 
@@ -28,12 +27,11 @@ class FlowceptAppContext(BaseAppContext):
     critical_tasks : List[Dict]
         List of critical task summaries with tags or anomalies.
     """
-    tasks: List[Dict]
-    task_summaries: List[Dict]
-    critical_tasks: List[Dict]
-    df: pl.DataFrame
-    tasks_schema: Dict  # TODO: we dont need to keep the tasks_schema in context, just in the manager's memory.
-    condensed_schema: Tuple[str,str]  # TODO this we need in context
+    tasks: List[Dict] | None
+    task_summaries: List[Dict] | None
+    critical_tasks: List[Dict] | None
+    df: pl.DataFrame | None
+    tasks_schema: Dict | None # TODO: we dont need to keep the tasks_schema in context, just in the manager's memory.
 
 
 class FlowceptAgentContextManager(BaseAgentContextManager):
@@ -91,15 +89,13 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             if self.msgs_counter > 0 and self.msgs_counter % self.context_size == 0:
                 self.logger.debug(f"Going to add to index! {(self.msgs_counter-self.context_size,self.msgs_counter)}")
                 self.update_schema_and_add_to_df(tasks=self.context.task_summaries[self.msgs_counter - self.context_size:self.msgs_counter])
-                #self.qa_manager.add_to_index(docs=self.context.task_summaries[self.msgs_counter-self.context_size:self.msgs_counter])
-                #self.context.qa_chain = FlowceptQAManager.qa_chain
+                # self.context.qa_chain = FlowceptQAManager.qa_chain
                 # self.monitor_chunk()
 
         return True
 
     def update_schema_and_add_to_df(self, tasks: List[Dict]):
         self.context.tasks_schema = update_tasks_summary_schema(self.context.task_summaries, self.context.tasks_schema)
-        self.context.condensed_schema = "" #condense_schema(self.context.tasks_schema)
         _df = pd.json_normalize(tasks)
         self.context.df = pd.concat([self.context.df, pd.DataFrame(_df)], ignore_index=True)
 
@@ -128,9 +124,8 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             critical_tasks=[],
             df=None,
             tasks_schema={},
-            condensed_schema=None
         )
-        DEBUG = True # TODO debugging!!
+        DEBUG = True  # TODO debugging!!
         if DEBUG:
             if os.path.exists("/tmp/current_agent_df.csv"):
                 self.logger.warning("We are debugging! -- Gonna load df into context")
@@ -139,5 +134,10 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             if os.path.exists("/tmp/current_tasks_schema.json"):
                 with open("/tmp/current_tasks_schema.json") as f:
                     self.context.tasks_schema = json.load(f)
-                    #self.context.condensed_schema = condense_schema(self.context.tasks_schema)
 
+
+# Exporting the ctx_manager and the mcp_flowcept
+ctx_manager = FlowceptAgentContextManager()
+mcp_flowcept = FastMCP("FlowceptAgent", require_session=False,
+                       lifespan=ctx_manager.lifespan,
+                       stateless_http=True)
