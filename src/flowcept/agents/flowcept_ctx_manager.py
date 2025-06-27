@@ -1,3 +1,4 @@
+from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from mcp.server.fastmcp import FastMCP
 
 import json
@@ -75,8 +76,14 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         bool
             True if the message was handled successfully.
         """
+        print(msg_obj)
         msg_type = msg_obj.get("type", None)
         if msg_type == "task":
+            task_msg = TaskObject.from_dict(msg_obj)
+            if task_msg.subtype == "llm_task" and task_msg.agent_id == self.agent_id:
+                self.logger.info(f"Going to ignore our own LLM messages: {task_msg}")
+                return True
+
             self.msgs_counter += 1
             self.logger.debug("Received task msg!")
             self.context.tasks.append(msg_obj)
@@ -125,10 +132,10 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             df=None,
             tasks_schema={},
         )
-        DEBUG = True  # TODO debugging!!
+        DEBUG = False  # TODO debugging!!
         if DEBUG:
             if os.path.exists("/tmp/current_agent_df.csv"):
-                self.logger.warning("We are debugging! -- Gonna load df into context")
+                self.logger.warning("We are debugging! -- Going to load df into context")
                 df = pd.read_csv("/tmp/current_agent_df.csv", index_col=False)
                 self.context.df = df
             if os.path.exists("/tmp/current_tasks_schema.json"):

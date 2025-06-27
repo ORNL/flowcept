@@ -178,6 +178,6 @@ class TaskObject:
 
     def __repr__(self):
         """Return an unambiguous string representation of the TaskObject."""
-        attrs = ["task_id", "workflow_id", "campaign_id", "activity_id", "custom_metadata", "started_at", "ended_at"]
+        attrs = ["task_id", "workflow_id", "campaign_id", "activity_id", "started_at", "ended_at"]
         attr_str = ", ".join(f"{attr}={repr(getattr(self, attr))}" for attr in attrs)
         return f"TaskObject({attr_str})"

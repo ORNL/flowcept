@@ -83,7 +83,7 @@ def display_df_tool_response(tool_result: ToolResult):
             st.markdown("📝 Summary:")
             st.markdown(summary)
         elif summary_error:
-            st.markdown(f"⚠️ Encountered this error when summarizing the result dataframe: {summary_error}")
+            st.markdown(f"⚠️ Encountered this error when summarizing the result dataframe:\n```text\n{summary_error}")
 
 
 def exec_st_plot_code(code, result_df, st_module):

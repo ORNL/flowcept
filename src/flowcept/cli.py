@@ -192,9 +192,18 @@ def get_task(task_id: str):
 
 def start_agent():
     """Start Flowcept agent."""
-    from flowcept.flowceptor.agents import main
+    from flowcept.agents.flowcept_agent import main
 
     main()
+
+
+def start_agent_gui():
+    """Start Flowcept agent GUI service."""
+
+    gui_path = Path(__file__).parent / "agents" / "gui" / "agent_gui.py"
+    gui_path = gui_path.resolve()
+
+    _run_command(f"streamlit run {gui_path}", check_output=True)
 
 
 def agent_client(tool_name: str, kwargs: str = None):
@@ -215,7 +224,7 @@ def agent_client(tool_name: str, kwargs: str = None):
     if kwargs:
         print(f"Using kwargs: {kwargs}")
     print("-----------------")
-    from flowcept.flowceptor.agents.agent_client import run_tool
+    from flowcept.agents.agent_client import run_tool
 
     result = run_tool(tool_name, kwargs)[0]
 
@@ -268,7 +277,7 @@ def check_services():
 
     if AGENT.get("enabled", False):
         print("Agent is enabled, so we are testing it too.")
-        from flowcept.flowceptor.agents.agent_client import run_tool
+        from flowcept.agents.agent_client import run_tool
 
         try:
             print(run_tool("check_liveness"))
@@ -303,7 +312,7 @@ COMMAND_GROUPS = [
     ("Basic Commands", [check_services, show_config, init_settings, start_services, stop_services]),
     ("Consumption Commands", [start_consumption_services, stop_consumption_services]),
     ("Database Commands", [workflow_count, query, get_task]),
-    ("Agent Commands", [start_agent, agent_client]),
+    ("Agent Commands", [start_agent, agent_client, start_agent_gui]),
 ]
 
 COMMANDS = set(f for _, fs in COMMAND_GROUPS for f in fs)
@@ -407,7 +416,7 @@ def main():  # noqa: D103
             meta = params.get(pname, {})
             opt = p.default != inspect.Parameter.empty
             print(
-                f"    --{pname:<18} {meta.get('type', 'str')}, "
+                f"    --{pname.replace("_", "-"):<18} {meta.get('type', 'str')}, "
                 f"{'optional' if opt else 'required'} - {meta.get('desc', '').strip()}"
             )
         print()
@@ -435,7 +444,7 @@ def main():  # noqa: D103
                         opt = sig.parameters[argname].default != inspect.Parameter.empty
                         print(
                             f"          --"
-                            f"{argname:<18} {meta['type']}, "
+                            f"{argname.replace("_", "-"):<18} {meta['type']}, "
                             f"{'optional' if opt else 'required'} - {meta['desc'].strip()}"
                         )
                 print()
@@ -461,5 +470,5 @@ def main():  # noqa: D103
 
 
 if __name__ == "__main__":
-    #main()
-    check_services()
+    main()
+    #check_services()

@@ -1,13 +1,7 @@
-import textwrap
-
 import numpy as np
-import regex as re
 import json
-import os
-from typing import Dict, Union
 import pandas as pd
-import uvicorn
-from flowcept.agents.agents_utils import ToolResult
+from flowcept.agents.agents_utils import ToolResult, build_llm_model
 from flowcept.agents.flowcept_ctx_manager import mcp_flowcept, ctx_manager
 from flowcept.agents.prompts.in_memory_query_prompts import generate_plot_code_prompt, extract_or_fix_json_code_prompt, \
     generate_pandas_code_prompt, dataframe_summarizer_context, extract_or_fix_python_code_prompt
@@ -32,14 +26,6 @@ def run_df_query(llm, query: str, plot=False) -> ToolResult:
         return generate_plot_code(llm, query, schema, df)
     else:
         return generate_result_df(llm, query, schema, df)
-
-
-@mcp_flowcept.tool()
-def save_df(df, schema):
-    with open('/tmp/current_tasks_schema.json', 'w') as f:
-        json.dump(schema, f, indent=2)
-    df.to_csv("/tmp/current_agent_df.csv", index=False)
-    return ToolResult(code=201, result="Saved df and schema to /tmp directory")
 
 
 @mcp_flowcept.tool()
@@ -230,3 +216,21 @@ def summarize_result(llm, code, result, original_cols: list[str], query: str) ->
             return ToolResult(code=201, result=response)
         except Exception as e:
             return ToolResult(code=400, result=str(e))
+
+
+@mcp_flowcept.tool()
+def save_df(df, schema):
+    with open('/tmp/current_tasks_schema.json', 'w') as f:
+        json.dump(schema, f, indent=2)
+    df.to_csv("/tmp/current_agent_df.csv", index=False)
+    return ToolResult(code=201, result="Saved df and schema to /tmp directory")
+
+
+@mcp_flowcept.tool()
+def query_on_saved_df(query: str, dynamic_schema_path, df_path):
+    df = pd.read_csv(df_path)
+    with open(dynamic_schema_path) as f:
+        dynamic_schema = json.load(f)
+
+    llm = build_llm_model()
+    return generate_result_df(llm, query, dynamic_schema, df)
