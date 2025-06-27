@@ -24,7 +24,6 @@ class MyConsumer(BaseConsumer):
                 FlowceptTask(
                     used={"pong": f"pong in response to '{ping_val}'"},
                     activity_id="pong_response",
-                    status=Status.FINISHED
                 ).send()
 
             pong_val = task.used.get("pong")
@@ -55,7 +54,7 @@ def main():
     consumer_thread.start()
 
     # Start producer in main thread
-    #Flowcept(start_persistence=False).start()
+    Flowcept(start_persistence=False).start()
     ping_loop(interval=5)
 
 

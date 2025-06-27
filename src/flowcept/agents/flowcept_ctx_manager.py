@@ -1,13 +1,19 @@
+from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
+from mcp.server.fastmcp import FastMCP
+
+import json
+import os.path
 from dataclasses import dataclass
 from typing import Dict, List
 
-from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager, BaseAppContext
-from langchain.chains.retrieval_qa.base import BaseRetrievalQA
-from langchain_community.embeddings import HuggingFaceEmbeddings
+import polars as pl
+import pandas as pd
 
-from flowcept.flowceptor.consumers.agent import client_agent
-from flowcept.flowceptor.consumers.agent.flowcept_qa_manager import FlowceptQAManager
-from flowcept.commons.task_data_preprocess import summarize_task
+from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager, BaseAppContext
+
+
+from flowcept.agents import agent_client
+from flowcept.commons.task_data_preprocess import summarize_task, update_tasks_summary_schema
 
 
 @dataclass
@@ -21,19 +27,12 @@ class FlowceptAppContext(BaseAppContext):
         List of summarized task dictionaries.
     critical_tasks : List[Dict]
         List of critical task summaries with tags or anomalies.
-    qa_chain : BaseRetrievalQA
-        The QA chain used for question-answering over task summaries.
-    vectorstore_path : str
-        Path to the persisted vectorstore used by the QA system.
-    embedding_model : HuggingFaceEmbeddings
-        The embedding model used to generate vector representations for tasks.
     """
-
-    task_summaries: List[Dict]
-    critical_tasks: List[Dict]
-    qa_chain: BaseRetrievalQA
-    vectorstore_path: str
-    embedding_model: HuggingFaceEmbeddings
+    tasks: List[Dict] | None
+    task_summaries: List[Dict] | None
+    critical_tasks: List[Dict] | None
+    df: pl.DataFrame | None
+    tasks_schema: Dict | None # TODO: we dont need to keep the tasks_schema in context, just in the manager's memory.
 
 
 class FlowceptAgentContextManager(BaseAgentContextManager):
@@ -61,8 +60,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         self.context: FlowceptAppContext = None
         self.reset_context()
         self.msgs_counter = 0
-        self.context_size = 5
-        self.qa_manager = FlowceptQAManager()
+        self.context_size = 1
 
     def message_handler(self, msg_obj: Dict):
         """
@@ -78,13 +76,17 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         bool
             True if the message was handled successfully.
         """
+        print(msg_obj)
         msg_type = msg_obj.get("type", None)
         if msg_type == "task":
+            task_msg = TaskObject.from_dict(msg_obj)
+            if task_msg.subtype == "llm_task" and task_msg.agent_id == self.agent_id:
+                self.logger.info(f"Going to ignore our own LLM messages: {task_msg}")
+                return True
+
             self.msgs_counter += 1
             self.logger.debug("Received task msg!")
             self.context.tasks.append(msg_obj)
-
-            self.logger.debug(f"This is QA! {self.context.qa_chain}")
 
             task_summary = summarize_task(msg_obj)
             self.context.task_summaries.append(task_summary)
@@ -92,18 +94,24 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                 self.context.critical_tasks.append(task_summary)
 
             if self.msgs_counter > 0 and self.msgs_counter % self.context_size == 0:
-                self.build_qa_index()
-
-                self.monitor_chunk()
+                self.logger.debug(f"Going to add to index! {(self.msgs_counter-self.context_size,self.msgs_counter)}")
+                self.update_schema_and_add_to_df(tasks=self.context.task_summaries[self.msgs_counter - self.context_size:self.msgs_counter])
+                # self.context.qa_chain = FlowceptQAManager.qa_chain
+                # self.monitor_chunk()
 
         return True
+
+    def update_schema_and_add_to_df(self, tasks: List[Dict]):
+        self.context.tasks_schema = update_tasks_summary_schema(self.context.task_summaries, self.context.tasks_schema)
+        _df = pd.json_normalize(tasks)
+        self.context.df = pd.concat([self.context.df, pd.DataFrame(_df)], ignore_index=True)
 
     def monitor_chunk(self):
         """
         Perform LLM-based analysis on the current chunk of task messages and send the results.
         """
         self.logger.debug(f"Going to begin LLM job! {self.msgs_counter}")
-        result = client_agent.run_tool("analyze_task_chunk")
+        result = agent_client.run_tool("analyze_task_chunk")
         if len(result):
             content = result[0].text
             if content != "Error executing tool":
@@ -113,24 +121,6 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             else:
                 self.logger.error(content)
 
-    def build_qa_index(self):
-        """
-        Build a new QA index from the current list of task summaries.
-        """
-        self.logger.debug(f"Going to begin QA Build! {self.msgs_counter}")
-        try:
-            qa_chain_result = self.qa_manager.build_qa(docs=self.context.task_summaries)
-
-            self.context.qa_chain = qa_chain_result.get("qa_chain")
-            self.context.vectorstore_path = qa_chain_result.get("path")
-
-            self.logger.debug(f"Built QA! {self.msgs_counter}")
-            assert self.context.qa_chain is not None
-            self.logger.debug(f"This is QA! {self.context.qa_chain}")
-            self.logger.debug(f"This is QA path! {self.context.vectorstore_path}")
-        except Exception as e:
-            self.logger.exception(e)
-
     def reset_context(self):
         """
         Reset the agent's context to a clean state, initializing a new QA setup.
@@ -139,7 +129,22 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             tasks=[],
             task_summaries=[],
             critical_tasks=[],
-            qa_chain=None,
-            vectorstore_path=None,
-            embedding_model=FlowceptQAManager.embedding_model,
+            df=None,
+            tasks_schema={},
         )
+        DEBUG = False  # TODO debugging!!
+        if DEBUG:
+            if os.path.exists("/tmp/current_agent_df.csv"):
+                self.logger.warning("We are debugging! -- Going to load df into context")
+                df = pd.read_csv("/tmp/current_agent_df.csv", index_col=False)
+                self.context.df = df
+            if os.path.exists("/tmp/current_tasks_schema.json"):
+                with open("/tmp/current_tasks_schema.json") as f:
+                    self.context.tasks_schema = json.load(f)
+
+
+# Exporting the ctx_manager and the mcp_flowcept
+ctx_manager = FlowceptAgentContextManager()
+mcp_flowcept = FastMCP("FlowceptAgent", require_session=False,
+                       lifespan=ctx_manager.lifespan,
+                       stateless_http=True)

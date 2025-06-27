@@ -7,17 +7,12 @@ name = "flowcept"
 dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
-    "flask-restful",
     "msgpack",
     "omegaconf",
-    "pandas",
-    "psutil>=6.1.1",
-    "py-cpuinfo",
     "redis",
-    "requests",
     "lmdb",
-    "pyarrow",
 ]
+
 authors = [{name = "Oak Ridge National Laboratory"}]
 description = "Capture and query workflow provenance data using data observability"
 readme = "README.md"
@@ -64,7 +59,9 @@ mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog"]
 nvidia = ["nvidia-ml-py"]
 mqtt = ["paho-mqtt"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
-llm_agent = ["mcp[cli]", "langchain_community", "sentence-transformers", "tiktoken", "faiss-cpu"]
+extras=["pandas", "lmdb", "psutil>=6.1.1", "py-cpuinfo", "flask-restful", "requests", "pyarrow"]
+base_agent = ["mcp[cli]"]
+llm_agent = ["mcp[cli]", "langchain_community", "crewai"]
 
 dev = [
     "flowcept[docs]",
@@ -86,6 +83,7 @@ ml_dev = [
     "nltk"
 ]
 all = [
+    "flowcept[extras]",
     "flowcept[mongo]",
     "flowcept[analytics]",
     "flowcept[dask]",
@@ -94,6 +92,7 @@ all = [
     "flowcept[mqtt]",
     "flowcept[tensorboard]",
     "flowcept[dev]",
+    "flowcept[llm_agent]"
 ]
 
 [tool.hatch.version]
