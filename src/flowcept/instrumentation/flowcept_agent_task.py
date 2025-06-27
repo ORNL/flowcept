@@ -4,7 +4,9 @@ import threading
 from time import time
 from functools import wraps
 import argparse
-from typing import Dict, Any
+from typing import Dict, Any, Union
+
+from crewai import BaseLLM
 
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
@@ -22,8 +24,6 @@ from flowcept.flowceptor.adapters.instrumentation_interceptor import Instrumenta
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
 from flowcept.instrumentation.task_capture import FlowceptTask
 from langchain_core.language_models import LLM
-from langchain_core.runnables import RunnableConfig
-from typing import Optional, List
 
 
 _thread_local = threading.local()
@@ -145,48 +145,59 @@ def _extract_llm_metadata(llm: LLM) -> Dict:
     return llm_metadata
 
 
-class FlowceptLLM(LLM):
-    def __init__(self, wrapped_llm: LLM, agent_id=None):
-        super().__init__()
-        self._wrapped_llm = wrapped_llm
-        self._agent_id = agent_id
+from typing import Any, Optional, List, Dict
+from langchain_core.language_models import LLM
+from langchain_core.messages import AIMessage, BaseMessage
 
-    @property
-    def agent_id(self):
-        return self._agent_id
 
-    @agent_id.setter
-    def agent_id(self, value):
-        self._agent_id = value
+from langchain_core.runnables import Runnable
+from langchain_core.language_models.base import BaseLanguageModel
 
-    @property
-    def _llm_type(self) -> str:
-        return f"flowcept_wrapper[{self._wrapped_llm._llm_type}]"
 
-    def _call(
-        self,
-        prompt: str,
-        stop: Optional[List[str]] = None,
-        run_manager: Optional[RunnableConfig] = None,
-        **kwargs: Any,
-    ) -> str:
-        used = {"prompt": prompt}
-        custom_metadata = _extract_llm_metadata(self._wrapped_llm)
-        with FlowceptTask(used=used, subtype="llm_task", custom_metadata=custom_metadata, agent_id=self.agent_id) as f:
-            response = self._wrapped_llm._call(prompt, stop=stop, run_manager=run_manager)
-            f.end(generated={"response": response})
-        return response
+class FlowceptLLM(BaseLLM, Runnable):
 
-    async def _acall(
-        self,
-        prompt: str,
-        stop: Optional[List[str]] = None,
-        run_manager: Optional[RunnableConfig] = None,
-        **kwargs: Any,
-    ) -> str:
-        used = {"prompt": prompt}
-        custom_metadata = _extract_llm_metadata(self._wrapped_llm)
-        with FlowceptTask(used=used, subtype="llm_task", custom_metadata=custom_metadata, agent_id=self.agent_id) as f:
-            response = await self._wrapped_llm._acall(prompt, stop=stop, run_manager=run_manager)
-            f.end(generated={"response": response})
-        return response
+    def __init__(self, llm: BaseLanguageModel, agent_id: str = None):
+        self.llm = llm
+        self.agent_id = agent_id
+        self.metadata = _extract_llm_metadata(llm)
+
+    def _our_call(self, messages, **kwargs):
+        messages_str = FlowceptLLM._format_messages(messages)
+        used = {"prompt": messages_str}
+        with FlowceptTask(used=used, subtype="llm_task", custom_metadata=self.metadata, agent_id=self.agent_id) as task:
+            response = self.llm.invoke(messages, kwargs)
+            response_str = response.content if isinstance(response, BaseMessage) else str(response)
+            generated = {"response": response_str}
+
+            if hasattr(response, "response_metadata"):
+                generated["response_metadata"]  = response.response_metadata
+
+            task.end(generated=generated)
+            return response_str
+
+    def call(
+            self,
+            messages: Union[str, List[Dict[str, str]]],
+            tools: Optional[List[dict]] = None,
+            callbacks: Optional[List[Any]] = None,
+            available_functions: Optional[Dict[str, Any]] = None,
+    ) -> Union[str, Any]:
+        return self._our_call(messages)
+
+    def invoke(self, input: Union[str, List[Dict[str, str]]], **kwargs) -> Any:
+        """Used by LangChain"""
+        return self._our_call(input, **kwargs)
+
+    def __call__(self, *args, **kwargs):
+        return self.invoke(*args, **kwargs)
+
+    @staticmethod
+    def _format_messages(messages: Union[str, List[Dict[str, str]]]) -> str:
+        if isinstance(messages, str):
+            return messages
+        elif isinstance(messages, list):
+            return "\n".join(
+                f"{m.get('role', '').capitalize()}: {m.get('content', '')}" for m in messages
+            )
+        else:
+            raise ValueError(f"Invalid message format: {messages}")
