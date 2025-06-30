@@ -97,6 +97,11 @@ class AdamantineDriver(BaseConsumer):
 
                 elif tool_name == "choose_option":
                     tool_output = msg_obj.get("generated")
+                    if tool_output is None:
+                        self.logger.error(f"An unexpected error happened!: Tool output is None. Msg was: {msg_obj}")
+                        if msg_obj.get("stderr", None):
+                            self.logger.error(f"This was the error from the agent tool: {msg_obj.get("stderr")}")
+                        return False
                     option = tool_output.get("option")
                     explanation = tool_output.get("explanation")
                     label = tool_output.get("label", None)

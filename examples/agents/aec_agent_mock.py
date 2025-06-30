@@ -31,7 +31,13 @@ def generate_options_set(layer: int, planned_controls, number_of_options=4, camp
     history = ctx.request_context.lifespan_context.history
     messages = generate_options_set_prompt(layer, planned_controls, history, number_of_options)
     response = llm.invoke(messages)
-    control_options = json.loads(response) # TODO better error handling
+
+    try:
+        control_options = json.loads(response)
+    except Exception as e:
+        raise Exception(f"Could not parse json in generate_options_set. Error {e}. Likely an LLM output problem. "
+                        f"This is the JSON we tried to parse: {response}")
+
     assert len(control_options) == number_of_options
     return {"control_options": control_options, "response": response, "prompt": messages, "llm": llm}
 
@@ -44,17 +50,16 @@ def choose_option(scores: Dict, planned_controls: List[Dict], campaign_id: str=N
     history = ctx.request_context.lifespan_context.history
     messages = choose_option_prompt(scores, planned_controls, history)
     response = llm.invoke(messages)
-    result = json.loads(response)
+    try:
+        result = json.loads(response)
+    except Exception as e:
+        raise Exception(f"Could not parse json in choose_option. Error {e}. Likely an LLM output problem. "
+                        f"This is the JSON we tried to parse: {response}")
 
     human_option = int(np.argmin(scores["scores"]))
 
     result["human_option"] = human_option
     result["attention"] = True if human_option != result["option"] else False
-
-    # Flowcept things:
-    result["response"] = response
-    result["prompt"] = messages
-    result["llm"] = llm
 
     return result
 

@@ -104,7 +104,10 @@ def choose_option_prompt(scores: Dict, planned_controls: List[Dict], history=Non
     Format Constraints: Return a JSON object like:
     {"option": index_of_best_option, "explanation": your_reasoning, "agent_label": "expected" or "surprise"}
 
-    Output Restriction: DO NOT write anything else. Your output will be parsed programmatically.
+    Output Restriction: 
+        - DO NOT SAY 'Here is the output'
+        - ONLY WRITE THE VALID JSON. NO EXPLANATIONS AT ALL.
+        - YOUR OUTPUT MUST BE A VALID JSON! Your output will be parsed programmatically.
     """
     return prompt_str
 
