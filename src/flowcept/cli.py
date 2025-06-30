@@ -190,7 +190,7 @@ def get_task(task_id: str):
     print(json.dumps(Flowcept.db.query(_query), indent=2, default=str))
 
 
-def start_agent():
+def start_agent(): # TODO: start with gui
     """Start Flowcept agent."""
     from flowcept.agents.flowcept_agent import main
 

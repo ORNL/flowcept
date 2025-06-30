@@ -179,5 +179,9 @@ class TaskObject:
     def __repr__(self):
         """Return an unambiguous string representation of the TaskObject."""
         attrs = ["task_id", "workflow_id", "campaign_id", "activity_id", "started_at", "ended_at"]
+        optionals = ["subtype", "parent_task_id", "agent_id"]
+        for opt in optionals:
+            if getattr(self, opt) is not None:
+                attrs.append(opt)
         attr_str = ", ".join(f"{attr}={repr(getattr(self, attr))}" for attr in attrs)
         return f"TaskObject({attr_str})"

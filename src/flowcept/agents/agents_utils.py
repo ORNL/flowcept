@@ -2,7 +2,7 @@ import os
 from typing import Union, Dict
 
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
-from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM
+from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM, get_current_context_task_id
 from langchain_community.llms.sambanova import SambaStudio
 from langchain_core.language_models import LLM
 
@@ -14,26 +14,30 @@ os.environ["SAMBASTUDIO_API_KEY"] = AGENT.get("api_key")
 
 
 class ToolResult(BaseModel):
+    """
+
+    Conventions:
+
+    - code 2xx: Success
+        → result is the expected output, a string
+           201, all good
+    - code 3xx: Success
+        → result is the expected output, a dict
+           301: all good
+    - code 4xx: System or agent internal errors → result is a string with an error message
+           400: problem with llm call, like server connection or token issues
+           404: Empty or none result
+           405: llm responded but format was probably wrong
+           406: error executing python code
+           499: some other error
+    - code 5xx: System or agent internal errors → result is a dict with structured error info
+    - code None: result not yet set or tool didn't return anything
+
+    """
     code: int | None = None
     result: Union[str, Dict] = None
     extra: Dict | str | None = None
     tool_name: str | None = None
-    # Conventions:
-
-    # - code 2xx: Success
-    #     → result is the expected output, a string
-    #        201, all good
-    # - code 3xx: Success
-    #     → result is the expected output, a dict
-    #        301: all good
-    # - code 4xx: System or agent internal errors → result is a string with an error message
-    #        400: problem with llm call, like server connection or token issues
-    #        404: Empty or none result
-    #        405: llm responded but format was probably wrong
-    #        406: error executing python code
-    #        499: some other error
-    # - code 5xx: System or agent internal errors → result is a dict with structured error info
-    # - code None: result not yet set or tool didn't return anything
 
     def result_is_str(self) -> bool:
         return (200 <= self.code < 300) or (400 <= self.code < 500)
@@ -51,7 +55,7 @@ class ToolResult(BaseModel):
         return 300 <= self.code < 400
 
 
-def build_llm_model(model_name=None, model_kwargs=None, agent_id=BaseAgentContextManager.agent_id) -> LLM:
+def build_llm_model(model_name=None, model_kwargs=None, agent_id=BaseAgentContextManager.agent_id) -> FlowceptLLM:
     """
     Build and return an LLM instance using agent configuration.
 
@@ -73,4 +77,6 @@ def build_llm_model(model_name=None, model_kwargs=None, agent_id=BaseAgentContex
     if agent_id is None:
         agent_id = BaseAgentContextManager.agent_id
     llm.agent_id = agent_id
+    tool_task_id = get_current_context_task_id()
+    llm.parent_task_id = tool_task_id
     return llm

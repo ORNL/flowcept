@@ -1,23 +1,16 @@
 import json
-import os
 from typing import Dict, List
 
 import numpy as np
 import uvicorn
-from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task
+from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task, get_current_context_task_id
 from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.prompts import base
 
 from flowcept.configs import AGENT
-from flowcept.flowceptor.adapters.agents.agents_utils import convert_mcp_to_langchain, build_llm_model, \
-    tuples_to_langchain_messages
-from flowcept.flowceptor.adapters.agents.flowcept_llm_prov_capture import invoke_llm, add_preamble_to_response
+from flowcept.agents.agents_utils import build_llm_model
 
 from examples.agents.aec_agent_context_manager import AdamantineAeCContextManager
 from examples.agents.aec_prompts import choose_option_prompt, generate_options_set_prompt
-
-os.environ["SAMBASTUDIO_URL"] = AGENT.get("llm_server_url")
-os.environ["SAMBASTUDIO_API_KEY"] = AGENT.get("api_key")
 
 
 agent_controller = AdamantineAeCContextManager()
@@ -37,11 +30,10 @@ def generate_options_set(layer: int, planned_controls, number_of_options=4, camp
     ctx = mcp.get_context()
     history = ctx.request_context.lifespan_context.history
     messages = generate_options_set_prompt(layer, planned_controls, history, number_of_options)
-    langchain_messages = tuples_to_langchain_messages(messages)
-    response = llm.invoke(langchain_messages)
+    response = llm.invoke(messages)
     control_options = json.loads(response) # TODO better error handling
     assert len(control_options) == number_of_options
-    return {"control_options": control_options, "response": response, "prompt": langchain_messages, "llm": llm}
+    return {"control_options": control_options, "response": response, "prompt": messages, "llm": llm}
 
 
 @mcp.tool()
@@ -51,8 +43,7 @@ def choose_option(scores: Dict, planned_controls: List[Dict], campaign_id: str=N
     ctx = mcp.get_context()
     history = ctx.request_context.lifespan_context.history
     messages = choose_option_prompt(scores, planned_controls, history)
-    langchain_messages = tuples_to_langchain_messages(messages)
-    response = llm.invoke(langchain_messages)
+    response = llm.invoke(messages)
     result = json.loads(response)
 
     human_option = int(np.argmin(scores["scores"]))
@@ -62,7 +53,7 @@ def choose_option(scores: Dict, planned_controls: List[Dict], campaign_id: str=N
 
     # Flowcept things:
     result["response"] = response
-    result["prompt"] = langchain_messages
+    result["prompt"] = messages
     result["llm"] = llm
 
     return result
@@ -95,14 +86,9 @@ def check_llm() -> str:
     """
     Check if the agent can talk to the LLM service.
     """
-
-    messages = [base.UserMessage(f"Hi, are you working properly?")]
-
-    langchain_messages = convert_mcp_to_langchain(messages)
-    response = invoke_llm(langchain_messages)
-    result = add_preamble_to_response(response, mcp)
-
-    return result
+    llm = build_llm_model()
+    response = llm.invoke("Hello, are you there?")
+    return response
 
 
 def main():

@@ -222,6 +222,8 @@ INSTRUMENTATION = settings.get("instrumentation", {})
 INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", False)
 
 AGENT = settings.get("agent", {})
+AGENT_HOST = os.getenv("AGENT_HOST", settings["agent"].get("mcp_host", "localhost"))
+AGENT_PORT = int(os.getenv("AGENT_PORT", settings["agent"].get("mcp_port", "8000")))
 
 ####################
 # Enabled ADAPTERS #

@@ -6,7 +6,6 @@ import os.path
 from dataclasses import dataclass
 from typing import Dict, List
 
-import polars as pl
 import pandas as pd
 
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager, BaseAppContext
@@ -31,7 +30,7 @@ class FlowceptAppContext(BaseAppContext):
     tasks: List[Dict] | None
     task_summaries: List[Dict] | None
     critical_tasks: List[Dict] | None
-    df: pl.DataFrame | None
+    df: pd.DataFrame | None
     tasks_schema: Dict | None # TODO: we dont need to keep the tasks_schema in context, just in the manager's memory.
 
 

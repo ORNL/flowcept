@@ -91,18 +91,7 @@ def agent_flowcept_task(func=None, **decorator_kwargs):
             try:
                 if result is not None:
                     if isinstance(result, dict):
-                        task_obj.generated = {}
-                        if "llm" in result:
-                            llm = result.pop("llm")
-                            # TODO: assert type
-
-                            task_obj.custom_metadata["llm"] = _extract_llm_metadata(llm)
-                        if "prompt" in result:
-                            parsed_prompt = [{"role": msg.type, "content": msg.content} for msg in result.pop("prompt")]
-                            task_obj.custom_metadata["prompt"] = parsed_prompt
-                        if "response" in result:
-                            task_obj.custom_metadata["llm_response"] = result.pop("response")
-                        task_obj.generated.update(args_handler(**result))
+                        task_obj.generated = args_handler(**result)
                     else:
                         task_obj.generated = args_handler(result)
             except Exception as e:
@@ -156,21 +145,27 @@ from langchain_core.language_models.base import BaseLanguageModel
 
 class FlowceptLLM(BaseLLM, Runnable):
 
-    def __init__(self, llm: BaseLanguageModel, agent_id: str = None):
+    def __init__(self, llm: BaseLanguageModel, agent_id: str = None, parent_task_id:str=None):
         self.llm = llm
         self.agent_id = agent_id
         self.metadata = _extract_llm_metadata(llm)
+        self.parent_task_id = parent_task_id
 
     def _our_call(self, messages, **kwargs):
         messages_str = FlowceptLLM._format_messages(messages)
         used = {"prompt": messages_str}
-        with FlowceptTask(used=used, subtype="llm_task", custom_metadata=self.metadata, agent_id=self.agent_id) as task:
+        with FlowceptTask(used=used,
+                          subtype="llm_task",
+                          custom_metadata=self.metadata,
+                          agent_id=self.agent_id,
+                          activity_id="llm_interaction",
+                          parent_task_id=self.parent_task_id) as task:
             response = self.llm.invoke(messages, kwargs)
             response_str = response.content if isinstance(response, BaseMessage) else str(response)
             generated = {"response": response_str}
 
             if hasattr(response, "response_metadata"):
-                generated["response_metadata"]  = response.response_metadata
+                generated["response_metadata"] = response.response_metadata
 
             task.end(generated=generated)
             return response_str

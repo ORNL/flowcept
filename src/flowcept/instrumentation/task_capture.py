@@ -59,6 +59,7 @@ class FlowceptTask(object):
             campaign_id: str = None,
             activity_id: str = None,
             agent_id: str = None,
+            parent_task_id: str = None,
             used: Dict = None,
             subtype: str = None,
             custom_metadata: Dict = None,
@@ -119,6 +120,7 @@ class FlowceptTask(object):
         self._task.task_id = task_id or self._gen_task_id()
         self._task.workflow_id = workflow_id or Flowcept.current_workflow_id
         self._task.campaign_id = campaign_id or Flowcept.campaign_id
+        self._task.parent_task_id = parent_task_id
         self._task.used = used
         self._task.subtype = subtype
         self._task.agent_id = agent_id
@@ -127,7 +129,7 @@ class FlowceptTask(object):
         self._ended = False
 
         # Check if any of the end-like fields were provided. If yes, end it.
-        if any([generated, ended_at, stdout, stderr, status is not None]):
+        if any([generated, ended_at, stdout, stderr is not None]):
             self.end(
                 generated=generated,
                 ended_at=ended_at,
