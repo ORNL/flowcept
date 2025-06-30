@@ -1,5 +1,5 @@
 from flowcept.agents.flowcept_ctx_manager import mcp_flowcept
-from flowcept.configs import AGENT, AGENT_HOST, AGENT_PORT
+from flowcept.configs import AGENT_HOST, AGENT_PORT
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 
 import uvicorn

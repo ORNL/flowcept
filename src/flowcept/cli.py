@@ -216,13 +216,14 @@ def agent_client(tool_name: str, kwargs: str = None):
     kwargs : str, optional
         A stringfied JSON containing the kwargs for the tool, if needed.
     """
-    print(kwargs)
-    if kwargs is not None:
-        kwargs = json.loads(kwargs)
-
     print(f"Going to run agent tool '{tool_name}'.")
     if kwargs:
-        print(f"Using kwargs: {kwargs}")
+        try:
+            kwargs = json.loads(kwargs)
+            print(f"Using kwargs: {kwargs}")
+        except Exception as e:
+            print(f"Could not parse kwargs as a valid JSON: {kwargs}")
+            print(e)
     print("-----------------")
     from flowcept.agents.agent_client import run_tool
 
