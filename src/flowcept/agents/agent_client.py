@@ -1,15 +1,13 @@
 import asyncio
 from typing import Dict, List
 
-from flowcept.configs import AGENT
+from flowcept.configs import AGENT_HOST, AGENT_PORT
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
 
-MCP_HOST = AGENT.get("mcp_host", "0.0.0.0")
-MCP_PORT = AGENT.get("mcp_port", 8000)
 
-def run_tool(tool_name: str, kwargs: Dict = None, host: str = MCP_HOST, port:int = MCP_PORT) -> List[str]:
+def run_tool(tool_name: str, kwargs: Dict = None, host: str = AGENT_HOST, port:int = AGENT_PORT) -> List[str]:
     """
     Run a tool using an MCP client session via a local streamable HTTP connection.
 
