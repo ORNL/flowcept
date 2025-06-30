@@ -61,7 +61,7 @@ mqtt = ["paho-mqtt"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
 extras=["pandas", "lmdb", "psutil>=6.1.1", "py-cpuinfo", "flask-restful", "requests", "pyarrow"]
 base_agent = ["mcp[cli]"]
-llm_agent = ["mcp[cli]", "langchain_community", "crewai"]
+llm_agent = ["mcp[cli]", "langchain_community", "crewai", "streamlit"]
 
 dev = [
     "flowcept[docs]",
