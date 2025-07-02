@@ -2,7 +2,7 @@ import os
 from typing import Union, Dict
 
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
-from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM, get_current_context_task_id
+from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM, get_current_context_task
 from langchain_community.llms.sambanova import SambaStudio
 from langchain_core.language_models import LLM
 
@@ -77,6 +77,7 @@ def build_llm_model(model_name=None, model_kwargs=None, agent_id=BaseAgentContex
     if agent_id is None:
         agent_id = BaseAgentContextManager.agent_id
     llm.agent_id = agent_id
-    tool_task_id = get_current_context_task_id()
-    llm.parent_task_id = tool_task_id
+    tool_task = get_current_context_task()
+    if tool_task:
+        llm.parent_task_id = tool_task.task_id
     return llm

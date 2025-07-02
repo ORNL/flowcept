@@ -1,32 +1,8 @@
-"""
-The base of this code was generated using ChatGPT.
-
-Prompt:
-
-Here I have a list containing one real task.
-
-<Paste one real task here>
-
-I want to create a list of summarized task data, per task, containing:
-- activity_id
-- task_id
-- used
-- generated
-- task_duration (ended_at - started_at)
-- hostname
-- cpu_info
-- disk_info
-- mem_info
-- network_info
-<Consider adding GPU info too, if you have gpu in your task data>
-
-Where info about cpu, disk, mem, and network must consider telemetry_at_end and telemetry_at_start.
-
-We will use this summarized data as input for LLM questions to find patterns in the resource usage and how they relate
-to input (used) and output (generated) of each task.
-"""
 from datetime import datetime
 from typing import Dict, List
+import copy
+from collections import defaultdict
+from typing import Any
 
 import pytz
 
@@ -84,25 +60,29 @@ def summarize_telemetry(task: Dict, logger) -> Dict:
     start_tele = task.get("telemetry_at_start", {})
     end_tele = task.get("telemetry_at_end", {})
 
-
-
     telemetry_summary = {}
 
     try:
-        started_at = task["started_at"]
-        ended_at = task["ended_at"]
-        duration = ended_at - started_at
-        telemetry_summary["duration_sec"] = duration
+        started_at = task.get("started_at", None)
+        ended_at = task.get("ended_at", None)
+        if started_at is None or ended_at is None:
+            logger.warning(f"We can't summarize telemetry for duration_sec for task {task}")
+        else:
+            duration = ended_at - started_at
+            telemetry_summary["duration_sec"] = duration
     except Exception as e:
-        logger.error(f"Error to summarize telemetry for duration_sec")
+        logger.error(f"Error to summarize telemetry for duration_sec in {task}")
         logger.exception(e)
 
     for key in start_tele.keys():
         try:
             func = f"extract_{key}_info"
-            globals()[func](start_tele[key], end_tele[key])
+            if key in end_tele:
+                globals()[func](start_tele[key], end_tele[key])
+            else:
+                logger.warning(f"We can't summarize telemetry {key} for task {task}")
         except Exception as e:
-            logger.error(f"Error to summarize telemetry for {key}")
+            logger.error(f"Error to summarize telemetry for {key} for task {task}")
             logger.exception(e)
 
     return telemetry_summary
@@ -132,7 +112,7 @@ def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
     task_summary = {}
 
     # Keys that can be copied directly
-    for key in ["workflow_id", "task_id", "activity_id", "used", "generated", "hostname", "status", "agent_id", "campaign_id"]:
+    for key in ["workflow_id", "task_id", "activity_id", "used", "generated", "hostname", "status", "agent_id", "campaign_id", "subtype"]:
         value = _safe_get(task, key)
         if value is not None:
             task_summary[key] = value
@@ -145,7 +125,6 @@ def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
             task_summary["started_at"] = started_at
     except Exception:
         pass
-
 
     try:
         telemetry_summary = summarize_telemetry(task, logger)
@@ -311,8 +290,6 @@ sample_tasks = [
 
 
 
-from collections import defaultdict
-from typing import Any
 
 
 def infer_dtype(value: Any) -> str:
@@ -355,6 +332,9 @@ def update_schema(schema_section: list, flat_fields: dict):
         else:
             val_repr = value
 
+        if isinstance(val_repr, str) and len(val_repr) > 100:
+            val_repr = val_repr[:100] + "#TRUNCATED"
+
         if key not in field_map:
             field = {
                 "n": key,
@@ -379,7 +359,7 @@ def update_activity_schema(tasks: list[dict]) -> dict:
     schema = defaultdict(lambda: {
         "in": [],
         "out": [],
-        "tel": [],
+        #"tel": [],
     })
 
     for task in tasks:
@@ -392,7 +372,7 @@ def update_activity_schema(tasks: list[dict]) -> dict:
         for section_key, schema_key in [
             ("used", "in"),
             ("generated", "out"),
-            ("telemetry_summary", "tel"),
+         #   ("telemetry_summary", "tel"),
         ]:
             section_data = task.get(section_key)
             if isinstance(section_data, dict):
@@ -402,7 +382,6 @@ def update_activity_schema(tasks: list[dict]) -> dict:
     schema = dict(schema)
     return schema
 
-import copy
 
 def deep_merge_dicts(a: dict, b: dict) -> dict:
     """

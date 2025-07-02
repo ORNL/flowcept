@@ -29,8 +29,6 @@ display_ai_msg(GREETING)
 #         st.markdown(msg["content"])
 
 
-
-
 def main():
     user_input = st.chat_input("Send a message")
     st.caption("💡 Tip: Ask about workflow metrics, generate plots, or summarize data.")
@@ -64,5 +62,6 @@ def main():
             st.stop()
 
         # st.session_state.chat_history.append({"role": "system", "content": agent_reply})
+
 
 main()

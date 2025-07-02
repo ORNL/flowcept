@@ -1,5 +1,4 @@
 import json
-from typing import Dict, Union
 
 from flowcept.agents.agents_utils import build_llm_model, ToolResult
 from flowcept.agents.flowcept_ctx_manager import mcp_flowcept

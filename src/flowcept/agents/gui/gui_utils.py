@@ -48,6 +48,7 @@ def display_df_tool_response(tool_result: ToolResult):
     result_dict = tool_result.result
     result_code = result_dict.get("result_code")
     result_df_str = result_dict.get("result_df", "").strip()
+
     summary = result_dict.get("summary", "")
     summary_error = result_dict.get("summary_error", "")
 
@@ -56,6 +57,7 @@ def display_df_tool_response(tool_result: ToolResult):
 
         st.markdown("📊 Here's the code:")
         st.markdown(f"```python\n{result_code}")
+        print(result_code)
 
         try:
             df = pd.read_csv(io.StringIO(result_df_str))

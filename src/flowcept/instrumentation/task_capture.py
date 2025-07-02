@@ -210,5 +210,6 @@ class FlowceptTask(object):
         if not self._ended:
             if self._interceptor._mq_dao.buffer is None:
                 raise Exception("Did you start Flowcept?")
+            self._task.ended_at = self._task.started_at  # message sents are not going to be analyzed for task duration
             self._interceptor.intercept(self._task.to_dict())
             self._ended = True
