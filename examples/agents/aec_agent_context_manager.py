@@ -24,6 +24,7 @@ class AdamantineAeCContextManager(BaseAgentContextManager):
 
     def __init__(self):
         super().__init__()
+        self.reset_context()
 
     def message_handler(self, msg_obj: Dict) -> bool:
         if msg_obj.get('type', '') == 'task':

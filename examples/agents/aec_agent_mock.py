@@ -3,7 +3,7 @@ from typing import Dict, List
 
 import numpy as np
 import uvicorn
-from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task, get_current_context_task_id
+from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task
 from mcp.server.fastmcp import FastMCP
 
 from flowcept.configs import AGENT
@@ -39,7 +39,7 @@ def generate_options_set(layer: int, planned_controls, number_of_options=4, camp
                         f"This is the JSON we tried to parse: {response}")
 
     assert len(control_options) == number_of_options
-    return {"control_options": control_options, "response": response, "prompt": messages, "llm": llm}
+    return {"control_options": control_options}
 
 
 @mcp.tool()
@@ -62,6 +62,7 @@ def choose_option(scores: Dict, planned_controls: List[Dict], campaign_id: str=N
     result["attention"] = True if human_option != result["option"] else False
 
     return result
+
 
 @mcp.tool()
 def get_latest(n: int = None) -> str:

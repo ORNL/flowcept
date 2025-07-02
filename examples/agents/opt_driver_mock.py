@@ -170,7 +170,7 @@ def simulate_layer(layer_number: int, control_options: List[Dict]):
 
 
 def main():
-    config = {"max_layers": 4, "number_of_options": 2, "first_layer_ix": 2}
+    config = {"max_layers": 6, "number_of_options": 2, "first_layer_ix": 2}
 
     fc = Flowcept(start_persistence=False, save_workflow=False, check_safe_stops=False, workflow_args=config)
     fc.start()
