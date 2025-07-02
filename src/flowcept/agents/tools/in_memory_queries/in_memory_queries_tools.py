@@ -7,7 +7,7 @@ from flowcept.agents.prompts.in_memory_query_prompts import generate_plot_code_p
     generate_pandas_code_prompt, dataframe_summarizer_context, extract_or_fix_python_code_prompt
 
 from flowcept.agents.tools.in_memory_queries.pandas_agent_utils import safe_execute, safe_json_parse, normalize_output, \
-    format_result_df
+    format_result_df, summarize_df
 
 
 @mcp_flowcept.tool()
@@ -15,22 +15,22 @@ def run_df_query(llm, query: str, plot=False) -> ToolResult:
     ctx = mcp_flowcept.get_context()
     df: pd.DataFrame = ctx.request_context.lifespan_context.df
     schema = ctx.request_context.lifespan_context.tasks_schema
-
+    value_examples = ctx.request_context.lifespan_context.value_examples
     if df is None or not len(df):
         return ToolResult(code=404, result="Current df is empty or null.")
 
     if "save" in query:
-        return save_df(df, schema)
+        return save_df(df, schema, value_examples)
 
     if plot:
-        return generate_plot_code(llm, query, schema, df)
+        return generate_plot_code(llm, query, schema, value_examples, df)
     else:
-        return generate_result_df(llm, query, schema, df)
+        return generate_result_df(llm, query, schema, value_examples, df)
 
 
 @mcp_flowcept.tool()
-def generate_plot_code(llm, query, dynamic_schema, df) -> ToolResult:
-    plot_prompt = generate_plot_code_prompt(query, dynamic_schema)
+def generate_plot_code(llm, query, dynamic_schema, value_examples, df) -> ToolResult:
+    plot_prompt = generate_plot_code_prompt(query, dynamic_schema, value_examples)
     try:
         response = llm(plot_prompt)
     except Exception as e:
@@ -81,9 +81,9 @@ def generate_plot_code(llm, query, dynamic_schema, df) -> ToolResult:
 
 
 @mcp_flowcept.tool()
-def generate_result_df(llm, query: str, dynamic_schema, df):
+def generate_result_df(llm, query: str, dynamic_schema, example_values, df):
     try:
-        prompt = generate_pandas_code_prompt(query, dynamic_schema)
+        prompt = generate_pandas_code_prompt(query, dynamic_schema, example_values)
         response = llm(prompt)
     except Exception as e:
         return ToolResult(code=400, result=str(e), extra=prompt)
@@ -92,11 +92,16 @@ def generate_result_df(llm, query: str, dynamic_schema, df):
         result_code = response
         result_df = safe_execute(df, result_code)
     except Exception as e:
-        result_code = None
         tool_result = extract_or_fix_python_code(llm, result_code)
         if tool_result.code == 201:
-            result_code = tool_result.result
-            result_df = safe_execute(df, result_code)
+            new_result_code = tool_result.result
+            try:
+                result_df = safe_execute(df, new_result_code)
+            except Exception as e:
+                return ToolResult(code=405, result=f"Failed to parse this as Python code: {result_code}."
+                                                   f"Then tried to LLM extract the Python code, got {new_result_code}"
+                                                   f"but got error {e}")
+
         else:
             return ToolResult(code=405, result=f"Failed to parse this as Python code: {result_code}."
                                                f"Exception: {e}\n"
@@ -109,9 +114,10 @@ def generate_result_df(llm, query: str, dynamic_schema, df):
         return ToolResult(code=405, result=str(e))
 
     result_df = result_df.dropna(axis=1, how='all')
+
     summary, summary_error = None, None
     try:
-        tool_result = summarize_result(llm, result_code, result_df, df.columns, query)
+        tool_result = summarize_result(llm, result_code, result_df, query)
         if tool_result.is_success():
             return_code = 301
             summary = tool_result.result
@@ -159,78 +165,41 @@ def extract_or_fix_json_code(llm, raw_text) -> ToolResult:
 
 
 @mcp_flowcept.tool()
-def summarize_result(llm, code, result, original_cols: list[str], query: str) -> ToolResult:
+def summarize_result(llm, code, result, query: str) -> ToolResult:
     """
     Summarize the pandas result with local reduction for large DataFrames.
     - For wide DataFrames, selects top columns based on variance and uniqueness.
     - For long DataFrames, truncates to preview rows.
     - Constructs a detailed prompt for the LLM with original column context.
     """
-    # Handle DataFrame results
-    if isinstance(result, pd.DataFrame):
-        df = result.copy()
-        summary_reason = ""
-        MAX_COLS = 10  # TODO could be config
-        MAX_ROWS = 5
 
-        if df.shape[1] > MAX_COLS:
-            numeric_cols = df.select_dtypes(include=[np.number])
-            non_numeric_cols = df.select_dtypes(exclude=[np.number])
-
-            top_var_cols = (
-                numeric_cols.var()
-                .sort_values(ascending=False)
-                .head(MAX_COLS // 2)
-                .index.tolist()
-            )
-
-            top_cat_cols = (
-                non_numeric_cols.nunique()
-                .sort_values(ascending=False)
-                .head(MAX_COLS - len(top_var_cols))
-                .index.tolist()
-            )
-
-            selected_cols = top_var_cols + top_cat_cols
-            df = df[selected_cols]
-            summary_reason = (
-                f"(Top {len(top_var_cols)} numeric columns by variance and "
-                f"{len(top_cat_cols)} categorical columns by uniqueness.)"
-            )
-            summary_reason = f"Summary reason: {summary_reason}"
-
-        # Preview rows
-        if len(df) > MAX_ROWS:
-            preview = pd.concat([
-                df.head(),
-                pd.DataFrame([["..."] * df.shape[1]], columns=df.columns)
-            ], ignore_index=True)
-        else:
-            preview = df
-
-        summary_text = preview.to_string(index=False)
-        cols_str = ", ".join(original_cols)
-        prompt = dataframe_summarizer_context(code, cols_str, summary_reason, summary_text, query)
-        try:
-            response = llm(prompt)
-            return ToolResult(code=201, result=response)
-        except Exception as e:
-            return ToolResult(code=400, result=str(e))
+    summarized_df = summarize_df(result, code)
+    prompt = dataframe_summarizer_context(code, summarized_df, query)
+    try:
+        response = llm(prompt)
+        return ToolResult(code=201, result=response)
+    except Exception as e:
+        return ToolResult(code=400, result=str(e))
 
 
 @mcp_flowcept.tool()
-def save_df(df, schema):
+def save_df(df, schema, value_examples):
     with open('/tmp/current_tasks_schema.json', 'w') as f:
         json.dump(schema, f, indent=2)
+    with open('/tmp/value_examples.json', 'w') as f:
+        json.dump(value_examples, f, indent=2)
     df.to_csv("/tmp/current_agent_df.csv", index=False)
     return ToolResult(code=201, result="Saved df and schema to /tmp directory")
 
 
 @mcp_flowcept.tool()
-def query_on_saved_df(query: str, dynamic_schema_path, df_path):
+def query_on_saved_df(query: str, dynamic_schema_path, value_examples_path, df_path):
     df = pd.read_csv(df_path)
     with open(dynamic_schema_path) as f:
         dynamic_schema = json.load(f)
 
+    with open(value_examples_path) as f:
+        value_examples = json.load(f)
+
     llm = build_llm_model()
-    return generate_result_df(llm, query, dynamic_schema, df)
+    return generate_result_df(llm, query, dynamic_schema, value_examples, df)

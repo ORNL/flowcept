@@ -1,3 +1,4 @@
+from flowcept.agents.dynamic_schema_tracker import DynamicSchemaTracker
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from mcp.server.fastmcp import FastMCP
 
@@ -31,7 +32,9 @@ class FlowceptAppContext(BaseAppContext):
     task_summaries: List[Dict] | None
     critical_tasks: List[Dict] | None
     df: pd.DataFrame | None
-    tasks_schema: Dict | None # TODO: we dont need to keep the tasks_schema in context, just in the manager's memory.
+    tasks_schema: Dict | None  # TODO: we dont need to keep the tasks_schema in context, just in the manager's memory.
+    value_examples: Dict | None
+    tracker_config: Dict | None
 
 
 class FlowceptAgentContextManager(BaseAgentContextManager):
@@ -55,11 +58,12 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
     """
 
     def __init__(self):
-        super().__init__()
         self.context: FlowceptAppContext = None
-        self.reset_context()
+        self.tracker_config = dict(max_examples=3, max_str_len=50)
+        self.schema_tracker = DynamicSchemaTracker(**self.tracker_config)
         self.msgs_counter = 0
         self.context_size = 1
+        super().__init__()
 
     def message_handler(self, msg_obj: Dict):
         """
@@ -87,7 +91,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             self.logger.debug("Received task msg!")
             self.context.tasks.append(msg_obj)
 
-            task_summary = summarize_task(msg_obj)
+            task_summary = summarize_task(msg_obj, logger=self.logger)
             self.context.task_summaries.append(task_summary)
             if len(task_summary.get("tags", [])):
                 self.context.critical_tasks.append(task_summary)
@@ -101,7 +105,10 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         return True
 
     def update_schema_and_add_to_df(self, tasks: List[Dict]):
-        self.context.tasks_schema = update_tasks_summary_schema(self.context.task_summaries, self.context.tasks_schema)
+        self.schema_tracker.update_with_tasks(tasks)
+        self.context.tasks_schema = self.schema_tracker.get_schema()
+        self.context.value_examples = self.schema_tracker.get_example_values()
+
         _df = pd.json_normalize(tasks)
         self.context.df = pd.concat([self.context.df, pd.DataFrame(_df)], ignore_index=True)
 
@@ -128,8 +135,10 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             tasks=[],
             task_summaries=[],
             critical_tasks=[],
-            df=None,
+            df=pd.DataFrame(),
             tasks_schema={},
+            value_examples={},
+            tracker_config=self.tracker_config
         )
         DEBUG = False  # TODO debugging!!
         if DEBUG:
@@ -140,6 +149,9 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             if os.path.exists("/tmp/current_tasks_schema.json"):
                 with open("/tmp/current_tasks_schema.json") as f:
                     self.context.tasks_schema = json.load(f)
+            if os.path.exists("/tmp/value_examples.json"):
+                with open("/tmp/value_examples.json") as f:
+                    self.context.value_examples = json.load(f)
 
 
 # Exporting the ctx_manager and the mcp_flowcept

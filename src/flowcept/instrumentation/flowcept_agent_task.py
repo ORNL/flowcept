@@ -73,7 +73,7 @@ def agent_flowcept_task(func=None, **decorator_kwargs):
             task_obj.started_at = time()
             task_obj.custom_metadata = custom_metadata or {}
             task_obj.task_id = str(task_obj.started_at)
-            _thread_local._flowcept_current_context_task_id = task_obj.task_id
+            _thread_local._flowcept_current_context_task = task_obj
             task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
             task_obj.agent_id = BaseAgentContextManager.agent_id
 
@@ -108,9 +108,9 @@ def agent_flowcept_task(func=None, **decorator_kwargs):
         return decorator(func)
 
 
-def get_current_context_task_id():
+def get_current_context_task() -> TaskObject | None:
     """Retrieve the current task object from thread-local storage."""
-    return getattr(_thread_local, "_flowcept_current_context_task_id", None)
+    return getattr(_thread_local, "_flowcept_current_context_task", None)
 
 def _extract_llm_metadata(llm: LLM) -> Dict:
     """
@@ -145,9 +145,11 @@ from langchain_core.language_models.base import BaseLanguageModel
 
 class FlowceptLLM(BaseLLM, Runnable):
 
-    def __init__(self, llm: BaseLanguageModel, agent_id: str = None, parent_task_id:str=None):
+    def __init__(self, llm: BaseLanguageModel, agent_id: str = None, parent_task_id:str=None, workflow_id=None, campaign_id=None):
         self.llm = llm
         self.agent_id = agent_id
+        self.worflow_id = workflow_id
+        self.campaign_id = campaign_id
         self.metadata = _extract_llm_metadata(llm)
         self.parent_task_id = parent_task_id
 
@@ -159,13 +161,15 @@ class FlowceptLLM(BaseLLM, Runnable):
                           custom_metadata=self.metadata,
                           agent_id=self.agent_id,
                           activity_id="llm_interaction",
+                          campaign_id=self.campaign_id,
+                          workflow_id=self.worflow_id,
                           parent_task_id=self.parent_task_id) as task:
             response = self.llm.invoke(messages, kwargs)
             response_str = response.content if isinstance(response, BaseMessage) else str(response)
             generated = {"response": response_str}
 
             if hasattr(response, "response_metadata"):
-                generated["response_metadata"] = response.response_metadata
+                task._task.custom_metadata["response_metadata"] = response.response_metadata
 
             task.end(generated=generated)
             return response_str

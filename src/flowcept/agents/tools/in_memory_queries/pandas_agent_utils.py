@@ -1,14 +1,9 @@
 import json
-
-
 import re
-import textwrap
-from flowcept.agents.agents_utils import build_llm_model
-from flowcept.agents.prompts.in_memory_query_prompts import dataframe_summarizer_context, COMMON_TASK_FIELDS, \
-    generate_plot_code_prompt
-
 import pandas as pd
 import numpy as np
+import ast
+
 
 def normalize_output(result):
     """
@@ -124,3 +119,74 @@ def clean_code(text):
         return line_match.group(1).strip()
 
     return ""
+
+
+
+def summarize_df(df: pd.DataFrame, df_query_code: str, max_rows: int = 5, max_cols: int = 10) -> pd.DataFrame:
+    """
+    Given a DataFrame and query code string that operates on it, return a reduced version
+    of the DataFrame that includes only the used columns and a small number of rows,
+    but only if the DataFrame exceeds the row or column limits.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The full DataFrame.
+    df_query_code : str
+        The string containing Python code that operates on the DataFrame `df`.
+    max_rows : int, optional
+        Maximum number of rows to include in the reduced DataFrame (default is 5).
+    max_cols : int, optional
+        Maximum number of columns to include (default is 10).
+
+    Returns
+    -------
+    pd.DataFrame
+        A reduced version of the DataFrame suitable for sending to an LLM.
+    """
+
+    def extract_columns_from_code(code: str) -> list:
+        """Extract column names accessed via df[...] or df.<column> in the code string."""
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            return []
+
+        columns = set()
+
+        class ColumnVisitor(ast.NodeVisitor):
+            def visit_Subscript(self, node):
+                if isinstance(node.slice, ast.Constant) and isinstance(node.slice.value, str):
+                    columns.add(node.slice.value)
+                elif isinstance(node.slice, ast.Index) and isinstance(node.slice.value, ast.Str):
+                    columns.add(node.slice.value.s)
+                self.generic_visit(node)
+
+            def visit_Attribute(self, node):
+                columns.add(node.attr)
+                self.generic_visit(node)
+
+        ColumnVisitor().visit(tree)
+
+        string_accesses = re.findall(r'\[["\']([\w\.\-]+)["\']\]', code)
+        columns.update(string_accesses)
+
+        return list(columns)
+
+    used_columns = extract_columns_from_code(df_query_code)
+    relevant_cols = [col for col in used_columns if col in df.columns]
+
+    if not relevant_cols:
+        relevant_cols = list(df.columns)
+
+    # Only apply column reduction if column count exceeds max_cols
+    if len(relevant_cols) > max_cols:
+        relevant_cols = relevant_cols[:max_cols]
+
+    reduced_df = df[relevant_cols]
+
+    # Only apply row reduction if row count exceeds max_rows
+    if reduced_df.shape[0] > max_rows:
+        reduced_df = reduced_df.sample(n=max_rows, random_state=42)
+
+    return reduced_df.reset_index(drop=True)

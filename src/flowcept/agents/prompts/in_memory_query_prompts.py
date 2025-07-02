@@ -4,16 +4,20 @@ COMMON_TASK_FIELDS = """
     |-------------------------------|-------------|
     | `workflow_id`                 | Workflow the task belongs to |
     | `task_id`                     | Unique identifier |
-    | `activity_id`                 | Type of task (e.g., 'choose_option') |
-    | `campaign_id`                 | Task group |
+    | `activity_id`                 | Type of task (e.g., 'choose_option'). Use this for "task type" queries |
+    | `campaign_id`                 | A group of workflows |
     | `hostname`                    | Compute node name |
     | `agent_id`                    | Set if executed by an agent |
     | `started_at`                  | Start time |
+    | `subtype`                  | Subtype of a task |
     | `tags`                        | List of descriptive tags |
     | `telemetry_summary.duration_sec` | Task duration (seconds) |
     """
 
-def get_df_schema_prompt(dynamic_schema):
+DF_FORM = "The user has a pandas DataFrame called `df`, created from flattened task objects using `pd.json_normalize`."
+
+
+def get_df_schema_prompt(dynamic_schema, example_values):
     prompt = f"""
      ## DATAFRAME STRUCTURE
 
@@ -23,18 +27,20 @@ def get_df_schema_prompt(dynamic_schema):
 
         - **in**: input parameters (columns starting with `used.`)
         - **out**: output metrics/results (columns starting with `generated.`)
-        - **tel**: telemetry (columns starting with `telemetry_summary.`)
 
-        The schema for these fields is defined in the `schema` dictionary below. Each key is an `activity_id` representing a task type, and the value lists the available fields:
-
+        The schema for these fields is defined in the dictionary below.
+        It maps each activity ID to its inputs (i) and outputs (o), using flattened field names that include `used.` or `generated.` prefixes to indicate the role the field played in the task. These names match the columns in the dataframe `df`.
+        
+        ```python
         {dynamic_schema}
-
-        Each field has:
-        - `n`: full column name
-        - `d`: data type (`int`, `float`, `str`, `bool`, or `list`)
-        - `v`: sample values
-
-        Use this schema to understand what inputs and outputs are valid for each activity.
+        ```
+        
+        Now, this other dictionary below provides type (t), up to 3 example values (v), and, for lists, shape (s) and element type (et) for each field.
+        Field names do not include `used.` or `generated.` They represent the unprefixed form shared across roles. String values may be truncated if they exceed the length limit.
+        ```python
+        {example_values}
+        ```
+        Use this schema and fields to understand what inputs and outputs are valid for each activity.
 
         ### 2. Additional fields for tasks 
 
@@ -43,11 +49,12 @@ def get_df_schema_prompt(dynamic_schema):
     """
     return prompt
 
-def generate_plot_code_prompt(query, dynamic_schema) -> str:
+def generate_plot_code_prompt(query, dynamic_schema, example_values) -> str:
     PLOT_PROMPT = f"""
-        You are a Streamlit chart expert. The user has a pandas DataFrame called `df`, created from flattened task objects using `pd.json_normalize`.
+        You are a Streamlit chart expert.
+        {DF_FORM}
 
-        {get_df_schema_prompt(dynamic_schema)}
+        {get_df_schema_prompt(dynamic_schema, example_values)}
         
         ### 3. Guidelines
 
@@ -101,11 +108,12 @@ def generate_plot_code_prompt(query, dynamic_schema) -> str:
     """
     return PLOT_PROMPT
 
-def generate_pandas_code_prompt(query: str, dynamic_schema):
+def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
     prompt = f"""
-    You are a Workflow Provenance Data Science Expert working with a flattened pandas DataFrame named `df`, created using `pd.json_normalize(tasks)`.
+    You are a Workflow Provenance Data Science Expert that knows to query pandas DataFrames.
+    {DF_FORM}
 
-    {get_df_schema_prompt(dynamic_schema)}
+    {get_df_schema_prompt(dynamic_schema, example_values)}
     
     ### 3. Query Interpretation Guidelines
 
@@ -161,17 +169,29 @@ def generate_pandas_code_prompt(query: str, dynamic_schema):
     return prompt
 
 
-def dataframe_summarizer_context(code, cols_str, summary_reason, summary_text, query) -> str:
-    prompt = (
-            f"You are a Workflow Provenance Specialist analyzing a DataFrame that was generated to answer a user query."
-            f"This DataFrame is the result of the execution of the following code:\n"
-            f"{code}\n"
-            f"where the original DataFrame `df` had these columns: {cols_str}.\n"
-            f"{summary_reason}\n"
-            f"Result DataFrame:\n{summary_text}\n"
-            f"Given this result, create a concise answer to the following user query: {query}."
-            f"BE CONCISE!"
-        )
+def dataframe_summarizer_context(code, reduced_df, query) -> str:
+    prompt = f"""
+    You are a Workflow Provenance Specialist analyzing a DataFrame that was obtained to answer a query. Given:
+    
+    **User Query**:  
+    {query}
+    
+    **Query_Code**:  
+    {code}
+    
+    **Reduced DataFrame** (rows sampled from full result):  
+    {reduced_df}
+    
+    Your task is to:
+    1. Analyze the DataFrame values and columns for any meaningful or notable information.
+    2. Compare the query_code with the data content to understand what the result represents. THIS IS A REDUCED DATAFRAME, the original dataframe, used to answer the query, may be much bigger. IT IS ALREADY KNOWN! Do not need to restate this.
+    3. Provide a concise and direct answer to the user query. Your final response to the query should be  within ```text .
+
+    Note that the user should not know that this is a reduced dataframe. 
+    
+    Keep your response short and focused.
+
+    """
     return prompt
 
 def extract_or_fix_json_code_prompt(raw_text) -> str:
