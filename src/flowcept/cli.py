@@ -417,7 +417,7 @@ def main():  # noqa: D103
             meta = params.get(pname, {})
             opt = p.default != inspect.Parameter.empty
             print(
-                f"    --{pname.replace("_", "-"):<18} {meta.get('type', 'str')}, "
+                f"    --{pname.replace('_', '-'):<18} {meta.get('type', 'str')}, "
                 f"{'optional' if opt else 'required'} - {meta.get('desc', '').strip()}"
             )
         print()
@@ -445,7 +445,7 @@ def main():  # noqa: D103
                         opt = sig.parameters[argname].default != inspect.Parameter.empty
                         print(
                             f"          --"
-                            f"{argname.replace("_", "-"):<18} {meta['type']}, "
+                            f"{argname.replace('_', '-'):<18} {meta['type']}, "
                             f"{'optional' if opt else 'required'} - {meta['desc'].strip()}"
                         )
                 print()
@@ -456,11 +456,11 @@ def main():  # noqa: D103
 
     for func in COMMANDS:
         flag = f"--{func.__name__.replace('_', '-')}"
-        if args.get(func.__name__.replace("-", "_")):
+        if args.get(func.__name__.replace('-', '_')):
             sig = inspect.signature(func)
             kwargs = {}
             for pname in sig.parameters:
-                val = args.get(pname.replace("-", "_"))
+                val = args.get(pname.replace('-', '_'))
                 if val is not None:
                     kwargs[pname] = val
             func(**kwargs)
