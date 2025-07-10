@@ -46,7 +46,7 @@ def display_ai_msg_from_tool(tool_result: ToolResult):
 
 def display_df_tool_response(tool_result: ToolResult):
     result_dict = tool_result.result
-    result_code = result_dict.get("result_code")
+    result_code = result_dict.get("result_code", "")
     result_df_str = result_dict.get("result_df", "").strip()
 
     summary = result_dict.get("summary", "")

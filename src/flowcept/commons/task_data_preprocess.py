@@ -112,10 +112,14 @@ def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
     task_summary = {}
 
     # Keys that can be copied directly
-    for key in ["workflow_id", "task_id", "activity_id", "used", "generated", "hostname", "status", "agent_id", "campaign_id", "subtype"]:
+    for key in ["workflow_id", "task_id", "parent_task_id", "activity_id", "used",
+                "generated", "hostname", "status", "agent_id", "campaign_id", "subtype", "custom_metadata"]:
         value = _safe_get(task, key)
         if value is not None:
-            task_summary[key] = value
+            if "_id" in key:
+                task_summary[key] = str(value)
+            else:
+                task_summary[key] = value
 
     # Special handling for timestamp field
     try:

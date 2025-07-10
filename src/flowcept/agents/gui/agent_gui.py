@@ -3,8 +3,8 @@ from flowcept.agents.gui import AI, PAGE_TITLE
 from flowcept.agents.gui.gui_utils import query_agent, display_ai_msg, display_ai_msg_from_tool, \
     display_df_tool_response
 
-from flowcept.agents.tools.in_memory_queries.in_memory_queries_tools import generate_result_df, generate_plot_code
-
+from flowcept.agents.tools.in_memory_queries.in_memory_queries_tools import generate_result_df, generate_plot_code, \
+    run_df_code
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=AI)
 st.title(PAGE_TITLE)
@@ -48,13 +48,14 @@ def main():
                 display_ai_msg_from_tool(tool_result)
             elif tool_result.is_success_dict():
                 tool_name = tool_result.tool_name
-                if tool_name in [generate_result_df.__name__, generate_plot_code.__name__]:
+                if tool_name in [generate_result_df.__name__, generate_plot_code.__name__, run_df_code.__name__]:
                     display_df_tool_response(tool_result)
                 else:
                     display_ai_msg(f"⚠️ Received unexpected response from agent: {tool_result}")
                     st.stop()
             else:
-                display_ai_msg(f"⚠️ Received unexpected response from agent: {tool_result}")
+                display_df_tool_response(tool_result)
+                # display_ai_msg(f"⚠️ Received unexpected response from agent: {tool_result}")
                 st.stop()
 
         except Exception as e:

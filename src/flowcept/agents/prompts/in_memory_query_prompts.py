@@ -3,7 +3,8 @@ COMMON_TASK_FIELDS = """
     | Column                        | Description |
     |-------------------------------|-------------|
     | `workflow_id`                 | Workflow the task belongs to |
-    | `task_id`                     | Unique identifier |
+    | `task_id`                     | Task identifier |
+    | `parent_task_id`              | A task may be directly linked to others. Use this field when the query asks for a task informed by (or associated with or linked to) other task. |
     | `activity_id`                 | Type of task (e.g., 'choose_option'). Use this for "task type" queries |
     | `campaign_id`                 | A group of workflows |
     | `hostname`                    | Compute node name |
@@ -41,6 +42,8 @@ def get_df_schema_prompt(dynamic_schema, example_values):
         {example_values}
         ```
         Use this schema and fields to understand what inputs and outputs are valid for each activity.
+        
+        Use df[<role>.field_name] == True or df[<role>.field_name] == False when user queries boolean fields, where <role> is either used or generated, depending on the field name. Make sure field_name is a valid field in the DataFrame.  
 
         ### 2. Additional fields for tasks 
 
@@ -225,7 +228,9 @@ def extract_or_fix_python_code_prompt(raw_text):
 
     The output must be valid Python code, and must not include any other text.
     This output will be parsed by another program.
-
+    
+    ONCE AGAIN, ONLY PRODUCE THE PYTHON CODE. DO NOT SAY ANYTHING ELSE!
+    
     User message:
     {raw_text}
     """
