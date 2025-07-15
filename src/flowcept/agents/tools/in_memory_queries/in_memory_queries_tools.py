@@ -21,8 +21,6 @@ def run_df_query(llm, query: str, plot=False) -> ToolResult:
 
     if "save" in query:
         return save_df(df, schema, value_examples)
-    elif "result = df" in query:
-        return run_df_code(user_code=query, df=df)
 
     if plot:
         return generate_plot_code(llm, query, schema, value_examples, df)
@@ -100,9 +98,9 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df):
             try:
                 result_df = safe_execute(df, new_result_code)
             except Exception as e:
-                return ToolResult(code=405, result=f"Failed to parse this as Python code: \n\n ```python\n {result_code} \n```\n "
-                                                   f"Then tried to LLM extract the Python code, got: \n\n ```python\n{new_result_code}```\n "
-                                                   f"but got error:\n\n {e}.")
+                return ToolResult(code=405, result=f"Failed to parse this as Python code: {result_code}."
+                                                   f"Then tried to LLM extract the Python code, got {new_result_code}"
+                                                   f"but got error {e}")
 
         else:
             return ToolResult(code=405, result=f"Failed to parse this as Python code: {result_code}."
@@ -113,11 +111,7 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df):
     try:
         result_df = normalize_output(result_df)
     except Exception as e:
-        this_result = {
-            "result_code": result_code,
-            "result_df": str(e),
-        }
-        return ToolResult(code=504, result=this_result)
+        return ToolResult(code=405, result=str(e))
 
     result_df = result_df.dropna(axis=1, how='all')
 
@@ -148,29 +142,6 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df):
         "summary_error": summary_error,
     }
     return ToolResult(code=return_code, result=this_result, tool_name=generate_result_df.__name__)
-
-
-@mcp_flowcept.tool()
-def run_df_code(user_code: str, df):
-    try:
-        result_df = safe_execute(df, user_code)
-    except Exception as e:
-        return ToolResult(code=405, result=f"Failed to run this as Python code: {user_code}. Got error {e}")
-
-    try:
-        result_df = normalize_output(result_df)
-    except Exception as e:
-
-        return ToolResult(code=405, result=str(e))
-
-    result_df = result_df.dropna(axis=1, how='all')
-    result_df = format_result_df(result_df)
-
-    this_result = {
-        "result_code": user_code,
-        "result_df": result_df,
-    }
-    return ToolResult(code=301, result=this_result, tool_name=run_df_code.__name__)
 
 
 @mcp_flowcept.tool()
