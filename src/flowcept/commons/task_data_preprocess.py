@@ -6,7 +6,6 @@ from typing import Any
 
 import pytz
 
-
 def summarize_telemetry(task: Dict, logger) -> Dict:
     """
     Extract and compute the telemetry summary for a task based on start and end telemetry snapshots.
@@ -57,6 +56,13 @@ def summarize_telemetry(task: Dict, logger) -> Dict:
             "packets_recv_diff": net_end["packets_recv"] - net_start["packets_recv"],
         }
 
+    tel_funcs = {
+        "cpu": extract_cpu_info,
+        "disk": extract_disk_info,
+        "mem": extract_mem_info,
+        "net": extract_network_info,
+    }
+
     start_tele = task.get("telemetry_at_start", {})
     end_tele = task.get("telemetry_at_end", {})
 
@@ -75,16 +81,17 @@ def summarize_telemetry(task: Dict, logger) -> Dict:
         logger.exception(e)
 
     for key in start_tele.keys():
+        logger.info("GETTING KEY FOR TELEMETRY " + key)
         try:
             func = f"extract_{key}_info"
             if key in end_tele:
-                globals()[func](start_tele[key], end_tele[key])
+                telemetry_summary[key] = tel_funcs[key](start_tele[key], end_tele[key])
             else:
                 logger.warning(f"We can't summarize telemetry {key} for task {task}")
         except Exception as e:
             logger.error(f"Error to summarize telemetry for {key} for task {task}")
             logger.exception(e)
-
+            
     return telemetry_summary
 
 def _safe_get(task, key):
@@ -112,23 +119,21 @@ def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
     task_summary = {}
 
     # Keys that can be copied directly
-    for key in ["workflow_id", "task_id", "parent_task_id", "activity_id", "used",
-                "generated", "hostname", "status", "agent_id", "campaign_id", "subtype", "custom_metadata"]:
+    for key in ["workflow_id", "task_id", "activity_id", "used", "generated", "hostname", "status", "agent_id", "campaign_id", "subtype"]:
         value = _safe_get(task, key)
         if value is not None:
-            if "_id" in key:
-                task_summary[key] = str(value)
-            else:
-                task_summary[key] = value
+            task_summary[key] = value
 
     # Special handling for timestamp field
     try:
-        started_at = _safe_get(task, "started_at")
-        if started_at is not None:
-            started_at = datetime.fromtimestamp(started_at, pytz.utc)
-            task_summary["started_at"] = started_at
+        time_keys = ["started_at", "ended_at"]
+        for time_key in time_keys:
+            timestamp = _safe_get(task, time_key)
+            if timestamp is not None:
+                task_summary[time_key] = datetime.fromtimestamp(timestamp, pytz.utc)
     except Exception:
-        pass
+        if logger:
+            logger.exception(f"Error converting timestamp for task {task.get('task_id', 'unknown')}")
 
     try:
         telemetry_summary = summarize_telemetry(task, logger)
@@ -146,10 +151,8 @@ def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
             logger.exception(e)
         else:
             print(e)
-
+    logger.info("This is after telemetry summary")
     return task_summary
-
-
 def tag_critical_task(
     generated: Dict, telemetry_summary: Dict, generated_keywords: List[str] = ["result"], thresholds: Dict = None
 ) -> List[str]:
