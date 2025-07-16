@@ -57,6 +57,13 @@ def summarize_telemetry(task: Dict, logger) -> Dict:
             "packets_recv_diff": net_end["packets_recv"] - net_start["packets_recv"],
         }
 
+    tel_funcs = {
+        "cpu": extract_cpu_info,
+        "disk": extract_disk_info,
+        "mem": extract_mem_info,
+        "net": extract_network_info,
+    }
+
     start_tele = task.get("telemetry_at_start", {})
     end_tele = task.get("telemetry_at_end", {})
 
@@ -76,9 +83,9 @@ def summarize_telemetry(task: Dict, logger) -> Dict:
 
     for key in start_tele.keys():
         try:
-            func = f"extract_{key}_info"
+            func = tel_funcs[key]
             if key in end_tele:
-                globals()[func](start_tele[key], end_tele[key])
+                telemetry_summary[key] = func(start_tele[key], end_tele[key])
             else:
                 logger.warning(f"We can't summarize telemetry {key} for task {task}")
         except Exception as e:
@@ -86,6 +93,7 @@ def summarize_telemetry(task: Dict, logger) -> Dict:
             logger.exception(e)
 
     return telemetry_summary
+
 
 def _safe_get(task, key):
     try:
@@ -121,14 +129,16 @@ def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
             else:
                 task_summary[key] = value
 
-    # Special handling for timestamp field
+        # Special handling for timestamp field
     try:
-        started_at = _safe_get(task, "started_at")
-        if started_at is not None:
-            started_at = datetime.fromtimestamp(started_at, pytz.utc)
-            task_summary["started_at"] = started_at
-    except Exception:
-        pass
+        time_keys = ["started_at", "ended_at"]
+        for time_key in time_keys:
+            timestamp = _safe_get(task, time_key)
+            if timestamp is not None:
+                task_summary[time_key] = datetime.fromtimestamp(timestamp, pytz.utc)
+    except Exception as e:
+        if logger:
+            logger.exception(f"Error {e} converting timestamp for task {task.get('task_id', 'unknown')}")
 
     try:
         telemetry_summary = summarize_telemetry(task, logger)

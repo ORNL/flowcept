@@ -5,12 +5,13 @@ COMMON_TASK_FIELDS = """
     | `workflow_id`                 | Workflow the task belongs to |
     | `task_id`                     | Task identifier |
     | `parent_task_id`              | A task may be directly linked to others. Use this field when the query asks for a task informed by (or associated with or linked to) other task. |
-    | `activity_id`                 | Type of task (e.g., 'choose_option'). Use this for "task type" queries |
+    | `activity_id`                 | Type of task (e.g., 'choose_option'). Use this for "task type" queries. One activity_id is linked to multiple task_ids. |
     | `campaign_id`                 | A group of workflows |
     | `hostname`                    | Compute node name |
     | `agent_id`                    | Set if executed by an agent |
     | `started_at`                  | Start time |
-    | `subtype`                  | Subtype of a task |
+    | `ended_at`                    | End time | 
+    | `subtype`                     | Subtype of a task |
     | `tags`                        | List of descriptive tags |
     | `telemetry_summary.duration_sec` | Task duration (seconds) |
     """
