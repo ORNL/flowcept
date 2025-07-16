@@ -145,6 +145,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             if os.path.exists("/tmp/current_agent_df.csv"):
                 self.logger.warning("We are debugging! -- Going to load df into context")
                 df = pd.read_csv("/tmp/current_agent_df.csv", index_col=False)
+                df[['task_id', 'parent_task_id']] = df[['task_id', 'parent_task_id']].astype(str)
                 self.context.df = df
             if os.path.exists("/tmp/current_tasks_schema.json"):
                 with open("/tmp/current_tasks_schema.json") as f:
