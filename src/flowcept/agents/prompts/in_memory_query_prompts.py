@@ -14,6 +14,12 @@ COMMON_TASK_FIELDS = """
     | `subtype`                     | Subtype of a task |
     | `tags`                        | List of descriptive tags |
     | `telemetry_summary.duration_sec` | Task duration (seconds) |
+    | `telemetry_summary.cpu.percent_all_diff` | Difference in overall CPU utilization percentage across all cores between task end and start.|
+    | `telemetry_summary.cpu.user_time_diff`   | Difference average per core CPU user time ( seconds ) between task start and end times. |
+    | `telemetry_summary.cpu.system_time_diff` | Difference in CPU system (kernel) time (seconds) used during the task execution. |
+    | `telemetry_summary.cpu.idle_time_diff`   | Difference in CPU idle time (seconds) during task end and start.  |
+    ---
+    For any queries involving CPU, use fields that begin with telemetry_summary.cpu.
     """
 
 DF_FORM = "The user has a pandas DataFrame called `df`, created from flattened task objects using `pd.json_normalize`."
