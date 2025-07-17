@@ -14,6 +14,7 @@ from flowcept.commons.utils import replace_non_serializable
 from flowcept.configs import (
     REPLACE_NON_JSON_SERIALIZABLE,
     INSTRUMENTATION_ENABLED,
+    HOSTNAME
 )
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
@@ -141,6 +142,7 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.tags = tags
             task_obj.started_at = time()
             task_obj.custom_metadata = custom_metadata
+            task_obj.hostname = HOSTNAME
             task_obj.task_id = str(task_obj.started_at)
             _thread_local._flowcept_current_context_task_id = task_obj.task_id
             task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
