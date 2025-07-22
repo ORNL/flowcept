@@ -707,6 +707,14 @@ class MongoDBDAO(DocumentDBDAO):
         else:
             raise Exception(f"You used type={collection}, but MongoDB only stores tasks, workflows, and objects")
 
+    def raw_task_pipeline(self, pipeline: List[Dict]):
+        try:
+            rs = self._tasks_collection.aggregate(pipeline)
+            return list(rs)
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
     def task_query(
         self,
         filter: Dict = None,
