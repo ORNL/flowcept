@@ -6,7 +6,7 @@ from flowcept.agents.flowcept_ctx_manager import mcp_flowcept, ctx_manager
 from flowcept.agents.prompts.in_memory_query_prompts import generate_plot_code_prompt, extract_or_fix_json_code_prompt, \
     generate_pandas_code_prompt, dataframe_summarizer_context, extract_or_fix_python_code_prompt
 
-from flowcept.agents.tools.in_memory_queries.pandas_agent_utils import safe_execute, safe_json_parse, normalize_output, \
+from flowcept.agents.tools.in_memory_queries.pandas_agent_utils import load_saved_df, safe_execute, safe_json_parse, normalize_output, \
     format_result_df, summarize_df
 
 
@@ -223,7 +223,9 @@ def save_df(df, schema, value_examples):
 
 @mcp_flowcept.tool()
 def query_on_saved_df(query: str, dynamic_schema_path, value_examples_path, df_path):
-    df = pd.read_csv(df_path)
+
+    df = load_saved_df(df_path)
+
     with open(dynamic_schema_path) as f:
         dynamic_schema = json.load(f)
 
