@@ -1,4 +1,5 @@
 from flowcept.agents.dynamic_schema_tracker import DynamicSchemaTracker
+from flowcept.agents.tools.in_memory_queries.pandas_agent_utils import load_saved_df
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from mcp.server.fastmcp import FastMCP
 
@@ -140,12 +141,12 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             value_examples={},
             tracker_config=self.tracker_config
         )
-        DEBUG = False  # TODO debugging!!
+        DEBUG = True  # TODO debugging!!
         if DEBUG:
-            if os.path.exists("/tmp/current_agent_df.csv"):
+            df_path = "/tmp/current_df.csv"
+            if os.path.exists(df_path):
                 self.logger.warning("We are debugging! -- Going to load df into context")
-                df = pd.read_csv("/tmp/current_agent_df.csv", index_col=False)
-                df[['task_id', 'parent_task_id']] = df[['task_id', 'parent_task_id']].astype(str)
+                df = load_saved_df(df_path)
                 self.context.df = df
             if os.path.exists("/tmp/current_tasks_schema.json"):
                 with open("/tmp/current_tasks_schema.json") as f:
