@@ -99,8 +99,13 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 
             if self.msgs_counter > 0 and self.msgs_counter % self.context_size == 0:
                 self.logger.debug(f"Going to add to index! {(self.msgs_counter-self.context_size,self.msgs_counter)}")
-                self.update_schema_and_add_to_df(tasks=self.context.task_summaries[self.msgs_counter - self.context_size:self.msgs_counter])
-                # self.context.qa_chain = FlowceptQAManager.qa_chain
+                try:
+                    self.update_schema_and_add_to_df(tasks=self.context.task_summaries[self.msgs_counter - self.context_size:self.msgs_counter])
+                except Exception as e:
+                    self.logger.error(f"Could not add these tasks to buffer!\n"
+                                      f"{self.context.task_summaries[self.msgs_counter - self.context_size:self.msgs_counter]}")
+                    self.logger.exception(e)
+
                 # self.monitor_chunk()
 
         return True

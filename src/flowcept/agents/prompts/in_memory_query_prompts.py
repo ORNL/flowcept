@@ -121,14 +121,9 @@ JOB= "You will generate a pandas dataframe code to solve the query."
 ROLE= """You are an expert in HPC workflow provenance analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems. 
             You are analyzing provenance data from a complex workflow consisting of numerous tasks."""
 
-def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
-    prompt = f"""
-     You are a Workflow Provenance Data Science Expert that knows to query pandas DataFrames.
-    {DF_FORM}
-    {JOB}
-    {ROLE}
-    {get_df_schema_prompt(dynamic_schema, example_values)}
-    ### 3. Query Interpretation Guidelines
+QUERY_GUIDELINES = """
+    
+    ### 3. Query Guidelines
 
     - Use `df` as the base DataFrame.
     - Use `activity_id` to filter by task type (valid values = schema keys).
@@ -137,11 +132,14 @@ def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
     - Use `hostname` when user mentions *where* a task ran.
     - Use `agent_id` when the user refers to agents (non-null means task was agent-run).
 
-    ### 4. Hard Constraints (obey strictly)
+    ### 4. Hard Constraints (obey strictly, YOUR LIFE DEPENDS ON THEM. DO NOT HALLUCINATE!!!)
 
     - Always return code in the form `result = df[<filter>][[...]]` or `result = df.loc[<filter>, [...]]`
-     -THERE ARE NOT INDIVIDUAL FIELDS NAMED `used` OR `generated`, they are ONLY are prefixes to the field names.
-    
+     -**THERE ARE NOT INDIVIDUAL FIELDS NAMED `used` OR `generated`, they are ONLY are prefixes to the field names.** 
+     - If the query needs fields that begin with `used.` or `generated.`, your generated query needs to iterate over the df.columns to select the used or generated fields only, such as (adapt when needed): `[col for col in df.columns if col.startswith('generated.')]` or `[col for col in df.columns if col.startswith('used.')]`
+     **THERE ABSOLUTELY ARE NO FIELDS NAMED `used` or `generated`. DO NOT, NEVER use the string 'used' or 'generated' in your generated code!!!**  
+    **THE COLUMN 'used' DOES NOT EXIST**
+    **THE COLUMN 'generated' DOES NOT EXIST**
     - **When filtering by `activity_id`, only select columns that belong to that activity’s schema.**
       - Use only `used.` and `generated.` fields listed in the schema for that `activity_id`.
      - Explicitly list the selected columns — **never return all columns**
@@ -149,22 +147,29 @@ def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
       -THERE IS NOT A FIELD NAMED `telemetry_summary.start_time` or `telemetry_summary.end_time` or `used.start_time` or `used.end_time`. Use `started_at` and `ended_at` instead when you want to find the duration of a task, activity, or workflow execution.
       -THE GENERATED FIELDS ARE LABELED AS SUCH: `generated.()` NOT `generated_output`. Any reference to `generated_output` is incorrect and should be replaced with `generated.` prefix.
       -THERE IS NOT A FIELD NAMED `execution_id` or `used.execution_id`. Look at the QUERY to decide what correct _id field to use. Any mentions of workflow use `workflow_id`. Any mentions of task use `task_id`. Any mentions of activity use `activity_id`.
-      -DO NOT USE `nlargest` in the query code, use `sort_values` instead. The `nlargest` method is not supported by the DataFrame used in this workflow.
+      -DO NOT USE `nlargest` or `nsmallest` in the query code, use `sort_values` instead.
       -An activity with a value in the `generated.` column created that value. Whereas an activity that has a value in the `used.` column used that value from another activity. IF THE `used.` and `generated.` fields share the same letter after the dot, that means that the activity associated with the `generated.` was created by another activity and the one with `used.` used that SAME value that was created by the activity with that same value in the `generated.` field.
       -WHEN user requests about workflow time (e.g., total time or  duration" or elapsed time or total execution time or elapsed time about workflow executions or asking about workflows that took longer than a certain threshold or other workflow-related timing question of one or many workflow executions (each is identified by `workflow_id`), get its latest task's `ended_at` and its earliest task's `started_at`and compute the difference between them, like this (adapt when needed): `df.groupby('workflow_id').apply(lambda x: (x['ended_at'].max() - x['started_at'].min()).total_seconds())`
       -WHEN user requests duration or execution time per task or for individual tasks, utilize `telemetry_summary.duration_sec`. 
       -WHEN user requests execution time per activity within workflows compute durations using the difference between the last `ended_at` and the first `started_at` grouping by activitiy_id, workflow_id rather than using `telemetry_summary.duration_sec`.
-      -WHEN the user requests the first or last workflow executions, USE the `started_at` or `ended_at` field to sort the DataFrame and select the first or last rows accordingly. Do not use the `workflow_id` to determine the first or last workflow execution.
-      -WHEN the user requests the "first workflow", you must identify the workflow by using workflow_id of the task with the earliest started_at. DO NOT use the smallest workflow_id. To find "last workflow" use the latest started_at.
-      -WHEN the user requests a "summary" of activities, you must incorporate relevant summary statistics such as min, max, and mean, into the code you generate.
+      
+      -The first workflow execution is the one that has the task with earliest `started_at`, so you need to sort the DataFrame based on `started_at` to get the associated workflow_id.
+      -The last workflow execution is the one that has the task with the latest `ended_at`, so you need to sort the DataFrame based on `ended_at` to get the associated workflow_id.
+      -WHEN the user requests the "first workflow", you must identify the workflow by using workflow_id of the task with the earliest started_at. DO NOT use the min workflow_id.
+      -WHEN the user requests the "last workflow", you must identify the workflow by using workflow_id of the task with the latest `ended_at`. DO NOT use the max workflow_id.
       -Do not use  df['workflow_id'].max() or  df['workflow_id'].min() to find the first or last workflow execution.
+      
+      -WHEN the user requests a "summary" of activities, you must incorporate relevant summary statistics such as min, max, and mean, into the code you generate.
       -Use `df[df['workflow_id'] == df.loc[df['started_at'].idxmax(), 'workflow_id']]` to filter the tasks in the earliest (or the first) workflow execution or `df[df['workflow_id'] == df.loc[df['started_at'].idxmax(), 'workflow_id']]` to filter the tasks in the latest (or the last or the one that started most recently) workflow execution.     
-      -To select the last (or latest) N workflow executions, use `df.groupby('workflow_id', as_index=False).agg({{"ended_at": 'max'}}).sort_values(by='ended_at', ascending=True).head(N)['workflow_id'])`
-      -To select the first (or earliest) N workflow executions, use `df.groupby('workflow_id', as_index=False).agg({{"started_at": 'min'}}).sort_values(by='started_at', ascending=False).head(N)['workflow_id'])`
-      -Do not do stupid things like: df[0] or df[integer value] or df[df[any field].idxmax()] because these are obvious       
+      -To select the last (or latest) N workflow executions, use or adapt the following: `df.groupby('workflow_id', as_index=False).agg({{"ended_at": 'max'}}).sort_values(by='ended_at', ascending=True).head(N)['workflow_id'])`
+      -To select the first (or earliest) N workflow executions, use or adapt the following: `df.groupby('workflow_id', as_index=False).agg({{"started_at": 'min'}}).sort_values(by='started_at', ascending=False).head(N)['workflow_id'])`
+      -Do NOT use df[0] or df[integer value] or df[df[<field name>].idxmax()] or df[df[<field name>].idxmin()] because these are obviously not valid Pandas Code!
+      -**Do NOT use any of those: df[df['started_at'].idxmax()], df[df['started_at'].idxmin()], df[df['ended_at'].idxmin()], df[df['ended_at'].idxmax()]. Those are not valid Pandas Code.**
     - **Do not include metadata columns unless explicitly required by the user query.**
+"""
 
-    ### 5. Few-Shot Examples
+FEW_SHOTS = """
+  ### 5. Few-Shot Examples
 
     # Q: How many tasks were processed?
     result = len(df)) 
@@ -180,7 +185,9 @@ def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
 
     # Q: Show duration and generated scores for 'simulate_layer' tasks
     result = df[df['activity_id'] == 'simulate_layer'][['telemetry_summary.duration_sec', 'generated.scores']]
+"""
 
+OUTPUT_FORMATTING = """
     6. Final Instructions
     Return only valid pandas code assigned to the variable result.
 
@@ -192,6 +199,21 @@ def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
     THE OUTPUT MUST BE ONE LINE OF VALID PYTHON CODE ONLY, DO NOT SAY ANYTHING ELSE.
 
     Strictly follow the constraints above.
+"""
+
+def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
+    prompt = f"""
+     You are a Workflow Provenance Data Science Expert that knows to query pandas DataFrames.
+    {DF_FORM}
+    {JOB}
+    {ROLE}
+    {get_df_schema_prompt(dynamic_schema, example_values)}
+    
+    {QUERY_GUIDELINES}
+
+    {FEW_SHOTS}
+    
+    {OUTPUT_FORMATTING}
 
     User Query:
     {query}
