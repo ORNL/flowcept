@@ -3,14 +3,11 @@ from typing import Union, Dict
 
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
 from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM, get_current_context_task
-from langchain_community.llms.sambanova import SambaStudio
 from langchain_core.language_models import LLM
 
 from flowcept.configs import AGENT
 from pydantic import BaseModel
 
-os.environ["SAMBASTUDIO_URL"] = AGENT.get("llm_server_url")
-os.environ["SAMBASTUDIO_API_KEY"] = AGENT.get("api_key")
 
 
 class ToolResult(BaseModel):
@@ -55,7 +52,7 @@ class ToolResult(BaseModel):
         return 300 <= self.code < 400
 
 
-def build_llm_model(model_name=None, model_kwargs=None, agent_id=BaseAgentContextManager.agent_id) -> FlowceptLLM:
+def build_llm_model(model_name=None, model_kwargs=None, service_provider=None, agent_id=BaseAgentContextManager.agent_id, track_tools=True) -> FlowceptLLM:
     """
     Build and return an LLM instance using agent configuration.
 
@@ -71,13 +68,43 @@ def build_llm_model(model_name=None, model_kwargs=None, agent_id=BaseAgentContex
     if model_kwargs is not None:
         for k in model_kwargs:
             _model_kwargs[k] = model_kwargs[k]
-    _model_kwargs["model"] = AGENT.get("model", model_name)
 
-    llm = FlowceptLLM(SambaStudio(model_kwargs=_model_kwargs))
-    if agent_id is None:
-        agent_id = BaseAgentContextManager.agent_id
-    llm.agent_id = agent_id
-    tool_task = get_current_context_task()
-    if tool_task:
-        llm.parent_task_id = tool_task.task_id
+    if "model" not in _model_kwargs:
+        _model_kwargs["model"] = AGENT.get("model", model_name)
+
+    if service_provider:
+        _service_provider = service_provider
+    else:
+        _service_provider = AGENT.get("service_provider")
+
+    if _service_provider == "sambanova":
+        from langchain_community.llms.sambanova import SambaStudio
+        os.environ["SAMBASTUDIO_URL"] = AGENT.get("llm_server_url")
+        os.environ["SAMBASTUDIO_API_KEY"] = AGENT.get("api_key")
+
+        llm = SambaStudio(model_kwargs=_model_kwargs)
+    elif _service_provider == "azure":
+        from langchain_openai.chat_models.azure import AzureChatOpenAI
+        api_key = os.environ.get("AZURE_OPENAI_API_KEY", AGENT.get("api_key", None))
+        service_url = os.environ.get("AZURE_OPENAI_API_ENDPOINT", AGENT.get("llm_server_url", None))
+        llm = AzureChatOpenAI(
+            azure_deployment=_model_kwargs.get("model"),
+            azure_endpoint=service_url,
+            api_key=api_key,
+            **_model_kwargs
+        )
+    elif _service_provider == "openai":
+        from langchain_openai import ChatOpenAI
+        api_key = os.environ.get("OPENAI_API_KEY", AGENT.get("api_key", None))
+        llm = ChatOpenAI(openai_api_key=api_key, **model_kwargs)
+
+    if track_tools:
+        llm = FlowceptLLM(llm)
+        if agent_id is None:
+            agent_id = BaseAgentContextManager.agent_id
+        llm.agent_id = agent_id
+        if track_tools:
+            tool_task = get_current_context_task()
+            if tool_task:
+                llm.parent_task_id = tool_task.task_id
     return llm
