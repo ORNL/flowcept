@@ -80,7 +80,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         bool
             True if the message was handled successfully.
         """
-        print(msg_obj)
+        print("Received:", msg_obj)
         msg_type = msg_obj.get("type", None)
         if msg_type == "task":
             task_msg = TaskObject.from_dict(msg_obj)
@@ -148,7 +148,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         )
         DEBUG = True  # TODO debugging!!
         if DEBUG:
-            df_path = "/tmp/current_df.csv"
+            df_path = "/tmp/current_agent_df.csv"
             if os.path.exists(df_path):
                 self.logger.warning("We are debugging! -- Going to load df into context")
                 df = load_saved_df(df_path)

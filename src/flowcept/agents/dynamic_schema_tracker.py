@@ -44,14 +44,15 @@ class DynamicSchemaTracker:
             return "list"
         else:
             return "str"
-
     def _get_shape(self, val):
         if not isinstance(val, list):
             return None
         shape = []
         while isinstance(val, list):
             shape.append(len(val))
-            val = val[0] if val else []
+            if not val:  # Empty list -> stop
+                break
+            val = val[0]
         return shape
 
     def _get_list_element_type(self, val):
@@ -113,6 +114,7 @@ class DynamicSchemaTracker:
                 self.schema[activity] = {"i": [], "o": []}
 
             for direction in ["used", "generated"]:
+
                 data = task.get(direction, {})
                 flat_data = self._flatten_dict(data)
                 for field, val in flat_data.items():
