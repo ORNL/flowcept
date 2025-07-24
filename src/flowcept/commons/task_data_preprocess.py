@@ -87,10 +87,9 @@ def summarize_telemetry(task: Dict, logger) -> Dict:
             if key in end_tele:
                 telemetry_summary[key] = func(start_tele[key], end_tele[key])
             else:
-                logger.warning(f"We can't summarize telemetry {key} for task {task}")
+                logger.warning(f"We can't summarize telemetry {key} for task {task} because the key is not in the end_tele")
         except Exception as e:
-            logger.error(f"Error to summarize telemetry for {key} for task {task}")
-            logger.exception(e)
+            logger.warning(f"Error to summarize telemetry for {key} for task {task}. Exception: {e}")
 
     return telemetry_summary
 
