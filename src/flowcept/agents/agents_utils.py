@@ -97,7 +97,8 @@ def build_llm_model(model_name=None, model_kwargs=None, service_provider=None, a
         from langchain_openai import ChatOpenAI
         api_key = os.environ.get("OPENAI_API_KEY", AGENT.get("api_key", None))
         llm = ChatOpenAI(openai_api_key=api_key, **model_kwargs)
-
+    else:
+        raise Exception("Currently supported providers are sambanova, openai, and azure.")
     if track_tools:
         llm = FlowceptLLM(llm)
         if agent_id is None:
