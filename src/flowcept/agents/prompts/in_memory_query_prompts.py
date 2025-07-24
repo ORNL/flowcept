@@ -13,7 +13,7 @@ COMMON_TASK_FIELDS = """
     | `ended_at`                    | datetime64[ns, UTC] | End time of a task. | 
     | `subtype`                     | string | Subtype of a task. |
     | `tags`                        | List[str] | List of descriptive tags. |
-    | `telemetry_summary.duration_sec` | float | Task duration (seconds). Use this for |
+    | `telemetry_summary.duration_sec` | float | Task duration (seconds). |
     | `telemetry_summary.cpu.percent_all_diff` | float | Difference in overall CPU utilization percentage across all cores between task end and start.|
     | `telemetry_summary.cpu.user_time_diff`   | float |  Difference average per core CPU user time ( seconds ) between task start and end times.|
     | `telemetry_summary.cpu.system_time_diff` | float |  Difference in CPU system (kernel) time (seconds) used during the task execution.|
@@ -151,13 +151,17 @@ def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
       -THERE IS NOT A FIELD NAMED `execution_id` or `used.execution_id`. Look at the QUERY to decide what correct _id field to use. Any mentions of workflow use `workflow_id`. Any mentions of task use `task_id`. Any mentions of activity use `activity_id`.
       -DO NOT USE `nlargest` in the query code, use `sort_values` instead. The `nlargest` method is not supported by the DataFrame used in this workflow.
       -An activity with a value in the `generated.` column created that value. Whereas an activity that has a value in the `used.` column used that value from another activity. IF THE `used.` and `generated.` fields share the same letter after the dot, that means that the activity associated with the `generated.` was created by another activity and the one with `used.` used that SAME value that was created by the activity with that same value in the `generated.` field.
-      -WHEN calculating total time of a workflow execution (identified by `workflow_id`), get its latest task's `ended_at` and its earliest task's `started_at`and compute the difference between them.
+      -WHEN user requests about workflow time (e.g., total time or  duration" or elapsed time or total execution time or elapsed time about workflow executions or asking about workflows that took longer than a certain threshold or other workflow-related timing question of one or many workflow executions (each is identified by `workflow_id`), get its latest task's `ended_at` and its earliest task's `started_at`and compute the difference between them, like this (adapt when needed): `df.groupby('workflow_id').apply(lambda x: (x['ended_at'].max() - x['started_at'].min()).total_seconds())`
       -WHEN user requests duration or execution time per task or for individual tasks, utilize `telemetry_summary.duration_sec`. 
       -WHEN user requests execution time per activity within workflows compute durations using the difference between the last `ended_at` and the first `started_at` grouping by activitiy_id, workflow_id rather than using `telemetry_summary.duration_sec`.
       -WHEN the user requests the first or last workflow executions, USE the `started_at` or `ended_at` field to sort the DataFrame and select the first or last rows accordingly. Do not use the `workflow_id` to determine the first or last workflow execution.
       -WHEN the user requests the "first workflow", you must identify the workflow by using workflow_id of the task with the earliest started_at. DO NOT use the smallest workflow_id. To find "last workflow" use the latest started_at.
-      -WHEN the user requests a "summary" of activites, you must incorporate relevant summary statistics such as min, max, and mean, into the code you generate.
-      -Do not use  df['workflow_id'].max() or  df['workflow_id'].min() to find the first or last workflow execution. Instead, use the `started_at` or `ended_at` fields to determine the first or last workflow execution.
+      -WHEN the user requests a "summary" of activities, you must incorporate relevant summary statistics such as min, max, and mean, into the code you generate.
+      -Do not use  df['workflow_id'].max() or  df['workflow_id'].min() to find the first or last workflow execution.
+      -Use `df[df['workflow_id'] == df.loc[df['started_at'].idxmax(), 'workflow_id']]` to filter the tasks in the earliest (or the first) workflow execution or `df[df['workflow_id'] == df.loc[df['started_at'].idxmax(), 'workflow_id']]` to filter the tasks in the latest (or the last or the one that started most recently) workflow execution.     
+      -To select the last (or latest) N workflow executions, use `df.groupby('workflow_id', as_index=False).agg({{"ended_at": 'max'}}).sort_values(by='ended_at', ascending=True).head(N)['workflow_id'])`
+      -To select the first (or earliest) N workflow executions, use `df.groupby('workflow_id', as_index=False).agg({{"started_at": 'min'}}).sort_values(by='started_at', ascending=False).head(N)['workflow_id'])`
+      -Do not do stupid things like: df[0] or df[integer value] or df[df[any field].idxmax()] because these are obvious       
     - **Do not include metadata columns unless explicitly required by the user query.**
 
     ### 5. Few-Shot Examples
