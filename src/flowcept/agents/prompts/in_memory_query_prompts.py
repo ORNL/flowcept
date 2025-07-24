@@ -117,10 +117,10 @@ def generate_plot_code_prompt(query, dynamic_schema, example_values) -> str:
 
     """
     return PLOT_PROMPT
-JOB= "You will generate a pandas dataframe code to solve the query."
-ROLE= """You are an expert in HPC workflow provenance analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems. 
-            You are analyzing provenance data from a complex workflow consisting of numerous tasks."""
 
+JOB = "You will generate a pandas dataframe code to solve the query."
+ROLE = """You are an expert in HPC workflow provenance data analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems. 
+            You are analyzing provenance data from a complex workflow consisting of numerous tasks."""
 QUERY_GUIDELINES = """
     
     ### 3. Query Guidelines
@@ -155,14 +155,17 @@ QUERY_GUIDELINES = """
       
       -The first workflow execution is the one that has the task with earliest `started_at`, so you need to sort the DataFrame based on `started_at` to get the associated workflow_id.
       -The last workflow execution is the one that has the task with the latest `ended_at`, so you need to sort the DataFrame based on `ended_at` to get the associated workflow_id.
+      - Use this to select the tasks in the first workflow (or in the earliest workflow): df[df.workflow_id == df.loc[df.started_at.idxmin(), 'workflow_id']]
+      - Use this to select the tasks in the last workflow (or in the latest workflow or in the most recent workflow or the workflow that started or ended most recently): df[df.workflow_id == df.loc[df.ended_at.idxmax(), 'workflow_id']]
       -WHEN the user requests the "first workflow", you must identify the workflow by using workflow_id of the task with the earliest started_at. DO NOT use the min workflow_id.
       -WHEN the user requests the "last workflow", you must identify the workflow by using workflow_id of the task with the latest `ended_at`. DO NOT use the max workflow_id.
       -Do not use  df['workflow_id'].max() or  df['workflow_id'].min() to find the first or last workflow execution.
       
       -WHEN the user requests a "summary" of activities, you must incorporate relevant summary statistics such as min, max, and mean, into the code you generate.
-      -Use `df[df['workflow_id'] == df.loc[df['started_at'].idxmax(), 'workflow_id']]` to filter the tasks in the earliest (or the first) workflow execution or `df[df['workflow_id'] == df.loc[df['started_at'].idxmax(), 'workflow_id']]` to filter the tasks in the latest (or the last or the one that started most recently) workflow execution.     
-      -To select the last (or latest) N workflow executions, use or adapt the following: `df.groupby('workflow_id', as_index=False).agg({{"ended_at": 'max'}}).sort_values(by='ended_at', ascending=True).head(N)['workflow_id'])`
-      -To select the first (or earliest) N workflow executions, use or adapt the following: `df.groupby('workflow_id', as_index=False).agg({{"started_at": 'min'}}).sort_values(by='started_at', ascending=False).head(N)['workflow_id'])`
+      
+      -To select the first (or earliest) N workflow executions, use or adapt the following: `df.groupby('workflow_id', as_index=False).agg({{"started_at": 'min'}}).sort_values(by='started_at', ascending=True).head(N)['workflow_id']` - utilize `started_at` to sort!     
+      -To select the last (or latest or most recent) N workflow executions, use or adapt the following: `df.groupby('workflow_id', as_index=False).agg({{"ended_at": 'max'}}).sort_values(by='ended_at', ascending=False).head(N)['workflow_id']` - utilize `ended_at` to sort!
+      
       -Do NOT use df[0] or df[integer value] or df[df[<field name>].idxmax()] or df[df[<field name>].idxmin()] because these are obviously not valid Pandas Code!
       -**Do NOT use any of those: df[df['started_at'].idxmax()], df[df['started_at'].idxmin()], df[df['ended_at'].idxmin()], df[df['ended_at'].idxmax()]. Those are not valid Pandas Code.**
     - **Do not include metadata columns unless explicitly required by the user query.**
@@ -194,30 +197,26 @@ OUTPUT_FORMATTING = """
     Your response must be only the raw Python code in the format:
         result = ...
 
-    Do not include: Explanations, Markdown, Comments, Any text before or after the code block
+    Do not include: Explanations, Markdown formatting, Triple backticks, Comments, or Any text before or after the code block.
+    The output cannot have any markdown, no ```python or ``` at all. 
 
     THE OUTPUT MUST BE ONE LINE OF VALID PYTHON CODE ONLY, DO NOT SAY ANYTHING ELSE.
 
     Strictly follow the constraints above.
 """
 
+
 def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
-    prompt = f"""
-     You are a Workflow Provenance Data Science Expert that knows to query pandas DataFrames.
-    {DF_FORM}
-    {JOB}
-    {ROLE}
-    {get_df_schema_prompt(dynamic_schema, example_values)}
-    
-    {QUERY_GUIDELINES}
-
-    {FEW_SHOTS}
-    
-    {OUTPUT_FORMATTING}
-
-    User Query:
-    {query}
-    """
+    prompt = (f"{ROLE}"
+              f"{JOB}"
+              f"{DF_FORM}"
+              f"{get_df_schema_prompt(dynamic_schema, example_values)}"
+              f"{QUERY_GUIDELINES}"
+              f"{FEW_SHOTS}"
+              f"{OUTPUT_FORMATTING}"
+              "User Query:"
+              f"{query}"
+              )
     return prompt
 
 
