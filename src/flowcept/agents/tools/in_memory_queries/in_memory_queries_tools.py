@@ -101,7 +101,7 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df, atte
             return ToolResult(code=405,
                               result=f"Failed to parse this as Python code: \n\n ```python\n {result_code} \n```\n "
                                      f"but got error:\n\n {e}.",
-                              extra={"generated_code": result_code, "exception": str(e)})
+                              extra={"generated_code": result_code, "exception": str(e), "prompt": prompt})
         else:
             tool_result = extract_or_fix_python_code(llm, result_code)
             if tool_result.code == 201:
@@ -158,7 +158,7 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df, atte
         "summary": summary,
         "summary_error": summary_error,
     }
-    return ToolResult(code=return_code, result=this_result, tool_name=generate_result_df.__name__)
+    return ToolResult(code=return_code, result=this_result, tool_name=generate_result_df.__name__, extra={"prompt": prompt})
 
 
 @mcp_flowcept.tool()
