@@ -26,7 +26,7 @@ DF_FORM = "The user has a pandas DataFrame called `df`, created from flattened t
 
 
 def get_df_schema_prompt(dynamic_schema, example_values):
-    prompt = f"""
+    schema_prompt = f"""
      ## DATAFRAME STRUCTURE
 
         Each row in `df` represents a single task.
@@ -42,21 +42,25 @@ def get_df_schema_prompt(dynamic_schema, example_values):
         ```python
         {dynamic_schema}
         ```
-        
+        Use this schema and fields to understand what inputs and outputs are valid for each activity.
+                
+        ### 2. Additional fields for tasks:
+
+        {COMMON_TASK_FIELDS}
+        ---
+    """ 
+
+    values_prompt = f"""    
         Now, this other dictionary below provides type (t), up to 3 example values (v), and, for lists, shape (s) and element type (et) for each field.
         Field names do not include `used.` or `generated.` They represent the unprefixed form shared across roles. String values may be truncated if they exceed the length limit.
         ```python
         {example_values}
         ```
-        Use this schema and fields to understand what inputs and outputs are valid for each activity.
-        
-        Use df[<role>.field_name] == True or df[<role>.field_name] == False when user queries boolean fields, where <role> is either used or generated, depending on the field name. Make sure field_name is a valid field in the DataFrame.  
-
-        ### 2. Additional fields for tasks 
-
-        {COMMON_TASK_FIELDS}
-        ---
     """
+
+    #schema_prompt = ""
+    #values_prompt = ""
+    prompt = schema_prompt + values_prompt
     return prompt
 
 def generate_plot_code_prompt(query, dynamic_schema, example_values) -> str:
@@ -168,6 +172,9 @@ QUERY_GUIDELINES = """
       
       -Do NOT use df[0] or df[integer value] or df[df[<field name>].idxmax()] or df[df[<field name>].idxmin()] because these are obviously not valid Pandas Code!
       -**Do NOT use any of those: df[df['started_at'].idxmax()], df[df['started_at'].idxmin()], df[df['ended_at'].idxmin()], df[df['ended_at'].idxmax()]. Those are not valid Pandas Code.**
+    
+      - Use df[<role>.field_name] == True or df[<role>.field_name] == False when user queries boolean fields, where <role> is either used or generated, depending on the field name. Make sure field_name is a valid field in the DataFrame.  
+
     - **Do not include metadata columns unless explicitly required by the user query.**
 """
 
@@ -207,13 +214,14 @@ OUTPUT_FORMATTING = """
 
 
 def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
-    prompt = (f"{ROLE}"
+    prompt = (
+              f"{ROLE}"
               f"{JOB}"
               f"{DF_FORM}"
-              f"{get_df_schema_prompt(dynamic_schema, example_values)}"
-              f"{QUERY_GUIDELINES}"
-              f"{FEW_SHOTS}"
-              f"{OUTPUT_FORMATTING}"
+              f"{get_df_schema_prompt(dynamic_schema, example_values)}" # main tester
+              f"{QUERY_GUIDELINES}" # main tester
+              f"{FEW_SHOTS}" # main tester
+              f"{OUTPUT_FORMATTING}" # main tester
               "User Query:"
               f"{query}"
               )
