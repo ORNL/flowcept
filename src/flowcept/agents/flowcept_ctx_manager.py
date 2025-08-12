@@ -1,4 +1,5 @@
 from flowcept.agents.dynamic_schema_tracker import DynamicSchemaTracker
+from flowcept.agents.tools.in_memory_queries.pandas_agent_utils import load_saved_df
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from mcp.server.fastmcp import FastMCP
 
@@ -79,7 +80,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         bool
             True if the message was handled successfully.
         """
-        print(msg_obj)
+        print("Received:", msg_obj)
         msg_type = msg_obj.get("type", None)
         if msg_type == "task":
             task_msg = TaskObject.from_dict(msg_obj)
@@ -98,8 +99,13 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 
             if self.msgs_counter > 0 and self.msgs_counter % self.context_size == 0:
                 self.logger.debug(f"Going to add to index! {(self.msgs_counter-self.context_size,self.msgs_counter)}")
-                self.update_schema_and_add_to_df(tasks=self.context.task_summaries[self.msgs_counter - self.context_size:self.msgs_counter])
-                # self.context.qa_chain = FlowceptQAManager.qa_chain
+                try:
+                    self.update_schema_and_add_to_df(tasks=self.context.task_summaries[self.msgs_counter - self.context_size:self.msgs_counter])
+                except Exception as e:
+                    self.logger.error(f"Could not add these tasks to buffer!\n"
+                                      f"{self.context.task_summaries[self.msgs_counter - self.context_size:self.msgs_counter]}")
+                    self.logger.exception(e)
+
                 # self.monitor_chunk()
 
         return True
@@ -140,12 +146,12 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             value_examples={},
             tracker_config=self.tracker_config
         )
-        DEBUG = False  # TODO debugging!!
+        DEBUG = True  # TODO debugging!!
         if DEBUG:
-            if os.path.exists("/tmp/current_agent_df.csv"):
+            df_path = "/tmp/current_agent_df.csv"
+            if os.path.exists(df_path):
                 self.logger.warning("We are debugging! -- Going to load df into context")
-                df = pd.read_csv("/tmp/current_agent_df.csv", index_col=False)
-                df[['task_id', 'parent_task_id']] = df[['task_id', 'parent_task_id']].astype(str)
+                df = load_saved_df(df_path)
                 self.context.df = df
             if os.path.exists("/tmp/current_tasks_schema.json"):
                 with open("/tmp/current_tasks_schema.json") as f:

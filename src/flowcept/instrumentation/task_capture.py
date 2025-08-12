@@ -1,5 +1,5 @@
 from time import time
-from typing import Dict
+from typing import Dict, Any
 import os
 import threading
 import random
@@ -61,6 +61,7 @@ class FlowceptTask(object):
             agent_id: str = None,
             parent_task_id: str = None,
             used: Dict = None,
+            data: Any = None,
             subtype: str = None,
             custom_metadata: Dict = None,
             generated: Dict = None,
@@ -122,6 +123,7 @@ class FlowceptTask(object):
         self._task.campaign_id = campaign_id or Flowcept.campaign_id
         self._task.parent_task_id = parent_task_id
         self._task.used = used
+        self._task.data = data
         self._task.subtype = subtype
         self._task.agent_id = agent_id
         self._task.custom_metadata = custom_metadata

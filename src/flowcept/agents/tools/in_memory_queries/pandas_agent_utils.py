@@ -4,6 +4,30 @@ import pandas as pd
 import numpy as np
 import ast
 
+def load_saved_df(df_path: str) -> pd.DataFrame:
+    """
+    Load a DataFrame from a CSV file.
+
+    Parameters
+    ----------
+    df_path : str
+        Path to the CSV file containing the DataFrame.
+
+    Returns
+    -------
+    pd.DataFrame
+        The loaded DataFrame.
+    """
+    df = pd.read_csv(df_path, index_col=False)
+    str_types = ['task_id', 'parent_task_id', 'workflow_id', 'activity_id', 'agent_id', 'campaign_id', 'hostname']
+    for col in str_types:
+        if col in df.columns:
+            df[col] = df[col].astype(str)
+    dates = ['started_at', 'ended_at']
+    for date in dates:
+        if date in df.columns:
+            df[date] = pd.to_datetime(df[date], errors='coerce')
+    return df
 
 def normalize_output(result):
     """

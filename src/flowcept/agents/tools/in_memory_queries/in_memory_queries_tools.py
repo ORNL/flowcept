@@ -6,7 +6,7 @@ from flowcept.agents.flowcept_ctx_manager import mcp_flowcept, ctx_manager
 from flowcept.agents.prompts.in_memory_query_prompts import generate_plot_code_prompt, extract_or_fix_json_code_prompt, \
     generate_pandas_code_prompt, dataframe_summarizer_context, extract_or_fix_python_code_prompt
 
-from flowcept.agents.tools.in_memory_queries.pandas_agent_utils import safe_execute, safe_json_parse, normalize_output, \
+from flowcept.agents.tools.in_memory_queries.pandas_agent_utils import load_saved_df, safe_execute, safe_json_parse, normalize_output, \
     format_result_df, summarize_df
 
 
@@ -19,7 +19,10 @@ def run_df_query(llm, query: str, plot=False) -> ToolResult:
     if df is None or not len(df):
         return ToolResult(code=404, result="Current df is empty or null.")
 
-    if "save" in query:
+    if "reset context" in query:
+        ctx.request_context.lifespan_context.df = pd.DataFrame()
+        return ToolResult(code=201, result="Context Reset!")
+    elif "save" in query:
         return save_df(df, schema, value_examples)
     elif "result = df" in query:
         return run_df_code(user_code=query, df=df)
@@ -83,7 +86,7 @@ def generate_plot_code(llm, query, dynamic_schema, value_examples, df) -> ToolRe
 
 
 @mcp_flowcept.tool()
-def generate_result_df(llm, query: str, dynamic_schema, example_values, df):
+def generate_result_df(llm, query: str, dynamic_schema, example_values, df, attempt_fix=True, summarize=True):
     try:
         prompt = generate_pandas_code_prompt(query, dynamic_schema, example_values)
         response = llm(prompt)
@@ -94,21 +97,27 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df):
         result_code = response
         result_df = safe_execute(df, result_code)
     except Exception as e:
-        tool_result = extract_or_fix_python_code(llm, result_code)
-        if tool_result.code == 201:
-            new_result_code = tool_result.result
-            try:
-                result_df = safe_execute(df, new_result_code)
-            except Exception as e:
-                return ToolResult(code=405, result=f"Failed to parse this as Python code: \n\n ```python\n {result_code} \n```\n "
-                                                   f"Then tried to LLM extract the Python code, got: \n\n ```python\n{new_result_code}```\n "
-                                                   f"but got error:\n\n {e}.")
-
+        if not attempt_fix:
+            return ToolResult(code=405,
+                              result=f"Failed to parse this as Python code: \n\n ```python\n {result_code} \n```\n "
+                                     f"but got error:\n\n {e}.",
+                              extra={"generated_code": result_code, "exception": str(e), "prompt": prompt})
         else:
-            return ToolResult(code=405, result=f"Failed to parse this as Python code: {result_code}."
-                                               f"Exception: {e}\n"
-                                               f"Then tried to LLM extract the Python code, but got error:"
-                                               f" {tool_result.result}")
+            tool_result = extract_or_fix_python_code(llm, result_code)
+            if tool_result.code == 201:
+                new_result_code = tool_result.result
+                try:
+                    result_df = safe_execute(df, new_result_code)
+                except Exception as e:
+                    return ToolResult(code=405, result=f"Failed to parse this as Python code: \n\n ```python\n {result_code} \n```\n "
+                                                       f"Then tried to LLM extract the Python code, got: \n\n ```python\n{new_result_code}```\n "
+                                                       f"but got error:\n\n {e}.")
+
+            else:
+                return ToolResult(code=405, result=f"Failed to parse this as Python code: {result_code}."
+                                                   f"Exception: {e}\n"
+                                                   f"Then tried to LLM extract the Python code, but got error:"
+                                                   f" {tool_result.result}")
 
     try:
         result_df = normalize_output(result_df)
@@ -121,20 +130,22 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df):
 
     result_df = result_df.dropna(axis=1, how='all')
 
+    return_code = 301
     summary, summary_error = None, None
-    try:
-        tool_result = summarize_result(llm, result_code, result_df, query)
-        if tool_result.is_success():
-            return_code = 301
-            summary = tool_result.result
-        else:
-            return_code = 302
-            summary_error = tool_result.result
-    except Exception as e:
-        ctx_manager.logger.exception(e)
-        summary = ""
-        summary_error = str(e)
-        return_code = 303
+    if summarize:
+        try:
+            tool_result = summarize_result(llm, result_code, result_df, query)
+            if tool_result.is_success():
+                return_code = 301
+                summary = tool_result.result
+            else:
+                return_code = 302
+                summary_error = tool_result.result
+        except Exception as e:
+            ctx_manager.logger.exception(e)
+            summary = ""
+            summary_error = str(e)
+            return_code = 303
 
     try:
         result_df = format_result_df(result_df)
@@ -147,7 +158,7 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df):
         "summary": summary,
         "summary_error": summary_error,
     }
-    return ToolResult(code=return_code, result=this_result, tool_name=generate_result_df.__name__)
+    return ToolResult(code=return_code, result=this_result, tool_name=generate_result_df.__name__, extra={"prompt": prompt})
 
 
 @mcp_flowcept.tool()
@@ -223,7 +234,9 @@ def save_df(df, schema, value_examples):
 
 @mcp_flowcept.tool()
 def query_on_saved_df(query: str, dynamic_schema_path, value_examples_path, df_path):
-    df = pd.read_csv(df_path)
+
+    df = load_saved_df(df_path)
+
     with open(dynamic_schema_path) as f:
         dynamic_schema = json.load(f)
 
@@ -231,4 +244,4 @@ def query_on_saved_df(query: str, dynamic_schema_path, value_examples_path, df_p
         value_examples = json.load(f)
 
     llm = build_llm_model()
-    return generate_result_df(llm, query, dynamic_schema, value_examples, df)
+    return generate_result_df(llm, query, dynamic_schema, value_examples, df, attempt_fix=False, summarize=False)
