@@ -24,6 +24,7 @@ class TaskObject:
     utc_timestamp: float = None
     adapter_id: AnyStr = None
     user: AnyStr = None
+    data: Any = None
     used: Dict[AnyStr, Any] = None  # Used parameter and files
     campaign_id: AnyStr = None
     generated: Dict[AnyStr, Any] = None  # Generated results and files
