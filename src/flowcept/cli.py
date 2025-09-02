@@ -54,11 +54,20 @@ def show_settings():
     )
 
 
-def init_settings():
+def init_settings(full: bool = False):
     """
     Create a new settings.yaml file in your home directory under ~/.flowcept.
+
+    Parameters
+    ----------
+    full : bool, optional -- Run with full to generate a complete version of the settings file.
     """
-    dest_path = Path(os.path.join(configs._SETTINGS_DIR, "settings.yaml"))
+    settings_path_env = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
+    if settings_path_env is not None:
+        print(f"FLOWCEPT_SETTINGS_PATH environment variable is set to {settings_path_env}.")
+        dest_path = settings_path_env
+    else:
+        dest_path = Path(os.path.join(configs._SETTINGS_DIR, "settings.yaml"))
 
     if dest_path.exists():
         overwrite = input(f"{dest_path} already exists. Overwrite? (y/N): ").strip().lower()
@@ -68,11 +77,17 @@ def init_settings():
 
     os.makedirs(configs._SETTINGS_DIR, exist_ok=True)
 
-    SAMPLE_SETTINGS_PATH = str(resources.files("resources").joinpath("sample_settings.yaml"))
-
-    with open(SAMPLE_SETTINGS_PATH, "rb") as src_file, open(dest_path, "wb") as dst_file:
-        dst_file.write(src_file.read())
-    print(f"Copied {configs.SETTINGS_PATH} to {dest_path}")
+    if full:
+        print("Going to generate full settings.yaml.")
+        sample_settings_path = str(resources.files("resources").joinpath("sample_settings.yaml"))
+        with open(sample_settings_path, "rb") as src_file, open(dest_path, "wb") as dst_file:
+            dst_file.write(src_file.read())
+            print(f"Copied {sample_settings_path} to {dest_path}")
+    else:
+        from omegaconf import OmegaConf
+        cfg = OmegaConf.create(configs.DEFAULT_SETTINGS)
+        OmegaConf.save(cfg, dest_path)
+        print(f"Generated default settings under {dest_path}.")
 
 
 def version():
@@ -408,10 +423,12 @@ def main():  # noqa: D103
         parser.add_argument(flag, action="store_true", help=short_help)
 
         for pname, param in inspect.signature(func).parameters.items():
+
             arg_name = f"--{pname.replace('_', '-')}"
             params_doc = _parse_numpy_doc(doc).get(pname, {})
+
             help_text = f"{params_doc.get('type', '')} - {params_doc.get('desc', '').strip()}"
-            if isinstance(param.annotation, bool):
+            if param.annotation == bool:
                 parser.add_argument(arg_name, action="store_true", help=help_text)
             elif param.annotation == List[str]:
                 parser.add_argument(arg_name, type=lambda s: s.split(","), help=help_text)

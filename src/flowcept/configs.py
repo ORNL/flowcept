@@ -4,29 +4,37 @@ import os
 import socket
 import getpass
 
+from flowcept.version import __version__
+
 PROJECT_NAME = "flowcept"
+
+DEFAULT_SETTINGS = {
+    "version": __version__,
+    "log": {"log_file_level": "disable", "log_stream_level": "disable"},
+    "project": {},
+    "telemetry_capture": {},
+    "instrumentation": {},
+    "experiment": {},
+    "mq": {"enabled": False},
+    "kv_db": {"enabled": False},
+    "web_server": {},
+    "sys_metadata": {},
+    "extra_metadata": {},
+    "analytics": {},
+    "db_buffer": {},
+    "databases": {"mongodb": {"enabled": False}, "lmdb": {"enabled": False}},
+    "adapters": {},
+    "agent": {},
+}
+
 USE_DEFAULT = os.getenv("FLOWCEPT_USE_DEFAULT", "False").lower() == "true"
 ########################
 #   Project Settings   #
 ########################
 
 if USE_DEFAULT:
-    settings = {
-        "log": {},
-        "project": {},
-        "telemetry_capture": {},
-        "instrumentation": {},
-        "experiment": {},
-        "mq": {},
-        "kv_db": {},
-        "web_server": {},
-        "sys_metadata": {},
-        "extra_metadata": {},
-        "analytics": {},
-        "buffer": {},
-        "databases": {},
-        "adapters": {},
-    }
+    settings = DEFAULT_SETTINGS.copy()
+
 else:
     from omegaconf import OmegaConf
 
@@ -42,7 +50,14 @@ else:
             settings = OmegaConf.load(f)
     else:
         settings = OmegaConf.load(SETTINGS_PATH)
-# print(SETTINGS_PATH)
+
+# Making sure all settings are in place.
+keys = DEFAULT_SETTINGS.keys() - settings.keys()
+if len(keys):
+    for k in keys:
+        settings[k] = DEFAULT_SETTINGS[k]
+
+
 ########################
 #   Log Settings       #
 ########################
@@ -68,6 +83,7 @@ FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 
 MQ_INSTANCES = settings["mq"].get("instances", None)
 MQ_SETTINGS = settings["mq"]
+MQ_ENABLED = os.getenv("MQ_ENABLED", settings["mq"].get("enabled", True))
 MQ_TYPE = os.getenv("MQ_TYPE", settings["mq"].get("type", "redis"))
 MQ_CHANNEL = os.getenv("MQ_CHANNEL", settings["mq"].get("channel", "interception"))
 MQ_PASSWORD = settings["mq"].get("password", None)
@@ -87,7 +103,7 @@ KVDB_PASSWORD = settings["kv_db"].get("password", None)
 KVDB_HOST = os.getenv("KVDB_HOST", settings["kv_db"].get("host", "localhost"))
 KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
 KVDB_URI = os.getenv("KVDB_URI", settings["kv_db"].get("uri", None))
-KVDB_ENABLED = settings["kv_db"].get("enabled", True)
+KVDB_ENABLED = settings["kv_db"].get("enabled", False)
 
 
 DATABASES = settings.get("databases", {})
@@ -140,7 +156,7 @@ DB_INSERTER_SLEEP_TRIALS_STOP = db_buffer_settings.get("stop_trials_sleep", 0.01
 # PROJECT SYSTEM SETTINGS #
 ######################
 
-DB_FLUSH_MODE = settings["project"].get("db_flush_mode", "online")
+DB_FLUSH_MODE = settings["project"].get("db_flush_mode", "offline")
 # DEBUG_MODE = settings["project"].get("debug", False)
 PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
@@ -219,7 +235,7 @@ ANALYTICS = settings.get("analytics", None)
 ####################
 
 INSTRUMENTATION = settings.get("instrumentation", {})
-INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", False)
+INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", True)
 
 AGENT = settings.get("agent", {})
 AGENT_HOST = os.getenv("AGENT_HOST", settings["agent"].get("mcp_host", "localhost"))

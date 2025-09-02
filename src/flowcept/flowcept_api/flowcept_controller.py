@@ -94,6 +94,7 @@ class Flowcept(object):
         self.logger.debug(f"Using settings file: {SETTINGS_PATH}")
         self._enable_persistence = start_persistence
         self._db_inserters: List = []
+        self.buffer = None
         self._check_safe_stops = check_safe_stops
         if bundle_exec_id is None:
             self._bundle_exec_id = id(self)
@@ -151,7 +152,7 @@ class Flowcept(object):
                 interceptor_inst = BaseInterceptor.build(interceptor)
                 interceptor_inst.start(bundle_exec_id=self._bundle_exec_id, check_safe_stops=self._check_safe_stops)
                 self._interceptor_instances.append(interceptor_inst)
-
+                self.buffer =  interceptor_inst._mq_dao.buffer
                 if self._should_save_workflow and not self._workflow_saved:
                     self.save_workflow(interceptor, interceptor_inst)
 
