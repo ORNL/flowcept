@@ -40,7 +40,7 @@ def no_docstring(func):
     return wrapper
 
 
-def show_config():
+def show_settings():
     """
     Show Flowcept configuration.
     """
@@ -73,6 +73,14 @@ def init_settings():
     with open(SAMPLE_SETTINGS_PATH, "rb") as src_file, open(dest_path, "wb") as dst_file:
         dst_file.write(src_file.read())
     print(f"Copied {configs.SETTINGS_PATH} to {dest_path}")
+
+
+def version():
+    """
+    Returns this Flowcept's installation version.
+    """
+    from flowcept.version import __version__
+    print(f"Flowcept {__version__}")
 
 
 def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: bool = False, consumers: List[str] = None):
@@ -197,13 +205,23 @@ def start_agent(): # TODO: start with gui
     main()
 
 
-def start_agent_gui():
-    """Start Flowcept agent GUI service."""
+def start_agent_gui(port: int = None):
+    """Start Flowcept agent GUI service.
+
+    Parameters
+    ----------
+    port : int, optional
+        The default port is 8501. Use --port if you want to run the GUI on a different port.
+    """
 
     gui_path = Path(__file__).parent / "agents" / "gui" / "agent_gui.py"
     gui_path = gui_path.resolve()
+    cmd = f"streamlit run {gui_path}"
 
-    _run_command(f"streamlit run {gui_path}", check_output=True)
+    if port is not None and isinstance(port, int):
+        cmd += f" --server.port {port}"
+
+    _run_command(cmd, check_output=True)
 
 
 def agent_client(tool_name: str, kwargs: str = None):
@@ -310,7 +328,7 @@ def check_services():
 
 
 COMMAND_GROUPS = [
-    ("Basic Commands", [check_services, show_config, init_settings, start_services, stop_services]),
+    ("Basic Commands", [version, check_services, show_settings, init_settings, start_services, stop_services]),
     ("Consumption Commands", [start_consumption_services, stop_consumption_services]),
     ("Database Commands", [workflow_count, query, get_task]),
     ("Agent Commands", [start_agent, agent_client, start_agent_gui]),
@@ -401,7 +419,7 @@ def main():  # noqa: D103
                 parser.add_argument(arg_name, type=str, help=help_text)
 
     # Handle --help --command
-    help_flag = "--help" in sys.argv
+    help_flag = "--help" in sys.argv or "-h" in sys.argv
     command_flags = {f"--{f.__name__.replace('_', '-')}" for f in COMMANDS}
     matched_command_flag = next((arg for arg in sys.argv if arg in command_flags), None)
 

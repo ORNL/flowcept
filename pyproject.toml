@@ -59,8 +59,8 @@ mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog"]
 nvidia = ["nvidia-ml-py"]
 mqtt = ["paho-mqtt"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
-extras=["pandas", "lmdb", "psutil>=6.1.1", "py-cpuinfo", "flask-restful", "requests", "pyarrow"]
-base_agent = ["mcp[cli]"]
+telemetry=["psutil>=6.1.1", "py-cpuinfo"]
+extras=["pandas", "lmdb", "py-cpuinfo", "flask-restful", "requests", "pyarrow"]
 llm_agent = ["mcp[cli]", "langchain_community", "crewai", "streamlit"]
 
 dev = [
@@ -83,6 +83,7 @@ ml_dev = [
     "nltk"
 ]
 all = [
+    "flowcept[telemetry]",
     "flowcept[extras]",
     "flowcept[mongo]",
     "flowcept[analytics]",
