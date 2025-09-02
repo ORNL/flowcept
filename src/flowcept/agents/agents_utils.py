@@ -97,8 +97,20 @@ def build_llm_model(model_name=None, model_kwargs=None, service_provider=None, a
         from langchain_openai import ChatOpenAI
         api_key = os.environ.get("OPENAI_API_KEY", AGENT.get("api_key", None))
         llm = ChatOpenAI(openai_api_key=api_key, **model_kwargs)
+    elif _service_provider == "google":
+
+        if "claude" in _model_kwargs["model"]:
+            api_key = os.environ.get("GOOGLE_API_KEY", AGENT.get("api_key", None))
+            _model_kwargs["model_id"] = _model_kwargs.pop("model")
+            _model_kwargs["google_token_auth"] = api_key
+            from flowcept.agents.llms.claude_gcp import ClaudeOnGCPLLM
+            llm = ClaudeOnGCPLLM(**_model_kwargs)
+        elif "gemini" in _model_kwargs["model"]:
+            from flowcept.agents.llms.gemini25 import Gemini25LLM
+            llm = Gemini25LLM(**_model_kwargs)
+
     else:
-        raise Exception("Currently supported providers are sambanova, openai, and azure.")
+        raise Exception("Currently supported providers are sambanova, openai, azure, and google.")
     if track_tools:
         llm = FlowceptLLM(llm)
         if agent_id is None:
@@ -109,3 +121,7 @@ def build_llm_model(model_name=None, model_kwargs=None, service_provider=None, a
             if tool_task:
                 llm.parent_task_id = tool_task.task_id
     return llm
+
+
+
+

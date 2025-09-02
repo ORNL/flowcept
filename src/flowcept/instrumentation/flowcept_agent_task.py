@@ -136,7 +136,7 @@ def _extract_llm_metadata(llm: LLM) -> Dict:
 
 from typing import Any, Optional, List, Dict
 from langchain_core.language_models import LLM
-from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages import BaseMessage
 
 
 from langchain_core.runnables import Runnable
@@ -164,7 +164,7 @@ class FlowceptLLM(BaseLLM, Runnable):
                           campaign_id=self.campaign_id,
                           workflow_id=self.worflow_id,
                           parent_task_id=self.parent_task_id) as task:
-            response = self.llm.invoke(messages, kwargs)
+            response = self.llm.invoke(messages, **kwargs)
             response_str = response.content if isinstance(response, BaseMessage) else str(response)
             generated = {"response": response_str}
 

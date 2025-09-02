@@ -58,8 +58,7 @@ def get_df_schema_prompt(dynamic_schema, example_values):
         ```
     """
 
-    #schema_prompt = ""
-    #values_prompt = ""
+    # values_prompt = ""
     prompt = schema_prompt + values_prompt
     return prompt
 
@@ -157,22 +156,21 @@ QUERY_GUIDELINES = """
       -WHEN user requests duration or execution time per task or for individual tasks, utilize `telemetry_summary.duration_sec`. 
       -WHEN user requests execution time per activity within workflows compute durations using the difference between the last `ended_at` and the first `started_at` grouping by activitiy_id, workflow_id rather than using `telemetry_summary.duration_sec`.
       
-      -The first workflow execution is the one that has the task with earliest `started_at`, so you need to sort the DataFrame based on `started_at` to get the associated workflow_id.
-      -The last workflow execution is the one that has the task with the latest `ended_at`, so you need to sort the DataFrame based on `ended_at` to get the associated workflow_id.
+      -The first (or the earliest) workflow execution is the one that has the task with earliest `started_at`, so you need to sort the DataFrame based on `started_at` to get the associated workflow_id.
+      -The last (or the latest or the most recent) workflow execution is the one that has the task with the latest `ended_at`, so you need to sort the DataFrame based on `ended_at` to get the associated workflow_id.
       - Use this to select the tasks in the first workflow (or in the earliest workflow): df[df.workflow_id == df.loc[df.started_at.idxmin(), 'workflow_id']]
       - Use this to select the tasks in the last workflow (or in the latest workflow or in the most recent workflow or the workflow that started or ended most recently): df[df.workflow_id == df.loc[df.ended_at.idxmax(), 'workflow_id']]
-      -WHEN the user requests the "first workflow", you must identify the workflow by using workflow_id of the task with the earliest started_at. DO NOT use the min workflow_id.
-      -WHEN the user requests the "last workflow", you must identify the workflow by using workflow_id of the task with the latest `ended_at`. DO NOT use the max workflow_id.
+      -WHEN the user requests the "first workflow" (or earliest workflow), you must identify the workflow by using workflow_id of the task with the earliest started_at. DO NOT use the min workflow_id.
+      -WHEN the user requests the "last workflow" (or latest workflow or most recent workflow), you must identify the workflow by using workflow_id of the task with the latest `ended_at`. DO NOT use the max workflow_id.
       -Do not use  df['workflow_id'].max() or  df['workflow_id'].min() to find the first or last workflow execution.
-      
-      -WHEN the user requests a "summary" of activities, you must incorporate relevant summary statistics such as min, max, and mean, into the code you generate.
       
       -To select the first (or earliest) N workflow executions, use or adapt the following: `df.groupby('workflow_id', as_index=False).agg({{"started_at": 'min'}}).sort_values(by='started_at', ascending=True).head(N)['workflow_id']` - utilize `started_at` to sort!     
       -To select the last (or latest or most recent) N workflow executions, use or adapt the following: `df.groupby('workflow_id', as_index=False).agg({{"ended_at": 'max'}}).sort_values(by='ended_at', ascending=False).head(N)['workflow_id']` - utilize `ended_at` to sort!
       
+      -WHEN the user requests a "summary" of activities, you must incorporate relevant summary statistics such as min, max, and mean, into the code you generate.
       -Do NOT use df[0] or df[integer value] or df[df[<field name>].idxmax()] or df[df[<field name>].idxmin()] because these are obviously not valid Pandas Code!
       -**Do NOT use any of those: df[df['started_at'].idxmax()], df[df['started_at'].idxmin()], df[df['ended_at'].idxmin()], df[df['ended_at'].idxmax()]. Those are not valid Pandas Code.**
-    
+      - When the query mentions "each task", or "each activity", or "each workflow", make sure you show (project) the correct id column in the results (i.e., respectively: `task_id`, `activity_id`, `workflow_id`) to identify those in the results. 
       - Use df[<role>.field_name] == True or df[<role>.field_name] == False when user queries boolean fields, where <role> is either used or generated, depending on the field name. Make sure field_name is a valid field in the DataFrame.  
 
     - **Do not include metadata columns unless explicitly required by the user query.**
@@ -215,13 +213,13 @@ OUTPUT_FORMATTING = """
 
 def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
     prompt = (
-              f"{ROLE}"
+              f"{ROLE}" 
               f"{JOB}"
               f"{DF_FORM}"
               f"{get_df_schema_prompt(dynamic_schema, example_values)}" # main tester
-              f"{QUERY_GUIDELINES}" # main tester
+              # f"{QUERY_GUIDELINES}" # main tester
               f"{FEW_SHOTS}" # main tester
-              f"{OUTPUT_FORMATTING}" # main tester
+              f"{OUTPUT_FORMATTING}" 
               "User Query:"
               f"{query}"
               )

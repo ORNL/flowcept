@@ -122,11 +122,8 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df, atte
     try:
         result_df = normalize_output(result_df)
     except Exception as e:
-        this_result = {
-            "result_code": result_code,
-            "result_df": str(e),
-        }
-        return ToolResult(code=504, result=this_result)
+        return ToolResult(code=504, result="Failed to normalize output of the resulting dataframe.",
+                          extra={"generated_code": result_code, "exception": str(e), "prompt": prompt})
 
     result_df = result_df.dropna(axis=1, how='all')
 
@@ -150,7 +147,8 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df, atte
     try:
         result_df = format_result_df(result_df)
     except Exception as e:
-        return ToolResult(code=405, result=str(e))
+        return ToolResult(code=405, result="Failed to format output of the resulting dataframe.",
+                          extra={"generated_code": result_code, "exception": str(e), "prompt": prompt})
 
     this_result = {
         "result_code": result_code,
