@@ -9,7 +9,6 @@ import platform
 import subprocess
 import types
 import numpy as np
-import pytz
 
 from flowcept import configs
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
@@ -19,7 +18,7 @@ from flowcept.commons.vocabulary import Status
 
 
 def get_utc_now() -> float:
-    """Get UTC time."""
+    """Get current UTC time as a timestamp (seconds since epoch)."""
     now = datetime.now(timezone.utc)
     return now.timestamp()
 
@@ -159,11 +158,11 @@ class GenericJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def replace_non_serializable_times(obj, tz=pytz.utc):
-    """Replace non-serializable times in an object."""
+def replace_non_serializable_times(obj, tz=timezone.utc):
+    """Replace non-serializable datetimes in an object with ISO 8601 strings (ms precision)."""
     for time_field in TaskObject.get_time_field_names():
-        if time_field in obj:
-            obj[time_field] = obj[time_field].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + f" {tz}"
+        if time_field in obj and isinstance(obj[time_field], datetime):
+            obj[time_field] = obj[time_field].astimezone(tz).isoformat(timespec="milliseconds")
 
 
 def replace_non_serializable(obj):
