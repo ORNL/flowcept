@@ -34,7 +34,7 @@ class MQDao(object):
 
     @staticmethod
     def build(*args, **kwargs) -> "MQDao":
-        """Build it."""
+        """Build MQDao."""
 
         if not MQ_ENABLED:
             return MQDao()
