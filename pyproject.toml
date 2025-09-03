@@ -6,6 +6,10 @@ build-backend = "hatchling.build"
 name = "flowcept"
 dynamic = ["version"]
 requires-python = ">=3.10"
+dependencies = [
+    "msgpack",
+    "omegaconf",
+]
 
 authors = [{name = "Oak Ridge National Laboratory"}]
 description = "Capture and query workflow provenance data using data observability"
@@ -40,28 +44,23 @@ keywords = [
     "data-analytics"
 ]
 
-dependencies = [
-    "omegaconf",
-    "numpy"
-]
+[project.urls]
+GitHub = "https://github.com/ORNL/flowcept"
 
 [project.optional-dependencies]
-messages = ["msgpack"]
-lmdb = ["lmdb"]
 analytics = ["seaborn", "plotly", "scipy"]
 mongo = ["pymongo"]
 dask = ["tomli", "dask[distributed]<=2024.10.0"]
 docs = ["sphinx", "furo"]
-redis = ["flowcept[messages]", "redis"]
-kafka = ["flowcept[messages]", "confluent-kafka<=2.8.0"]  # As of today, 2/28/2025, version 2.8.1 is stale. When this gets fixed, let's remove the version constraint. https://pypi.org/project/confluent-kafka/#history
-mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog", "cryptography"]
+redis = ["redis"]
+kafka = ["confluent-kafka<=2.8.0"]  # As of today, 2/28/2025, version 2.8.1 is stale. When this gets fixed, let's remove the version constraint. https://pypi.org/project/confluent-kafka/#history
+mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog"]
 nvidia = ["nvidia-ml-py"]
 mqtt = ["paho-mqtt"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
-telemetry = ["psutil>=6.1.1", "py-cpuinfo"]
-extras = ["flowcept[redis]", "flowcept[telemetry]", "flowcept[lmdb]", "pandas", "flask-restful", "requests", "pyarrow"]
+telemetry=["psutil>=6.1.1", "py-cpuinfo"]
+extras=["pandas", "lmdb", "flask-restful", "requests", "pyarrow"]
 llm_agent = ["mcp[cli]", "langchain_community", "crewai", "streamlit"]
-llm_google = ["flowcept[llm_agent]", "google-genai"]
 
 dev = [
     "flowcept[docs]",
@@ -83,11 +82,9 @@ ml_dev = [
     "nltk"
 ]
 all = [
-    "flowcept[messages]",
+    "flowcept[redis]",
     "flowcept[telemetry]",
     "flowcept[extras]",
-    "flowcept[redis]",
-    "flowcept[lmdb]",
     "flowcept[mongo]",
     "flowcept[analytics]",
     "flowcept[dask]",
@@ -96,8 +93,7 @@ all = [
     "flowcept[mqtt]",
     "flowcept[tensorboard]",
     "flowcept[dev]",
-    "flowcept[llm_agent]",
-    "flowcept[llm_google]"
+    "flowcept[llm_agent]"
 ]
 
 [tool.hatch.version]
@@ -112,12 +108,6 @@ ignore = ["D200", "D212", "D105", "D401", "D205", "D100"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
-
-[tool.uv.workspace]
-members = [
-    "tmp_tests/mcp-server-demo",
-    "tmp_tests/mcp-server-demo/mcp-server-demo",
-]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/flowcept"]

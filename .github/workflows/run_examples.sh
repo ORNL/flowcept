@@ -33,8 +33,7 @@ run_test() {
 
   pip uninstall flowcept -y > /dev/null 2>&1 || true  # Ignore errors during uninstall
 
-  pip install .[extras] > /dev/null 2>&1
-  pip list
+  pip install . > /dev/null 2>&1
 
   if [[ "$with_mongo" == "true" ]]; then
     pip install .[mongo] > /dev/null 2>&1
