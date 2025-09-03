@@ -1,6 +1,6 @@
 """MQ base module."""
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Union, List, Callable
 import csv
 import msgpack
@@ -20,13 +20,13 @@ from flowcept.configs import (
     MQ_CHUNK_SIZE,
     MQ_TYPE,
     MQ_TIMING,
-    KVDB_ENABLED, MQ_ENABLED, DUMP_BUFFER_PATH,
+    KVDB_ENABLED,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
 
 
-class MQDao(object):
+class MQDao(ABC):
     """MQ base class."""
 
     ENCODER = GenericJSONEncoder if JSON_SERIALIZER == "complex" else None
@@ -35,10 +35,6 @@ class MQDao(object):
     @staticmethod
     def build(*args, **kwargs) -> "MQDao":
         """Build it."""
-
-        if not MQ_ENABLED:
-            return MQDao()
-
         if MQ_TYPE == "redis":
             from flowcept.commons.daos.mq_dao.mq_dao_redis import MQDaoRedis
 
@@ -76,6 +72,9 @@ class MQDao(object):
             self._keyvalue_dao = KeyValueDAO()
         else:
             self._keyvalue_dao = None
+            self.logger.warning(
+                "We are going to run without KVDB. If you are running a workflow, this may lead to errors."
+            )
         self._time_based_flushing_started = False
         self.buffer: Union[AutoflushBuffer, List] = None
         if MQ_TIMING:
@@ -96,20 +95,11 @@ class MQDao(object):
     def bulk_publish(self, buffer):
         """Publish it."""
         # self.logger.info(f"Going to flush {len(buffer)} to MQ...")
-        if flowcept.configs.DB_FLUSH_MODE == "offline":
-            if DUMP_BUFFER_PATH is not None:
-                import orjson
-                with open(DUMP_BUFFER_PATH, "wb", buffering=1_048_576) as f:
-                    for obj in buffer:
-                        f.write(orjson.dumps(obj))
-                        f.write(b"\n")
-                self.logger.info(f"Saved Flowcept messages into {DUMP_BUFFER_PATH}.")
+        if MQ_CHUNK_SIZE > 1:
+            for chunk in chunked(buffer, MQ_CHUNK_SIZE):
+                self._bulk_publish(chunk)
         else:
-            if MQ_CHUNK_SIZE > 1:
-                for chunk in chunked(buffer, MQ_CHUNK_SIZE):
-                    self._bulk_publish(chunk)
-            else:
-                self._bulk_publish(buffer)
+            self._bulk_publish(buffer)
 
     def register_time_based_thread_init(self, interceptor_instance_id: str, exec_bundle_id=None):
         """Register the time."""

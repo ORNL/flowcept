@@ -2,7 +2,6 @@
 
 import threading
 from time import time
-import inspect
 from functools import wraps
 import argparse
 from flowcept.commons.flowcept_dataclasses.task_object import (
@@ -125,30 +124,18 @@ def flowcept_task(func=None, **decorator_kwargs):
         logger = FlowceptLogger()
 
     def decorator(func):
-        # Precompute once (perf)
-        sig = inspect.signature(func)
-        args_handler = decorator_kwargs.get("args_handler", default_args_handler)
-        custom_metadata = decorator_kwargs.get("custom_metadata", None)
-        tags = decorator_kwargs.get("tags", None)
-        subtype = decorator_kwargs.get("subtype", None)
-        output_names = decorator_kwargs.get("output_names", None)
-
         @wraps(func)
         def wrapper(*args, **kwargs):
             if not INSTRUMENTATION_ENABLED:
                 return func(*args, **kwargs)
 
-            # Bind inputs to parameter names
-            try:
-                bound_args = sig.bind(*args, **kwargs)
-                bound_args.apply_defaults()
-                handled_args = dict(bound_args.arguments)
-            except Exception:
-                handled_args = args_handler(*args, **kwargs)
-
+            args_handler = decorator_kwargs.get("args_handler", default_args_handler)
+            custom_metadata = decorator_kwargs.get("custom_metadata", None)
+            tags = decorator_kwargs.get("tags", None)
             task_obj = TaskObject()
-            task_obj.subtype = subtype
+            task_obj.subtype = decorator_kwargs.get("subtype", None)
             task_obj.activity_id = func.__name__
+            handled_args = args_handler(*args, **kwargs)
             task_obj.workflow_id = handled_args.pop("workflow_id", Flowcept.current_workflow_id)
             task_obj.campaign_id = handled_args.pop("campaign_id", Flowcept.campaign_id)
             task_obj.used = handled_args
@@ -159,7 +146,6 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.task_id = str(task_obj.started_at)
             _thread_local._flowcept_current_context_task_id = task_obj.task_id
             task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
-
             try:
                 result = func(*args, **kwargs)
                 task_obj.status = Status.FINISHED
@@ -168,41 +154,13 @@ def flowcept_task(func=None, **decorator_kwargs):
                 result = None
                 logger.exception(e)
                 task_obj.stderr = str(e)
-
             task_obj.ended_at = time()
             task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
-
-            # Output handling: only use output_names if provided
             try:
                 if result is not None:
-                    named = None
-
                     if isinstance(result, dict):
-                        # User already returned a mapping; pass through
-                        try:
-                            task_obj.generated = args_handler(**result)
-                        except Exception:
-                            task_obj.generated = result
-                    elif output_names:
-                        # If output_names provided, map scalar or tuple/list to names
-                        if isinstance(result, (tuple, list)):
-                            if len(output_names) == len(result):
-                                named = {k: v for k, v in zip(output_names, result)}
-                        elif isinstance(output_names, str):
-                            named = {output_names: result}
-                        elif isinstance(output_names, (tuple,list)) and len(output_names) == 1:
-                            named = {output_names[0]: result}
-
-                        if isinstance(named, dict):
-                            try:
-                                task_obj.generated = args_handler(**named)
-                            except Exception:
-                                task_obj.generated = named
-                        else:
-                            # Mismatch or no mapping possible -> original behavior
-                            task_obj.generated = args_handler(result)
+                        task_obj.generated = args_handler(**result)
                     else:
-                        # No output_names: original behavior
                         task_obj.generated = args_handler(result)
             except Exception as e:
                 logger.exception(e)
@@ -216,6 +174,7 @@ def flowcept_task(func=None, **decorator_kwargs):
         return decorator
     else:
         return decorator(func)
+
 
 def get_current_context_task_id():
     """Retrieve the current task object from thread-local storage."""
