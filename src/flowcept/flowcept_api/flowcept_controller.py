@@ -15,7 +15,7 @@ from flowcept.configs import (
     MONGO_ENABLED,
     SETTINGS_PATH,
     LMDB_ENABLED,
-    KVDB_ENABLED,
+    KVDB_ENABLED, MQ_ENABLED, DUMP_BUFFER_PATH,
 )
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
@@ -94,6 +94,7 @@ class Flowcept(object):
         self.logger.debug(f"Using settings file: {SETTINGS_PATH}")
         self._enable_persistence = start_persistence
         self._db_inserters: List = []
+        self.buffer = None
         self._check_safe_stops = check_safe_stops
         if bundle_exec_id is None:
             self._bundle_exec_id = id(self)
@@ -151,7 +152,7 @@ class Flowcept(object):
                 interceptor_inst = BaseInterceptor.build(interceptor)
                 interceptor_inst.start(bundle_exec_id=self._bundle_exec_id, check_safe_stops=self._check_safe_stops)
                 self._interceptor_instances.append(interceptor_inst)
-
+                self.buffer =  interceptor_inst._mq_dao.buffer
                 if self._should_save_workflow and not self._workflow_saved:
                     self.save_workflow(interceptor, interceptor_inst)
 
@@ -160,6 +161,21 @@ class Flowcept(object):
         self.is_started = True
         self.logger.debug("Flowcept started successfully.")
         return self
+
+    def _publish_buffer(self):
+        self._interceptor_instances[0]._mq_dao.bulk_publish(self.buffer)
+
+    @staticmethod
+    def read_messages_file(file_path: str = None) -> List[Dict]:
+        import orjson
+        _buffer = []
+        if file_path is None:
+            file_path = DUMP_BUFFER_PATH
+        assert file_path is not None, "Please indicate file_path either in the argument or in the config file."
+        with open(file_path, "rb") as f:
+            lines = [ln for ln in f.read().splitlines() if ln]
+        _buffer = orjson.loads(b"[" + b",".join(lines) + b"]")
+        return _buffer
 
     def save_workflow(self, interceptor: str, interceptor_instance: BaseInterceptor):
         """
@@ -270,9 +286,10 @@ class Flowcept(object):
         """
         logger = FlowceptLogger()
         mq = MQDao.build()
-        if not mq.liveness_test():
-            logger.error("MQ Not Ready!")
-            return False
+        if MQ_ENABLED:
+            if not mq.liveness_test():
+                logger.error("MQ Not Ready!")
+                return False
 
         if KVDB_ENABLED:
             if not mq._keyvalue_dao.liveness_test():
