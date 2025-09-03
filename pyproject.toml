@@ -60,7 +60,7 @@ mqtt = ["paho-mqtt"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
 telemetry = ["psutil>=6.1.1", "py-cpuinfo"]
 extras = ["flowcept[redis]", "flowcept[telemetry]", "flowcept[lmdb]", "pandas", "flask-restful", "requests"]
-llm_agent = ["mcp[cli]", "langchain_community", "crewai", "streamlit"]
+llm_agent = ["mcp[cli]", "langchain_community", "streamlit"]
 llm_google = ["flowcept[llm_agent]", "google-genai"]
 
 dev = [

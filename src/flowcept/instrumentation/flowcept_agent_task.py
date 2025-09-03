@@ -1,12 +1,10 @@
-"""Task module."""
+"""Flowcept Agent Task module."""
 
 import threading
 from time import time
 from functools import wraps
 import argparse
-from typing import Dict, Any, Union
-
-from crewai import BaseLLM
+from typing import Dict, Union
 
 from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
@@ -143,7 +141,7 @@ from langchain_core.runnables import Runnable
 from langchain_core.language_models.base import BaseLanguageModel
 
 
-class FlowceptLLM(BaseLLM, Runnable):
+class FlowceptLLM(Runnable):
 
     def __init__(self, llm: BaseLanguageModel, agent_id: str = None, parent_task_id:str=None, workflow_id=None, campaign_id=None):
         self.llm = llm
