@@ -15,6 +15,7 @@ Supports:
 """
 
 import subprocess
+import shlex
 from typing import Dict, Optional
 import argparse
 import os
@@ -435,12 +436,92 @@ def check_services():
     print("\n\nAll expected services seem to be working properly!")
     return
 
+def start_mongo() -> None:
+    """
+    Start a MongoDB server using paths configured in the settings file.
+
+    Looks up:
+        databases:
+            mongodb:
+              - bin : str (required) path to the mongod executable
+              - log_path : str, optional (adds --fork --logpath)
+              - lock_file_path : str, optional (adds --pidfilepath)
+
+    Builds and runs the startup command.
+    """
+    # Safe nested gets
+    settings = getattr(configs, "settings", {}) or {}
+    databases = settings.get("databases") or {}
+    mongodb = databases.get("mongodb") or {}
+
+    bin_path = mongodb.get("bin")
+    log_path = mongodb.get("log_path")
+    lock_file_path = mongodb.get("lock_file_path")
+
+    if not bin_path:
+        print("Error: settings['databases']['mongodb']['bin'] is required.")
+        return
+
+    # Build command
+    parts = [shlex.quote(str(bin_path))]
+    if log_path:
+        parts += ["--fork", "--logpath", shlex.quote(str(log_path))]
+    if lock_file_path:
+        parts += ["--pidfilepath", shlex.quote(str(lock_file_path))]
+
+    cmd = " ".join(parts)
+    try:
+        out = _run_command(cmd, check_output=True)
+        if out:
+            print(out)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to start MongoDB: {e}")
+
+
+def start_redis() -> None:
+    """
+    Start a Redis server using paths configured in settings.
+
+    Looks up:
+        mq:
+          - bin : str (required) path to the redis-server executable
+          - conf_file : str, optional (appended as the sole argument)
+
+    Builds and runs the command via _run_command(cmd, check_output=True).
+    """
+    settings = getattr(configs, "settings", {}) or {}
+    mq = settings.get("mq") or {}
+
+    if mq.get("type", None) != "redis":
+        print("Your settings file needs to specify redis as the MQ type. Please fix it.")
+        return
+
+    bin_path = mq.get("bin")
+    conf_file = mq.get("conf_file", None)
+
+    if not bin_path:
+        print("Error: settings['mq']['bin'] is required.")
+        return
+
+    parts = [shlex.quote(str(bin_path))]
+    if conf_file:
+        parts.append(shlex.quote(str(conf_file)))
+
+    cmd = " ".join(parts)
+    try:
+        out = _run_command(cmd, check_output=True)
+        if out:
+            print(out)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to start Redis: {e}")
+
 
 COMMAND_GROUPS = [
     ("Basic Commands", [version, check_services, show_settings, init_settings, start_services, stop_services]),
     ("Consumption Commands", [start_consumption_services, stop_consumption_services, stream_messages]),
     ("Database Commands", [workflow_count, query, get_task]),
     ("Agent Commands", [start_agent, agent_client, start_agent_gui]),
+    ("External Services", [start_mongo, start_redis]),
 ]
 
 COMMANDS = set(f for _, fs in COMMAND_GROUPS for f in fs)
@@ -474,7 +555,7 @@ def _run_command(cmd_str: str, check_output: bool = True, popen_kwargs: Optional
         popen_kwargs = {}
 
     kwargs = {"shell": True, "check": True, **popen_kwargs}
-
+    print(f"Going to run shell command:\n{cmd_str}")
     if check_output:
         kwargs.update({"capture_output": True, "text": True})
         result = subprocess.run(cmd_str, **kwargs)

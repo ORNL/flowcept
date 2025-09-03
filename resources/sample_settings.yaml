@@ -51,6 +51,8 @@ mq:
   # uri: use Redis connection uri here
   chunk_size: -1  # use 0 or -1 to disable this. Or simply omit this from the config file.
   same_as_kvdb: false # Set this to true if you are using the same Redis instance both as an MQ and as the KV_DB. In that case, no need to repeat connection parameters in MQ. Use only what you define in KV_DB.
+#  bin: /usr/local/bin/redis-server # Use this if you want to start redis using the flowcept-cli.
+#  conf_file: /etc/redis/redis.conf
 
 kv_db:
   host: localhost
@@ -102,13 +104,17 @@ databases:
     port: 27017
     db: flowcept
     create_collection_index: true  # Whether flowcept should create collection indices if they haven't been created yet. This is done only at the Flowcept start up.
+#    bin: /usr/bin/mongod
+#    log_path: /var/log/mongodb/mongod.log
+#    lock_file_path: /var/run/mongod.pid
+
 
 adapters:
   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2. Use an empty dict, {}, if you won't use any adapter.
 
   broker_mqtt:
     kind: broker
-    host: h
+    host: localhost
     port: 30011
     protocol: mqtt3.1.1
     queues: ["#"]
