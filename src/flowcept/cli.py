@@ -28,7 +28,7 @@ from importlib import resources
 from pathlib import Path
 from typing import List
 
-from flowcept import Flowcept, configs
+from flowcept import configs
 
 
 def no_docstring(func):
@@ -211,6 +211,7 @@ def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: boo
     print(f"  check_safe_stops: {check_safe_stops}")
     print(f"  consumers: {consumers or []}")
 
+    from flowcept import Flowcept
     Flowcept.start_consumption_services(
         bundle_exec_id=bundle_exec_id,
         check_safe_stops=check_safe_stops,
@@ -254,6 +255,7 @@ def workflow_count(workflow_id: str):
     workflow_id : str
         The ID of the workflow to count tasks for.
     """
+    from flowcept import Flowcept
     result = {
         "workflow_id": workflow_id,
         "tasks": len(Flowcept.db.query({"workflow_id": workflow_id})),
@@ -283,6 +285,7 @@ def query(filter: str, project: str = None, sort: str = None, limit: int = 0):
     List[dict]
         A list of task documents matching the query.
     """
+    from flowcept import Flowcept
     _filter, _project, _sort = None, None, None
     if filter:
         _filter = json.loads(filter)
@@ -304,6 +307,7 @@ def get_task(task_id: str):
     task_id : str
         The identifier of the task.
     """
+    from flowcept import Flowcept
     _query = {"task_id": task_id}
     print(json.dumps(Flowcept.db.query(_query), indent=2, default=str))
 
@@ -376,6 +380,7 @@ def check_services():
     None
         Prints diagnostics to stdout; returns nothing.
     """
+    from flowcept import Flowcept
     print(f"Testing with settings at: {configs.SETTINGS_PATH}")
     from flowcept.configs import MONGO_ENABLED, AGENT, KVDB_ENABLED
 
