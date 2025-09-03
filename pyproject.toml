@@ -83,7 +83,6 @@ ml_dev = [
     "nltk"
 ]
 all = [
-    "flowcept[messages]",
     "flowcept[telemetry]",
     "flowcept[extras]",
     "flowcept[redis]",
