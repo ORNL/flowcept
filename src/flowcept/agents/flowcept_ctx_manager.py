@@ -146,11 +146,12 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             value_examples={},
             tracker_config=self.tracker_config
         )
-        DEBUG = True  # TODO debugging!!
+        DEBUG = True  # TODO debugging!
         if DEBUG:
+            self.logger.warning("Running agent in DEBUG mode!")
             df_path = "/tmp/current_agent_df.csv"
             if os.path.exists(df_path):
-                self.logger.warning("We are debugging! -- Going to load df into context")
+                self.logger.warning("Going to load df into context")
                 df = load_saved_df(df_path)
                 self.context.df = df
             if os.path.exists("/tmp/current_tasks_schema.json"):

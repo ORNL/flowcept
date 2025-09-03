@@ -2,16 +2,18 @@
 
 from flowcept.version import __version__
 
-from flowcept.commons.flowcept_dataclasses.workflow_object import (
-    WorkflowObject,
-)
-
 
 def __getattr__(name):
     if name == "Flowcept":
         from flowcept.flowcept_api.flowcept_controller import Flowcept
 
         return Flowcept
+
+    elif name == "WorkflowObject":
+        from flowcept.commons.flowcept_dataclasses.workflow_object import (
+            WorkflowObject,
+        )
+        return WorkflowObject
 
     elif name == "flowcept_task":
         from flowcept.instrumentation.flowcept_task import flowcept_task
