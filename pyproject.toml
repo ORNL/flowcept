@@ -43,7 +43,8 @@ keywords = [
 dependencies = [
     "omegaconf",
     "numpy",
-    "msgpack"
+    "msgpack",
+    "orjson"
 ]
 
 [project.optional-dependencies]
