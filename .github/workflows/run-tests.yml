@@ -29,7 +29,7 @@ jobs:
           cache: "pip"
 
       - name: Show OS Info
-        run: '[[ "$OSTYPE" == "linux-gnu"* ]] && { echo "OS Type: Linux"; (command -v lsb_release &> /dev/null && lsb_release -a) || cat /etc/os-release; uname -r; } || [[ "$OSTYPE" == "darwin"* ]] && { echo "OS Type: macOS"; sw_vers; uname -r; } || echo "Unsupported OS type: $OSTYPE"'
+        run: 'case "${OSTYPE:-}" in linux*) echo "OS Type: Linux"; (command -v lsb_release >/dev/null 2>&1 && lsb_release -a || cat /etc/os-release); uname -r ;; darwin*) echo "OS Type: macOS"; sw_vers || true; uname -r ;; *) echo "Unsupported OS type: ${OSTYPE:-unknown}" ;; esac'
 
       - name: Start docker compose with redis
         run: make services-mongo
