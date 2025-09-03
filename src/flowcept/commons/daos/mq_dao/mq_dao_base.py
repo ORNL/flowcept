@@ -7,9 +7,6 @@ import msgpack
 from time import time
 import flowcept.commons
 from flowcept.commons.autoflush_buffer import AutoflushBuffer
-
-from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
-
 from flowcept.commons.utils import chunked
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
@@ -73,6 +70,7 @@ class MQDao(object):
         self.started = False
         self._adapter_settings = adapter_settings
         if KVDB_ENABLED:
+            from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
             self._keyvalue_dao = KeyValueDAO()
         else:
             self._keyvalue_dao = None
