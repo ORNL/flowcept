@@ -188,9 +188,10 @@ def flowcept_task(func=None, **decorator_kwargs):
                         if isinstance(result, (tuple, list)):
                             if len(output_names) == len(result):
                                 named = {k: v for k, v in zip(output_names, result)}
-                        else:
-                            if len(output_names) == 1:
-                                named = {output_names[0]: result}
+                        elif isinstance(output_names, str):
+                            named = {output_names: result}
+                        elif isinstance(output_names, (tuple,list)) and len(output_names) == 1:
+                            named = {output_names[0]: result}
 
                         if isinstance(named, dict):
                             try:

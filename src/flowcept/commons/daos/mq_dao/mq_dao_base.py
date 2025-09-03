@@ -20,7 +20,7 @@ from flowcept.configs import (
     MQ_CHUNK_SIZE,
     MQ_TYPE,
     MQ_TIMING,
-    KVDB_ENABLED, MQ_ENABLED,
+    KVDB_ENABLED, MQ_ENABLED, DUMP_BUFFER_PATH,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -96,11 +96,20 @@ class MQDao(object):
     def bulk_publish(self, buffer):
         """Publish it."""
         # self.logger.info(f"Going to flush {len(buffer)} to MQ...")
-        if MQ_CHUNK_SIZE > 1:
-            for chunk in chunked(buffer, MQ_CHUNK_SIZE):
-                self._bulk_publish(chunk)
-        elif flowcept.configs.DB_FLUSH_MODE == "online":
-            self._bulk_publish(buffer)
+        if flowcept.configs.DB_FLUSH_MODE == "offline":
+            if DUMP_BUFFER_PATH is not None:
+                import orjson
+                with open(DUMP_BUFFER_PATH, "wb", buffering=1_048_576) as f:
+                    for obj in buffer:
+                        f.write(orjson.dumps(obj))
+                        f.write(b"\n")
+                self.logger.info(f"Saved Flowcept messages into {DUMP_BUFFER_PATH}.")
+        else:
+            if MQ_CHUNK_SIZE > 1:
+                for chunk in chunked(buffer, MQ_CHUNK_SIZE):
+                    self._bulk_publish(chunk)
+            else:
+                self._bulk_publish(buffer)
 
     def register_time_based_thread_init(self, interceptor_instance_id: str, exec_bundle_id=None):
         """Register the time."""

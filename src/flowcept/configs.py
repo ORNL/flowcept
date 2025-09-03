@@ -11,7 +11,7 @@ PROJECT_NAME = "flowcept"
 DEFAULT_SETTINGS = {
     "version": __version__,
     "log": {"log_file_level": "disable", "log_stream_level": "disable"},
-    "project": {},
+    "project": {"dump_buffer_path": "flowcept_messages.jsonl"},
     "telemetry_capture": {},
     "instrumentation": {},
     "experiment": {},
@@ -28,9 +28,6 @@ DEFAULT_SETTINGS = {
 }
 
 USE_DEFAULT = os.getenv("FLOWCEPT_USE_DEFAULT", "False").lower() == "true"
-########################
-#   Project Settings   #
-########################
 
 if USE_DEFAULT:
     settings = DEFAULT_SETTINGS.copy()
@@ -56,7 +53,6 @@ keys = DEFAULT_SETTINGS.keys() - settings.keys()
 if len(keys):
     for k in keys:
         settings[k] = DEFAULT_SETTINGS[k]
-
 
 ########################
 #   Log Settings       #
@@ -152,9 +148,9 @@ DB_INSERTER_MAX_TRIALS_STOP = db_buffer_settings.get("stop_max_trials", 240)
 DB_INSERTER_SLEEP_TRIALS_STOP = db_buffer_settings.get("stop_trials_sleep", 0.01)
 
 
-######################
+###########################
 # PROJECT SYSTEM SETTINGS #
-######################
+###########################
 
 DB_FLUSH_MODE = settings["project"].get("db_flush_mode", "offline")
 # DEBUG_MODE = settings["project"].get("debug", False)
@@ -162,7 +158,7 @@ PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get("replace_non_json_serializable", True)
 ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
-
+DUMP_BUFFER_PATH = settings["project"].get("dump_buffer_path", None)
 
 TELEMETRY_CAPTURE = settings.get("telemetry_capture", None)
 
