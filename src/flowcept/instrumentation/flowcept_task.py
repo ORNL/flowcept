@@ -15,7 +15,7 @@ from flowcept.commons.utils import replace_non_serializable
 from flowcept.configs import (
     REPLACE_NON_JSON_SERIALIZABLE,
     INSTRUMENTATION_ENABLED,
-    HOSTNAME
+    HOSTNAME, TELEMETRY_ENABLED
 )
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
@@ -56,8 +56,8 @@ def telemetry_flowcept_task(func=None):
             _thread_local._flowcept_current_context_task_id = task_obj["task_id"]
             task_obj["workflow_id"] = kwargs.pop("workflow_id", Flowcept.current_workflow_id)
             task_obj["used"] = kwargs
-            tel = interceptor.telemetry_capture.capture()
-            if tel is not None:
+            if TELEMETRY_ENABLED:
+                tel = interceptor.telemetry_capture.capture()
                 task_obj["telemetry_at_start"] = tel.to_dict()
             try:
                 result = func(*args, **kwargs)
@@ -67,8 +67,8 @@ def telemetry_flowcept_task(func=None):
                 result = None
                 task_obj["stderr"] = str(e)
             # task_obj["ended_at"] = time()
-            tel = interceptor.telemetry_capture.capture()
-            if tel is not None:
+            if TELEMETRY_ENABLED:
+                tel = interceptor.telemetry_capture.capture()
                 task_obj["telemetry_at_end"] = tel.to_dict()
             task_obj["generated"] = result
             interceptor.intercept(task_obj)
@@ -107,15 +107,6 @@ def lightweight_flowcept_task(func=None):
         return decorator
     else:
         return decorator(func)
-
-
-# def flowcept_task_switch(mode=None):
-#     if mode is None:
-#         return flowcept_task
-#     elif mode == "disable":
-#         return lambda _: _
-#     else:
-#         raise NotImplementedError
 
 
 def flowcept_task(func=None, **decorator_kwargs):
@@ -158,7 +149,8 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.hostname = HOSTNAME
             task_obj.task_id = str(task_obj.started_at)
             _thread_local._flowcept_current_context_task_id = task_obj.task_id
-            task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
+            if TELEMETRY_ENABLED:
+                task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
 
             try:
                 result = func(*args, **kwargs)
@@ -170,7 +162,8 @@ def flowcept_task(func=None, **decorator_kwargs):
                 task_obj.stderr = str(e)
 
             task_obj.ended_at = time()
-            task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
+            if TELEMETRY_ENABLED:
+                task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
 
             # Output handling: only use output_names if provided
             try:
@@ -216,6 +209,7 @@ def flowcept_task(func=None, **decorator_kwargs):
         return decorator
     else:
         return decorator(func)
+
 
 def get_current_context_task_id():
     """Retrieve the current task object from thread-local storage."""

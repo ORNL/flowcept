@@ -161,6 +161,7 @@ ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
 DUMP_BUFFER_PATH = settings["project"].get("dump_buffer_path", None)
 
 TELEMETRY_CAPTURE = settings.get("telemetry_capture", None)
+TELEMETRY_ENABLED = TELEMETRY_CAPTURE is not None and len(TELEMETRY_CAPTURE)
 
 ######################
 # SYS METADATA #

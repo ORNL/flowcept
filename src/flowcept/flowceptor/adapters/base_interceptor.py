@@ -78,6 +78,7 @@ class BaseInterceptor(object):
             self.telemetry_capture = TelemetryCapture()
         else:
             self.telemetry_capture = None
+
         self._saved_workflows = set()
         self._generated_workflow_id = False
         self.kind = kind

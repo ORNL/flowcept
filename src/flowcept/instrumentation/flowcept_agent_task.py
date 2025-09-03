@@ -15,7 +15,7 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import replace_non_serializable
 from flowcept.configs import (
     REPLACE_NON_JSON_SERIALIZABLE,
-    INSTRUMENTATION_ENABLED,
+    INSTRUMENTATION_ENABLED, TELEMETRY_ENABLED,
 )
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
@@ -72,7 +72,8 @@ def agent_flowcept_task(func=None, **decorator_kwargs):
             task_obj.custom_metadata = custom_metadata or {}
             task_obj.task_id = str(task_obj.started_at)
             _thread_local._flowcept_current_context_task = task_obj
-            task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
+            if TELEMETRY_ENABLED:
+                task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
             task_obj.agent_id = BaseAgentContextManager.agent_id
 
             try:
@@ -85,7 +86,8 @@ def agent_flowcept_task(func=None, **decorator_kwargs):
                 task_obj.stderr = str(e)
             task_obj.ended_at = time()
 
-            task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
+            if TELEMETRY_ENABLED:
+                task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
             try:
                 if result is not None:
                     if isinstance(result, dict):

@@ -8,7 +8,7 @@ from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
 )
 from flowcept.commons.vocabulary import Status
-from flowcept.configs import INSTRUMENTATION_ENABLED
+from flowcept.configs import INSTRUMENTATION_ENABLED, TELEMETRY_ENABLED
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
@@ -112,8 +112,8 @@ class FlowceptTask(object):
         self._task = TaskObject()
         self._interceptor = InstrumentationInterceptor.get_instance()
 
-        tel = self._interceptor.telemetry_capture.capture()
-        if tel:
+        if TELEMETRY_ENABLED:
+            tel = self._interceptor.telemetry_capture.capture()
             self._task.telemetry_at_start = tel
 
         self._task.activity_id = activity_id
@@ -188,8 +188,8 @@ class FlowceptTask(object):
         """
         if not INSTRUMENTATION_ENABLED:
             return
-        tel = self._interceptor.telemetry_capture.capture()
-        if tel:
+        if TELEMETRY_ENABLED:
+            tel = self._interceptor.telemetry_capture.capture()
             self._task.telemetry_at_end = tel
         self._task.ended_at = ended_at or time()
         self._task.status = status
