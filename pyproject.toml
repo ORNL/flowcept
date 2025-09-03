@@ -59,7 +59,7 @@ nvidia = ["nvidia-ml-py"]
 mqtt = ["paho-mqtt"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
 telemetry = ["psutil>=6.1.1", "py-cpuinfo"]
-extras = ["pandas", "flask-restful", "requests", "pyarrow"]
+extras = ["flowcept[redis]", "flowcept[telemetry]", "pandas", "flask-restful", "requests", "pyarrow"]
 llm_agent = ["mcp[cli]", "langchain_community", "crewai", "streamlit"]
 llm_google = ["flowcept[llm_agent]", "google-genai"]
 
