@@ -45,9 +45,9 @@ def decorated_static_function2(x):
     return {"y": 2}
 
 
-@flowcept_task
+@flowcept_task(output_names="out_df")
 def decorated_static_function(df: pd.DataFrame):
-    return 2
+    return pd.DataFrame([3])
 
 
 @lightweight_flowcept_task

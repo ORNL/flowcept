@@ -142,7 +142,7 @@ def flowcept_task(func=None, **decorator_kwargs):
             try:
                 bound_args = sig.bind(*args, **kwargs)
                 bound_args.apply_defaults()
-                handled_args = dict(bound_args.arguments)
+                handled_args = args_handler(kwargs=dict(bound_args.arguments))
             except Exception:
                 handled_args = args_handler(*args, **kwargs)
 
@@ -190,7 +190,7 @@ def flowcept_task(func=None, **decorator_kwargs):
                                 named = {k: v for k, v in zip(output_names, result)}
                         elif isinstance(output_names, str):
                             named = {output_names: result}
-                        elif isinstance(output_names, (tuple,list)) and len(output_names) == 1:
+                        elif isinstance(output_names, (tuple, list)) and len(output_names) == 1:
                             named = {output_names[0]: result}
 
                         if isinstance(named, dict):
