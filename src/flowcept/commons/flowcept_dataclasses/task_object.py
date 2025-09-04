@@ -106,20 +106,16 @@ class TaskObject:
         if self.utc_timestamp is None:
             self.utc_timestamp = flowcept.commons.utils.get_utc_now()
 
-        if self.node_name is None and NODE_NAME is not None:
-            self.node_name = NODE_NAME
+        for key, fallback_value in TaskObject._DEFAULT_ENRICH_VALUES.items():
+            if getattr(self, key) is None and fallback_value is not None:
+                setattr(self, key, fallback_value)
 
-        if self.login_name is None and LOGIN_NAME is not None:
-            self.login_name = LOGIN_NAME
-
-        if self.public_ip is None and PUBLIC_IP is not None:
-            self.public_ip = PUBLIC_IP
-
-        if self.private_ip is None and PRIVATE_IP is not None:
-            self.private_ip = PRIVATE_IP
-
-        if self.hostname is None and HOSTNAME is not None:
-            self.hostname = HOSTNAME
+    @staticmethod
+    def enrich_task_dict(task_dict: dict):
+        """Enrich the task."""
+        for key, fallback_value in TaskObject._DEFAULT_ENRICH_VALUES.items():
+            if (key not in task_dict or task_dict[key] is None) and fallback_value is not None:
+                task_dict[key] = fallback_value
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -141,12 +137,6 @@ class TaskObject:
         """Serialize it."""
         return msgpack.dumps(self.to_dict())
 
-    @staticmethod
-    def enrich_task_dict(task_dict: dict):
-        """Enrich the task."""
-        for key, fallback_value in TaskObject._DEFAULT_ENRICH_VALUES.items():
-            if (key not in task_dict or task_dict[key] is None) and fallback_value is not None:
-                task_dict[key] = fallback_value
 
     @staticmethod
     def from_dict(task_obj_dict: Dict[AnyStr, Any]) -> "TaskObject":

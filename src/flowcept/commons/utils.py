@@ -164,6 +164,7 @@ def replace_non_serializable_times(obj, tz=timezone.utc):
         if time_field in obj and isinstance(obj[time_field], datetime):
             obj[time_field] = obj[time_field].astimezone(tz).isoformat(timespec="milliseconds")
 
+
 __DICT__CLASSES = (argparse.Namespace,)
 def replace_non_serializable(obj):
     """Replace non-serializable items in an object."""
@@ -261,6 +262,19 @@ class GenericJSONDecoder(json.JSONDecoder):
         else:
             inst = dct
         return inst
+
+
+def get_git_info(path: str = "."):
+    """Get Git Repo metadata."""
+    from git import Repo
+    repo = Repo(path, search_parent_directories=True)
+    head = repo.head.commit.hexsha
+    short = repo.git.rev_parse(head, short=True)
+    branch = repo.active_branch.name if not repo.head.is_detached else "HEAD"
+    remote = next(iter(repo.remotes)).url if repo.remotes else None
+    dirty = "dirty" if repo.is_dirty() else "clean"
+    root = repo.working_tree_dir
+    return {"sha": head, "short_sha": short, "branch": branch, "root": root, "remote": remote, "dirty": dirty}
 
 
 class ClassProperty:

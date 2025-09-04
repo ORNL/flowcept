@@ -8,7 +8,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 from flowcept.configs import (
-    ENRICH_MESSAGES, TELEMETRY_CAPTURE,
+    ENRICH_MESSAGES, TELEMETRY_CAPTURE, TELEMETRY_ENABLED,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
@@ -73,7 +73,7 @@ class BaseInterceptor(object):
         self.started = False
         self._interceptor_instance_id = str(id(self))
 
-        if TELEMETRY_CAPTURE is not None and len(TELEMETRY_CAPTURE):
+        if TELEMETRY_ENABLED:
             from flowcept.flowceptor.telemetry_capture import TelemetryCapture
             self.telemetry_capture = TelemetryCapture()
         else:
@@ -133,10 +133,8 @@ class BaseInterceptor(object):
             # TODO :base-interceptor-refactor: :code-reorg: :usability:
             raise Exception(f"This interceptor {id(self)} has never been started!")
         workflow_obj.interceptor_ids = [self._interceptor_instance_id]
-        machine_info = None
         if self.telemetry_capture:
             machine_info = self.telemetry_capture.capture_machine_info()
-        if machine_info is not None:
             if workflow_obj.machine_info is None:
                 workflow_obj.machine_info = dict()
             # TODO :refactor-base-interceptor: we might want to register
