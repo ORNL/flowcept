@@ -60,8 +60,8 @@ def summarize_telemetry(task: Dict, logger) -> Dict:
     tel_funcs = {
         "cpu": extract_cpu_info,
         "disk": extract_disk_info,
-        "mem": extract_mem_info,
-        "net": extract_network_info,
+        "memory": extract_mem_info,
+        "network": extract_network_info,
     }
 
     start_tele = task.get("telemetry_at_start", {})
@@ -83,6 +83,8 @@ def summarize_telemetry(task: Dict, logger) -> Dict:
 
     for key in start_tele.keys():
         try:
+            if key not in tel_funcs:
+                continue
             func = tel_funcs[key]
             if key in end_tele:
                 telemetry_summary[key] = func(start_tele[key], end_tele[key])
@@ -90,6 +92,7 @@ def summarize_telemetry(task: Dict, logger) -> Dict:
                 logger.warning(f"We can't summarize telemetry {key} for task {task} because the key is not in the end_tele")
         except Exception as e:
             logger.warning(f"Error to summarize telemetry for {key} for task {task}. Exception: {e}")
+            logger.exception(e)
 
     return telemetry_summary
 
