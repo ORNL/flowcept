@@ -1,5 +1,5 @@
 """Utilities."""
-
+import argparse
 from datetime import datetime, timedelta, timezone
 import json
 from time import time, sleep
@@ -164,7 +164,7 @@ def replace_non_serializable_times(obj, tz=timezone.utc):
         if time_field in obj and isinstance(obj[time_field], datetime):
             obj[time_field] = obj[time_field].astimezone(tz).isoformat(timespec="milliseconds")
 
-
+__DICT__CLASSES = (argparse.Namespace,)
 def replace_non_serializable(obj):
     """Replace non-serializable items in an object."""
     if isinstance(obj, (int, float, bool, str, list, tuple, dict, type(None))):
@@ -179,6 +179,8 @@ def replace_non_serializable(obj):
             return obj.to_flowcept_dict()
         elif hasattr(obj, "to_dict"):
             return obj.to_dict()
+        elif isinstance(obj, __DICT__CLASSES):
+            return obj.__dict__
         else:
             # Replace non-serializable values with id()
             return f"{obj.__class__.__name__}_instance_id_{id(obj)}"

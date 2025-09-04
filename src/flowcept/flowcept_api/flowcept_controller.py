@@ -1,5 +1,5 @@
 """Controller module."""
-
+import os.path
 from typing import List, Dict
 from uuid import uuid4
 
@@ -172,6 +172,8 @@ class Flowcept(object):
         if file_path is None:
             file_path = DUMP_BUFFER_PATH
         assert file_path is not None, "Please indicate file_path either in the argument or in the config file."
+        if not os.path.exists(file_path):
+            raise f"File {file_path} has not been created. It will only be created if you run in fully offline mode."
         with open(file_path, "rb") as f:
             lines = [ln for ln in f.read().splitlines() if ln]
         _buffer = orjson.loads(b"[" + b",".join(lines) + b"]")
