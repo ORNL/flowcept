@@ -17,7 +17,9 @@ from flowcept.configs import (
     MQ_CHUNK_SIZE,
     MQ_TYPE,
     MQ_TIMING,
-    KVDB_ENABLED, MQ_ENABLED, DUMP_BUFFER_PATH,
+    KVDB_ENABLED,
+    MQ_ENABLED,
+    DUMP_BUFFER_PATH,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -32,7 +34,6 @@ class MQDao(object):
     @staticmethod
     def build(*args, **kwargs) -> "MQDao":
         """Build it."""
-
         if not MQ_ENABLED:
             return MQDao()
 
@@ -71,6 +72,7 @@ class MQDao(object):
         self._adapter_settings = adapter_settings
         if KVDB_ENABLED:
             from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
+
             self._keyvalue_dao = KeyValueDAO()
         else:
             self._keyvalue_dao = None
@@ -97,6 +99,7 @@ class MQDao(object):
         if flowcept.configs.DB_FLUSH_MODE == "offline":
             if DUMP_BUFFER_PATH is not None:
                 import orjson
+
                 with open(DUMP_BUFFER_PATH, "wb", buffering=1_048_576) as f:
                     for obj in buffer:
                         f.write(orjson.dumps(obj))

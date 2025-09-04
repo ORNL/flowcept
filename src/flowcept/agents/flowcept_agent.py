@@ -18,9 +18,8 @@ def main():
     f.logger.info(f"This section's workflow_id={Flowcept.current_workflow_id}")
 
     def run():
-        uvicorn.run(
-            mcp_flowcept.streamable_http_app, host=AGENT_HOST, port=AGENT_PORT, lifespan="on"
-        )
+        uvicorn.run(mcp_flowcept.streamable_http_app, host=AGENT_HOST, port=AGENT_PORT, lifespan="on")
+
     Thread(target=run).start()
     sleep(2)
     # Wake up tool call

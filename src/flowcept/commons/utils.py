@@ -1,4 +1,5 @@
 """Utilities."""
+
 import argparse
 from datetime import datetime, timedelta, timezone
 import json
@@ -166,6 +167,8 @@ def replace_non_serializable_times(obj, tz=timezone.utc):
 
 
 __DICT__CLASSES = (argparse.Namespace,)
+
+
 def replace_non_serializable(obj):
     """Replace non-serializable items in an object."""
     if isinstance(obj, (int, float, bool, str, list, tuple, dict, type(None))):
@@ -267,6 +270,7 @@ class GenericJSONDecoder(json.JSONDecoder):
 def get_git_info(path: str = "."):
     """Get Git Repo metadata."""
     from git import Repo
+
     repo = Repo(path, search_parent_directories=True)
     head = repo.head.commit.hexsha
     short = repo.git.rev_parse(head, short=True)

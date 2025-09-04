@@ -137,7 +137,6 @@ class TaskObject:
         """Serialize it."""
         return msgpack.dumps(self.to_dict())
 
-
     @staticmethod
     def from_dict(task_obj_dict: Dict[AnyStr, Any]) -> "TaskObject":
         """Create a TaskObject from a dictionary.

@@ -1,4 +1,5 @@
 """Controller module."""
+
 import os.path
 from typing import List, Dict
 from uuid import uuid4
@@ -15,7 +16,9 @@ from flowcept.configs import (
     MONGO_ENABLED,
     SETTINGS_PATH,
     LMDB_ENABLED,
-    KVDB_ENABLED, MQ_ENABLED, DUMP_BUFFER_PATH,
+    KVDB_ENABLED,
+    MQ_ENABLED,
+    DUMP_BUFFER_PATH,
 )
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
@@ -152,7 +155,7 @@ class Flowcept(object):
                 interceptor_inst = BaseInterceptor.build(interceptor)
                 interceptor_inst.start(bundle_exec_id=self._bundle_exec_id, check_safe_stops=self._check_safe_stops)
                 self._interceptor_instances.append(interceptor_inst)
-                self.buffer =  interceptor_inst._mq_dao.buffer
+                self.buffer = interceptor_inst._mq_dao.buffer
                 if self._should_save_workflow and not self._workflow_saved:
                     self.save_workflow(interceptor, interceptor_inst)
 
@@ -167,7 +170,52 @@ class Flowcept(object):
 
     @staticmethod
     def read_messages_file(file_path: str = None) -> List[Dict]:
+        """
+        Read a JSON Lines (JSONL) file containing captured Flowcept messages.
+
+        This function loads a file where each line is a serialized JSON object.
+        It joins the lines into a single JSON array and parses them efficiently
+        with ``orjson``.
+
+        Parameters
+        ----------
+        file_path : str, optional
+            Path to the messages file. If not provided, defaults to the
+            value of ``DUMP_BUFFER_PATH`` from the configuration.
+            If neither is provided, an assertion error is raised.
+
+        Returns
+        -------
+        List[dict]
+            A list of message objects (dictionaries) parsed from the file.
+
+        Raises
+        ------
+        AssertionError
+            If no ``file_path`` is provided and ``DUMP_BUFFER_PATH`` is not set.
+        FileNotFoundError
+            If the specified file does not exist.
+        orjson.JSONDecodeError
+            If the file contents cannot be parsed as valid JSON.
+
+        Examples
+        --------
+        Read messages from a file explicitly:
+
+        >>> msgs = read_messages_file("offline_buffer.jsonl")
+        >>> print(len(msgs))
+        128
+
+        Use the default dump buffer path from config:
+
+        >>> msgs = read_messages_file()
+        >>> for m in msgs[:2]:
+        ...     print(m["type"], m.get("workflow_id"))
+        task_start wf_123
+        task_end wf_123
+        """
         import orjson
+
         _buffer = []
         if file_path is None:
             file_path = DUMP_BUFFER_PATH

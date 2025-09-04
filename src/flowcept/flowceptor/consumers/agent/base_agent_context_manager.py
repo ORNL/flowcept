@@ -105,12 +105,18 @@ class BaseAgentContextManager(BaseConsumer):
             self.logger.info(f"Starting lifespan for agent {BaseAgentContextManager.agent_id}.")
             self._started = True
 
-            f = Flowcept(start_persistence=False, save_workflow=True, check_safe_stops=False,
-                         workflow_name="agent_workflow",
-                         workflow_args={"agent_id": self.agent_id})
+            f = Flowcept(
+                start_persistence=False,
+                save_workflow=True,
+                check_safe_stops=False,
+                workflow_name="agent_workflow",
+                workflow_args={"agent_id": self.agent_id},
+            )
             self.agent_workflow_id = f.current_workflow_id
             f.start()
-            f.logger.info(f"This section's workflow_id={Flowcept.current_workflow_id}, campaign_id={Flowcept.campaign_id}")
+            f.logger.info(
+                f"This section's workflow_id={Flowcept.current_workflow_id}, campaign_id={Flowcept.campaign_id}"
+            )
             self.start()
 
         try:

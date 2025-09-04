@@ -7,7 +7,9 @@ from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
 
 
-def run_tool(tool_name: str | Callable, kwargs: Dict = None, host: str = AGENT_HOST, port:int = AGENT_PORT) -> List[str]:
+def run_tool(
+    tool_name: str | Callable, kwargs: Dict = None, host: str = AGENT_HOST, port: int = AGENT_PORT
+) -> List[str]:
     """
     Run a tool using an MCP client session via a local streamable HTTP connection.
 

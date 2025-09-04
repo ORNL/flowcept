@@ -8,7 +8,8 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 from flowcept.configs import (
-    ENRICH_MESSAGES, TELEMETRY_CAPTURE, TELEMETRY_ENABLED,
+    ENRICH_MESSAGES,
+    TELEMETRY_ENABLED,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
@@ -75,6 +76,7 @@ class BaseInterceptor(object):
 
         if TELEMETRY_ENABLED:
             from flowcept.flowceptor.telemetry_capture import TelemetryCapture
+
             self.telemetry_capture = TelemetryCapture()
         else:
             self.telemetry_capture = None

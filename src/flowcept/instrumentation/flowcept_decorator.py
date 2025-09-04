@@ -13,6 +13,7 @@ def flowcept(func=None, **flowcept_constructor_kwargs):
         @flowcept(project="X", campaign_id="C123", verbose=True)
         def main(): ...
     """
+
     def _decorate(f):
         is_async = inspect.iscoroutinefunction(f)
         flowcept_args = flowcept_constructor_kwargs.copy()
@@ -21,17 +22,21 @@ def flowcept(func=None, **flowcept_constructor_kwargs):
         flowcept_args["check_safe_stops"] = flowcept_constructor_kwargs.get("check_safe_stops", False)
 
         if is_async:
+
             @wraps(f)
             async def _aw(*args, **kwargs):
                 # Flowcept used as a context manager around the coroutine call
                 with Flowcept(**flowcept_args):
                     return await f(*args, **kwargs)
+
             return _aw
         else:
+
             @wraps(f)
             def _w(*args, **kwargs):
                 with Flowcept(**flowcept_args):
                     return f(*args, **kwargs)
+
             return _w
 
     # Support bare @flowcept vs @flowcept(...)

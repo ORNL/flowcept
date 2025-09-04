@@ -89,7 +89,9 @@ def summarize_telemetry(task: Dict, logger) -> Dict:
             if key in end_tele:
                 telemetry_summary[key] = func(start_tele[key], end_tele[key])
             else:
-                logger.warning(f"We can't summarize telemetry {key} for task {task} because the key is not in the end_tele")
+                logger.warning(
+                    f"We can't summarize telemetry {key} for task {task} because the key is not in the end_tele"
+                )
         except Exception as e:
             logger.warning(f"Error to summarize telemetry for {key} for task {task}. Exception: {e}")
             logger.exception(e)
@@ -102,6 +104,7 @@ def _safe_get(task, key):
         return task.get(key)
     except Exception:
         return None
+
 
 def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
     """
@@ -122,8 +125,20 @@ def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
     task_summary = {}
 
     # Keys that can be copied directly
-    for key in ["workflow_id", "task_id", "parent_task_id", "activity_id", "used",
-                "generated", "hostname", "status", "agent_id", "campaign_id", "subtype", "custom_metadata"]:
+    for key in [
+        "workflow_id",
+        "task_id",
+        "parent_task_id",
+        "activity_id",
+        "used",
+        "generated",
+        "hostname",
+        "status",
+        "agent_id",
+        "campaign_id",
+        "subtype",
+        "custom_metadata",
+    ]:
         value = _safe_get(task, key)
         if value is not None:
             if "_id" in key:
@@ -223,28 +238,16 @@ def tag_critical_task(
     return tags
 
 
-
-
 sample_tasks = [
     {
         "task_id": "t1",
         "activity_id": "train_model",
         "used": {
-            "dataset": {
-                "name": "MNIST",
-                "size": 60000,
-                "source": {"url": "http://example.com/mnist", "format": "csv"}
-            },
-            "params": {"epochs": 5, "batch_size": 32, "shuffle": True}
+            "dataset": {"name": "MNIST", "size": 60000, "source": {"url": "http://example.com/mnist", "format": "csv"}},
+            "params": {"epochs": 5, "batch_size": 32, "shuffle": True},
         },
-        "generated": {
-            "model": {
-                "accuracy": 0.98,
-                "layers": [64, 64, 10],
-                "saved_path": "/models/mnist_v1.pth"
-            }
-        },
-        "telemetry_summary": {"duration_sec": 42.7, "cpu_percent": 85.2}
+        "generated": {"model": {"accuracy": 0.98, "layers": [64, 64, 10], "saved_path": "/models/mnist_v1.pth"}},
+        "telemetry_summary": {"duration_sec": 42.7, "cpu_percent": 85.2},
     },
     {
         "task_id": "t2",
@@ -253,59 +256,28 @@ sample_tasks = [
             "dataset": {
                 "name": "CIFAR-10",
                 "size": 50000,
-                "source": {"url": "http://example.com/cifar", "format": "jpeg"}
+                "source": {"url": "http://example.com/cifar", "format": "jpeg"},
             },
-            "params": {"epochs": 10, "batch_size": 64, "shuffle": False}
+            "params": {"epochs": 10, "batch_size": 64, "shuffle": False},
         },
-        "generated": {
-            "model": {
-                "accuracy": 0.91,
-                "layers": [128, 128, 10],
-                "saved_path": "/models/cifar_v1.pth"
-            }
-        },
-        "telemetry_summary": {"duration_sec": 120.5, "cpu_percent": 92.0}
+        "generated": {"model": {"accuracy": 0.91, "layers": [128, 128, 10], "saved_path": "/models/cifar_v1.pth"}},
+        "telemetry_summary": {"duration_sec": 120.5, "cpu_percent": 92.0},
     },
     {
         "task_id": "t3",
         "activity_id": "evaluate_model",
-        "used": {
-            "model_path": "/models/mnist_v1.pth",
-            "test_data": {
-                "name": "MNIST-test",
-                "samples": 10000
-            }
-        },
-        "generated": {
-            "metrics": {
-                "accuracy": 0.97,
-                "confusion_matrix": [[8500, 100], [50, 1350]]
-            }
-        },
-        "telemetry_summary": {"duration_sec": 15.3}
+        "used": {"model_path": "/models/mnist_v1.pth", "test_data": {"name": "MNIST-test", "samples": 10000}},
+        "generated": {"metrics": {"accuracy": 0.97, "confusion_matrix": [[8500, 100], [50, 1350]]}},
+        "telemetry_summary": {"duration_sec": 15.3},
     },
     {
         "task_id": "t4",
         "activity_id": "evaluate_model",
-        "used": {
-            "model_path": "/models/cifar_v1.pth",
-            "test_data": {
-                "name": "CIFAR-test",
-                "samples": 10000
-            }
-        },
-        "generated": {
-            "metrics": {
-                "accuracy": 0.88,
-                "confusion_matrix": [[4000, 500], [300, 5200]]
-            }
-        },
-        "telemetry_summary": {"duration_sec": 18.9}
-    }
+        "used": {"model_path": "/models/cifar_v1.pth", "test_data": {"name": "CIFAR-test", "samples": 10000}},
+        "generated": {"metrics": {"accuracy": 0.88, "confusion_matrix": [[4000, 500], [300, 5200]]}},
+        "telemetry_summary": {"duration_sec": 18.9},
+    },
 ]
-
-
-
 
 
 def infer_dtype(value: Any) -> str:
@@ -364,19 +336,23 @@ def update_schema(schema_section: list, flat_fields: dict):
             if val_repr not in field["v"] and len(field["v"]) < 3:
                 field["v"].append(val_repr)
 
+
 def update_tasks_summary_schema(tasks: list[dict], schema) -> dict:
+    """Update tasks_summary schema."""
     act_schema = update_activity_schema(tasks)
     merged_schema = deep_merge_dicts(act_schema, schema)
     return merged_schema
 
+
 def update_activity_schema(tasks: list[dict]) -> dict:
     """Build schema for each activity_id from list of task dicts."""
-
-    schema = defaultdict(lambda: {
-        "in": [],
-        "out": [],
-        #"tel": [],
-    })
+    schema = defaultdict(
+        lambda: {
+            "in": [],
+            "out": [],
+            # "tel": [],
+        }
+    )
 
     for task in tasks:
         activity_id = task.get("activity_id")
@@ -388,7 +364,7 @@ def update_activity_schema(tasks: list[dict]) -> dict:
         for section_key, schema_key in [
             ("used", "in"),
             ("generated", "out"),
-         #   ("telemetry_summary", "tel"),
+            #   ("telemetry_summary", "tel"),
         ]:
             section_data = task.get(section_key)
             if isinstance(section_data, dict):

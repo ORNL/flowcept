@@ -1,10 +1,17 @@
 import streamlit as st
 from flowcept.agents.gui import AI, PAGE_TITLE
-from flowcept.agents.gui.gui_utils import query_agent, display_ai_msg, display_ai_msg_from_tool, \
-    display_df_tool_response
+from flowcept.agents.gui.gui_utils import (
+    query_agent,
+    display_ai_msg,
+    display_ai_msg_from_tool,
+    display_df_tool_response,
+)
 
-from flowcept.agents.tools.in_memory_queries.in_memory_queries_tools import generate_result_df, generate_plot_code, \
-    run_df_code
+from flowcept.agents.tools.in_memory_queries.in_memory_queries_tools import (
+    generate_result_df,
+    generate_plot_code,
+    run_df_code,
+)
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=AI)
 st.title(PAGE_TITLE)
@@ -30,6 +37,7 @@ display_ai_msg(GREETING)
 
 
 def main():
+    """Main Streamlit Function."""
     user_input = st.chat_input("Send a message")
     st.caption("💡 Tip: Ask about workflow metrics, generate plots, or summarize data.")
 

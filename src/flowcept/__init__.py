@@ -13,6 +13,7 @@ def __getattr__(name):
         from flowcept.commons.flowcept_dataclasses.workflow_object import (
             WorkflowObject,
         )
+
         return WorkflowObject
 
     elif name == "flowcept_task":

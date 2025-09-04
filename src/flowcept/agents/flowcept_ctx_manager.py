@@ -14,7 +14,7 @@ from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseA
 
 
 from flowcept.agents import agent_client
-from flowcept.commons.task_data_preprocess import summarize_task, update_tasks_summary_schema
+from flowcept.commons.task_data_preprocess import summarize_task
 
 
 @dataclass
@@ -29,6 +29,7 @@ class FlowceptAppContext(BaseAppContext):
     critical_tasks : List[Dict]
         List of critical task summaries with tags or anomalies.
     """
+
     tasks: List[Dict] | None
     task_summaries: List[Dict] | None
     critical_tasks: List[Dict] | None
@@ -98,12 +99,18 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                 self.context.critical_tasks.append(task_summary)
 
             if self.msgs_counter > 0 and self.msgs_counter % self.context_size == 0:
-                self.logger.debug(f"Going to add to index! {(self.msgs_counter-self.context_size,self.msgs_counter)}")
+                self.logger.debug(
+                    f"Going to add to index! {(self.msgs_counter - self.context_size, self.msgs_counter)}"
+                )
                 try:
-                    self.update_schema_and_add_to_df(tasks=self.context.task_summaries[self.msgs_counter - self.context_size:self.msgs_counter])
+                    self.update_schema_and_add_to_df(
+                        tasks=self.context.task_summaries[self.msgs_counter - self.context_size : self.msgs_counter]
+                    )
                 except Exception as e:
-                    self.logger.error(f"Could not add these tasks to buffer!\n"
-                                      f"{self.context.task_summaries[self.msgs_counter - self.context_size:self.msgs_counter]}")
+                    self.logger.error(
+                        f"Could not add these tasks to buffer!\n"
+                        f"{self.context.task_summaries[self.msgs_counter - self.context_size : self.msgs_counter]}"
+                    )
                     self.logger.exception(e)
 
                 # self.monitor_chunk()
@@ -111,6 +118,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         return True
 
     def update_schema_and_add_to_df(self, tasks: List[Dict]):
+        """Update the schema and add to the DataFrame in context."""
         self.schema_tracker.update_with_tasks(tasks)
         self.context.tasks_schema = self.schema_tracker.get_schema()
         self.context.value_examples = self.schema_tracker.get_example_values()
@@ -144,7 +152,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             df=pd.DataFrame(),
             tasks_schema={},
             value_examples={},
-            tracker_config=self.tracker_config
+            tracker_config=self.tracker_config,
         )
         DEBUG = True  # TODO debugging!
         if DEBUG:
@@ -164,6 +172,4 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 
 # Exporting the ctx_manager and the mcp_flowcept
 ctx_manager = FlowceptAgentContextManager()
-mcp_flowcept = FastMCP("FlowceptAgent", require_session=False,
-                       lifespan=ctx_manager.lifespan,
-                       stateless_http=True)
+mcp_flowcept = FastMCP("FlowceptAgent", require_session=False, lifespan=ctx_manager.lifespan, stateless_http=True)

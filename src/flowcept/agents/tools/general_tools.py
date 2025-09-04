@@ -61,7 +61,6 @@ def check_llm() -> str:
 
 @mcp_flowcept.tool()
 def prompt_handler(message: str) -> ToolResult:
-
     """
     Routes a user message using an LLM to classify its intent.
 

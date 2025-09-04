@@ -1,3 +1,6 @@
+# flake8: noqa: E501
+# flake8: noqa: D103
+
 from mcp.server.fastmcp.prompts import base
 
 BASE_ROLE = (
@@ -14,9 +17,7 @@ DATA_SCHEMA_PROMPT = (
 
 QUESTION_PROMPT = "I am particularly more interested in the following question: %QUESTION%."
 
-SMALL_TALK_PROMPT = (
-    "Act as a Workflow Provenance Specialist. I would like to interact with you, but please be concise and brief. This is my message:\n"
-)
+SMALL_TALK_PROMPT = "Act as a Workflow Provenance Specialist. I would like to interact with you, but please be concise and brief. This is my message:\n"
 
 ROUTING_PROMPT = (
     "You are a routing assistant for a provenance AI agent. "
@@ -30,6 +31,7 @@ ROUTING_PROMPT = (
     "Respond with only the route label."
     "User message is below:\n "
 )
+
 
 def get_question_prompt(question: str):
     """Generates a user prompt with the given question filled in."""

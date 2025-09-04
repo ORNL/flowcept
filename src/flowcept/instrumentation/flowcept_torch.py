@@ -18,9 +18,9 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 from flowcept.commons.vocabulary import Status
 from flowcept.configs import (
     INSTRUMENTATION,
-    TELEMETRY_CAPTURE,
     REPLACE_NON_JSON_SERIALIZABLE,
-    INSTRUMENTATION_ENABLED, TELEMETRY_ENABLED,
+    INSTRUMENTATION_ENABLED,
+    TELEMETRY_ENABLED,
 )
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor

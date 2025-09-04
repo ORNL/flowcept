@@ -12,11 +12,7 @@ from flowcept.commons.vocabulary import Status
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 from flowcept.commons.utils import replace_non_serializable
-from flowcept.configs import (
-    REPLACE_NON_JSON_SERIALIZABLE,
-    INSTRUMENTATION_ENABLED,
-    HOSTNAME, TELEMETRY_ENABLED
-)
+from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE, INSTRUMENTATION_ENABLED, HOSTNAME, TELEMETRY_ENABLED
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 

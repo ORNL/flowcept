@@ -86,6 +86,7 @@ def init_settings(full: bool = False):
             print(f"Copied {sample_settings_path} to {dest_path}")
     else:
         from omegaconf import OmegaConf
+
         cfg = OmegaConf.create(configs.DEFAULT_SETTINGS)
         OmegaConf.save(cfg, dest_path)
         print(f"Generated default settings under {dest_path}.")
@@ -96,13 +97,15 @@ def version():
     Returns this Flowcept's installation version.
     """
     from flowcept.version import __version__
+
     print(f"Flowcept {__version__}")
 
 
 def stream_messages(print_messages: bool = False, messages_file_path: Optional[str] = None):
     """
     Listen to Flowcept's message stream and optionally echo/save messages.
-    Parameters
+
+    Parameters.
     ----------
     print_messages : bool, optional
         If True, print each decoded message to stdout.
@@ -112,6 +115,7 @@ def stream_messages(print_messages: bool = False, messages_file_path: Optional[s
     """
     # Local imports to avoid changing module-level deps
     from flowcept.configs import MQ_TYPE
+
     if MQ_TYPE != "redis":
         print("This is currently only available for Redis. Other MQ impls coming soon.")
         return
@@ -135,6 +139,7 @@ def stream_messages(print_messages: bool = False, messages_file_path: Optional[s
 
     def _json_dumps(obj) -> str:
         """JSON-dump a msgpack-decoded object; handle bytes safely."""
+
         def _default(o):
             if isinstance(o, (bytes, bytearray)):
                 try:
@@ -142,6 +147,7 @@ def stream_messages(print_messages: bool = False, messages_file_path: Optional[s
                 except Exception:
                     return o.hex()
             raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+
         return json.dumps(obj, ensure_ascii=False, separators=(",", ":"), default=_default)
 
     # Prepare output file (JSONL)
@@ -212,6 +218,7 @@ def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: boo
     print(f"  consumers: {consumers or []}")
 
     from flowcept import Flowcept
+
     Flowcept.start_consumption_services(
         bundle_exec_id=bundle_exec_id,
         check_safe_stops=check_safe_stops,
@@ -256,6 +263,7 @@ def workflow_count(workflow_id: str):
         The ID of the workflow to count tasks for.
     """
     from flowcept import Flowcept
+
     result = {
         "workflow_id": workflow_id,
         "tasks": len(Flowcept.db.query({"workflow_id": workflow_id})),
@@ -286,6 +294,7 @@ def query(filter: str, project: str = None, sort: str = None, limit: int = 0):
         A list of task documents matching the query.
     """
     from flowcept import Flowcept
+
     _filter, _project, _sort = None, None, None
     if filter:
         _filter = json.loads(filter)
@@ -294,7 +303,9 @@ def query(filter: str, project: str = None, sort: str = None, limit: int = 0):
     if sort:
         _sort = list(sort)
     print(
-        json.dumps(Flowcept.db.query(filter=_filter, projection=_project, sort=_sort, limit=limit), indent=2, default=str)
+        json.dumps(
+            Flowcept.db.query(filter=_filter, projection=_project, sort=_sort, limit=limit), indent=2, default=str
+        )
     )
 
 
@@ -308,11 +319,12 @@ def get_task(task_id: str):
         The identifier of the task.
     """
     from flowcept import Flowcept
+
     _query = {"task_id": task_id}
     print(json.dumps(Flowcept.db.query(_query), indent=2, default=str))
 
 
-def start_agent(): # TODO: start with gui
+def start_agent():  # TODO: start with gui
     """Start Flowcept agent."""
     from flowcept.agents.flowcept_agent import main
 
@@ -327,7 +339,6 @@ def start_agent_gui(port: int = None):
     port : int, optional
         The default port is 8501. Use --port if you want to run the GUI on a different port.
     """
-
     gui_path = Path(__file__).parent / "agents" / "gui" / "agent_gui.py"
     gui_path = gui_path.resolve()
     cmd = f"streamlit run {gui_path}"
@@ -381,6 +392,7 @@ def check_services():
         Prints diagnostics to stdout; returns nothing.
     """
     from flowcept import Flowcept
+
     print(f"Testing with settings at: {configs.SETTINGS_PATH}")
     from flowcept.configs import MONGO_ENABLED, AGENT, KVDB_ENABLED
 
@@ -440,6 +452,7 @@ def check_services():
         #         print("Could not find chat history. Make sure that the DB Inserter service is on.")
     print("\n\nAll expected services seem to be working properly!")
     return
+
 
 def start_mongo() -> None:
     """
@@ -603,12 +616,11 @@ def main():  # noqa: D103
         parser.add_argument(flag, action="store_true", help=short_help)
 
         for pname, param in inspect.signature(func).parameters.items():
-
             arg_name = f"--{pname.replace('_', '-')}"
             params_doc = _parse_numpy_doc(doc).get(pname, {})
 
             help_text = f"{params_doc.get('type', '')} - {params_doc.get('desc', '').strip()}"
-            if param.annotation == bool:
+            if param.annotation is bool:
                 parser.add_argument(arg_name, action="store_true", help=help_text)
             elif param.annotation == List[str]:
                 parser.add_argument(arg_name, type=lambda s: s.split(","), help=help_text)
@@ -671,11 +683,11 @@ def main():  # noqa: D103
 
     for func in COMMANDS:
         flag = f"--{func.__name__.replace('_', '-')}"
-        if args.get(func.__name__.replace('-', '_')):
+        if args.get(func.__name__.replace("-", "_")):
             sig = inspect.signature(func)
             kwargs = {}
             for pname in sig.parameters:
-                val = args.get(pname.replace('-', '_'))
+                val = args.get(pname.replace("-", "_"))
                 if val is not None:
                     kwargs[pname] = val
             func(**kwargs)
@@ -687,4 +699,4 @@ def main():  # noqa: D103
 
 if __name__ == "__main__":
     main()
-    #check_services()
+    # check_services()

@@ -53,22 +53,22 @@ class FlowceptTask(object):
     """
 
     def __init__(
-            self,
-            task_id: str = None,
-            workflow_id: str = None,
-            campaign_id: str = None,
-            activity_id: str = None,
-            agent_id: str = None,
-            parent_task_id: str = None,
-            used: Dict = None,
-            data: Any = None,
-            subtype: str = None,
-            custom_metadata: Dict = None,
-            generated: Dict = None,
-            ended_at: float = None,
-            stdout: str = None,
-            stderr: str = None,
-            status: Status = None,
+        self,
+        task_id: str = None,
+        workflow_id: str = None,
+        campaign_id: str = None,
+        activity_id: str = None,
+        agent_id: str = None,
+        parent_task_id: str = None,
+        used: Dict = None,
+        data: Any = None,
+        subtype: str = None,
+        custom_metadata: Dict = None,
+        generated: Dict = None,
+        ended_at: float = None,
+        stdout: str = None,
+        stderr: str = None,
+        status: Status = None,
     ):
         """
         Initializes a FlowceptTask and optionally finalizes it.

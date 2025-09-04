@@ -1,3 +1,5 @@
+# flake8: noqa: E501
+# flake8: noqa: D103
 
 COMMON_TASK_FIELDS = """
     | Column                        | Data Type | Description |
@@ -48,7 +50,7 @@ def get_df_schema_prompt(dynamic_schema, example_values):
 
         {COMMON_TASK_FIELDS}
         ---
-    """ 
+    """
 
     values_prompt = f"""    
         Now, this other dictionary below provides type (t), up to 3 example values (v), and, for lists, shape (s) and element type (et) for each field.
@@ -61,6 +63,7 @@ def get_df_schema_prompt(dynamic_schema, example_values):
     # values_prompt = ""
     prompt = schema_prompt + values_prompt
     return prompt
+
 
 def generate_plot_code_prompt(query, dynamic_schema, example_values) -> str:
     PLOT_PROMPT = f"""
@@ -120,6 +123,7 @@ def generate_plot_code_prompt(query, dynamic_schema, example_values) -> str:
 
     """
     return PLOT_PROMPT
+
 
 JOB = "You will generate a pandas dataframe code to solve the query."
 ROLE = """You are an expert in HPC workflow provenance data analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems. 
@@ -213,16 +217,16 @@ OUTPUT_FORMATTING = """
 
 def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
     prompt = (
-              f"{ROLE}" 
-              f"{JOB}"
-              f"{DF_FORM}"
-              f"{get_df_schema_prompt(dynamic_schema, example_values)}" # main tester
-              # f"{QUERY_GUIDELINES}" # main tester
-              f"{FEW_SHOTS}" # main tester
-              f"{OUTPUT_FORMATTING}" 
-              "User Query:"
-              f"{query}"
-              )
+        f"{ROLE}"
+        f"{JOB}"
+        f"{DF_FORM}"
+        f"{get_df_schema_prompt(dynamic_schema, example_values)}"  # main tester
+        # f"{QUERY_GUIDELINES}" # main tester
+        f"{FEW_SHOTS}"  # main tester
+        f"{OUTPUT_FORMATTING}"
+        "User Query:"
+        f"{query}"
+    )
     return prompt
 
 
@@ -251,6 +255,7 @@ def dataframe_summarizer_context(code, reduced_df, query) -> str:
     """
     return prompt
 
+
 def extract_or_fix_json_code_prompt(raw_text) -> str:
     prompt = f"""
     You are a JSON extractor and fixer.
@@ -268,6 +273,7 @@ def extract_or_fix_json_code_prompt(raw_text) -> str:
     {raw_text}
     """
     return prompt
+
 
 def extract_or_fix_python_code_prompt(raw_text):
     prompt = f"""

@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import ast
 
+
 def load_saved_df(df_path: str) -> pd.DataFrame:
     """
     Load a DataFrame from a CSV file.
@@ -19,15 +20,16 @@ def load_saved_df(df_path: str) -> pd.DataFrame:
         The loaded DataFrame.
     """
     df = pd.read_csv(df_path, index_col=False)
-    str_types = ['task_id', 'parent_task_id', 'workflow_id', 'activity_id', 'agent_id', 'campaign_id', 'hostname']
+    str_types = ["task_id", "parent_task_id", "workflow_id", "activity_id", "agent_id", "campaign_id", "hostname"]
     for col in str_types:
         if col in df.columns:
             df[col] = df[col].astype(str)
-    dates = ['started_at', 'ended_at']
+    dates = ["started_at", "ended_at"]
     for date in dates:
         if date in df.columns:
-            df[date] = pd.to_datetime(df[date], errors='coerce')
+            df[date] = pd.to_datetime(df[date], errors="coerce")
     return df
+
 
 def normalize_output(result):
     """
@@ -58,14 +60,14 @@ def normalize_output(result):
 
     elif isinstance(result, (int, float, str, bool, np.generic)):
         # Scalars or numpy scalars
-        _df = pd.DataFrame({'Scalar_Value': [result]})
+        _df = pd.DataFrame({"Scalar_Value": [result]})
 
     elif isinstance(result, (list, tuple)):
-        _df = pd.DataFrame({'List_Value': result})
+        _df = pd.DataFrame({"List_Value": result})
 
     elif isinstance(result, np.ndarray):
         if result.ndim == 1:
-            _df = pd.DataFrame({'Array_Value': result})
+            _df = pd.DataFrame({"Array_Value": result})
         elif result.ndim == 2:
             _df = pd.DataFrame(result)
         else:
@@ -75,13 +77,15 @@ def normalize_output(result):
         raise TypeError(f"Unsupported result type: {type(result)}")
 
     if not len(_df):
-        raise ValueError(f"Result DataFrame is Empty.")
+        raise ValueError("Result DataFrame is Empty.")
 
     return _df
+
+
 def safe_execute(df: pd.DataFrame, code: str):
     """
     Strip any leftover fences, then execute the code in a limited namespace.
-    Returns result or None
+    Returns result or None.
     """
     code = clean_code(code)
     local_env = {"df": df, "pd": pd, "np": np}
@@ -90,6 +94,52 @@ def safe_execute(df: pd.DataFrame, code: str):
 
 
 def format_result_df(result_df) -> str:
+    """
+    Format a pandas DataFrame as a CSV string with safety checks.
+
+    This function validates that the input is a pandas DataFrame,
+    ensures it is not empty, and converts it to a CSV string. If the
+    DataFrame is very large, only the first 100 rows are included.
+
+    Parameters
+    ----------
+    result_df : pandas.DataFrame
+        The DataFrame to format.
+
+    Returns
+    -------
+    str
+        A CSV-formatted string representation of the DataFrame.
+
+    Raises
+    ------
+    Exception
+        If the input is not a DataFrame or if the DataFrame is empty.
+
+    Notes
+    -----
+    - The maximum number of rows returned is 100. If the DataFrame has
+      more than 100 rows, a message is printed and only the first 100
+      rows are included.
+    - The index column is omitted in the CSV output.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> df = pd.DataFrame({"a": [1, 2, 3], "b": ["x", "y", "z"]})
+    >>> print(format_result_df(df))
+    a,b
+    1,x
+    2,y
+    3,z
+
+    Example with more than 100 rows:
+
+    >>> df = pd.DataFrame({"col": range(200)})
+    >>> csv_str = format_result_df(df)  # prints warning
+    >>> len(csv_str.splitlines())  # 101 lines (header + 100 rows)
+    101
+    """
     if isinstance(result_df, pd.DataFrame):
         if not len(result_df):
             raise Exception("Empty DataFrame")
@@ -104,19 +154,63 @@ def format_result_df(result_df) -> str:
 
 
 def safe_json_parse(text):
+    r"""
+    Safely parse a string into a JSON object with minimal error recovery.
+
+    This function attempts to parse the given text as JSON. If the
+    initial parsing fails, it tries to fix common issues such as:
+
+    - Leading/trailing whitespace
+    - Surrounding backticks (e.g., Markdown-formatted JSON)
+    - Missing opening/closing braces
+
+    Parameters
+    ----------
+    text : str
+        The input string expected to contain JSON content.
+
+    Returns
+    -------
+    object
+        The Python object resulting from parsing the JSON string
+        (usually a dict or list).
+
+    Raises
+    ------
+    ValueError
+        If the text cannot be parsed as valid JSON even after recovery attempts.
+
+    Examples
+    --------
+    Valid JSON string:
+
+    >>> safe_json_parse('{"a": 1, "b": 2}')
+    {'a': 1, 'b': 2}
+
+    With backticks and whitespace:
+
+    >>> safe_json_parse("``` { \\"x\\": 42 } ```")
+    {'x': 42}
+
+    Missing braces:
+
+    >>> safe_json_parse('"y": 99')
+    {'y': 99}
+    """
     try:
         return json.loads(text)
     except json.JSONDecodeError:
         # Try to fix common issues
-        text = text.strip().strip('`')  # remove backticks or whitespace
-        if not text.startswith('{'):
-            text = '{' + text
-        if not text.endswith('}'):
-            text = text + '}'
+        text = text.strip().strip("`")  # remove backticks or whitespace
+        if not text.startswith("{"):
+            text = "{" + text
+        if not text.endswith("}"):
+            text = text + "}"
         try:
             return json.loads(text)
         except Exception as e:
             raise ValueError(f"Still failed to parse JSON: {e}")
+
 
 def clean_code(text):
     """
@@ -143,7 +237,6 @@ def clean_code(text):
         return line_match.group(1).strip()
 
     return ""
-
 
 
 def summarize_df(df: pd.DataFrame, df_query_code: str, max_rows: int = 5, max_cols: int = 10) -> pd.DataFrame:
