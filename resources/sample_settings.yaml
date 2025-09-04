@@ -79,8 +79,8 @@ db_buffer:
   insertion_buffer_time_secs: 5   # Time interval (in seconds) to buffer incoming records before flushing to the database
   buffer_size: 50    # Maximum number of records to hold in the buffer before forcing a flush
   remove_empty_fields: false    # If true, fields with null/empty values will be removed before insertion
-  stop_max_trials: 240    # Maximum number of trials before giving up when waiting for a fully safe stop (i.e., all records have been inserted as expected).
-  stop_trials_sleep: 0.01   # Sleep duration (in seconds) between trials when waiting for a fully safe stop.
+  stop_max_trials: 300    # Maximum number of trials before giving up when waiting for a fully safe stop (i.e., all records have been inserted as expected).
+  stop_trials_sleep: 0.1  # Sleep duration (in seconds) between trials when waiting for a fully safe stop.
 
 agent:
   enabled: false
