@@ -110,7 +110,7 @@ def lightweight_flowcept_task(func=None):
 
 
 def flowcept_task(func=None, **decorator_kwargs):
-    """Get flowcept task."""
+    """Flowcept task decorator."""
     if INSTRUMENTATION_ENABLED:
         interceptor = InstrumentationInterceptor.get_instance()
         logger = FlowceptLogger()
@@ -133,9 +133,12 @@ def flowcept_task(func=None, **decorator_kwargs):
             try:
                 bound_args = sig.bind(*args, **kwargs)
                 bound_args.apply_defaults()
-                handled_args = args_handler(kwargs=dict(bound_args.arguments))
-            except Exception:
-                handled_args = args_handler(*args, **kwargs)
+                handled_args = args_handler(**dict(bound_args.arguments))
+            except Exception as e:
+                if isinstance(e, TypeError):
+                    raise e
+                else:
+                    handled_args = args_handler(*args, **kwargs)
 
             task_obj = TaskObject()
             task_obj.subtype = subtype
