@@ -141,6 +141,7 @@ class TestDask(unittest.TestCase):
             {"workflow_id": wf_id},
             condition_to_evaluate=lambda docs: "phenome" in docs[0]["used"]
             and len(docs[0]["generated"]) > 0,
+            max_trials=30
         )
         assert evaluate_until(
             lambda: Flowcept.db.get_workflow_object(workflow_id=wf_id) is not None,
