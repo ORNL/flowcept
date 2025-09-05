@@ -1,7 +1,7 @@
 # The code in this file is based on:
 # https://blog.paperspace.com/build-a-language-model-using-pytorch/
 import math
-from time import time
+from time import time, sleep
 
 import torch
 import torch.nn as nn
@@ -241,6 +241,8 @@ def model_train(
 
     t1 = time()
     print("Finished training")
+
+    sleep(3) # Adding some sleep time to help processing calm down a bit.
 
     test_loss = -1
     if with_persistence:

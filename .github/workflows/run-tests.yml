@@ -31,15 +31,12 @@ jobs:
       - name: Show OS Info
         run: 'case "${OSTYPE:-}" in linux*) echo "OS Type: Linux"; (command -v lsb_release >/dev/null 2>&1 && lsb_release -a || cat /etc/os-release); uname -r ;; darwin*) echo "OS Type: macOS"; sw_vers || true; uname -r ;; *) echo "Unsupported OS type: ${OSTYPE:-unknown}" ;; esac'
 
-      - name: Start docker compose with redis
-        run: make services-mongo
-
-      - name: Upgrade pip and install basic dependencies
+      - name: Upgrade pip
         run: |  
           python -m pip install --upgrade pip
           python --version
 
-      - name: Test Basic Example
+      - name: Test basic example without any external service
         run: |
           pip install .
           pip list
@@ -47,6 +44,9 @@ jobs:
           python examples/start_here.py
           pip uninstall flowcept -y 
           rm ~/.flowcept/settings.yaml
+
+      - name: Start docker compose with redis
+        run: make services-mongo
 
       - name: Test examples
         run: bash .github/workflows/run_examples.sh examples true # with mongo
