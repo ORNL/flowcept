@@ -7,6 +7,70 @@
 
 # Flowcept
 
+Flowcept captures and queries workflow provenance at runtime with minimal code changes and low overhead. It unifies data from diverse tools and workflows across the Edge–Cloud–HPC continuum and provides ML-aware capture, telemetry, and flexible storage.
+
+---
+
+# Quickstart
+
+This is the fastest way to see Flowcept capturing provenance from plain Python functions, no external services needed.
+
+1) Install and initialize settings
+
+```shell
+# Make sure you activate your Python environment (e.g., conda, venv) first
+pip install flowcept
+flowcept --init-settings
+```
+
+2) Run the minimal example
+
+Save as `quickstart.py` and run `python quickstart.py.`
+
+```python
+"""
+A minimal example of Flowcept's instrumentation using @decorators.
+This example needs no DB, broker, or external service.
+"""
+import json
+
+from flowcept import Flowcept, flowcept_task
+from flowcept.instrumentation.flowcept_decorator import flowcept
+
+
+@flowcept_task(output_names="o1")
+def sum_one(i1):
+    return i1 + 1
+
+
+@flowcept_task(output_names="o2")
+def mult_two(o1):
+    return o1 * 2
+
+
+@flowcept
+def main():
+    n = 3
+    o1 = sum_one(n)
+    o2 = mult_two(o1)
+    print("Final output", o2)
+
+
+if __name__ == "__main__":
+    main()
+
+    prov_messages = Flowcept.read_messages_file()
+    assert len(prov_messages) == 2
+    print(json.dumps(prov_messages, indent=2))
+```
+
+You should see:
+- Final output 8 printed to stdout, and
+- Two provenance messages printed, each related to an executed function.
+
+For online querying, telemetry, adapters (MLflow, Dask, TensorBoard), PyTorch instrumentation, HPC or federated runs,
+and more, see the [Jupyter Notebooks](notebooks) and [Examples directory](examples) for utilization examples.
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -22,61 +86,41 @@
 
 ## Overview
 
-Flowcept is a runtime data integration system that captures and queries workflow provenance with minimal or no code changes. It unifies data from diverse workflows and tools, enabling integrated analysis and insights, especially in federated environments. 
+Flowcept captures and queries workflow provenance at runtime with minimal code changes and low data capture overhead,
+unifying data from diverse tools and workflows.
 
-Designed for scenarios involving critical data from multiple workflows, Flowcept supports end-to-end monitoring, analysis, querying, and enhanced support for Machine Learning (ML) workflows.
+Designed for scenarios involving critical data from multiple, federated workflows in the Edge-Cloud-HPC continuum, Flowcept supports end-to-end monitoring, analysis, querying, and enhanced support for Machine Learning (ML) workflows.
 
 ## Features
 
-- Automatic workflow provenance data capture from heterogeneous workflows
-- Data observability with no or minimal intrusion to application workflows
-- Explicit application instrumentation, if this is preferred over data observability
-- ML data capture in various levels of details: workflow, model fitting or evaluation task, epoch iteration, layer forwarding
-- ML model management (e.g., model storage and retrieval, along with their metadata and provenance)
-- Adapter-based, loosely-coupled system architecture, making it easy to plug and play with different data processing systems and backend database (e.g., MongoDB) or MQ services (e.g., Redis, Kafka)
-- Low-overhead focused system architecture, to avoid adding performance overhead particularly to workloads that run on HPC machines
-- Telemetry data capture (e.g., CPU, GPU, Memory consumption) linked to the application dataflow
-- Highly customizable to multiple use cases, enabling easy toggle between settings (e.g., with/without provenance capture; with/without telemetry and which telemetry type to capture; which adapters or backend services to run with) 
-- [W3C PROV](https://www.w3.org/TR/prov-overview/) adherence
- 
-Notes:
-
-- Currently implemented data observability adapters:
-  - MLFlow
-  - Dask
-  - TensorBoard
-- Python scripts can be easily instrumented via `@decorators` using `@flowcept_task` (for generic Python method) or `@torch_task` (for methods that encapsulate PyTorch model manipulation, such as training or evaluation). 
-- Currently supported MQ systems:
-  - [Kafka](https://kafka.apache.org)
-  - [Redis](https://redis.io)
-  - [Mofka](https://mofka.readthedocs.io)
-- Currently supported database systems:
-  - MongoDB
-  - Lightning Memory-Mapped Database (lightweight file-only database system)
+- Automatic workflow provenance capture with minimal intrusion
+- Adapters for MLflow, Dask, TensorBoard; easy to add more
+- Optional explicit instrumentation via decorators
+- ML-aware capture, from workflow to epoch and layer granularity
+- Low overhead, suitable for HPC and distributed setups
+- Telemetry capture for CPU, GPU, memory, linked to dataflow
+- Pluggable MQ and storage backends (Redis, Kafka, MongoDB, LMDB)
+- [W3C PROV](https://www.w3.org/TR/prov-overview/) adherence 
 
 Explore [Jupyter Notebooks](notebooks) and [Examples](examples) for usage.
 
-Refer to [Contributing](CONTRIBUTING.md) for adding new adapters. Note: The term "plugin" in the codebase is synonymous with "adapter," and future updates will standardize terminology.
-
-# Installation
+## Installation
 
 Flowcept can be installed in multiple ways, depending on your needs.
 
 ### 1. Default Installation
 To install Flowcept with its basic dependencies from [PyPI](https://pypi.org/project/flowcept/), run:
 
-```
+```shell
 pip install flowcept
 ```
 
-This installs the core Flowcept package but does **not** include MongoDB or any adapter-specific dependencies.
-
-
+This installs the core Flowcept package but does **not** include MongoDB, Redis, or any adapter-specific dependencies.
 
 ### 2. Installing Specific Adapters and Additional Dependencies
-To install extra dependencies required for specific adapters or features, use:
+To install extra dependencies required for specific adapters or features (good practice is to install only what you need!):
 
-```
+```shell
 pip install flowcept[mongo]         # Install Flowcept with MongoDB support.
 pip install flowcept[mlflow]        # Install MLflow adapter.
 pip install flowcept[dask]          # Install Dask adapter.
@@ -88,13 +132,14 @@ pip install flowcept[dev]           # Install Flowcept's developer dependencies.
 ```
 
 ### 3. Install All Optional Dependencies at Once
-If you want to install all optional dependencies, use:
+
+WARNING: Very likely you will not need this, as this will install several dependencies that won't make sense to be in
+a same Python environment. This is useful for developers contributing to Flowcept's codebase, who may
+need all dependencies installed. 
 
 ```
 pip install flowcept[all]
 ```
-
-This is useful mostly for Flowcept developers. Please avoid installing like this if you can, as it may install several dependencies you will never use.
 
 ### 4. Installing from Source
 To install Flowcept from the source repository:
@@ -113,15 +158,18 @@ pip install .[dependency_name]
 
 This follows the same pattern as step 2, allowing for a customized installation from source.
 
-# Setup
+## Setup
 
 ### Start the MQ System:
 
-To use Flowcept, one needs to start a MQ system `$> make services`. This will start up Redis but see other options in the [deployment](deployment) directory and see [Data Persistence](#data-persistence) notes below.
+To use Flowcept, one needs to start a MQ system `make services`. This will start up Redis but see other options in the [deployment](deployment) directory and see [Data Persistence](#data-persistence) notes below.
 
 ### Flowcept Settings File
 
-Flowcept requires a settings file for configuration. 
+Flowcept requires a settings file for configuration.
+
+Running `flowcept --init-settings` will create a minimal settings file under your home directory: `~/.flowcept/setting.yaml`. 
+
 You can find an example configuration file [here](resources/sample_settings.yaml), with documentation for each parameter provided as inline comments.
 
 #### What You Can Configure:
@@ -180,32 +228,14 @@ To use containers instead of installing Flowcept's dependencies on your host sys
 
  See the [Jupyter Notebooks](notebooks) and [Examples directory](examples) for utilization examples.
 
+## Supported Adapters & Backends
 
-### Simple Example with Decorators Instrumentation
-
-In addition to existing adapters to Dask, MLFlow, and others (it's extensible for any system that generates data), Flowcept also offers instrumentation via @decorators. 
-
-```python 
-from flowcept import Flowcept, flowcept_task
-
-@flowcept_task
-def sum_one(n):
-    return n + 1
-
-
-@flowcept_task
-def mult_two(n):
-    return n * 2
-
-
-with Flowcept(workflow_name='test_workflow'):
-    n = 3
-    o1 = sum_one(n)
-    o2 = mult_two(o1)
-    print(o2)
-
-print(Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id}))
-```
+| Category                           | Supported Options |
+|------------------------------------|----------------------------------------------------------------------------------|
+| **Data Observability**             | [MLflow](https://github.com/ORNL/flowcept/blob/main/examples/mlflow_example.py), [Dask](https://github.com/ORNL/flowcept/blob/main/examples/dask_example.py), [TensorBoard](https://github.com/ORNL/flowcept/blob/main/examples/tensorboard_example.py) |
+| **Instrumentation and Decorators** | - [@flowcept](https://github.com/ORNL/flowcept/blob/main/examples/start_here.py): capture a bigger block of code as a workflow <br> - [@flowcept_task](https://github.com/ORNL/flowcept/blob/main/examples/instrumented_simple_example.py): generic tasks <br> - `@telemetry_flowcept_task`: same as `@flowcept_task`, but optimized for telemetry capture <br> - `@lightweight_flowcept_task`: same as `@flowcept_task`, but very lightweight, optimized for HPC workloads <br> - [Loop](https://github.com/ORNL/flowcept/blob/main/examples/instrumented_loop_example.py) <br> - [PyTorch Model](https://github.com/ORNL/flowcept/blob/main/examples/llm_complex/llm_model.py) <br> - [MCP Agents](https://github.com/ORNL/flowcept/blob/main/examples/agents/aec_agent_mock.py) |
+| **Message Queues (MQ)**            | [Redis](https://redis.io), [Kafka](https://kafka.apache.org), [Mofka](https://mofka.readthedocs.io) <br> _Setup example:_ [docker compose](https://github.com/ORNL/flowcept/blob/main/deployment/compose.yml) |
+| **Databases**                      | MongoDB, LMDB |
 
 ## Data Persistence
 
@@ -305,7 +335,10 @@ R. Souza, T. Skluzacek, S. Wilkinson, M. Ziatdinov, and R. da Silva
 
 ## Disclaimer & Get in Touch
 
-Please note that this a research software. We encourage you to give it a try and use it with your own stack. We are continuously working on improving documentation and adding more examples and notebooks, but we are continuously improving documentation and examples. If you are interested in working with Flowcept in your own scientific project, we can give you a jump start if you reach out to us. Feel free to [create an issue](https://github.com/ORNL/flowcept/issues/new), [create a new discussion thread](https://github.com/ORNL/flowcept/discussions/new/choose) or drop us an email (we trust you'll find a way to reach out to us :wink:).
+Refer to [Contributing](CONTRIBUTING.md) for adding new adapters or contributing with the codebase.
+
+Please note that this a research software. We encourage you to give it a try and use it with your own stack.
+We are continuously working on improving documentation and adding more examples and notebooks, but we are continuously improving documentation and examples. If you are interested in working with Flowcept in your own scientific project, we can give you a jump start if you reach out to us. Feel free to [create an issue](https://github.com/ORNL/flowcept/issues/new), [create a new discussion thread](https://github.com/ORNL/flowcept/discussions/new/choose) or drop us an email (we trust you'll find a way to reach out to us :wink:).
 
 ## Acknowledgement
 
