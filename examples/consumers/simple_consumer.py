@@ -1,5 +1,6 @@
 from typing import Dict
 
+from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.flowceptor.consumers.base_consumer import BaseConsumer
 
 
@@ -10,7 +11,17 @@ class MyConsumer(BaseConsumer):
 
     def message_handler(self, msg_obj: Dict) -> bool:
         if msg_obj.get('type', '') == 'task':
-            print(msg_obj)
+            msg = TaskObject.from_dict(msg_obj)
+            print(msg)
+            if msg.used:
+                print(f"\t\tUsed: {msg.used}")
+            if msg.generated:
+                print(f"\t\tGenerated: {msg.generated}")
+            if msg.custom_metadata:
+                print(f"\t\tCustom Metadata: {msg.custom_metadata}")
+
+            print()
+            print()
         else:
             print(f"We got a msg with different type: {msg_obj.get("type", None)}")
         return True

@@ -1,3 +1,6 @@
+# flake8: noqa: E501
+# flake8: noqa: D103
+
 from mcp.server.fastmcp.prompts import base
 
 BASE_ROLE = (
@@ -13,6 +16,21 @@ DATA_SCHEMA_PROMPT = (
 )
 
 QUESTION_PROMPT = "I am particularly more interested in the following question: %QUESTION%."
+
+SMALL_TALK_PROMPT = "Act as a Workflow Provenance Specialist. I would like to interact with you, but please be concise and brief. This is my message:\n"
+
+ROUTING_PROMPT = (
+    "You are a routing assistant for a provenance AI agent. "
+    "Given the following user message, classify it into one of the following routes:\n"
+    "- small_talk: if it's casual conversation or some random word (e.g., 'hausdn', 'a', hello, how are you, what can you do, what's your name)\n"
+    "- plot: if user is requesting plots (e.g., plot, chart, visualize)\n"
+    "- historical_prov_query: if the user wants to query historical provenance data\n"
+    "- in_context_query: if the user appears to ask questions about tasks or data in running workflow (or a workflow that ran recently) or if the user mentions the in-memory 'df' or a dataframe.\n"
+    "- in_chat_query: if the user appears to be asking about something that has said recently in this chat.\n"
+    "- unknown: if you don't know.\n"
+    "Respond with only the route label."
+    "User message is below:\n "
+)
 
 
 def get_question_prompt(question: str):

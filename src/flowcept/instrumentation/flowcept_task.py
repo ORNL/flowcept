@@ -2,6 +2,7 @@
 
 import threading
 from time import time
+import inspect
 from functools import wraps
 import argparse
 from flowcept.commons.flowcept_dataclasses.task_object import (
@@ -11,10 +12,7 @@ from flowcept.commons.vocabulary import Status
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 from flowcept.commons.utils import replace_non_serializable
-from flowcept.configs import (
-    REPLACE_NON_JSON_SERIALIZABLE,
-    INSTRUMENTATION_ENABLED,
-)
+from flowcept.configs import REPLACE_NON_JSON_SERIALIZABLE, INSTRUMENTATION_ENABLED, HOSTNAME, TELEMETRY_ENABLED
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
@@ -54,8 +52,8 @@ def telemetry_flowcept_task(func=None):
             _thread_local._flowcept_current_context_task_id = task_obj["task_id"]
             task_obj["workflow_id"] = kwargs.pop("workflow_id", Flowcept.current_workflow_id)
             task_obj["used"] = kwargs
-            tel = interceptor.telemetry_capture.capture()
-            if tel is not None:
+            if TELEMETRY_ENABLED:
+                tel = interceptor.telemetry_capture.capture()
                 task_obj["telemetry_at_start"] = tel.to_dict()
             try:
                 result = func(*args, **kwargs)
@@ -65,8 +63,8 @@ def telemetry_flowcept_task(func=None):
                 result = None
                 task_obj["stderr"] = str(e)
             # task_obj["ended_at"] = time()
-            tel = interceptor.telemetry_capture.capture()
-            if tel is not None:
+            if TELEMETRY_ENABLED:
+                tel = interceptor.telemetry_capture.capture()
                 task_obj["telemetry_at_end"] = tel.to_dict()
             task_obj["generated"] = result
             interceptor.intercept(task_obj)
@@ -107,39 +105,52 @@ def lightweight_flowcept_task(func=None):
         return decorator(func)
 
 
-# def flowcept_task_switch(mode=None):
-#     if mode is None:
-#         return flowcept_task
-#     elif mode == "disable":
-#         return lambda _: _
-#     else:
-#         raise NotImplementedError
-
-
 def flowcept_task(func=None, **decorator_kwargs):
-    """Get flowcept task."""
+    """Flowcept task decorator."""
     if INSTRUMENTATION_ENABLED:
         interceptor = InstrumentationInterceptor.get_instance()
         logger = FlowceptLogger()
 
     def decorator(func):
+        # Precompute once (perf)
+        sig = inspect.signature(func)
+        args_handler = decorator_kwargs.get("args_handler", default_args_handler)
+        custom_metadata = decorator_kwargs.get("custom_metadata", None)
+        tags = decorator_kwargs.get("tags", None)
+        subtype = decorator_kwargs.get("subtype", None)
+        output_names = decorator_kwargs.get("output_names", None)
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             if not INSTRUMENTATION_ENABLED:
                 return func(*args, **kwargs)
 
-            args_handler = decorator_kwargs.get("args_handler", default_args_handler)
-            task_obj = TaskObject()
+            # Bind inputs to parameter names
+            try:
+                bound_args = sig.bind(*args, **kwargs)
+                bound_args.apply_defaults()
+                handled_args = args_handler(**dict(bound_args.arguments))
+            except Exception as e:
+                if isinstance(e, TypeError):
+                    raise e
+                else:
+                    handled_args = args_handler(*args, **kwargs)
 
+            task_obj = TaskObject()
+            task_obj.subtype = subtype
             task_obj.activity_id = func.__name__
-            handled_args = args_handler(*args, **kwargs)
             task_obj.workflow_id = handled_args.pop("workflow_id", Flowcept.current_workflow_id)
             task_obj.campaign_id = handled_args.pop("campaign_id", Flowcept.campaign_id)
             task_obj.used = handled_args
+            task_obj.tags = tags
             task_obj.started_at = time()
+            task_obj.custom_metadata = custom_metadata
+            task_obj.hostname = HOSTNAME
             task_obj.task_id = str(task_obj.started_at)
             _thread_local._flowcept_current_context_task_id = task_obj.task_id
-            task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
+            if TELEMETRY_ENABLED:
+                task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
+
             try:
                 result = func(*args, **kwargs)
                 task_obj.status = Status.FINISHED
@@ -148,13 +159,42 @@ def flowcept_task(func=None, **decorator_kwargs):
                 result = None
                 logger.exception(e)
                 task_obj.stderr = str(e)
+
             task_obj.ended_at = time()
-            task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
+            if TELEMETRY_ENABLED:
+                task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
+
+            # Output handling: only use output_names if provided
             try:
                 if result is not None:
+                    named = None
+
                     if isinstance(result, dict):
-                        task_obj.generated = args_handler(**result)
+                        # User already returned a mapping; pass through
+                        try:
+                            task_obj.generated = args_handler(**result)
+                        except Exception:
+                            task_obj.generated = result
+                    elif output_names:
+                        # If output_names provided, map scalar or tuple/list to names
+                        if isinstance(result, (tuple, list)):
+                            if len(output_names) == len(result):
+                                named = {k: v for k, v in zip(output_names, result)}
+                        elif isinstance(output_names, str):
+                            named = {output_names: result}
+                        elif isinstance(output_names, (tuple, list)) and len(output_names) == 1:
+                            named = {output_names[0]: result}
+
+                        if isinstance(named, dict):
+                            try:
+                                task_obj.generated = args_handler(**named)
+                            except Exception:
+                                task_obj.generated = named
+                        else:
+                            # Mismatch or no mapping possible -> original behavior
+                            task_obj.generated = args_handler(result)
                     else:
+                        # No output_names: original behavior
                         task_obj.generated = args_handler(result)
             except Exception as e:
                 logger.exception(e)

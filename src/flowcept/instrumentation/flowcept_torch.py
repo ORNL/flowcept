@@ -18,9 +18,9 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 from flowcept.commons.vocabulary import Status
 from flowcept.configs import (
     INSTRUMENTATION,
-    TELEMETRY_CAPTURE,
     REPLACE_NON_JSON_SERIALIZABLE,
     INSTRUMENTATION_ENABLED,
+    TELEMETRY_ENABLED,
 )
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
@@ -192,8 +192,8 @@ def flowcept_torch(cls):
             if self._current_epoch < 1:
                 forward_task["generated"] = {"tensor": _inspect_torch_tensor(y)}
 
-            tel = TorchModuleWrapper._interceptor.telemetry_capture.capture()
-            if tel:
+            if TELEMETRY_ENABLED:
+                tel = TorchModuleWrapper._interceptor.telemetry_capture.capture()
                 forward_task["telemetry_at_end"] = tel.to_dict()
 
             TorchModuleWrapper._interceptor.intercept(forward_task)
@@ -322,9 +322,9 @@ def flowcept_torch(cls):
 
     def _get_our_child_forward_func(mode):
         """Pick the torch_task function."""
-        if "telemetry" in mode and TELEMETRY_CAPTURE is None:
+        if "telemetry" in mode and not TELEMETRY_ENABLED:
             raise Exception(
-                "Your telemetry settings are null but you chose a telemetry mode. Please revise your settings."
+                "Your telemetry settings are disabled but you chose a telemetry mode. Please revise your settings."
             )
         elif mode == "lightweight":
             return _our_forward_lightweight

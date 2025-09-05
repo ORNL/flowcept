@@ -116,5 +116,21 @@ class MQDaoKafka(MQDao):
             return False
 
     def unsubscribe(self):
-        """Unsubscribes from Kafka topic."""
-        raise NotImplementedError()
+        """Unsubscribes from Kafka topic and closes consumer if open."""
+        if self._consumer is None:
+            self.logger.warning("No Kafka consumer to unsubscribe.")
+            return
+
+        try:
+            self._consumer.unsubscribe()
+            self.logger.info("Unsubscribed from Kafka topics.")
+        except RuntimeError as e:
+            self.logger.debug(f"Consumer already closed while unsubscribing: {e}")
+        except Exception as e:
+            self.logger.exception(f"Error while unsubscribing from Kafka: {e}")
+        finally:
+            try:
+                self._consumer.close()
+            except Exception as e:
+                self.logger.debug(f"Error closing consumer after unsubscribe: {e}")
+            self._consumer = None

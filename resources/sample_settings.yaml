@@ -7,6 +7,7 @@ project:
   performance_logging: false # Enable performance logging if true. Particularly useful for MQ flushes.
   enrich_messages: true # Add extra metadata to task messages, such as IP addresses and UTC timestamps.
   db_flush_mode: online # Mode for flushing DB entries: "online" or "offline". If online, flushes to the DB will happen before the workflow ends.
+  # dump_buffer_path: flowcept_messages.jsonl # This is useful if you need to run completely offline.
 
 log:
   log_path: "default" # Path for log file output; "default" will write the log in the directory where the main executable is running from.
@@ -50,6 +51,8 @@ mq:
   # uri: use Redis connection uri here
   chunk_size: -1  # use 0 or -1 to disable this. Or simply omit this from the config file.
   same_as_kvdb: false # Set this to true if you are using the same Redis instance both as an MQ and as the KV_DB. In that case, no need to repeat connection parameters in MQ. Use only what you define in KV_DB.
+#  bin: /usr/local/bin/redis-server # Use this if you want to start redis using the flowcept-cli.
+#  conf_file: /etc/redis/redis.conf
 
 kv_db:
   host: localhost
@@ -76,8 +79,8 @@ db_buffer:
   insertion_buffer_time_secs: 5   # Time interval (in seconds) to buffer incoming records before flushing to the database
   buffer_size: 50    # Maximum number of records to hold in the buffer before forcing a flush
   remove_empty_fields: false    # If true, fields with null/empty values will be removed before insertion
-  stop_max_trials: 240    # Maximum number of trials before giving up when waiting for a fully safe stop (i.e., all records have been inserted as expected).
-  stop_trials_sleep: 0.01   # Sleep duration (in seconds) between trials when waiting for a fully safe stop.
+  stop_max_trials: 300    # Maximum number of trials before giving up when waiting for a fully safe stop (i.e., all records have been inserted as expected).
+  stop_trials_sleep: 0.1  # Sleep duration (in seconds) between trials when waiting for a fully safe stop.
 
 agent:
   enabled: false
@@ -86,6 +89,7 @@ agent:
   llm_server_url: '?'
   api_key: '?'
   model: '?'
+  service_provider: '?'
   model_kwargs: {}
 
 databases:
@@ -100,13 +104,17 @@ databases:
     port: 27017
     db: flowcept
     create_collection_index: true  # Whether flowcept should create collection indices if they haven't been created yet. This is done only at the Flowcept start up.
+#    bin: /usr/bin/mongod
+#    log_path: /var/log/mongodb/mongod.log
+#    lock_file_path: /var/run/mongod.pid
+
 
 adapters:
   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2. Use an empty dict, {}, if you won't use any adapter.
 
   broker_mqtt:
     kind: broker
-    host: h
+    host: localhost
     port: 30011
     protocol: mqtt3.1.1
     queues: ["#"]

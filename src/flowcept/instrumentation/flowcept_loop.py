@@ -6,7 +6,7 @@ from typing import Union, Sized, Iterator, Dict
 
 from flowcept import Flowcept
 from flowcept.commons.vocabulary import Status
-from flowcept.configs import INSTRUMENTATION_ENABLED
+from flowcept.configs import INSTRUMENTATION_ENABLED, TELEMETRY_ENABLED
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
 
@@ -160,8 +160,8 @@ class FlowceptLoop:
 
     def _end_iteration_task(self, _):
         self._last_iteration_task["status"] = Status.FINISHED.value
-        tel = FlowceptLoop._interceptor.telemetry_capture.capture()
-        if tel:
+        if TELEMETRY_ENABLED:
+            tel = FlowceptLoop._interceptor.telemetry_capture.capture()
             self._last_iteration_task["telemetry_at_end"] = tel.to_dict()
         FlowceptLoop._interceptor.intercept(self._last_iteration_task)
 

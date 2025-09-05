@@ -1,5 +1,5 @@
 from time import time
-from typing import Dict
+from typing import Dict, Any
 import os
 import threading
 import random
@@ -8,7 +8,7 @@ from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
 )
 from flowcept.commons.vocabulary import Status
-from flowcept.configs import INSTRUMENTATION_ENABLED
+from flowcept.configs import INSTRUMENTATION_ENABLED, TELEMETRY_ENABLED
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
 
@@ -58,27 +58,87 @@ class FlowceptTask(object):
         workflow_id: str = None,
         campaign_id: str = None,
         activity_id: str = None,
+        agent_id: str = None,
+        parent_task_id: str = None,
         used: Dict = None,
+        data: Any = None,
         subtype: str = None,
         custom_metadata: Dict = None,
+        generated: Dict = None,
+        ended_at: float = None,
+        stdout: str = None,
+        stderr: str = None,
+        status: Status = None,
     ):
+        """
+        Initializes a FlowceptTask and optionally finalizes it.
+
+        If any of the following optional arguments are provided — `generated`, `ended_at`, `stdout`,
+        `stderr`, or `status` — the task will be automatically finalized by calling `end()` during
+        initialization. This is useful when the task's outcome is already known at the moment of
+        instantiation.
+
+        Parameters
+        ----------
+        task_id : str, optional
+            Unique identifier for the task. Defaults to a generated ID.
+        workflow_id : str, optional
+            ID of the workflow to which this task belongs.
+        campaign_id : str, optional
+            ID of the campaign to which this task belongs.
+        activity_id : str, optional
+            Describes the specific activity this task captures.
+        used : Dict, optional
+            Metadata about resources or data used during the task.
+        subtype : str, optional
+            Optional string categorizing the task subtype.
+        custom_metadata : Dict, optional
+            Additional user-defined metadata to associate with the task.
+        generated : Dict, optional
+            Output data generated during the task execution.
+        ended_at : float, optional
+            Timestamp indicating when the task ended.
+        stdout : str, optional
+            Captured standard output from the task.
+        stderr : str, optional
+            Captured standard error from the task.
+        status : Status, optional
+            Task completion status. If provided, defaults to Status.FINISHED if unspecified.
+        """
         if not INSTRUMENTATION_ENABLED:
             self._ended = True
             return
+
         self._task = TaskObject()
         self._interceptor = InstrumentationInterceptor.get_instance()
-        tel = self._interceptor.telemetry_capture.capture()
-        if tel:
+
+        if TELEMETRY_ENABLED:
+            tel = self._interceptor.telemetry_capture.capture()
             self._task.telemetry_at_start = tel
+
         self._task.activity_id = activity_id
         self._task.started_at = time()
         self._task.task_id = task_id or self._gen_task_id()
         self._task.workflow_id = workflow_id or Flowcept.current_workflow_id
         self._task.campaign_id = campaign_id or Flowcept.campaign_id
+        self._task.parent_task_id = parent_task_id
         self._task.used = used
+        self._task.data = data
         self._task.subtype = subtype
+        self._task.agent_id = agent_id
         self._task.custom_metadata = custom_metadata
+
         self._ended = False
+
+        # Check if any of the end-like fields were provided. If yes, end it.
+        if any([generated, ended_at, stdout, stderr is not None]):
+            self.end(
+                generated=generated,
+                ended_at=ended_at,
+                stdout=stdout,
+                stderr=stderr,
+                status=status or Status.FINISHED,
+            )
 
     def __enter__(self):
         return self
@@ -128,13 +188,30 @@ class FlowceptTask(object):
         """
         if not INSTRUMENTATION_ENABLED:
             return
-        tel = self._interceptor.telemetry_capture.capture()
-        if tel:
+        if TELEMETRY_ENABLED:
+            tel = self._interceptor.telemetry_capture.capture()
             self._task.telemetry_at_end = tel
         self._task.ended_at = ended_at or time()
         self._task.status = status
         self._task.stderr = stderr
         self._task.stdout = stdout
         self._task.generated = generated
+        if self._interceptor._mq_dao.buffer is None:
+            raise Exception("Did you start Flowcept?")
         self._interceptor.intercept(self._task.to_dict())
         self._ended = True
+
+    def send(self):
+        """
+        Finalizes and sends the task data if not already ended.
+
+        This method acts as a simple alias for finalizing the task without requiring additional
+        arguments. It sends the task object to the interceptor for capture and marks it as ended
+        to prevent multiple submissions.
+        """
+        if not self._ended:
+            if self._interceptor._mq_dao.buffer is None:
+                raise Exception("Did you start Flowcept?")
+            self._task.ended_at = self._task.started_at  # message sents are not going to be analyzed for task duration
+            self._interceptor.intercept(self._task.to_dict())
+            self._ended = True

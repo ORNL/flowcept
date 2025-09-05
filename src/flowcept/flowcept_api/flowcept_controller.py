@@ -1,6 +1,7 @@
 """Controller module."""
 
-from typing import List
+import os.path
+from typing import List, Dict
 from uuid import uuid4
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
@@ -16,6 +17,8 @@ from flowcept.configs import (
     SETTINGS_PATH,
     LMDB_ENABLED,
     KVDB_ENABLED,
+    MQ_ENABLED,
+    DUMP_BUFFER_PATH,
 )
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
@@ -44,7 +47,7 @@ class Flowcept(object):
         campaign_id: str = None,
         workflow_id: str = None,
         workflow_name: str = None,
-        workflow_args: str = None,
+        workflow_args: Dict = None,
         start_persistence=True,
         check_safe_stops=True,  # TODO add to docstring
         save_workflow=True,
@@ -94,6 +97,7 @@ class Flowcept(object):
         self.logger.debug(f"Using settings file: {SETTINGS_PATH}")
         self._enable_persistence = start_persistence
         self._db_inserters: List = []
+        self.buffer = None
         self._check_safe_stops = check_safe_stops
         if bundle_exec_id is None:
             self._bundle_exec_id = id(self)
@@ -151,7 +155,7 @@ class Flowcept(object):
                 interceptor_inst = BaseInterceptor.build(interceptor)
                 interceptor_inst.start(bundle_exec_id=self._bundle_exec_id, check_safe_stops=self._check_safe_stops)
                 self._interceptor_instances.append(interceptor_inst)
-
+                self.buffer = interceptor_inst._mq_dao.buffer
                 if self._should_save_workflow and not self._workflow_saved:
                     self.save_workflow(interceptor, interceptor_inst)
 
@@ -160,6 +164,68 @@ class Flowcept(object):
         self.is_started = True
         self.logger.debug("Flowcept started successfully.")
         return self
+
+    def _publish_buffer(self):
+        self._interceptor_instances[0]._mq_dao.bulk_publish(self.buffer)
+
+    @staticmethod
+    def read_messages_file(file_path: str = None) -> List[Dict]:
+        """
+        Read a JSON Lines (JSONL) file containing captured Flowcept messages.
+
+        This function loads a file where each line is a serialized JSON object.
+        It joins the lines into a single JSON array and parses them efficiently
+        with ``orjson``.
+
+        Parameters
+        ----------
+        file_path : str, optional
+            Path to the messages file. If not provided, defaults to the
+            value of ``DUMP_BUFFER_PATH`` from the configuration.
+            If neither is provided, an assertion error is raised.
+
+        Returns
+        -------
+        List[dict]
+            A list of message objects (dictionaries) parsed from the file.
+
+        Raises
+        ------
+        AssertionError
+            If no ``file_path`` is provided and ``DUMP_BUFFER_PATH`` is not set.
+        FileNotFoundError
+            If the specified file does not exist.
+        orjson.JSONDecodeError
+            If the file contents cannot be parsed as valid JSON.
+
+        Examples
+        --------
+        Read messages from a file explicitly:
+
+        >>> msgs = read_messages_file("offline_buffer.jsonl")
+        >>> print(len(msgs))
+        128
+
+        Use the default dump buffer path from config:
+
+        >>> msgs = read_messages_file()
+        >>> for m in msgs[:2]:
+        ...     print(m["type"], m.get("workflow_id"))
+        task_start wf_123
+        task_end wf_123
+        """
+        import orjson
+
+        _buffer = []
+        if file_path is None:
+            file_path = DUMP_BUFFER_PATH
+        assert file_path is not None, "Please indicate file_path either in the argument or in the config file."
+        if not os.path.exists(file_path):
+            raise f"File {file_path} has not been created. It will only be created if you run in fully offline mode."
+        with open(file_path, "rb") as f:
+            lines = [ln for ln in f.read().splitlines() if ln]
+        _buffer = orjson.loads(b"[" + b",".join(lines) + b"]")
+        return _buffer
 
     def save_workflow(self, interceptor: str, interceptor_instance: BaseInterceptor):
         """
@@ -270,9 +336,10 @@ class Flowcept(object):
         """
         logger = FlowceptLogger()
         mq = MQDao.build()
-        if not mq.liveness_test():
-            logger.error("MQ Not Ready!")
-            return False
+        if MQ_ENABLED:
+            if not mq.liveness_test():
+                logger.error("MQ Not Ready!")
+                return False
 
         if KVDB_ENABLED:
             if not mq._keyvalue_dao.liveness_test():
