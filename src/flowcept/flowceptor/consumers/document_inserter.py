@@ -150,9 +150,9 @@ class DocumentInserter(BaseConsumer):
                 and message["telemetry_at_end"]
             ):
                 try:
-                    telemetry_summary = summarize_telemetry(message)
+                    telemetry_summary = summarize_telemetry(message, self.logger)
                     message["telemetry_summary"] = telemetry_summary
-                    # TODO: make this dynamic
+                    # TODO: make this configurable
                     tags = tag_critical_task(
                         generated=message.get("generated", {}), telemetry_summary=telemetry_summary, thresholds=None
                     )

@@ -41,13 +41,26 @@ TIME_TO_SLEEP = calc_time_to_sleep()
 
 
 @flowcept_task
+def decorated_static_function(df: pd.DataFrame):
+    return pd.DataFrame([3])
+
+
+@flowcept_task
 def decorated_static_function2(x):
     return {"y": 2}
 
 
-@flowcept_task
-def decorated_static_function(df: pd.DataFrame):
-    return 2
+@flowcept_task(output_names="z")
+def decorated_static_function3(x, y):
+    return 5
+
+
+@flowcept_task(output_names=("z", "w"))
+def decorated_static_function4(x, y):
+    return 6, 7
+
+
+
 
 
 @lightweight_flowcept_task
@@ -212,18 +225,39 @@ class DecoratorTests(unittest.TestCase):
             decorated_static_function(df=pd.DataFrame([1]))
             decorated_static_function2(x=1)
             decorated_static_function2(2)
+            try:
+                decorated_static_function3(3, x=4)
+            except Exception as e:
+                print("Expected exception because the arg x should be y, like the func call below.", e)
+
+            decorated_static_function3(3, y=4)
+            decorated_static_function4(3, y=4)
 
         sleep(1)
         assert assert_by_querying_tasks_until(
             filter={"workflow_id": Flowcept.current_workflow_id},
-            condition_to_evaluate=lambda docs: len(docs) == 3,
+            condition_to_evaluate=lambda docs: len(docs) == 5,
             max_time=30,
             max_trials=10,
         )
         tasks = Flowcept.db.get_tasks_from_current_workflow()
         for t in tasks:
-            assert len(t["used"]) == 1
-            assert len(t["generated"]) == 1
+            if t["activity_id"] == "decorated_static_function":
+                assert len(t["used"]) == 1
+                assert "arg_0" in t["generated"]
+            elif t["activity_id"] == "decorated_static_function2":
+                assert len(t["used"]) == 1
+                assert "x" in t["used"]
+                assert t["generated"]["y"] == 2
+            if t["activity_id"] == "decorated_static_function3":
+                assert t["used"]["x"] == 3
+                assert t["used"]["y"] == 4
+                assert t["generated"]["z"] == 5
+            elif t["activity_id"] == "decorated_static_function4":
+                assert t["used"]["x"] == 3
+                assert t["used"]["y"] == 4
+                assert t["generated"]["z"] == 6
+                assert t["generated"]["w"] == 7
 
     @patch("sys.argv", ["script_name", "--a", "123", "--b", "abc", "--unknown_arg", "unk", "['a']"])
     def test_argparse(self):
@@ -237,9 +271,9 @@ class DecoratorTests(unittest.TestCase):
 
         task = Flowcept.db.get_tasks_from_current_workflow()[0]
         assert task["status"] == Status.FINISHED.value
-        assert task["used"]["a"] == 123
-        assert task["used"]["b"] == "abc"
-        assert task["used"]["arg_0"] == ['--unknown_arg', 'unk', "['a']"]
+        assert task["used"]["known_args"]["a"] == 123
+        assert task["used"]["known_args"]["b"] == "abc"
+        assert task["used"]["unknown_args"] == ['--unknown_arg', 'unk', "['a']"]
 
 
     def test_online_offline(self):

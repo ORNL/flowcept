@@ -2,9 +2,8 @@
 
 from typing import Callable, Set, List
 
-import psutil
 import platform
-import cpuinfo
+
 import os
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -14,6 +13,10 @@ from flowcept.configs import (
     LOGIN_NAME,
 )
 from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
+
+if TELEMETRY_CAPTURE is not None and len(TELEMETRY_CAPTURE):
+    import psutil
+    import cpuinfo
 
 
 class GPUCapture:

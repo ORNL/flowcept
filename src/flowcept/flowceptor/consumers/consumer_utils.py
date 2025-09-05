@@ -1,13 +1,14 @@
 """Consumer utilities module."""
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from time import time
 from typing import List, Dict
 
-import pytz
-
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.vocabulary import Status
+
+UTC_TZ = ZoneInfo("UTC")
 
 
 def curate_task_msg(task_msg_dict: dict, convert_times=True):
@@ -47,10 +48,10 @@ def curate_task_msg(task_msg_dict: dict, convert_times=True):
     if convert_times:
         for time_field in TaskObject.get_time_field_names():
             if time_field in task_msg_dict:
-                task_msg_dict[time_field] = datetime.fromtimestamp(task_msg_dict[time_field], pytz.utc)
+                task_msg_dict[time_field] = datetime.fromtimestamp(task_msg_dict[time_field], UTC_TZ)
 
         if "registered_at" not in task_msg_dict:
-            task_msg_dict["registered_at"] = datetime.fromtimestamp(time(), pytz.utc)
+            task_msg_dict["registered_at"] = datetime.fromtimestamp(time(), UTC_TZ)
 
 
 def remove_empty_fields_from_dict(obj: dict):

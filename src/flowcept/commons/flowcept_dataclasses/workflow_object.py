@@ -5,7 +5,7 @@ import msgpack
 from omegaconf import OmegaConf, DictConfig
 
 from flowcept.version import __version__
-from flowcept.commons.utils import get_utc_now
+from flowcept.commons.utils import get_utc_now, get_git_info
 from flowcept.configs import (
     settings,
     FLOWCEPT_USER,
@@ -38,6 +38,7 @@ class WorkflowObject:
     sys_name: str = None
     extra_metadata: str = None
     used: Dict = None
+    code_repository: Dict = None
     generated: Dict = None
 
     def __init__(self, workflow_id=None, name=None, used=None, generated=None):
@@ -92,6 +93,13 @@ class WorkflowObject:
                 OmegaConf.to_container(EXTRA_METADATA) if isinstance(EXTRA_METADATA, DictConfig) else EXTRA_METADATA
             )
             self.extra_metadata = _extra_metadata
+
+        if self.code_repository is None:
+            try:
+                self.code_repository = get_git_info()
+            except Exception as e:
+                print(e)
+                pass
 
         if self.flowcept_version is None:
             self.flowcept_version = __version__

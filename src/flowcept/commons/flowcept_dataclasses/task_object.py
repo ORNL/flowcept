@@ -24,6 +24,7 @@ class TaskObject:
     utc_timestamp: float = None
     adapter_id: AnyStr = None
     user: AnyStr = None
+    data: Any = None
     used: Dict[AnyStr, Any] = None  # Used parameter and files
     campaign_id: AnyStr = None
     generated: Dict[AnyStr, Any] = None  # Generated results and files
@@ -53,6 +54,7 @@ class TaskObject:
     dependencies: List = None
     dependents: List = None
     tags: List = None
+    agent_id: str = None
 
     _DEFAULT_ENRICH_VALUES = {
         "node_name": NODE_NAME,
@@ -104,20 +106,16 @@ class TaskObject:
         if self.utc_timestamp is None:
             self.utc_timestamp = flowcept.commons.utils.get_utc_now()
 
-        if self.node_name is None and NODE_NAME is not None:
-            self.node_name = NODE_NAME
+        for key, fallback_value in TaskObject._DEFAULT_ENRICH_VALUES.items():
+            if getattr(self, key) is None and fallback_value is not None:
+                setattr(self, key, fallback_value)
 
-        if self.login_name is None and LOGIN_NAME is not None:
-            self.login_name = LOGIN_NAME
-
-        if self.public_ip is None and PUBLIC_IP is not None:
-            self.public_ip = PUBLIC_IP
-
-        if self.private_ip is None and PRIVATE_IP is not None:
-            self.private_ip = PRIVATE_IP
-
-        if self.hostname is None and HOSTNAME is not None:
-            self.hostname = HOSTNAME
+    @staticmethod
+    def enrich_task_dict(task_dict: dict):
+        """Enrich the task."""
+        for key, fallback_value in TaskObject._DEFAULT_ENRICH_VALUES.items():
+            if (key not in task_dict or task_dict[key] is None) and fallback_value is not None:
+                task_dict[key] = fallback_value
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -138,13 +136,6 @@ class TaskObject:
     def serialize(self):
         """Serialize it."""
         return msgpack.dumps(self.to_dict())
-
-    @staticmethod
-    def enrich_task_dict(task_dict: dict):
-        """Enrich the task."""
-        for key, fallback_value in TaskObject._DEFAULT_ENRICH_VALUES.items():
-            if (key not in task_dict or task_dict[key] is None) and fallback_value is not None:
-                task_dict[key] = fallback_value
 
     @staticmethod
     def from_dict(task_obj_dict: Dict[AnyStr, Any]) -> "TaskObject":
@@ -177,6 +168,10 @@ class TaskObject:
 
     def __repr__(self):
         """Return an unambiguous string representation of the TaskObject."""
-        attrs = ["task_id", "workflow_id", "campaign_id", "activity_id", "custom_metadata", "started_at", "ended_at"]
+        attrs = ["task_id", "workflow_id", "campaign_id", "activity_id", "started_at", "ended_at"]
+        optionals = ["subtype", "parent_task_id", "agent_id"]
+        for opt in optionals:
+            if getattr(self, opt) is not None:
+                attrs.append(opt)
         attr_str = ", ".join(f"{attr}={repr(getattr(self, attr))}" for attr in attrs)
         return f"TaskObject({attr_str})"

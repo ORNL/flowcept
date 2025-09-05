@@ -9,13 +9,12 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 )
 from flowcept.configs import (
     ENRICH_MESSAGES,
+    TELEMETRY_ENABLED,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.settings_factory import get_settings
-
-from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 
 
 # TODO :base-interceptor-refactor: :ml-refactor: :code-reorg: :usability:
@@ -74,7 +73,14 @@ class BaseInterceptor(object):
         self._bundle_exec_id = None
         self.started = False
         self._interceptor_instance_id = str(id(self))
-        self.telemetry_capture = TelemetryCapture()
+
+        if TELEMETRY_ENABLED:
+            from flowcept.flowceptor.telemetry_capture import TelemetryCapture
+
+            self.telemetry_capture = TelemetryCapture()
+        else:
+            self.telemetry_capture = None
+
         self._saved_workflows = set()
         self._generated_workflow_id = False
         self.kind = kind
@@ -129,8 +135,8 @@ class BaseInterceptor(object):
             # TODO :base-interceptor-refactor: :code-reorg: :usability:
             raise Exception(f"This interceptor {id(self)} has never been started!")
         workflow_obj.interceptor_ids = [self._interceptor_instance_id]
-        machine_info = self.telemetry_capture.capture_machine_info()
-        if machine_info is not None:
+        if self.telemetry_capture:
+            machine_info = self.telemetry_capture.capture_machine_info()
             if workflow_obj.machine_info is None:
                 workflow_obj.machine_info = dict()
             # TODO :refactor-base-interceptor: we might want to register

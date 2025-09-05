@@ -1,5 +1,6 @@
 """Utilities."""
 
+import argparse
 from datetime import datetime, timedelta, timezone
 import json
 from time import time, sleep
@@ -9,7 +10,6 @@ import platform
 import subprocess
 import types
 import numpy as np
-import pytz
 
 from flowcept import configs
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
@@ -19,7 +19,7 @@ from flowcept.commons.vocabulary import Status
 
 
 def get_utc_now() -> float:
-    """Get UTC time."""
+    """Get current UTC time as a timestamp (seconds since epoch)."""
     now = datetime.now(timezone.utc)
     return now.timestamp()
 
@@ -159,11 +159,14 @@ class GenericJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def replace_non_serializable_times(obj, tz=pytz.utc):
-    """Replace non-serializable times in an object."""
+def replace_non_serializable_times(obj, tz=timezone.utc):
+    """Replace non-serializable datetimes in an object with ISO 8601 strings (ms precision)."""
     for time_field in TaskObject.get_time_field_names():
-        if time_field in obj:
-            obj[time_field] = obj[time_field].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + f" {tz}"
+        if time_field in obj and isinstance(obj[time_field], datetime):
+            obj[time_field] = obj[time_field].astimezone(tz).isoformat(timespec="milliseconds")
+
+
+__DICT__CLASSES = (argparse.Namespace,)
 
 
 def replace_non_serializable(obj):
@@ -180,6 +183,8 @@ def replace_non_serializable(obj):
             return obj.to_flowcept_dict()
         elif hasattr(obj, "to_dict"):
             return obj.to_dict()
+        elif isinstance(obj, __DICT__CLASSES):
+            return obj.__dict__
         else:
             # Replace non-serializable values with id()
             return f"{obj.__class__.__name__}_instance_id_{id(obj)}"
@@ -260,6 +265,20 @@ class GenericJSONDecoder(json.JSONDecoder):
         else:
             inst = dct
         return inst
+
+
+def get_git_info(path: str = "."):
+    """Get Git Repo metadata."""
+    from git import Repo
+
+    repo = Repo(path, search_parent_directories=True)
+    head = repo.head.commit.hexsha
+    short = repo.git.rev_parse(head, short=True)
+    branch = repo.active_branch.name if not repo.head.is_detached else "HEAD"
+    remote = next(iter(repo.remotes)).url if repo.remotes else None
+    dirty = "dirty" if repo.is_dirty() else "clean"
+    root = repo.working_tree_dir
+    return {"sha": head, "short_sha": short, "branch": branch, "root": root, "remote": remote, "dirty": dirty}
 
 
 class ClassProperty:

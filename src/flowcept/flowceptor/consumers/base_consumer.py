@@ -82,6 +82,10 @@ class BaseConsumer(object):
         """
         self.logger.debug("Going to wait for new messages!")
         self._mq_dao.message_listener(self.message_handler)
+        self.logger.debug("Broke main message listening loop!")
+        # self._mq_dao.stop(check_safe_stops=False) # TODO Do we need to stop mq_dao here?
+        self.stop_consumption()
+        self.logger.debug("MQ stopped.")
 
     def stop_consumption(self):
         """

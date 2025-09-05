@@ -707,6 +707,53 @@ class MongoDBDAO(DocumentDBDAO):
         else:
             raise Exception(f"You used type={collection}, but MongoDB only stores tasks, workflows, and objects")
 
+    def raw_task_pipeline(self, pipeline: List[Dict]):
+        """
+        Run a raw MongoDB aggregation pipeline on the tasks collection.
+
+        This method allows advanced users to directly execute an
+        aggregation pipeline against the underlying ``_tasks_collection``.
+        It is intended for cases where more complex queries, transformations,
+        or aggregations are needed beyond the high-level query APIs.
+
+        Parameters
+        ----------
+        pipeline : list of dict
+            A MongoDB aggregation pipeline represented as a list of
+            stage documents (e.g., ``[{"$match": {...}}, {"$group": {...}}]``).
+
+        Returns
+        -------
+        list of dict or None
+            The aggregation results as a list of documents if successful,
+            or ``None`` if an error occurred.
+
+        Raises
+        ------
+        Exception
+            Any exception raised by the underlying MongoDB driver will be
+            logged and the method will return ``None`` instead of propagating.
+
+        Examples
+        --------
+        Count the number of tasks per workflow:
+
+        >>> pipeline = [
+        ...     {"$group": {"_id": "$workflow_id", "count": {"$sum": 1}}}
+        ... ]
+        >>> results = obj.raw_task_pipeline(pipeline)
+        >>> for r in results:
+        ...     print(r["_id"], r["count"])
+        wf_123  42
+        wf_456  18
+        """
+        try:
+            rs = self._tasks_collection.aggregate(pipeline)
+            return list(rs)
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
     def task_query(
         self,
         filter: Dict = None,

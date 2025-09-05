@@ -15,7 +15,7 @@ Supports:
 """
 
 import subprocess
-from time import sleep
+import shlex
 from typing import Dict, Optional
 import argparse
 import os
@@ -28,7 +28,7 @@ from importlib import resources
 from pathlib import Path
 from typing import List
 
-from flowcept import Flowcept, configs
+from flowcept import configs
 
 
 def no_docstring(func):
@@ -41,7 +41,7 @@ def no_docstring(func):
     return wrapper
 
 
-def show_config():
+def show_settings():
     """
     Show Flowcept configuration.
     """
@@ -55,11 +55,20 @@ def show_config():
     )
 
 
-def init_settings():
+def init_settings(full: bool = False):
     """
     Create a new settings.yaml file in your home directory under ~/.flowcept.
+
+    Parameters
+    ----------
+    full : bool, optional -- Run with full to generate a complete version of the settings file.
     """
-    dest_path = Path(os.path.join(configs._SETTINGS_DIR, "settings.yaml"))
+    settings_path_env = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
+    if settings_path_env is not None:
+        print(f"FLOWCEPT_SETTINGS_PATH environment variable is set to {settings_path_env}.")
+        dest_path = settings_path_env
+    else:
+        dest_path = Path(os.path.join(configs._SETTINGS_DIR, "settings.yaml"))
 
     if dest_path.exists():
         overwrite = input(f"{dest_path} already exists. Overwrite? (y/N): ").strip().lower()
@@ -69,11 +78,125 @@ def init_settings():
 
     os.makedirs(configs._SETTINGS_DIR, exist_ok=True)
 
-    SAMPLE_SETTINGS_PATH = str(resources.files("resources").joinpath("sample_settings.yaml"))
+    if full:
+        print("Going to generate full settings.yaml.")
+        sample_settings_path = str(resources.files("resources").joinpath("sample_settings.yaml"))
+        with open(sample_settings_path, "rb") as src_file, open(dest_path, "wb") as dst_file:
+            dst_file.write(src_file.read())
+            print(f"Copied {sample_settings_path} to {dest_path}")
+    else:
+        from omegaconf import OmegaConf
 
-    with open(SAMPLE_SETTINGS_PATH, "rb") as src_file, open(dest_path, "wb") as dst_file:
-        dst_file.write(src_file.read())
-    print(f"Copied {configs.SETTINGS_PATH} to {dest_path}")
+        cfg = OmegaConf.create(configs.DEFAULT_SETTINGS)
+        OmegaConf.save(cfg, dest_path)
+        print(f"Generated default settings under {dest_path}.")
+
+
+def version():
+    """
+    Returns this Flowcept's installation version.
+    """
+    from flowcept.version import __version__
+
+    print(f"Flowcept {__version__}")
+
+
+def stream_messages(print_messages: bool = False, messages_file_path: Optional[str] = None):
+    """
+    Listen to Flowcept's message stream and optionally echo/save messages.
+
+    Parameters.
+    ----------
+    print_messages : bool, optional
+        If True, print each decoded message to stdout.
+    messages_file_path : str, optional
+        If provided, append each message as JSON (one per line) to this file.
+        If the file already exists, a new timestamped file is created instead.
+    """
+    # Local imports to avoid changing module-level deps
+    from flowcept.configs import MQ_TYPE
+
+    if MQ_TYPE != "redis":
+        print("This is currently only available for Redis. Other MQ impls coming soon.")
+        return
+
+    import os
+    import json
+    from datetime import datetime
+    import redis
+    import msgpack
+    from flowcept.configs import MQ_HOST, MQ_PORT, MQ_CHANNEL, KVDB_URI
+    from flowcept.commons.daos.mq_dao.mq_dao_redis import MQDaoRedis
+
+    def _timestamped_path_if_exists(path: Optional[str]) -> Optional[str]:
+        if not path:
+            return path
+        if os.path.exists(path):
+            base, ext = os.path.splitext(path)
+            ts = datetime.now().strftime("%Y-%m-%d %H.%M.%S")
+            return f"{base} ({ts}){ext}"
+        return path
+
+    def _json_dumps(obj) -> str:
+        """JSON-dump a msgpack-decoded object; handle bytes safely."""
+
+        def _default(o):
+            if isinstance(o, (bytes, bytearray)):
+                try:
+                    return o.decode("utf-8")
+                except Exception:
+                    return o.hex()
+            raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+
+        return json.dumps(obj, ensure_ascii=False, separators=(",", ":"), default=_default)
+
+    # Prepare output file (JSONL)
+    out_fh = None
+    if messages_file_path:
+        out_path = _timestamped_path_if_exists(messages_file_path)
+        out_fh = open(out_path, "w", encoding="utf-8", buffering=1)  # line-buffered
+
+    # Connect & subscribe
+    redis_client = redis.from_url(KVDB_URI) if KVDB_URI else redis.Redis(host=MQ_HOST, port=MQ_PORT, db=0)
+    pubsub = redis_client.pubsub()
+    pubsub.subscribe(MQ_CHANNEL)
+
+    print(f"Listening for messages on channel '{MQ_CHANNEL}'... (Ctrl+C to exit)")
+
+    try:
+        for message in pubsub.listen():
+            if not message or message.get("type") in MQDaoRedis.MESSAGE_TYPES_IGNORE:
+                continue
+
+            data = message.get("data")
+            if not isinstance(data, (bytes, bytearray)):
+                print(f"Skipping message with unexpected data type: {type(data)} - {data}")
+                continue
+
+            try:
+                msg_obj = msgpack.loads(data, strict_map_key=False)
+                msg_type = msg_obj.get("type", None)
+                print(f"\nReceived a message! type={msg_type}")
+
+                if print_messages:
+                    print(_json_dumps(msg_obj))
+
+                if out_fh is not None:
+                    out_fh.write(_json_dumps(msg_obj))
+                    out_fh.write("\n")
+
+            except Exception as e:
+                print(f"Error decoding message: {e}")
+
+    except KeyboardInterrupt:
+        print("\nInterrupted, shutting down...")
+    finally:
+        try:
+            if out_fh:
+                out_fh.close()
+            pubsub.close()
+        except Exception:
+            pass
 
 
 def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: bool = False, consumers: List[str] = None):
@@ -93,6 +216,8 @@ def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: boo
     print(f"  bundle_exec_id: {bundle_exec_id}")
     print(f"  check_safe_stops: {check_safe_stops}")
     print(f"  consumers: {consumers or []}")
+
+    from flowcept import Flowcept
 
     Flowcept.start_consumption_services(
         bundle_exec_id=bundle_exec_id,
@@ -137,6 +262,8 @@ def workflow_count(workflow_id: str):
     workflow_id : str
         The ID of the workflow to count tasks for.
     """
+    from flowcept import Flowcept
+
     result = {
         "workflow_id": workflow_id,
         "tasks": len(Flowcept.db.query({"workflow_id": workflow_id})),
@@ -166,11 +293,19 @@ def query(filter: str, project: str = None, sort: str = None, limit: int = 0):
     List[dict]
         A list of task documents matching the query.
     """
-    _filter = json.loads(filter)
-    _project = json.loads(project) or None
-    _sort = list(sort) or None
+    from flowcept import Flowcept
+
+    _filter, _project, _sort = None, None, None
+    if filter:
+        _filter = json.loads(filter)
+    if project:
+        _project = json.loads(project)
+    if sort:
+        _sort = list(sort)
     print(
-        json.dumps(Flowcept.db.query(filter=_filter, project=_project, sort=_sort, limit=limit), indent=2, default=str)
+        json.dumps(
+            Flowcept.db.query(filter=_filter, projection=_project, sort=_sort, limit=limit), indent=2, default=str
+        )
     )
 
 
@@ -183,15 +318,35 @@ def get_task(task_id: str):
     task_id : str
         The identifier of the task.
     """
+    from flowcept import Flowcept
+
     _query = {"task_id": task_id}
     print(json.dumps(Flowcept.db.query(_query), indent=2, default=str))
 
 
-def start_agent():
+def start_agent():  # TODO: start with gui
     """Start Flowcept agent."""
-    from flowcept.flowceptor.adapters.agents.flowcept_agent import main
+    from flowcept.agents.flowcept_agent import main
 
     main()
+
+
+def start_agent_gui(port: int = None):
+    """Start Flowcept agent GUI service.
+
+    Parameters
+    ----------
+    port : int, optional
+        The default port is 8501. Use --port if you want to run the GUI on a different port.
+    """
+    gui_path = Path(__file__).parent / "agents" / "gui" / "agent_gui.py"
+    gui_path = gui_path.resolve()
+    cmd = f"streamlit run {gui_path}"
+
+    if port is not None and isinstance(port, int):
+        cmd += f" --server.port {port}"
+
+    _run_command(cmd, check_output=True)
 
 
 def agent_client(tool_name: str, kwargs: str = None):
@@ -204,19 +359,20 @@ def agent_client(tool_name: str, kwargs: str = None):
     kwargs : str, optional
         A stringfied JSON containing the kwargs for the tool, if needed.
     """
-    print(kwargs)
-    if kwargs is not None:
-        kwargs = json.loads(kwargs)
-
     print(f"Going to run agent tool '{tool_name}'.")
     if kwargs:
-        print(f"Using kwargs: {kwargs}")
+        try:
+            kwargs = json.loads(kwargs)
+            print(f"Using kwargs: {kwargs}")
+        except Exception as e:
+            print(f"Could not parse kwargs as a valid JSON: {kwargs}")
+            print(e)
     print("-----------------")
-    from flowcept.flowceptor.consumers.agent.client_agent import run_tool
+    from flowcept.agents.agent_client import run_tool
 
     result = run_tool(tool_name, kwargs)[0]
 
-    print(result.text)
+    print(result)
 
 
 def check_services():
@@ -235,8 +391,10 @@ def check_services():
     None
         Prints diagnostics to stdout; returns nothing.
     """
+    from flowcept import Flowcept
+
     print(f"Testing with settings at: {configs.SETTINGS_PATH}")
-    from flowcept.configs import MONGO_ENABLED, AGENT, KVDB_ENABLED, INSERTION_BUFFER_TIME
+    from flowcept.configs import MONGO_ENABLED, AGENT, KVDB_ENABLED
 
     if not Flowcept.services_alive():
         print("Some of the enabled services are not alive!")
@@ -265,7 +423,7 @@ def check_services():
 
     if AGENT.get("enabled", False):
         print("Agent is enabled, so we are testing it too.")
-        from flowcept.flowceptor.consumers.agent.client_agent import run_tool
+        from flowcept.agents.agent_client import run_tool
 
         try:
             print(run_tool("check_liveness"))
@@ -275,30 +433,113 @@ def check_services():
 
         print("Testing LLM connectivity")
         check_llm_result = run_tool("check_llm")[0]
-        print(check_llm_result.text)
+        print(check_llm_result)
 
-        if "error" in check_llm_result.text.lower():
+        if "error" in check_llm_result.lower():
             print("There is an error with the LLM communication.")
             return
-        elif MONGO_ENABLED:
-            print("Testing if llm chat was stored in MongoDB.")
-            response_metadata = json.loads(check_llm_result.text.split("\n")[0])
-            print(response_metadata)
-            sleep(INSERTION_BUFFER_TIME * 1.05)
-            chats = Flowcept.db.query({"workflow_id": response_metadata["agent_id"]})
-            if chats:
-                print(chats)
-            else:
-                print("Could not find chat history. Make sure that the DB Inserter service is on.")
+        # TODO: the following needs to be fixed
+        # elif MONGO_ENABLED:
+        #
+        #     print("Testing if llm chat was stored in MongoDB.")
+        #     response_metadata = json.loads(check_llm_result.split("\n")[0])
+        #     print(response_metadata)
+        #     sleep(INSERTION_BUFFER_TIME * 1.05)
+        #     chats = Flowcept.db.query({"workflow_id": response_metadata["agent_id"]})
+        #     if chats:
+        #         print(chats)
+        #     else:
+        #         print("Could not find chat history. Make sure that the DB Inserter service is on.")
     print("\n\nAll expected services seem to be working properly!")
     return
 
 
+def start_mongo() -> None:
+    """
+    Start a MongoDB server using paths configured in the settings file.
+
+    Looks up:
+        databases:
+            mongodb:
+              - bin : str (required) path to the mongod executable
+              - log_path : str, optional (adds --fork --logpath)
+              - lock_file_path : str, optional (adds --pidfilepath)
+
+    Builds and runs the startup command.
+    """
+    # Safe nested gets
+    settings = getattr(configs, "settings", {}) or {}
+    databases = settings.get("databases") or {}
+    mongodb = databases.get("mongodb") or {}
+
+    bin_path = mongodb.get("bin")
+    log_path = mongodb.get("log_path")
+    lock_file_path = mongodb.get("lock_file_path")
+
+    if not bin_path:
+        print("Error: settings['databases']['mongodb']['bin'] is required.")
+        return
+
+    # Build command
+    parts = [shlex.quote(str(bin_path))]
+    if log_path:
+        parts += ["--fork", "--logpath", shlex.quote(str(log_path))]
+    if lock_file_path:
+        parts += ["--pidfilepath", shlex.quote(str(lock_file_path))]
+
+    cmd = " ".join(parts)
+    try:
+        out = _run_command(cmd, check_output=True)
+        if out:
+            print(out)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to start MongoDB: {e}")
+
+
+def start_redis() -> None:
+    """
+    Start a Redis server using paths configured in settings.
+
+    Looks up:
+        mq:
+          - bin : str (required) path to the redis-server executable
+          - conf_file : str, optional (appended as the sole argument)
+
+    Builds and runs the command via _run_command(cmd, check_output=True).
+    """
+    settings = getattr(configs, "settings", {}) or {}
+    mq = settings.get("mq") or {}
+
+    if mq.get("type", None) != "redis":
+        print("Your settings file needs to specify redis as the MQ type. Please fix it.")
+        return
+
+    bin_path = mq.get("bin")
+    conf_file = mq.get("conf_file", None)
+
+    if not bin_path:
+        print("Error: settings['mq']['bin'] is required.")
+        return
+
+    parts = [shlex.quote(str(bin_path))]
+    if conf_file:
+        parts.append(shlex.quote(str(conf_file)))
+
+    cmd = " ".join(parts)
+    try:
+        out = _run_command(cmd, check_output=True)
+        if out:
+            print(out)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to start Redis: {e}")
+
+
 COMMAND_GROUPS = [
-    ("Basic Commands", [check_services, show_config, init_settings, start_services, stop_services]),
-    ("Consumption Commands", [start_consumption_services, stop_consumption_services]),
+    ("Basic Commands", [version, check_services, show_settings, init_settings, start_services, stop_services]),
+    ("Consumption Commands", [start_consumption_services, stop_consumption_services, stream_messages]),
     ("Database Commands", [workflow_count, query, get_task]),
-    ("Agent Commands", [start_agent, agent_client]),
+    ("Agent Commands", [start_agent, agent_client, start_agent_gui]),
+    ("External Services", [start_mongo, start_redis]),
 ]
 
 COMMANDS = set(f for _, fs in COMMAND_GROUPS for f in fs)
@@ -332,7 +573,7 @@ def _run_command(cmd_str: str, check_output: bool = True, popen_kwargs: Optional
         popen_kwargs = {}
 
     kwargs = {"shell": True, "check": True, **popen_kwargs}
-
+    print(f"Going to run shell command:\n{cmd_str}")
     if check_output:
         kwargs.update({"capture_output": True, "text": True})
         result = subprocess.run(cmd_str, **kwargs)
@@ -377,8 +618,9 @@ def main():  # noqa: D103
         for pname, param in inspect.signature(func).parameters.items():
             arg_name = f"--{pname.replace('_', '-')}"
             params_doc = _parse_numpy_doc(doc).get(pname, {})
+
             help_text = f"{params_doc.get('type', '')} - {params_doc.get('desc', '').strip()}"
-            if isinstance(param.annotation, bool):
+            if param.annotation is bool:
                 parser.add_argument(arg_name, action="store_true", help=help_text)
             elif param.annotation == List[str]:
                 parser.add_argument(arg_name, type=lambda s: s.split(","), help=help_text)
@@ -386,7 +628,7 @@ def main():  # noqa: D103
                 parser.add_argument(arg_name, type=str, help=help_text)
 
     # Handle --help --command
-    help_flag = "--help" in sys.argv
+    help_flag = "--help" in sys.argv or "-h" in sys.argv
     command_flags = {f"--{f.__name__.replace('_', '-')}" for f in COMMANDS}
     matched_command_flag = next((arg for arg in sys.argv if arg in command_flags), None)
 
@@ -402,7 +644,7 @@ def main():  # noqa: D103
             meta = params.get(pname, {})
             opt = p.default != inspect.Parameter.empty
             print(
-                f"    --{pname:<18} {meta.get('type', 'str')}, "
+                f"    --{pname.replace('_', '-'):<18} {meta.get('type', 'str')}, "
                 f"{'optional' if opt else 'required'} - {meta.get('desc', '').strip()}"
             )
         print()
@@ -430,7 +672,7 @@ def main():  # noqa: D103
                         opt = sig.parameters[argname].default != inspect.Parameter.empty
                         print(
                             f"          --"
-                            f"{argname:<18} {meta['type']}, "
+                            f"{argname.replace('_', '-'):<18} {meta['type']}, "
                             f"{'optional' if opt else 'required'} - {meta['desc'].strip()}"
                         )
                 print()

@@ -1,15 +1,12 @@
 """MQ base module."""
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Union, List, Callable
 import csv
 import msgpack
 from time import time
 import flowcept.commons
 from flowcept.commons.autoflush_buffer import AutoflushBuffer
-
-from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
-
 from flowcept.commons.utils import chunked
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
@@ -21,12 +18,14 @@ from flowcept.configs import (
     MQ_TYPE,
     MQ_TIMING,
     KVDB_ENABLED,
+    MQ_ENABLED,
+    DUMP_BUFFER_PATH,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
 
 
-class MQDao(ABC):
+class MQDao(object):
     """MQ base class."""
 
     ENCODER = GenericJSONEncoder if JSON_SERIALIZER == "complex" else None
@@ -35,6 +34,9 @@ class MQDao(ABC):
     @staticmethod
     def build(*args, **kwargs) -> "MQDao":
         """Build it."""
+        if not MQ_ENABLED:
+            return MQDao()
+
         if MQ_TYPE == "redis":
             from flowcept.commons.daos.mq_dao.mq_dao_redis import MQDaoRedis
 
@@ -69,12 +71,11 @@ class MQDao(ABC):
         self.started = False
         self._adapter_settings = adapter_settings
         if KVDB_ENABLED:
+            from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
+
             self._keyvalue_dao = KeyValueDAO()
         else:
             self._keyvalue_dao = None
-            self.logger.warning(
-                "We are going to run without KVDB. If you are running a workflow, this may lead to errors."
-            )
         self._time_based_flushing_started = False
         self.buffer: Union[AutoflushBuffer, List] = None
         if MQ_TIMING:
@@ -95,11 +96,21 @@ class MQDao(ABC):
     def bulk_publish(self, buffer):
         """Publish it."""
         # self.logger.info(f"Going to flush {len(buffer)} to MQ...")
-        if MQ_CHUNK_SIZE > 1:
-            for chunk in chunked(buffer, MQ_CHUNK_SIZE):
-                self._bulk_publish(chunk)
+        if flowcept.configs.DB_FLUSH_MODE == "offline":
+            if DUMP_BUFFER_PATH is not None:
+                import orjson
+
+                with open(DUMP_BUFFER_PATH, "wb", buffering=1_048_576) as f:
+                    for obj in buffer:
+                        f.write(orjson.dumps(obj))
+                        f.write(b"\n")
+                self.logger.info(f"Saved Flowcept messages into {DUMP_BUFFER_PATH}.")
         else:
-            self._bulk_publish(buffer)
+            if MQ_CHUNK_SIZE > 1:
+                for chunk in chunked(buffer, MQ_CHUNK_SIZE):
+                    self._bulk_publish(chunk)
+            else:
+                self._bulk_publish(buffer)
 
     def register_time_based_thread_init(self, interceptor_instance_id: str, exec_bundle_id=None):
         """Register the time."""
@@ -183,7 +194,7 @@ class MQDao(ABC):
             writer.writerow(["type", "start", "end", "duration", "size"])
             writer.writerows(self._flush_events)
 
-    def _stop(self, interceptor_instance_id: str, check_safe_stops: bool = True, bundle_exec_id: int = None):
+    def _stop(self, interceptor_instance_id: str = None, check_safe_stops: bool = True, bundle_exec_id: int = None):
         """Stop MQ publisher."""
         self.logger.debug(f"MQ pub received stop sign: bundle={bundle_exec_id}, interceptor={interceptor_instance_id}")
         self._close_buffer()
