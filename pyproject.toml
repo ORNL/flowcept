@@ -37,7 +37,10 @@ keywords = [
     "model-management",
     "mlflow",
     "responsible-ai",
-    "data-analytics"
+    "data-analytics",
+    "agentic-ai",
+    "agentic-workflows",
+    "llm",
 ]
 
 dependencies = [
