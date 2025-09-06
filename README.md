@@ -1,3 +1,14 @@
+<p align="center">
+  <img src="./docs/img/flowcept-logo.png" alt="Flowcept Logo" width="200"/>
+</p>
+<h3 align="center">Lightweight Distributed Workflow Provenance</h3>
+
+---
+
+Flowcept captures and queries workflow provenance at runtime with minimal code changes and low overhead. It unifies data from diverse tools and workflows across the Edge–Cloud–HPC continuum and provides ML-aware capture, MCP agents provenance, telemetry, extensible adapters, and flexible storage.
+
+---
+
 [![Documentation](https://img.shields.io/badge/docs-readthedocs.io-green.svg)](https://flowcept.readthedocs.io/)
 [![Build](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml)
 [![PyPI](https://badge.fury.io/py/flowcept.svg)](https://pypi.org/project/flowcept)
@@ -5,15 +16,11 @@
 [![Code Formatting](https://github.com/ORNL/flowcept/actions/workflows/checks.yml/badge.svg?branch=dev)](https://github.com/ORNL/flowcept/actions/workflows/checks.yml)
 [![License: MIT](https://img.shields.io/github/license/ORNL/flowcept)](LICENSE)
 
-# Flowcept
-
-Flowcept captures and queries workflow provenance at runtime with minimal code changes and low overhead. It unifies data from diverse tools and workflows across the Edge–Cloud–HPC continuum and provides ML-aware capture, telemetry, and flexible storage.
-
 ---
 
 # Quickstart
 
-This is the fastest way to see Flowcept capturing provenance from plain Python functions, no external services needed.
+The easiest way to capture provenance from plain Python functions, with no external services needed:
 
 1) Install and initialize settings
 
@@ -22,10 +29,11 @@ This is the fastest way to see Flowcept capturing provenance from plain Python f
 pip install flowcept
 flowcept --init-settings
 ```
+This generates a minimal settings file in `~/.flowcept/settings.yaml.`
 
 2) Run the minimal example
 
-Save as `quickstart.py` and run `python quickstart.py.`
+Save the following script as `quickstart.py` and run `python quickstart.py.`
 
 ```python
 """
@@ -64,12 +72,50 @@ if __name__ == "__main__":
     print(json.dumps(prov_messages, indent=2))
 ```
 
-You should see:
-- Final output 8 printed to stdout, and
-- Two provenance messages printed, each related to an executed function.
+This creates a provenance file in `flowcept_messages.jsonl`.  In it, you will see two provenance messages, each related to an executed function.
 
-For online querying, telemetry, adapters (MLflow, Dask, TensorBoard), PyTorch instrumentation, HPC or federated runs,
-and more, see the [Jupyter Notebooks](notebooks) and [Examples directory](examples) for utilization examples.
+```json
+[
+  {
+    "activity_id": "sum_one",
+    "workflow_id": "fe546706-ef46-4482-8f70-3af664a7131b",
+    "campaign_id": "76088532-3bef-4343-831e-d8a5d9156174",
+    "used": {
+      "i1": 3
+    },
+    "started_at": 1757171258.637908,
+    "hostname": "my_laptop",
+    "task_id": "1757171258.637908",
+    "status": "FINISHED",
+    "ended_at": 1757171258.6379142,
+    "generated": {
+      "o1": 4
+    },
+    "type": "task"
+  },
+  {
+    "activity_id": "mult_two",
+    "workflow_id": "fe546706-ef46-4482-8f70-3af664a7131b",
+    "campaign_id": "76088532-3bef-4343-831e-d8a5d9156174",
+    "used": {
+      "o1": 4
+    },
+    "started_at": 1757171258.637933,
+    "hostname": "my_laptop",
+    "task_id": "1757171258.637933",
+    "status": "FINISHED",
+    "ended_at": 1757171258.6379352,
+    "generated": {
+      "o2": 8
+    },
+    "type": "task"
+  }
+]
+```
+
+
+For online querying using databases, MCP agents and Grafana, telemetry, adapters (MLflow, Dask, TensorBoard), PyTorch and MCP instrumentation, HPC optimization or federated runs,
+and more, see the [Jupyter Notebooks](notebooks), the [Examples directory](examples) and the [complete documentation](https://flowcept.readthedocs.io/).
 
 ## Table of Contents
 
@@ -89,7 +135,7 @@ and more, see the [Jupyter Notebooks](notebooks) and [Examples directory](exampl
 Flowcept captures and queries workflow provenance at runtime with minimal code changes and low data capture overhead,
 unifying data from diverse tools and workflows.
 
-Designed for scenarios involving critical data from multiple, federated workflows in the Edge-Cloud-HPC continuum, Flowcept supports end-to-end monitoring, analysis, querying, and enhanced support for Machine Learning (ML) workflows.
+Designed for scenarios involving critical data from multiple, federated workflows in the Edge-Cloud-HPC continuum, Flowcept supports end-to-end monitoring, analysis, querying, and enhanced support for Machine Learning (ML) and for agentic workflows.
 
 ## Features
 
@@ -97,7 +143,8 @@ Designed for scenarios involving critical data from multiple, federated workflow
 - Adapters for MLflow, Dask, TensorBoard; easy to add more
 - Optional explicit instrumentation via decorators
 - ML-aware capture, from workflow to epoch and layer granularity
-- Low overhead, suitable for HPC and distributed setups
+- Agentic workflows: MCP agents-aware provenance capture
+- Low overhead, suitable for HPC and highly distributed setups
 - Telemetry capture for CPU, GPU, memory, linked to dataflow
 - Pluggable MQ and storage backends (Redis, Kafka, MongoDB, LMDB)
 - [W3C PROV](https://www.w3.org/TR/prov-overview/) adherence 
@@ -115,33 +162,63 @@ To install Flowcept with its basic dependencies from [PyPI](https://pypi.org/pro
 pip install flowcept
 ```
 
-This installs the core Flowcept package but does **not** include MongoDB, Redis, or any adapter-specific dependencies.
+This installs the minimal Flowcept package, **not** including MongoDB, Redis, MCP, or any adapter-specific dependencies.
 
 ### 2. Installing Specific Adapters and Additional Dependencies
-To install extra dependencies required for specific adapters or features (good practice is to install only what you need!):
+
+Flowcept integrates with several tools and services, but you should **only install what you actually need**.  
+Good practice is to cherry-pick the extras relevant to your workflow instead of installing them all.
 
 ```shell
-pip install flowcept[mongo]         # Install Flowcept with MongoDB support.
-pip install flowcept[mlflow]        # Install MLflow adapter.
-pip install flowcept[dask]          # Install Dask adapter.
-pip install flowcept[tensorboard]   # Install TensorBoard adapter.
-pip install flowcept[kafka]         # Use Kafka as the MQ instead of Redis.
-pip install flowcept[nvidia]        # Capture NVIDIA GPU runtime information.
-pip install flowcept[analytics]     # Enable extra analytics features.
-pip install flowcept[dev]           # Install Flowcept's developer dependencies.
+pip install flowcept[mongo]         # MongoDB support
+pip install flowcept[mlflow]        # MLflow adapter
+pip install flowcept[dask]          # Dask adapter
+pip install flowcept[tensorboard]   # TensorBoard adapter
+pip install flowcept[kafka]         # Kafka message queue
+pip install flowcept[nvidia]        # NVIDIA GPU runtime capture
+pip install flowcept[telemetry]     # CPU/GPU/memory telemetry capture
+pip install flowcept[lmdb]          # LMDB lightweight database
+pip install flowcept[mqtt]          # MQTT support
+pip install flowcept[llm_agent]     # MCP agent, LangChain, Streamlit integration: needed either for MCP capture or for the Flowcept Agent.
+pip install flowcept[llm_google]    # Google GenAI + Flowcept agent support
+pip install flowcept[analytics]     # Extra analytics (seaborn, plotly, scipy)
+pip install flowcept[dev]           # Developer dependencies (docs, tests, lint, etc.)
 ```
 
-### 3. Install All Optional Dependencies at Once
+### 3. Installing with Common Runtime Bundle
 
-WARNING: Very likely you will not need this, as this will install several dependencies that won't make sense to be in
-a same Python environment. This is useful for developers contributing to Flowcept's codebase, who may
-need all dependencies installed. 
+```shell
+pip install flowcept[extras]
+```
+
+The `extras` group is a convenience shortcut that bundles the most common runtime dependencies.  
+It is intended for users who want a fairly complete, but not maximal, Flowcept environment.
+
+It installs:
+
+- **Redis** → default message queue system for Flowcept  
+- **Telemetry** → CPU, GPU, memory usage monitoring  
+- **MongoDB** → MongoDB client  
+- **GitPython, Pandas, Flask-RESTful, Requests** → useful for model management, LLM prompt tuning, API interactions, and data analytics  
+
+You might choose `flowcept[extras]` if:
+
+- You want Flowcept to run out-of-the-box with Redis, telemetry, and MongoDB.  
+- You also want convenience libraries (Pandas, GitPython, Flask-RESTful, Requests) for querying, analysis, and small API endpoints  
+- You prefer not to install each extra one by one
+
+⚠️ If you only need one of these features, install it individually instead of `extras`.
+
+### 4. Install All Optional Dependencies at Once (⚠️ Not Recommended)
+
+Flowcept provides a combined all extra, but installing everything into a single environment is not recommended for users.
+Many of these dependencies are unrelated and should not be mixed in the same runtime. This option is only intended for Flowcept developers who need to test across all adapters and integrations.
 
 ```
 pip install flowcept[all]
 ```
 
-### 4. Installing from Source
+### 5. Installing from Source
 To install Flowcept from the source repository:
 
 ```
@@ -150,78 +227,133 @@ cd flowcept
 pip install .
 ```
 
-You can also install specific dependencies using:
+You can then install specific dependencies similarly as above:
 
 ```
-pip install .[dependency_name]
+pip install .[optional_dependency_name]
 ```
 
 This follows the same pattern as step 2, allowing for a customized installation from source.
 
 ## Setup
 
-### Start the MQ System:
+The [Quickstart](#quickstart) example works with just `pip install flowcept`, no extra setup is required.
 
-To use Flowcept, one needs to start a MQ system `make services`. This will start up Redis but see other options in the [deployment](deployment) directory and see [Data Persistence](#data-persistence) notes below.
+For online queries or distributed capture, Flowcept relies on two optional components:
 
+- **Message Queue (MQ)** — message broker / pub-sub / data stream  
+- **Database (DB)** — persistent storage for historical queries  
+
+---
+
+#### Message Queue (MQ)
+
+- Required for anything beyond Quickstart  
+- Flowcept publishes provenance data to the MQ during workflow runs  
+- Developers can subscribe with custom consumers (see [this example](resources/simple_redis_consumer.py).  
+- You can monitor or print messages in motion using `flowcept --stream-messages --print`.  
+
+Supported MQs:
+- [Redis](https://redis.io) → **default**, lightweight, works on Linux, macOS, Windows, and HPC (tested on [Frontier](link) and [Summit](link))  
+- [Kafka](https://kafka.apache.org) → for distributed environments or if Kafka is already in your stack  
+- [Mofka](https://mofka.readthedocs.io) → optimized for HPC runs  
+
+---
+
+#### Database (DB)
+
+- **Optional**, but required for:
+  - Persisting provenance beyond MQ memory/disk buffers  
+  - Running complex analytical queries on historical data  
+
+Supported DBs:
+- [MongoDB](https://www.mongodb.com) → default, efficient bulk writes + rich query support  
+- [LMDB](https://lmdb.readthedocs.io) → lightweight, no external service, basic query capabilities  
+
+---
+
+### Notes
+
+- Without a DB:
+  - Provenance remains in the MQ only (persistence not guaranteed)  
+  - Complex historical queries are unavailable  
+- Flowcept’s architecture is modular: other MQs and DBs (graph, relational, etc.) can be added in the future  
+- Deployment examples for MQ and DB are provided in the [deployment](deployment) directory  
+ 
+
+### Downloading and Starting External Services (MQ or DB)
+
+Flowcept uses external services for message queues (MQ) and databases (DB). You can start them with Docker Compose, plain containers, or directly on your host.
+
+---
+
+#### Using Docker Compose (recommended)
+
+We provide a [Makefile](deployment/Makefile) with shortcuts:
+
+1. **Redis only (no DB)**: `make services`   (LMDB can be used in this setup as a lightweight DB)
+2. **Redis + MongoDB**: `make services-mongo`
+3. **Kafka + MongoDB**: `make services-kafka`
+4. **Mofka only (no DB)**: `make services-mofka`
+
+To customize, edit the YAML files in [deployment](deployment/) and run `docker compose -f deployment/<compose-file>.yml up -d`
+
+---
+
+#### Using Docker (without Compose)
+
+See the [deployment/](deployment/) compose files for expected images and configurations. You can adapt them to your environment and use standard `docker pull / run / exec` commands.
+
+---
+
+#### Running on the Host (no containers)
+
+1. Install binaries for the service you need:  
+   - **macOS** users can install with [Homebrew](https://brew.sh).  
+     Example for Redis:
+     ```bash
+     brew install redis
+     brew services start redis
+     ```
+
+   - On Linux, use your distro package manager (e.g. `apt`, `dnf`, `yum`) 
+   - If non-root (typically the case if you want to deploy these services locally in an HPC system), search for the installed binaries for your OS/hardware architecture, download them in a directory that you have r+w permission, and run them.
+   - On Windows, utilize [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) to use a Linux distro.
+
+2. Start services normally (`redis-server`, `mongod`, `kafka-server-start.sh`, etc.).
+
+## Flowcept Settings File
 ### Flowcept Settings File
 
-Flowcept requires a settings file for configuration.
+Flowcept uses a settings file for configuration.
 
-Running `flowcept --init-settings` will create a minimal settings file under your home directory: `~/.flowcept/setting.yaml`. 
+- Create a minimal settings file (**recommended**): `flowcept --init-settings` → creates `~/.flowcept/settings.yaml`
 
-You can find an example configuration file [here](resources/sample_settings.yaml), with documentation for each parameter provided as inline comments.
+- Create a full settings file with all options: `flowcept --init-settings --full` → creates `~/.flowcept/settings.yaml`
 
-#### What You Can Configure:
+---
 
-- Message queue and database routes, ports, and paths;
-- Buffer sizes and flush settings;
-- Telemetry data capture settings;
-- Instrumentation and PyTorch details;
-- Log levels;
-- Data observability adapters; and more.
+#### What You Can Configure
 
-#### How to use a custom settings file:
+- Message queue and database routes, ports, and paths  
+- MCP agent ports and LLM API keys  
+- Buffer sizes and flush settings  
+- Telemetry capture settings  
+- Instrumentation and PyTorch details  
+- Log levels  
+- Data observability adapters  
+- And more (see [example file](resources/sample_settings.yaml))  
 
-Create or modify your settings file based on the [example](resources/sample_settings.yaml).
+---
 
-Set the `FLOWCEPT_SETTINGS_PATH` environment variable to its absolute path:
-```sh
-export FLOWCEPT_SETTINGS_PATH=/absolute/path/to/your/settings.yaml
-```
+#### Custom Settings File
 
-If this variable is not set, Flowcept will use the default values from the [example](resources/sample_settings.yaml) file.
+Flowcept looks for its settings in the following order:
 
-# Running with Containers
+1. `~/.flowcept/settings.yaml` — created by running `flowcept --init-settings`  
+2. Environment variable `FLOWCEPT_SETTINGS_PATH` — if set, Flowcept will use this environment variable  
+3. [Default sample file](resources/sample_settings.yaml) — used if neither of the above is found
 
-To use containers instead of installing Flowcept's dependencies on your host system, we provide a [Dockerfile](deployment/Dockerfile) alongside a [docker-compose.yml](deployment/compose.yml) for dependent services (e.g., Redis, MongoDB).  
-
-#### Notes:  
-- As seen in the steps below, there are [Makefile](Makefile) commands to build and run the image. Please use them instead of running the Docker commands to build and run the image.
-- The Dockerfile builds from a local `miniconda` image, which will be built first using the [build-image.sh](deployment/build-image.sh) script.  
-- All dependencies for all adapters are installed, increasing build time. Edit the Dockerfile to customize dependencies based on our [pyproject.toml](pyproject.toml) to reduce build time if needed.  
-
-#### Steps:
-
-1. Build the Docker image:  
-    ```bash
-    make build
-    ```
-
-2. Start dependent services:
-    ```bash
-    make services
-    ```
-
-3. Run the image interactively:
-    ```bash
-    make run
-    ```
-
-4. Optionally, run Unit tests in the container:
-    ```bash
-    make tests-in-container
-    ```
 # Examples
 
 ### Adapters and Notebooks
@@ -236,21 +368,6 @@ To use containers instead of installing Flowcept's dependencies on your host sys
 | **Instrumentation and Decorators** | - [@flowcept](https://github.com/ORNL/flowcept/blob/main/examples/start_here.py): capture a bigger block of code as a workflow <br> - [@flowcept_task](https://github.com/ORNL/flowcept/blob/main/examples/instrumented_simple_example.py): generic tasks <br> - `@telemetry_flowcept_task`: same as `@flowcept_task`, but optimized for telemetry capture <br> - `@lightweight_flowcept_task`: same as `@flowcept_task`, but very lightweight, optimized for HPC workloads <br> - [Loop](https://github.com/ORNL/flowcept/blob/main/examples/instrumented_loop_example.py) <br> - [PyTorch Model](https://github.com/ORNL/flowcept/blob/main/examples/llm_complex/llm_model.py) <br> - [MCP Agents](https://github.com/ORNL/flowcept/blob/main/examples/agents/aec_agent_mock.py) |
 | **Message Queues (MQ)**            | [Redis](https://redis.io), [Kafka](https://kafka.apache.org), [Mofka](https://mofka.readthedocs.io) <br> _Setup example:_ [docker compose](https://github.com/ORNL/flowcept/blob/main/deployment/compose.yml) |
 | **Databases**                      | MongoDB, LMDB |
-
-## Data Persistence
-
-Flowcept uses an ephemeral message queue (MQ) with a pub/sub system to flush observed data. For optional data persistence, you can choose between:
-
-- [LMDB](https://lmdb.readthedocs.io/) (default): A lightweight, file-based database requiring no external services (but note it might require `gcc`). Ideal for simple tests or cases needing basic data persistence without query capabilities. Data stored in LMDB can be loaded into tools like Pandas for complex analysis. Flowcept's database API provides methods to export data in LMDB into Pandas DataFrames.
-- [MongoDB](https://www.mongodb.com/): A robust, service-based database with advanced query capabilities. Required to use Flowcept's Query API (i.e., `flowcept.Flowcept.db`) to run more complex queries and other features like ML model management or runtime queries (i.e., query while writing). To use MongoDB, initialize the service with `make services-mongo`.
-
-Flowcept supports writing to both databases simultaneously (default configuration), individually, or to neither, depending on configuration.
-
-If data persistence is disabled, captured data is sent to the MQ without any default consumer subscribing to persist it. In this case, querying the data requires creating a custom consumer to subscribe to the MQ.
-
-However, for querying, Flowcept Database API uses only one at a time. If both are enabled, Flowcept defaults to MongoDB. If neither is enabled, an error will occur.
-
-Data stored in MongoDB and LMDB are interchangeable. You can switch between them by transferring data from one to the other as needed.
 
 ## Performance Tuning for Performance Evaluation
 
