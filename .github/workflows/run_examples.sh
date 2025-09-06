@@ -35,6 +35,7 @@ run_test() {
 
   pip install . > /dev/null 2>&1
   pip install .[extras] > /dev/null 2>&1
+  pip install .[lmdb]
   pip list
 
   if [[ "$with_mongo" == "true" ]]; then
