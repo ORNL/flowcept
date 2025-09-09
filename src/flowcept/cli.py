@@ -101,17 +101,17 @@ def version():
     print(f"Flowcept {__version__}")
 
 
-def stream_messages(print_messages: bool = False, messages_file_path: Optional[str] = None):
+def stream_messages(messages_file_path: Optional[str] = None, keys_to_show: List[str] = None):
     """
     Listen to Flowcept's message stream and optionally echo/save messages.
 
     Parameters.
     ----------
-    print_messages : bool, optional
-        If True, print each decoded message to stdout.
     messages_file_path : str, optional
         If provided, append each message as JSON (one per line) to this file.
         If the file already exists, a new timestamped file is created instead.
+    keys_to_show : List[str], optional
+        List of object keys to show in the prints. Use comma-separated list: --keys-to-show 'activity_id','workflow_id'
     """
     # Local imports to avoid changing module-level deps
     from flowcept.configs import MQ_TYPE
@@ -123,10 +123,7 @@ def stream_messages(print_messages: bool = False, messages_file_path: Optional[s
     import os
     import json
     from datetime import datetime
-    import redis
-    import msgpack
-    from flowcept.configs import MQ_HOST, MQ_PORT, MQ_CHANNEL, KVDB_URI
-    from flowcept.commons.daos.mq_dao.mq_dao_redis import MQDaoRedis
+    from flowcept.flowceptor.consumers.base_consumer import BaseConsumer
 
     def _timestamped_path_if_exists(path: Optional[str]) -> Optional[str]:
         if not path:
@@ -150,53 +147,53 @@ def stream_messages(print_messages: bool = False, messages_file_path: Optional[s
 
         return json.dumps(obj, ensure_ascii=False, separators=(",", ":"), default=_default)
 
-    # Prepare output file (JSONL)
     out_fh = None
     if messages_file_path:
         out_path = _timestamped_path_if_exists(messages_file_path)
         out_fh = open(out_path, "w", encoding="utf-8", buffering=1)  # line-buffered
 
-    # Connect & subscribe
-    redis_client = redis.from_url(KVDB_URI) if KVDB_URI else redis.Redis(host=MQ_HOST, port=MQ_PORT, db=0)
-    pubsub = redis_client.pubsub()
-    pubsub.subscribe(MQ_CHANNEL)
+    class MyConsumer(BaseConsumer):
+        def __init__(self):
+            super().__init__()
 
-    print(f"Listening for messages on channel '{MQ_CHANNEL}'... (Ctrl+C to exit)")
-
-    try:
-        for message in pubsub.listen():
-            if not message or message.get("type") in MQDaoRedis.MESSAGE_TYPES_IGNORE:
-                continue
-
-            data = message.get("data")
-            if not isinstance(data, (bytes, bytearray)):
-                print(f"Skipping message with unexpected data type: {type(data)} - {data}")
-                continue
-
+        def message_handler(self, msg_obj: Dict) -> bool:
             try:
-                msg_obj = msgpack.loads(data, strict_map_key=False)
-                msg_type = msg_obj.get("type", None)
-                print(f"\nReceived a message! type={msg_type}")
+                if keys_to_show is not None:
+                    obj_to_print = {}
+                    for k in keys_to_show:
+                        v = msg_obj.get(k, None)
+                        if v is not None:
+                            obj_to_print[k] = v
+                    if not obj_to_print:
+                        obj_to_print = msg_obj
+                else:
+                    obj_to_print = msg_obj
 
-                if print_messages:
-                    print(_json_dumps(msg_obj))
+                print(_json_dumps(obj_to_print))
 
                 if out_fh is not None:
-                    out_fh.write(_json_dumps(msg_obj))
+                    out_fh.write(_json_dumps(obj_to_print))
                     out_fh.write("\n")
-
+            except KeyboardInterrupt:
+                print("\nGracefully interrupted, shutting down...")
+                return False
             except Exception as e:
-                print(f"Error decoding message: {e}")
+                print(e)
+                return False
+            finally:
+                try:
+                    if out_fh:
+                        out_fh.close()
+                except Exception as e:
+                    print(e)
+                    return False
 
-    except KeyboardInterrupt:
-        print("\nInterrupted, shutting down...")
-    finally:
-        try:
-            if out_fh:
-                out_fh.close()
-            pubsub.close()
-        except Exception:
-            pass
+            return True
+
+    m = f"Printing only the keys {keys_to_show}" if keys_to_show is not None else ""
+    print(f"Listening for messages.{m} Ctrl+C to exit")
+    consumer = MyConsumer()
+    consumer.start(daemon=False)
 
 
 def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: bool = False, consumers: List[str] = None):

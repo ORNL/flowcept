@@ -65,6 +65,7 @@ class FlowceptTask(object):
         subtype: str = None,
         custom_metadata: Dict = None,
         generated: Dict = None,
+        started_at: float = None,
         ended_at: float = None,
         stdout: str = None,
         stderr: str = None,
@@ -96,6 +97,8 @@ class FlowceptTask(object):
             Additional user-defined metadata to associate with the task.
         generated : Dict, optional
             Output data generated during the task execution.
+        started_at : float, optional
+            Timestamp indicating when the task started.
         ended_at : float, optional
             Timestamp indicating when the task ended.
         stdout : str, optional
@@ -117,7 +120,7 @@ class FlowceptTask(object):
             self._task.telemetry_at_start = tel
 
         self._task.activity_id = activity_id
-        self._task.started_at = time()
+        self._task.started_at = started_at or time()
         self._task.task_id = task_id or self._gen_task_id()
         self._task.workflow_id = workflow_id or Flowcept.current_workflow_id
         self._task.campaign_id = campaign_id or Flowcept.campaign_id

@@ -12,6 +12,7 @@ Designed for scenarios involving critical data from multiple workflows, Flowcept
    :caption: Contents:
 
    getstarted
+   prov_capture
    schemas
    contributing
    api-reference
