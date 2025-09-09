@@ -1,23 +1,22 @@
 Provenance Capture Methods
-================================
+===========================
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
 
 This page shows the **practical ways to capture provenance in Flowcept**—from zero-config quick runs to decorators, context managers, adapters, and fully custom tasks. Each section includes a minimal code snippet and links to examples.
 
-.. contents::
-   :local:
-   :depth: 2
-
-
 Data Observability Adapters
---------------------------
+---------------------------
 
 Flowcept can **observe** external tools and emit provenance automatically.
 
 Supported adapters:
 
-- **MLflow** — `example <https://github.com/ORNL/flowcept/blob/main/examples/mlflow_example.py>`_
-- **Dask** — `example <https://github.com/ORNL/flowcept/blob/main/examples/dask_example.py>`_
-- **TensorBoard** — `example <https://github.com/ORNL/flowcept/blob/main/examples/tensorboard_example.py>`_
+- **MLflow** — `MLflow example <https://github.com/ORNL/flowcept/blob/main/examples/mlflow_example.py>`_
+- **Dask** — `Dask example <https://github.com/ORNL/flowcept/blob/main/examples/dask_example.py>`_
+- **TensorBoard** — `TensorBoard example <https://github.com/ORNL/flowcept/blob/main/examples/tensorboard_example.py>`_
 
 Install the extras you need (from README), then configure the adapter in your settings file.  
 Adapters capture runs, tasks, metrics, and artifacts and push them through Flowcept’s pipeline (MQ → DB).
@@ -28,7 +27,7 @@ Decorators
 Use decorators to mark functions as **workflows** or **tasks** with almost no code changes.
 
 ``@flowcept`` (wrap a “main” function as a workflow)
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -46,13 +45,13 @@ Use decorators to mark functions as **workflows** or **tasks** with almost no co
 **Effect**: creates a workflow context and captures enclosed calls (including decorated tasks).
 
 ``@flowcept_task`` (mark a function as a task)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``@flowcept_task`` decorator wraps a Python function as a **provenance task**.  
 When the function executes, Flowcept captures its inputs (``used``), outputs (``generated``), execution metadata, telemetry (if enabled), and publishes them as provenance messages.
 
 Simple Example (works for most)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
 
@@ -76,11 +75,16 @@ Simple Example (works for most)
 - If an ``argparse.Namespace`` is passed, its attributes are flattened into key-value pairs.  
 - Internally this is done by the **default args handler**. You may override it by passing ``args_handler=...`` in the decorator.
 
-**Outputs (``generated``)**  
-- By default, the return value is stored under generic keys.  
-- Using ``output_names`` improves semantics:  
-  - ``@flowcept_task(output_names="y")`` maps a scalar result to ``{"y": result}``.  
-  - If the function returns a tuple/list and ``output_names`` has the same length, elements are mapped accordingly.  
+**Outputs (``generated``)**
+
+- By default, the return value is stored under generic keys.
+
+- Using ``output_names`` improves semantics:
+
+  * ``@flowcept_task(output_names="y")`` maps a scalar result to ``{"y": result}``.
+
+  * If the function returns a tuple/list and ``output_names`` has the same length, elements are mapped accordingly.
+
 - If the function returns a **dict**, it is passed through directly as ``generated`` (with minimal normalization).
 
 **Optional Metadata**
@@ -323,14 +327,19 @@ See `MCP Agent example <https://github.com/ORNL/flowcept/blob/main/examples/agen
         return result
 
 
-Context Managers (flexible block capture)
------------------------------------------
+Context Managers and Manual Control
+-----------------------------------
 
-The Flowcept() object
-~~~~~~~~~~~~~~~~~~~~~
+The ``Flowcept()`` Object
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Flowcept can be used in two main ways:
 
-If your workflow is **scattered across files** or you prefer block scoping, use the context manager:
+1. **As a context manager** – the easiest and safest option, which automatically starts and stops provenance capture.
+2. **Manually** – start/stop explicitly in code. Useful when workflows are scattered across multiple files.
+
+Using the Context Manager
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -340,11 +349,72 @@ If your workflow is **scattered across files** or you prefer block scoping, use 
    def add_one(x): return x + 1
 
    with Flowcept(workflow_name="my_workflow"):
-       # any code in here belongs to the workflow
+       # all code inside belongs to the workflow
        z = add_one(7)
        print(z)
 
-**When to use**: flexible block capture, multi-file codebases, or when you can’t (or don’t want to) decorate a top-level function.
+**When to use**:  
+- Flexible block capture  
+- Multi-file codebases  
+- When you don’t want to decorate a single top-level function
+
+Manual Start/Stop
+~~~~~~~~~~~~~~~~~
+
+You can also manage a ``Flowcept`` object manually.  
+This gives finer control and is handy when your workflow spans multiple files or when you want to start/stop capture dynamically.
+
+.. code-block:: python
+
+   from flowcept import Flowcept, flowcept_task
+
+   @flowcept_task
+   def double(x): return 2 * x
+
+   flowcept = Flowcept(workflow_name="manual_example")
+   flowcept.start()
+
+   y = double(21)
+   print("Result:", y)
+
+   flowcept.stop()
+
+Optional Arguments
+~~~~~~~~~~~~~~~~~~
+
+When creating a ``Flowcept`` instance (with or without a context manager), you can pass:
+
+- **interceptors**: list of interceptors (e.g., ``"instrumentation"``, ``"dask"``, ``"mlflow"``). Defaults to ``["instrumentation"]`` if enabled.
+- **bundle_exec_id**: identifier for grouping interceptors. Defaults to ``id(self)``.
+- **campaign_id**: unique identifier for the campaign. Defaults to a generated UUID.
+- **workflow_id**: unique identifier for the workflow. Defaults to a generated UUID.
+- **workflow_name**: descriptive name for the workflow.
+- **workflow_args**: dictionary of workflow-level arguments, stored in provenance.
+- **start_persistence (bool)**: default ``True``. Enables message persistence into DBs.
+- **check_safe_stops (bool)**: default ``True``. Controls safe shutdown of consumers.
+- **save_workflow (bool)**: default ``True``. Emits a workflow metadata message on start.
+- **\*args / \*\*kwargs**: adapter-specific parameters (e.g., Dask requires a ``dask_client`` kwarg).
+
+Example with Custom Args
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   with Flowcept(
+       workflow_name="training_workflow",
+       campaign_id="experiment_42",
+       start_persistence=True,
+       interceptors=["instrumentation", "dask"],
+       workflow_args={"epochs_list": [10, 100], "learning_rates": [0.1, 0.01, 0.001]}
+   ):
+       train_model()
+
+Notes
+~~~~~
+
+- Without persistence, messages are published only to MQ (not DB).  
+- In offline mode, provenance can be dumped to a JSONL file and loaded with ``Flowcept.read_messages_file()``.  
+- Both context manager and manual start/stop provide the same functionality—choose whichever fits your code structure.
 
 
 Custom Task Creation (fully customizable)
@@ -373,47 +443,6 @@ Requires an active workflow (``with Flowcept(...)`` or ``Flowcept().start()``).
 
 - Use **context** (``with FlowceptTask(...)``) *or* call ``send()`` explicitly.
 - Flows publish to the MQ; persistence/queries require a DB (e.g., MongoDB).
-
-
-End-to-End Example (Decorators)
--------------------------------
-
-.. code-block:: python
-
-   from flowcept import Flowcept, flowcept_task
-
-   @flowcept_task
-   def sum_one(n): return n + 1
-
-   @flowcept_task
-   def mult_two(n): return n * 2
-
-   with Flowcept(workflow_name="test_workflow"):
-       n = 3
-       o1 = sum_one(n)
-       o2 = mult_two(o1)
-       print(o2)
-
-   # If MongoDB is enabled in settings, you can query:
-   # from flowcept import Flowcept
-   # print(Flowcept.db.query(filter={"workflow_id": Flowcept.current_workflow_id}))
-
-
-Querying (MongoDB)
-------------------
-
-Once persisted (e.g., to MongoDB), you can query captured provenance:
-
-.. code-block:: python
-
-   from flowcept import Flowcept
-   results = Flowcept.db.query({"workflow_id": "<some_workflow_id>"})
-   print(results)
-
-.. note::
-   Complex historical queries require a persistent database (MongoDB).  
-   Without a DB, provenance lives in the MQ (ephemeral/streaming).
-
 
 References & Examples
 ---------------------

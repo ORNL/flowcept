@@ -16,45 +16,122 @@ from flowcept.configs import (
 
 
 class TaskObject:
-    """Task class."""
+    """Task object class.
+
+    Represents a single provenance task in Flowcept, including inputs, outputs,
+    execution metadata, telemetry, and environment details.
+    """
 
     type = "task"
+    """Constant type label for this object ("task")."""
+
     subtype: AnyStr = None
-    task_id: AnyStr = None  # Any way to identify a task
+    """Optional subtype of the task (e.g., iteration, ML step, custom)."""
+
+    task_id: AnyStr = None
+    """Unique identifier of the task."""
+
     utc_timestamp: float = None
+    """UTC timestamp when the task object was created."""
+
     adapter_id: AnyStr = None
+    """Identifier of the adapter that produced this task (if any)."""
+
     user: AnyStr = None
+    """User who executed or triggered the task."""
+
     data: Any = None
-    used: Dict[AnyStr, Any] = None  # Used parameter and files
+    """Arbitrary raw data payload associated with the task."""
+
+    used: Dict[AnyStr, Any] = None
+    """Inputs consumed by the task (parameters, files, resources)."""
+
     campaign_id: AnyStr = None
-    generated: Dict[AnyStr, Any] = None  # Generated results and files
+    """Campaign identifier grouping related tasks together."""
+
+    generated: Dict[AnyStr, Any] = None
+    """Outputs produced by the task (results, artifacts, files)."""
+
     submitted_at: float = None
+    """Timestamp when the task was submitted."""
+
     started_at: float = None
+    """Timestamp when the task execution started."""
+
     ended_at: float = None
-    registered_at: float = None  # Leave this for dates generated at the DocInserter
+    """Timestamp when the task execution ended."""
+
+    registered_at: float = None
+    """Timestamp when the task was registered by the DocInserter."""
+
     telemetry_at_start: Telemetry = None
+    """Telemetry snapshot captured at the start of the task."""
+
     telemetry_at_end: Telemetry = None
+    """Telemetry snapshot captured at the end of the task."""
+
     workflow_name: AnyStr = None
+    """Name of the workflow this task belongs to."""
+
     workflow_id: AnyStr = None
+    """Identifier of the workflow this task belongs to."""
+
     parent_task_id: AnyStr = None
+    """Identifier of the parent task, if this task is nested or dependent."""
+
     activity_id: AnyStr = None
-    group_id: AnyStr = None  # Utilized especially for loop iteration tasks, to group them.
+    """Activity name (usually the function name) associated with the task."""
+
+    group_id: AnyStr = None
+    """Grouping identifier, often used to link loop iterations together."""
+
     status: Status = None
+    """Execution status of the task (e.g., FINISHED, ERROR)."""
+
     stdout: Union[AnyStr, Dict] = None
+    """Captured standard output from the task, if available."""
+
     stderr: Union[AnyStr, Dict] = None
+    """Captured standard error from the task, if available."""
+
     custom_metadata: Dict[AnyStr, Any] = None
+    """Custom metadata dictionary provided by the developer/user."""
+
     mq_host: str = None
+    """Message queue host associated with the task."""
+
     environment_id: AnyStr = None
+    """Identifier of the environment where the task executed."""
+
     node_name: AnyStr = None
+    """Node name in a distributed system or HPC cluster."""
+
     login_name: AnyStr = None
+    """Login name of the user in the execution environment."""
+
     public_ip: AnyStr = None
+    """Public IP address of the machine executing the task."""
+
     private_ip: AnyStr = None
+    """Private IP address of the machine executing the task."""
+
     hostname: AnyStr = None
+    """Hostname of the machine executing the task."""
+
     address: AnyStr = None
+    """Optional network address associated with the task."""
+
     dependencies: List = None
+    """List of task IDs this task depends on."""
+
     dependents: List = None
+    """List of task IDs that depend on this task."""
+
     tags: List = None
+    """User-defined tags attached to the task."""
+
     agent_id: str = None
+    """Identifier of the agent responsible for executing this task (if any)."""
 
     _DEFAULT_ENRICH_VALUES = {
         "node_name": NODE_NAME,

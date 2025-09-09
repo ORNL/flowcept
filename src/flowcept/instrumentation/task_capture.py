@@ -22,21 +22,6 @@ class FlowceptTask(object):
     and metadata. It integrates with the Flowcept API and Instrumentation Interceptor to
     log task-specific details.
 
-    Parameters
-    ----------
-    task_id : str, optional
-        Unique identifier for the task. If not provided, it defaults to the current timestamp.
-    workflow_id : str, optional
-        ID of the workflow to which this task belongs. Defaults to the current workflow ID from
-        Flowcept.
-    campaign_id : str, optional
-        ID of the campaign to which this task belongs. Defaults to the current campaign ID from
-        Flowcept.
-    used : Dict, optional
-        Metadata about the resources or data used during the task execution.
-    custom_metadata : Dict, optional
-        User-defined metadata associated with the task.
-
     Methods
     -------
     __enter__()
