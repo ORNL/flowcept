@@ -32,3 +32,4 @@ core.*
 *.csv
 
 uv.lock
+examples/flowcept_messages.jsonl

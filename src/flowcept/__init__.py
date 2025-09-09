@@ -16,6 +16,11 @@ def __getattr__(name):
 
         return WorkflowObject
 
+    elif name == "TaskObject":
+        from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
+
+        return TaskObject
+
     elif name == "flowcept_task":
         from flowcept.instrumentation.flowcept_task import flowcept_task
 

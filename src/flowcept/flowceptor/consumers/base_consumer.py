@@ -4,6 +4,7 @@ from typing import Callable, Dict, Tuple, Optional
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.configs import MQ_ENABLED
 
 
 class BaseConsumer(object):
@@ -16,7 +17,11 @@ class BaseConsumer(object):
 
     def __init__(self):
         """Initialize the message queue DAO and logger."""
+        if not MQ_ENABLED:
+            raise Exception("MQ is disabled in the settings. You cannot consume messages.")
+
         self._mq_dao = MQDao.build()
+
         self.logger = FlowceptLogger()
         self._main_thread: Optional[Thread] = None
 
