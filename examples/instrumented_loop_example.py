@@ -3,6 +3,9 @@ from time import sleep
 
 from flowcept import Flowcept, FlowceptLoop
 
+# EXAMPLE 1:
+
+
 iterations = range(1, 5)
 
 with Flowcept():
@@ -19,7 +22,7 @@ docs = Flowcept.db.get_tasks_from_current_workflow()
 assert len(docs) == len(iterations)
 
 
-# WHILE LOOP EXAMPLE
+# EXAMPLE 2: WHILE LOOP EXAMPLE
 # The following code is equivalent to:
 # while layer_for_control_update <= num_layers - 1:
 #     ... loop code ...
@@ -69,3 +72,6 @@ for layer_ix in iterations:
 if with_flowcept:
     docs = Flowcept.db.get_tasks_from_current_workflow()
     assert len(docs) == len(iterations)
+
+
+# EXAMPLE 3: WHILE LOOP EXAMPLE
