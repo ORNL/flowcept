@@ -4,6 +4,7 @@ import os.path
 from typing import List, Dict
 from uuid import uuid4
 
+from flowcept.commons.autoflush_buffer import AutoflushBuffer
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
@@ -30,6 +31,7 @@ class Flowcept(object):
     # TODO: rename current_workflow_id to workflow_id. This will be a major refactor
     current_workflow_id = None
     campaign_id = None
+    buffer = None
 
     @ClassProperty
     def db(cls):
@@ -155,7 +157,11 @@ class Flowcept(object):
                 interceptor_inst = BaseInterceptor.build(interceptor)
                 interceptor_inst.start(bundle_exec_id=self._bundle_exec_id, check_safe_stops=self._check_safe_stops)
                 self._interceptor_instances.append(interceptor_inst)
-                self.buffer = interceptor_inst._mq_dao.buffer
+                if isinstance(interceptor_inst._mq_dao.buffer, AutoflushBuffer):
+                    Flowcept.buffer = self.buffer = interceptor_inst._mq_dao.buffer.current_buffer
+                else:
+                    Flowcept.buffer = self.buffer = interceptor_inst._mq_dao.buffer
+
                 if self._should_save_workflow and not self._workflow_saved:
                     self.save_workflow(interceptor, interceptor_inst)
 
@@ -296,6 +302,8 @@ class Flowcept(object):
             self.logger.info("Stopping DB Inserters...")
             for db_inserter in self._db_inserters:
                 db_inserter.stop(bundle_exec_id=self._bundle_exec_id)
+
+        Flowcept.buffer = self.buffer = None
         self.is_started = False
         self.logger.debug("All stopped!")
 

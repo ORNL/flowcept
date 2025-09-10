@@ -1,3 +1,6 @@
+"""
+This is a simple, standalone Redis consumer. Use it to customize to your needs or to use it as basis for other MQs.
+"""
 import redis
 import msgpack
 

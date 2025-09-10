@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "Flowcept"
-copyright = "2025, Oak Ridge National Lab"
+copyright = "Oak Ridge National Lab"
 author = "Oak Ridge National Lab"
 
 # -- General configuration ---------------------------------------------------
@@ -23,4 +23,5 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "furo"
 html_title = "Flowcept"
-html_static_path = ["_static"]
+html_static_path = ["img"]
+html_logo = "img/flowcept-logo.png"

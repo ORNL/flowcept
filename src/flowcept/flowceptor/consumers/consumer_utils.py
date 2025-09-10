@@ -11,7 +11,7 @@ from flowcept.commons.vocabulary import Status
 UTC_TZ = ZoneInfo("UTC")
 
 
-def curate_task_msg(task_msg_dict: dict, convert_times=True):
+def curate_task_msg(task_msg_dict: dict, convert_times=True, keys_to_drop: List = None):
     """Curate a task message."""
     # Converting any arg to kwarg in the form {"arg1": val1, "arg2: val2}
     for field in TaskObject.get_dict_field_names():
@@ -44,6 +44,10 @@ def curate_task_msg(task_msg_dict: dict, convert_times=True):
     # This happens because of the @lightweight_flowcept_task
     if "used" in task_msg_dict and task_msg_dict["used"].get("workflow_id", None):
         task_msg_dict["workflow_id"] = task_msg_dict["used"].pop("workflow_id")
+
+    if keys_to_drop is not None:
+        for k in keys_to_drop:
+            task_msg_dict.pop(k, None)
 
     if convert_times:
         for time_field in TaskObject.get_time_field_names():
@@ -97,7 +101,11 @@ def convert_keys_to_strings(obj):
 
 
 def curate_dict_task_messages(
-    doc_list: List[Dict], indexing_key: str, utc_time_at_insertion: float = 0, convert_times=True
+    doc_list: List[Dict],
+    indexing_key: str,
+    utc_time_at_insertion: float = 0,
+    convert_times=True,
+    keys_to_drop: List = None,
 ):
     """Remove duplicates.
 
@@ -134,7 +142,7 @@ def curate_dict_task_messages(
         if utc_time_at_insertion > 0:
             doc["utc_time_at_insertion"] = utc_time_at_insertion
 
-        curate_task_msg(doc, convert_times)
+        curate_task_msg(doc, convert_times, keys_to_drop)
         indexing_key_value = doc[indexing_key]
 
         if indexing_key_value not in indexed_buffer:

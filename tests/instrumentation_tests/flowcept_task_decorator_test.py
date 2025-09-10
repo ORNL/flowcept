@@ -275,7 +275,6 @@ class DecoratorTests(unittest.TestCase):
         assert task["used"]["known_args"]["b"] == "abc"
         assert task["used"]["unknown_args"] == ['--unknown_arg', 'unk', "['a']"]
 
-
     def test_online_offline(self):
         flowcept.configs.DB_FLUSH_MODE = "offline"
         # flowcept.instrumentation.decorators.instrumentation_interceptor = (

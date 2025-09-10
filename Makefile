@@ -8,6 +8,10 @@ help:
 	@printf "\033[32mservices-stop\033[0m             stop the running Docker services\n"
 	@printf "\033[32mservices-mongo\033[0m            run services with MongoDB using Docker\n"
 	@printf "\033[32mservices-stop-mongo\033[0m       stop MongoDB services and remove attached volumes\n"
+	@printf "\033[32mservices-kafka\033[0m            run services with Kafka using Docker\n"
+	@printf "\033[32mservices-stop-kafka\033[0m       stop Kafka services and remove attached volumes\n"
+	@printf "\033[32mservices-mofka\033[0m            run services with Mofka using Docker\n"
+	@printf "\033[32mservices-stop-mofka\033[0m       stop Mofka services and remove attached volumes\n"
 	@printf "\033[32mtests\033[0m                     run unit tests with pytest\n"
 	@printf "\033[32mtests-in-container\033[0m        run unit tests with pytest inside Flowcept's container\n"
 	@printf "\033[32mtests-in-container-mongo\033[0m  run unit tests inside container with MongoDB\n"
@@ -89,6 +93,22 @@ dev_agent:
 install_dev_agent: # Run this to fix python env problems in the MCP studio env
 	mcp install src/flowcept/flowceptor/adapters/agents/flowcept_agent.py
 
+
+# Run services with Kafka using Docker
+services-kafka:
+	docker compose --file deployment/compose-kafka.yml up --detach
+
+# Stop Kafka services and remove attached volumes
+services-stop-kafka:
+	docker compose --file deployment/compose-kafka.yml down --volumes
+
+# Run services with Mofka using Docker
+services-mofka:
+	docker compose --file deployment/compose-mofka.yml up --detach
+
+# Stop Mofka services and remove attached volumes
+services-stop-mofka:
+	docker compose --file deployment/compose-mofka.yml down --volumes
 
 # Run unit tests using pytest
 .PHONY: tests

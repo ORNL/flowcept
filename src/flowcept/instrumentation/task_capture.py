@@ -22,21 +22,6 @@ class FlowceptTask(object):
     and metadata. It integrates with the Flowcept API and Instrumentation Interceptor to
     log task-specific details.
 
-    Parameters
-    ----------
-    task_id : str, optional
-        Unique identifier for the task. If not provided, it defaults to the current timestamp.
-    workflow_id : str, optional
-        ID of the workflow to which this task belongs. Defaults to the current workflow ID from
-        Flowcept.
-    campaign_id : str, optional
-        ID of the campaign to which this task belongs. Defaults to the current campaign ID from
-        Flowcept.
-    used : Dict, optional
-        Metadata about the resources or data used during the task execution.
-    custom_metadata : Dict, optional
-        User-defined metadata associated with the task.
-
     Methods
     -------
     __enter__()
@@ -65,6 +50,7 @@ class FlowceptTask(object):
         subtype: str = None,
         custom_metadata: Dict = None,
         generated: Dict = None,
+        started_at: float = None,
         ended_at: float = None,
         stdout: str = None,
         stderr: str = None,
@@ -90,12 +76,16 @@ class FlowceptTask(object):
             Describes the specific activity this task captures.
         used : Dict, optional
             Metadata about resources or data used during the task.
+        data: Any, optional
+            Any raw data associated to this task.
         subtype : str, optional
             Optional string categorizing the task subtype.
         custom_metadata : Dict, optional
             Additional user-defined metadata to associate with the task.
         generated : Dict, optional
             Output data generated during the task execution.
+        started_at : float, optional
+            Timestamp indicating when the task started.
         ended_at : float, optional
             Timestamp indicating when the task ended.
         stdout : str, optional
@@ -117,7 +107,7 @@ class FlowceptTask(object):
             self._task.telemetry_at_start = tel
 
         self._task.activity_id = activity_id
-        self._task.started_at = time()
+        self._task.started_at = started_at or time()
         self._task.task_id = task_id or self._gen_task_id()
         self._task.workflow_id = workflow_id or Flowcept.current_workflow_id
         self._task.campaign_id = campaign_id or Flowcept.campaign_id
@@ -159,6 +149,8 @@ class FlowceptTask(object):
         ended_at: float = None,
         stdout: str = None,
         stderr: str = None,
+        data: Any = None,
+        custom_metadata: Dict = None,
         status: Status = Status.FINISHED,
     ):
         """
@@ -172,6 +164,10 @@ class FlowceptTask(object):
         ----------
         generated : Dict, optional
             Metadata or data generated during the task's execution. Defaults to None.
+        data: Any, optional
+            Any raw data associated to this task.
+        custom_metadata : Dict, optional
+            Additional user-defined metadata to associate with the task.
         ended_at : float, optional
             Timestamp indicating when the task ended. If not provided, defaults to the current time.
         stdout : str, optional
@@ -191,6 +187,10 @@ class FlowceptTask(object):
         if TELEMETRY_ENABLED:
             tel = self._interceptor.telemetry_capture.capture()
             self._task.telemetry_at_end = tel
+        if data:
+            self._task.data = data
+        if custom_metadata:
+            self._task.custom_metadata = custom_metadata
         self._task.ended_at = ended_at or time()
         self._task.status = status
         self._task.stderr = stderr

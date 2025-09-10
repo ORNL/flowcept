@@ -102,6 +102,7 @@ class MQDao(object):
 
                 with open(DUMP_BUFFER_PATH, "wb", buffering=1_048_576) as f:
                     for obj in buffer:
+                        obj.pop("data", None)  # We are not going to store data in the buffer file.
                         f.write(orjson.dumps(obj))
                         f.write(b"\n")
                 self.logger.info(f"Saved Flowcept messages into {DUMP_BUFFER_PATH}.")

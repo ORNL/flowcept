@@ -54,7 +54,7 @@ dependencies = [
 redis = ["redis"]
 lmdb = ["lmdb"]
 telemetry = ["psutil>=6.1.1", "py-cpuinfo"]
-extras = ["flowcept[redis]", "flowcept[telemetry]", "flowcept[lmdb]", "GitPython", "pandas", "flask-restful", "requests"]
+extras = ["flowcept[redis]", "flowcept[telemetry]", "flowcept[mongo]", "GitPython", "pandas", "flask-restful", "requests"]
 
 analytics = ["seaborn", "plotly", "scipy"]
 mongo = ["pymongo", "pyarrow"]

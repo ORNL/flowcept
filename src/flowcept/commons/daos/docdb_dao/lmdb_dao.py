@@ -56,7 +56,10 @@ class LMDBDAO(DocumentDBDAO):
             t0 = 0
             if PERF_LOG:
                 t0 = time()
-            indexed_buffer = curate_dict_task_messages(docs, indexing_key, t0, convert_times=False)
+            indexed_buffer = curate_dict_task_messages(
+                docs, indexing_key, t0, convert_times=False, keys_to_drop=["data"]
+            )
+
             with self._env.begin(write=True, db=self._tasks_db) as txn:
                 for key, value in indexed_buffer.items():
                     k, v = key.encode(), json.dumps(value).encode()
