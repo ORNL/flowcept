@@ -84,6 +84,12 @@ This can serve as a template for building custom provenance consumers.
        consumer = MyConsumer()
        consumer.start(daemon=False)
 
+**Notes**:
+
+- See also: `Explicit publish example <file:///Users/rsr/Documents/GDrive/ORNL/dev/flowcept/docs/_build/html/prov_capture.html#custom-task-creation-fully-customizable>`_
+- See also: `Ping pong example via PubSub with Flowcept <https://github.com/ORNL/flowcept/blob/main/examples/consumers/ping_pong_example.py>`_
+
+
 
 Document Inserter
 -----------------
