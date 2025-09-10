@@ -25,6 +25,10 @@ Decorators
 --------------------------
 
 Use decorators to mark functions as **workflows** or **tasks** with almost no code changes.
+If using the decorators, we expect that `instrumentation` is enabled in your settings file.
+If it is not, the provenance capture will be simply ignored and the decorated function
+will run as if without any Flowcept instrumentation.
+
 
 ``@flowcept`` (wrap a “main” function as a workflow)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

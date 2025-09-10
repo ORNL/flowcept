@@ -53,7 +53,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         Current application context holding task state and QA components.
     msgs_counter : int
         Counter tracking how many task messages have been processed.
-    context_size : int
+    context_chunk_size : int
         Number of task messages to collect before triggering QA index building and LLM analysis.
     qa_manager : FlowceptQAManager
         Utility for constructing QA chains from task summaries.
@@ -64,7 +64,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         self.tracker_config = dict(max_examples=3, max_str_len=50)
         self.schema_tracker = DynamicSchemaTracker(**self.tracker_config)
         self.msgs_counter = 0
-        self.context_size = 1
+        self.context_chunk_size = 1  # Should be in the settings
         super().__init__()
 
     def message_handler(self, msg_obj: Dict):
@@ -98,18 +98,22 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             if len(task_summary.get("tags", [])):
                 self.context.critical_tasks.append(task_summary)
 
-            if self.msgs_counter > 0 and self.msgs_counter % self.context_size == 0:
+            if self.msgs_counter > 0 and self.msgs_counter % self.context_chunk_size == 0:
                 self.logger.debug(
-                    f"Going to add to index! {(self.msgs_counter - self.context_size, self.msgs_counter)}"
+                    f"Going to add to index! {(self.msgs_counter - self.context_chunk_size, self.msgs_counter)}"
                 )
                 try:
                     self.update_schema_and_add_to_df(
-                        tasks=self.context.task_summaries[self.msgs_counter - self.context_size : self.msgs_counter]
+                        tasks=self.context.task_summaries[
+                            self.msgs_counter - self.context_chunk_size : self.msgs_counter
+                        ]
                     )
                 except Exception as e:
                     self.logger.error(
                         f"Could not add these tasks to buffer!\n"
-                        f"{self.context.task_summaries[self.msgs_counter - self.context_size : self.msgs_counter]}"
+                        f"{
+                            self.context.task_summaries[self.msgs_counter - self.context_chunk_size : self.msgs_counter]
+                        }"
                     )
                     self.logger.exception(e)
 

@@ -294,6 +294,8 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df, atte
     >>> generate_result_df(llm, "bad query", schema, examples, df, attempt_fix=False)
     ToolResult(code=405, result="Failed to parse this as Python code: ...")
     """
+    if llm is None:
+        llm = build_llm_model()
     try:
         prompt = generate_pandas_code_prompt(query, dynamic_schema, example_values)
         response = llm(prompt)
@@ -351,7 +353,14 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df, atte
     summary, summary_error = None, None
     if summarize:
         try:
-            tool_result = summarize_result(llm, result_code, result_df, query)
+            tool_result = summarize_result(
+                llm,
+                result_code,
+                result_df,
+                query,
+                dynamic_schema,
+                example_values,
+            )
             if tool_result.is_success():
                 return_code = 301
                 summary = tool_result.result
@@ -570,7 +579,14 @@ def extract_or_fix_json_code(llm, raw_text) -> ToolResult:
 
 
 @mcp_flowcept.tool()
-def summarize_result(llm, code, result, query: str) -> ToolResult:
+def summarize_result(
+    llm,
+    code,
+    result,
+    query: str,
+    dynamic_schema,
+    example_values,
+) -> ToolResult:
     """
     Summarize the pandas result with local reduction for large DataFrames.
     - For wide DataFrames, selects top columns based on variance and uniqueness.
@@ -578,7 +594,7 @@ def summarize_result(llm, code, result, query: str) -> ToolResult:
     - Constructs a detailed prompt for the LLM with original column context.
     """
     summarized_df = summarize_df(result, code)
-    prompt = dataframe_summarizer_context(code, summarized_df, query)
+    prompt = dataframe_summarizer_context(code, summarized_df, dynamic_schema, example_values, query)
     try:
         response = llm(prompt)
         return ToolResult(code=201, result=response)

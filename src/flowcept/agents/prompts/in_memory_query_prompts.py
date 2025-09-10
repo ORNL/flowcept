@@ -15,6 +15,7 @@ COMMON_TASK_FIELDS = """
     | `ended_at`                    | datetime64[ns, UTC] | End time of a task. | 
     | `subtype`                     | string | Subtype of a task. |
     | `tags`                        | List[str] | List of descriptive tags. |
+    | `image`                        | blob | Raw binary data related to an image. |
     | `telemetry_summary.duration_sec` | float | Task duration (seconds). |
     | `telemetry_summary.cpu.percent_all_diff` | float | Difference in overall CPU utilization percentage across all cores between task end and start.|
     | `telemetry_summary.cpu.user_time_diff`   | float |  Difference average per core CPU user time ( seconds ) between task start and end times.|
@@ -25,6 +26,17 @@ COMMON_TASK_FIELDS = """
     """
 
 DF_FORM = "The user has a pandas DataFrame called `df`, created from flattened task objects using `pd.json_normalize`."
+
+
+def get_example_values_prompt(example_values):
+    values_prompt = f"""    
+           Now, this other dictionary below provides type (t), up to 3 example values (v), and, for lists, shape (s) and element type (et) for each field.
+           Field names do not include `used.` or `generated.` They represent the unprefixed form shared across roles. String values may be truncated if they exceed the length limit.
+           ```python
+           {example_values}
+           ```
+       """
+    return values_prompt
 
 
 def get_df_schema_prompt(dynamic_schema, example_values):
@@ -52,14 +64,7 @@ def get_df_schema_prompt(dynamic_schema, example_values):
         ---
     """
 
-    values_prompt = f"""    
-        Now, this other dictionary below provides type (t), up to 3 example values (v), and, for lists, shape (s) and element type (et) for each field.
-        Field names do not include `used.` or `generated.` They represent the unprefixed form shared across roles. String values may be truncated if they exceed the length limit.
-        ```python
-        {example_values}
-        ```
-    """
-
+    values_prompt = get_example_values_prompt(example_values)
     # values_prompt = ""
     prompt = schema_prompt + values_prompt
     return prompt
@@ -221,7 +226,7 @@ def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
         f"{JOB}"
         f"{DF_FORM}"
         f"{get_df_schema_prompt(dynamic_schema, example_values)}"  # main tester
-        # f"{QUERY_GUIDELINES}" # main tester
+        f"{QUERY_GUIDELINES}"  # main tester
         f"{FEW_SHOTS}"  # main tester
         f"{OUTPUT_FORMATTING}"
         "User Query:"
@@ -230,9 +235,16 @@ def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
     return prompt
 
 
-def dataframe_summarizer_context(code, reduced_df, query) -> str:
+def dataframe_summarizer_context(code, reduced_df, dynamic_schema, example_values, query) -> str:
+    job = "You are a Workflow Provenance Specialist analyzing a DataFrame that was obtained to answer a query."
+
+    if "image" in reduced_df.columns:
+        reduced_df = reduced_df.drop(columns=["image"])
+
     prompt = f"""
-    You are a Workflow Provenance Specialist analyzing a DataFrame that was obtained to answer a query. Given:
+    {job}
+    
+     Given:
     
     **User Query**:  
     {query}
@@ -240,19 +252,26 @@ def dataframe_summarizer_context(code, reduced_df, query) -> str:
     **Query_Code**:  
     {code}
     
-    **Reduced DataFrame** (rows sampled from full result):  
+    **Reduced DataFrame `df` contents** (rows sampled from full result):  
     {reduced_df}
     
-    Your task is to:
-    1. Analyze the DataFrame values and columns for any meaningful or notable information.
-    2. Compare the query_code with the data content to understand what the result represents. THIS IS A REDUCED DATAFRAME, the original dataframe, used to answer the query, may be much bigger. IT IS ALREADY KNOWN! Do not need to restate this.
-    3. Provide a concise and direct answer to the user query. Your final response to the query should be  within ```text .
+    **Original df (before reduction) had this schema:
+    {get_df_schema_prompt(dynamic_schema, example_values)}
+    
+    Your task is to find a concise and direct answer as an English sentence to the user query.
+        
+    Only if the answer to the query is complex, provide more explanation by: 
+        1. Analyzing the DataFrame values and columns for any meaningful or notable information. 
+        2. Comparing the query_code with the data content to understand what the result represents. THIS IS A REDUCED DATAFRAME, the original dataframe, used to answer the query, may be much bigger. IT IS ALREADY KNOWN! Do not need to restate this.
+        3. If it makes sense, provide information beyond the recorded provenance, but state it clearly that you are inferring it.
+    
+    In the end, conclude by giving your concise answer as follows: **Response**: <YOUR ANSWER>
 
     Note that the user should not know that this is a reduced dataframe. 
-    
     Keep your response short and focused.
 
     """
+
     return prompt
 
 

@@ -1,3 +1,5 @@
+import base64
+import ast
 import io
 import json
 
@@ -122,6 +124,53 @@ def display_ai_msg_from_tool(tool_result: ToolResult):
     return agent_reply
 
 
+def _sniff_mime(b: bytes) -> str:
+    if b.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if b.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if b.startswith(b"GIF87a") or b.startswith(b"GIF89a"):
+        return "image/gif"
+    if b.startswith(b"BM"):
+        return "image/bmp"
+    if b.startswith(b"RIFF") and b[8:12] == b"WEBP":
+        return "image/webp"
+    return "application/octet-stream"
+
+
+def ensure_data_uri(val):
+    r"""Accepts bytes/bytearray/memoryview or a repr like \"b'\\x89PNG...'\" and returns a data URL."""
+    if isinstance(val, str) and val.startswith("data:"):
+        return val
+    if isinstance(val, str) and val.startswith("b'"):
+        try:
+            val = ast.literal_eval(val)  # turn repr into bytes
+        except Exception:
+            return None
+    if isinstance(val, memoryview):
+        val = val.tobytes()
+    if isinstance(val, bytearray):
+        val = bytes(val)
+    if isinstance(val, bytes):
+        mime = _sniff_mime(val)
+        return f"data:{mime};base64,{base64.b64encode(val).decode('ascii')}"
+    return val  # path/URL, etc.
+
+
+def _render_df(df: pd.DataFrame, image_width: int = 90, row_height: int = 90):
+    if "image" in df.columns:
+        df = df.copy()
+        df["image"] = df["image"].apply(ensure_data_uri)
+        st.dataframe(
+            df,
+            column_config={"image": st.column_config.ImageColumn("Preview", width=image_width)},
+            hide_index=True,
+            row_height=row_height,  # make thumbnails visible
+        )
+    else:
+        st.dataframe(df, hide_index=True)
+
+
 def display_df_tool_response(tool_result: ToolResult):
     r"""
     Display the DataFrame contained in a ToolResult.
@@ -170,7 +219,8 @@ def display_df_tool_response(tool_result: ToolResult):
             df = pd.read_csv(io.StringIO(result_df_str))
             print("The result is a df")
             if not df.empty:
-                st.dataframe(df, hide_index=False)
+                _render_df(df)
+
                 print("Columns", str(df.columns))
                 print("Number of columns", len(df.columns))
             else:
@@ -190,6 +240,7 @@ def display_df_tool_response(tool_result: ToolResult):
 
         if summary:
             st.markdown("📝 Summary:")
+            print(f"THIS IS THE SUMMARY\n{summary}")
             st.markdown(summary)
         elif summary_error:
             st.markdown(f"⚠️ Encountered this error when summarizing the result dataframe:\n```text\n{summary_error}")

@@ -137,7 +137,6 @@ def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
         "agent_id",
         "campaign_id",
         "subtype",
-        "custom_metadata",
     ]:
         value = _safe_get(task, key)
         if value is not None:
@@ -146,7 +145,14 @@ def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
             else:
                 task_summary[key] = value
 
-        # Special handling for timestamp field
+    # Adding image column if data is image. This is to handle special cases when there is an image associated to
+    # a provenance task.
+    if "data" in task:
+        if "custom_metadata" in task:
+            if "image" in task["custom_metadata"].get("mime_type", ""):
+                task_summary["image"] = task["data"]
+
+    # Special handling for timestamp field
     try:
         time_keys = ["started_at", "ended_at"]
         for time_key in time_keys:
