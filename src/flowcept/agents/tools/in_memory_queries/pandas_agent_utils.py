@@ -77,7 +77,7 @@ def normalize_output(result):
         raise TypeError(f"Unsupported result type: {type(result)}")
 
     if not len(_df):
-        raise ValueError("Result DataFrame is Empty.")
+        return pd.DataFrame()
 
     return _df
 

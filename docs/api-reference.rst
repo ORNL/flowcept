@@ -1,37 +1,27 @@
 API Reference
 =============
 
-.. toctree::
-   :maxdepth: 3
-   :caption: Contents:
+.. autosummary::
+   :toctree: generated/
+   :recursive:
 
+   flowcept.Flowcept
+   flowcept.flowcept_api.db_api.DBAPI
+   flowcept.TaskObject
+   flowcept.WorkflowObject
+   flowcept.FlowceptTask
+   flowcept.FlowceptLoop
+   flowcept.FlowceptLightweightLoop
 
-Public API documentation.
-
-Core components
----------------
+Main Flowcept Object
+--------------------
 
 .. autoclass:: flowcept.Flowcept
    :members:
-
-
-Main Message Objects
----------------------
-
-.. autoclass:: flowcept.TaskObject
-   :members:
-
-.. autoclass:: flowcept.WorkflowObject
-   :members:
-
-FlowceptTask object
--------------------
-
-.. autoclass:: flowcept.FlowceptTask
-   :members:
    :special-members: __init__
-   :undoc-members:
-   :show-inheritance:
+   :exclude-members: __weakref__, __dict__, __module__
+
+
 
 Flowcept.db: Querying the Database
 ----------------------------------
@@ -57,5 +47,43 @@ Typical usage:
 
 .. autoclass:: flowcept.flowcept_api.db_api.DBAPI
    :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Main Message Objects
+---------------------
+
+.. autoclass:: flowcept.TaskObject
+   :members:
+
+.. autoclass:: flowcept.WorkflowObject
+   :members:
+
+FlowceptTask object
+-------------------
+
+.. autoclass:: flowcept.FlowceptTask
+   :members:
+   :special-members: __init__
+   :undoc-members:
+   :show-inheritance:
+
+FlowceptLoop object
+-------------------
+
+.. autoclass:: flowcept.FlowceptLoop
+   :members:
+   :special-members: __init__
+   :undoc-members:
+   :show-inheritance:
+
+
+FlowceptLightweightLoop object
+------------------------------
+
+.. autoclass:: flowcept.FlowceptLightweightLoop
+   :members:
+   :special-members: __init__
    :undoc-members:
    :show-inheritance:

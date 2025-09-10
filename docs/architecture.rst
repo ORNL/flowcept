@@ -1,5 +1,5 @@
 Flowcept Architecture
-===================
+======================
 
 .. toctree::
    :maxdepth: 2
