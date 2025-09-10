@@ -19,7 +19,7 @@ st.title(PAGE_TITLE)
 GREETING = (
     "Hi, there! I'm a **Workflow Provenance Specialist**.\n\n"
     "I am tracking workflow executions and I can:\n"
-    "- 🔍 Analyze running workflows\n"
+    "- 🔍 Query running workflows\n"
     "- 📊 Plot graphs\n"
     "- 🤖 Answer general questions about provenance data\n\n"
     "How can I help you today?"
@@ -39,7 +39,10 @@ display_ai_msg(GREETING)
 def main():
     """Main Streamlit Function."""
     user_input = st.chat_input("Send a message")
-    st.caption("💡 Tip: Ask about workflow metrics, generate plots, or summarize data.")
+    st.caption(
+        "💡 Tip: Ask about workflow metrics, generate plots, or summarize data. Inputs are mapped to `used` "
+        "and outputs to `generated` fields."
+    )
 
     if user_input:
         # st.session_state.chat_history.append({"role": "human", "content": user_input})

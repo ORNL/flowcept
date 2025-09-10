@@ -222,7 +222,9 @@ def generate_plot_code(llm, query, dynamic_schema, value_examples, df, custom_us
 
 
 @mcp_flowcept.tool()
-def generate_result_df(llm, query: str, dynamic_schema, example_values, df, custom_user_guidance=None, attempt_fix=True, summarize=True):
+def generate_result_df(
+    llm, query: str, dynamic_schema, example_values, df, custom_user_guidance=None, attempt_fix=True, summarize=True
+):
     """
     Generate a result DataFrame from a natural language query using an LLM.
 

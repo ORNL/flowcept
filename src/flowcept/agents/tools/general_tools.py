@@ -62,6 +62,9 @@ def check_llm() -> str:
 
 @mcp_flowcept.tool()
 def record_guidance(message: str) -> ToolResult:
+    """
+    Record guidance tool.
+    """
     ctx = mcp_flowcept.get_context()
     message = message.replace("@record", "")
     custom_guidance: List = ctx.request_context.lifespan_context.custom_guidance

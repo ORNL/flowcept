@@ -226,10 +226,11 @@ OUTPUT_FORMATTING = """
 def generate_pandas_code_prompt(query: str, dynamic_schema, example_values, custom_user_guidances):
     if custom_user_guidances is not None and isinstance(custom_user_guidances, list) and len(custom_user_guidances):
         concatenated_guidance = "\n".join(f"- {msg}" for msg in custom_user_guidances)
-        custom_user_guidance_prompt = (f"You MUST consider the following guidance from the user:\n"
-                                       f"{concatenated_guidance}"
-                                       "------------------------------------------------------"
-                                       )
+        custom_user_guidance_prompt = (
+            f"You MUST consider the following guidance from the user:\n"
+            f"{concatenated_guidance}"
+            "------------------------------------------------------"
+        )
     else:
         custom_user_guidance_prompt = ""
     prompt = (
