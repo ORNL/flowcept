@@ -65,7 +65,7 @@ mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog", "cryptography"]
 nvidia = ["nvidia-ml-py"]
 mqtt = ["paho-mqtt"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
-llm_agent = ["mcp[cli]", "langchain_community", "streamlit"]
+llm_agent = ["mcp[cli]", "langchain_community", "streamlit", "langchain_openai"]
 llm_google = ["flowcept[llm_agent]", "google-genai"]
 
 dev = [
