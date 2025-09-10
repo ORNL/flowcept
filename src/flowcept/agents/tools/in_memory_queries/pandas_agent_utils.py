@@ -142,7 +142,7 @@ def format_result_df(result_df) -> str:
     """
     if isinstance(result_df, pd.DataFrame):
         if not len(result_df):
-            raise Exception("Empty DataFrame")
+            return "Empty Results"
         if len(result_df) > 100:
             print("Result set is too long. We are only going to send the head.")  # TODO log
             # TODO deal with very long results later

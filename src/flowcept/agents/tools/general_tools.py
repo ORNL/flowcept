@@ -93,7 +93,6 @@ def prompt_handler(message: str) -> ToolResult:
     if "@record" in message:
         return record_guidance(message)
 
-
     llm = build_llm_model()
 
     prompt = ROUTING_PROMPT + message
