@@ -2,6 +2,7 @@ import base64
 import ast
 import io
 import json
+import re
 
 import streamlit as st
 from flowcept.agents import prompt_handler
@@ -242,6 +243,16 @@ def display_df_tool_response(tool_result: ToolResult):
             st.markdown("📝 Summary:")
             print(f"THIS IS THE SUMMARY\n{summary}")
             st.markdown(summary)
+
+            # 🔊 Speak only if user spoke to us this turn
+            print(f"This is the session state nowww: {st.session_state['speak_reply']}")
+            if st.session_state.get("speak_reply"):
+                try:
+                    plain_text = _md_to_plain_text(summary)
+                    print(f"Trying to speak plain text {plain_text}")
+                    speak(plain_text)  # uses your existing gTTS-based speak()
+                except Exception as e:
+                    st.warning(f"TTS failed: {e}")
         elif summary_error:
             st.markdown(f"⚠️ Encountered this error when summarizing the result dataframe:\n```text\n{summary_error}")
 
@@ -288,3 +299,48 @@ def exec_st_plot_code(code, result_df, st_module):
         code,
         {"result": result_df, "st": st_module, "plt": __import__("matplotlib.pyplot"), "alt": __import__("altair")},
     )
+
+from streamlit_mic_recorder import mic_recorder
+import speech_recognition as sr
+import tempfile
+from gtts import gTTS
+
+def speech_to_text():
+    """Record from mic, return transcribed text or None."""
+    rec = mic_recorder(
+        start_prompt="🎙️ Speak",
+        stop_prompt="⏹️ Stop",
+        key="mic",
+        use_container_width=True,
+    )
+    if rec and "wav" in rec:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+            tmp.write(rec["wav"])
+            tmp.flush()
+            r = sr.Recognizer()
+            with sr.AudioFile(tmp.name) as source:
+                audio = r.record(source)
+            try:
+                return r.recognize_google(audio)
+            except Exception as e:
+                st.warning(f"Speech recognition failed: {e}")
+    return None
+
+
+def speak(text: str):
+    """Synthesize speech for the agent reply and play it."""
+    if not text:
+        return
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
+            gTTS(text).save(tmp.name)
+            st.audio(tmp.name, format="audio/mp3")
+    except Exception as e:
+        st.warning(f"TTS failed: {e}")
+
+def _md_to_plain_text(s: str) -> str:
+    """Very light Markdown cleanup for TTS."""
+    s = re.sub(r"```.*?```", lambda m: m.group(0).replace("```", ""), s, flags=re.S)  # drop fences
+    s = s.replace("`", "")  # inline code ticks
+    s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)  # links: [text](url) -> text
+    return s.strip()
