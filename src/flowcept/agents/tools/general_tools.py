@@ -74,7 +74,7 @@ def prompt_handler(message: str) -> ToolResult:
     TextContent
         The AI response or routing feedback.
     """
-    df_key_words = {"save", "result = df", "reset context"}
+    df_key_words = ["df", "save", "result = df", "reset context"]
     for key in df_key_words:
         if key in message:
             return run_df_query(llm=None, query=message, plot=False)
