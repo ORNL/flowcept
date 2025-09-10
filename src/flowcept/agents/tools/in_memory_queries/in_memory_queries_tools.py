@@ -106,7 +106,7 @@ def run_df_query(llm, query: str, plot=False) -> ToolResult:
 
 
 @mcp_flowcept.tool()
-def generate_plot_code(llm, query, dynamic_schema, value_examples, df) -> ToolResult:
+def generate_plot_code(llm, query, dynamic_schema, value_examples, df, custom_user_guidance=None) -> ToolResult:
     """
     Generate DataFrame and plotting code from a natural language query using an LLM.
 
