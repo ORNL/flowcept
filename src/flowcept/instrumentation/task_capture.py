@@ -76,6 +76,8 @@ class FlowceptTask(object):
             Describes the specific activity this task captures.
         used : Dict, optional
             Metadata about resources or data used during the task.
+        data: Any, optional
+            Any raw data associated to this task.
         subtype : str, optional
             Optional string categorizing the task subtype.
         custom_metadata : Dict, optional
@@ -147,6 +149,8 @@ class FlowceptTask(object):
         ended_at: float = None,
         stdout: str = None,
         stderr: str = None,
+        data: Any = None,
+        custom_metadata: Dict = None,
         status: Status = Status.FINISHED,
     ):
         """
@@ -160,6 +164,10 @@ class FlowceptTask(object):
         ----------
         generated : Dict, optional
             Metadata or data generated during the task's execution. Defaults to None.
+        data: Any, optional
+            Any raw data associated to this task.
+        custom_metadata : Dict, optional
+            Additional user-defined metadata to associate with the task.
         ended_at : float, optional
             Timestamp indicating when the task ended. If not provided, defaults to the current time.
         stdout : str, optional
@@ -179,6 +187,10 @@ class FlowceptTask(object):
         if TELEMETRY_ENABLED:
             tel = self._interceptor.telemetry_capture.capture()
             self._task.telemetry_at_end = tel
+        if data:
+            self._task.data = data
+        if custom_metadata:
+            self._task.custom_metadata = custom_metadata
         self._task.ended_at = ended_at or time()
         self._task.status = status
         self._task.stderr = stderr

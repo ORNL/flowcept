@@ -41,7 +41,10 @@ class TaskObject:
     """User who executed or triggered the task."""
 
     data: Any = None
-    """Arbitrary raw data payload associated with the task."""
+    """Arbitrary raw data payload associated with the task. It is good practice to add custom_metadata associated with
+    `data`, especially if it contains file contents. 
+    In that case, `custom_metadata` should contain the keys "file_type", "file_content", "file_name", "extension".
+    """
 
     used: Dict[AnyStr, Any] = None
     """Inputs consumed by the task (parameters, files, resources)."""

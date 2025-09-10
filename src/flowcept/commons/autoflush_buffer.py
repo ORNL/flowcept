@@ -47,6 +47,11 @@ class AutoflushBuffer:
         if len(buffer) >= self._max_size:
             self._swap_event.set()
 
+    @property
+    def current_buffer(self):
+        """Return the currently active buffer (read-only)."""
+        return self._buffers[self._current_buffer_index]
+
     def time_based_flush(self):
         """Time flush."""
         while not self._stop_event.is_set():

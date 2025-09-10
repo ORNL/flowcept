@@ -259,10 +259,7 @@ class TelemetryCapture:
 
             platform_info = platform.uname()._asdict()
             network_info_raw = psutil.net_if_addrs()
-            network_info = {
-                ifname: [addr._asdict() for addr in addrs]
-                for ifname, addrs in network_info_raw.items()
-            }
+            network_info = {ifname: [addr._asdict() for addr in addrs] for ifname, addrs in network_info_raw.items()}
             processor_info = cpuinfo.get_cpu_info()
 
             gpu_info = None
