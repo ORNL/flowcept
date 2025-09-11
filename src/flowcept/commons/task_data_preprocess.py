@@ -149,7 +149,8 @@ def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
     # a provenance task.
     if "data" in task:
         if "custom_metadata" in task:
-            if "image" in task["custom_metadata"].get("mime_type", ""):
+            mime_type = task["custom_metadata"].get("mime_type", "")
+            if "image" in mime_type or "application/pdf" in mime_type:
                 task_summary["image"] = task["data"]
 
     # Special handling for timestamp field

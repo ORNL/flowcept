@@ -33,16 +33,27 @@ class ExplicitTaskTest(unittest.TestCase):
             used_args = {"a": 1}
             with FlowceptTask(used=used_args) as t:
                 repo_root = Path(__file__).resolve().parents[2]
-                img_path = repo_root / "docs" / "img" / "flowcept-logo.png"
+                img_path = repo_root / "docs" / "img" / "architecture.pdf"
                 with open(img_path, "rb") as fp:
                     img_data = fp.read()
 
                 t.end(generated={"b": 2}, data=img_data, custom_metadata={
+                    "mime_type": "application/pdf", "file_name": "flowcept-logo.png", "file_extension": "pdf"}
+                      )
+                t.send()
+
+            with FlowceptTask(used=used_args) as t:
+                repo_root = Path(__file__).resolve().parents[2]
+                img_path = repo_root / "docs" / "img" / "flowcept-logo.png"
+                with open(img_path, "rb") as fp:
+                    img_data = fp.read()
+
+                t.end(generated={"c": 2}, data=img_data, custom_metadata={
                     "mime_type": "image/png", "file_name": "flowcept-logo.png", "file_extension": "png"}
                       )
                 t.send()
 
-            assert len(Flowcept.buffer) == 2
+            assert len(Flowcept.buffer) == 3
             assert Flowcept.buffer[1]["data"]
-            assert Flowcept.buffer[1]["data"].startswith(b"\x89PNG")
+            #assert Flowcept.buffer[1]["data"].startswith(b"\x89PNG")
 

@@ -65,8 +65,14 @@ mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog", "cryptography"]
 nvidia = ["nvidia-ml-py"]
 mqtt = ["paho-mqtt"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
-llm_agent = ["mcp[cli]", "langchain_community", "streamlit"]
+llm_agent = ["mcp[cli]", "langchain_community", "streamlit", "PyMuPDF"]
 llm_google = ["flowcept[llm_agent]", "google-genai"]
+llm_agent_audio = ["flowcept[llm_agent]", "streamlit-mic-recorder", "SpeechRecognition", "pydub", "gTTS"]
+# System dependency (required for pydub)
+# Install ffmpeg on the system (not a pip package):
+# macOS (Homebrew): brew install ffmpeg
+# Conda (any OS): conda install -c conda-forge ffmpeg
+# Debian/Ubuntu: sudo apt-get install ffmpeg
 
 dev = [
     "flowcept[docs]",

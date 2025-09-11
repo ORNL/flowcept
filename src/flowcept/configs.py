@@ -235,6 +235,13 @@ INSTRUMENTATION = settings.get("instrumentation", {})
 INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", True)
 
 AGENT = settings.get("agent", {})
+AGENT_AUDIO = os.getenv("AGENT_AUDIO", str(settings["agent"].get("audio_enabled", "false"))).strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "y",
+    "t",
+}
 AGENT_HOST = os.getenv("AGENT_HOST", settings["agent"].get("mcp_host", "localhost"))
 AGENT_PORT = int(os.getenv("AGENT_PORT", settings["agent"].get("mcp_port", "8000")))
 
