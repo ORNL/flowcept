@@ -74,6 +74,57 @@ def record_guidance(message: str) -> ToolResult:
 
 
 @mcp_flowcept.tool()
+def show_records() -> ToolResult:
+    """
+    Lists all recorded user guidance.
+    """
+    try:
+        ctx = mcp_flowcept.get_context()
+        custom_guidance: List = ctx.request_context.lifespan_context.custom_guidance
+        if not custom_guidance:
+            message = "There is no recorded user guidance."
+        else:
+            message = "This is the list of custom guidance I have in my memory:\n"
+            message += "\n".join(f" - {msg}" for msg in custom_guidance)
+
+        return ToolResult(code=201, result=message)
+    except Exception as e:
+        return ToolResult(code=499, result=str(e))
+
+
+@mcp_flowcept.tool()
+def reset_records() -> ToolResult:
+    """
+    Resets all recorded user guidance.
+    """
+    try:
+        ctx = mcp_flowcept.get_context()
+        ctx.request_context.lifespan_context.custom_guidance = []
+        return ToolResult(code=201, result="Custom guidance reset.")
+    except Exception as e:
+        return ToolResult(code=499, result=str(e))
+
+@mcp_flowcept.tool()
+def show_records() -> ToolResult:
+    """
+    Lists all recorded user guidance.
+    """
+    try:
+        ctx = mcp_flowcept.get_context()
+        custom_guidance: List = ctx.request_context.lifespan_context.custom_guidance
+        if not custom_guidance:
+            message = "There is no recorded user guidance."
+        else:
+            message = "This is the list of custom guidance I have in my memory:"
+            message += "\n".join(f"- {msg}" for msg in custom_guidance)
+
+        return ToolResult(code=201, result=message)
+    except Exception as e:
+        return ToolResult(code=499, result=str(e))
+
+
+
+@mcp_flowcept.tool()
 def prompt_handler(message: str) -> ToolResult:
     """
     Routes a user message using an LLM to classify its intent.
@@ -95,6 +146,10 @@ def prompt_handler(message: str) -> ToolResult:
 
     if "@record" in message:
         return record_guidance(message)
+    if "@show records" in message:
+        return show_records()
+    if "@reset records" in message:
+        return reset_records(message)
 
     llm = build_llm_model()
 
@@ -105,12 +160,12 @@ def prompt_handler(message: str) -> ToolResult:
         prompt = SMALL_TALK_PROMPT + message
         response = llm.invoke(prompt)
         return ToolResult(code=201, result=response)
+    elif route == "in_context_query":
+        return run_df_query(llm, message, plot=False)
     elif route == "plot":
         return run_df_query(llm, message, plot=True)
     elif route == "historical_prov_query":
         return ToolResult(code=201, result="We need to query the Provenance Database. Feature coming soon.")
-    elif route == "in_context_query":
-        return run_df_query(llm, message, plot=False)
     elif route == "in_chat_query":
         prompt = SMALL_TALK_PROMPT + message
         response = llm.invoke(prompt)

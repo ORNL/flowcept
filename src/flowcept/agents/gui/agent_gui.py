@@ -37,9 +37,11 @@ display_ai_msg(GREETING)
 def main():
     """Main Agent GUI function."""
     st.caption(
-        "💡 Tip: Ask about workflow metrics, generate plots, or summarize data. "
-        "Inputs are mapped to `used` and outputs to `generated` fields. "
-        "Use @record <your query guidance> if you have custom guidance."
+        "💡 Quick help\n"
+        "Ask about workflow metrics, plots, or summaries.\n\n"
+        "Inputs → used, outputs → generated.\n"
+        "Commands: @record <note> add • @show records list • reset context clear • save context save.\n"
+        "Tip: set result = df to run ad-hoc Python on the in-memory DataFrame."
     )
 
     user_input = st.chat_input("Send a message")
