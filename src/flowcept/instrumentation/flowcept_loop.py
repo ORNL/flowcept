@@ -18,26 +18,6 @@ class FlowceptLoop:
     while capturing metadata for each iteration and for the loop as a whole. This is particularly
     useful in scenarios where tracking and instrumentation of loop executions is required.
 
-    Parameters
-    ----------
-    items : typing.Union[Sized, int, Iterator]
-        The items to iterate over. Must either be an iterable with a `__len__` method or an integer
-        representing the range of iteration.
-    loop_name : str, optional
-        A descriptive name for the loop (default is "loop").
-    item_name : str, optional
-        The name used for each item in the telemetry (default is "item").
-    parent_task_id : str, optional
-        The ID of the parent task associated with the loop, if applicable (default is None).
-    workflow_id : str, optional
-        The workflow ID to associate with this loop. If not provided, it will be generated or
-        inferred from the current workflow context.
-
-    Raises
-    ------
-    Exception
-        If `items` is not an iterable with a `__len__` method or an integer.
-
     Notes
     -----
     This class integrates with the `Flowcept` system for telemetry and tracking, ensuring
@@ -57,6 +37,52 @@ class FlowceptLoop:
         items_length=0,
         capture_enabled=True,
     ):
+        """
+        Initialize a FlowceptLoop instance for tracking iterations.
+
+        This constructor wraps an iterable, numeric range, or explicit iterator into a
+        loop context where each iteration is instrumented with provenance and optional
+        telemetry. If instrumentation is disabled, the loop behaves like a normal
+        Python iterator with minimal overhead.
+
+        Parameters
+        ----------
+        items : Union[Sized, Iterator, int]
+            The items to iterate over. Can be:
+            - A sized iterable (e.g., list, range).
+            - An integer (interpreted as ``range(items)``).
+            - An iterator (requires ``items_length`` if length cannot be inferred).
+        loop_name : str, optional
+            A descriptive name for the loop. Used in provenance as the loop's activity
+            identifier. Default is ``"loop"``.
+        item_name : str, optional
+            The key name under which each iteration's item is recorded in provenance.
+            Default is ``"item"``.
+        parent_task_id : str, optional
+            The identifier of a parent task, if this loop is nested within another task.
+            Default is ``None``.
+        workflow_id : str, optional
+            Identifier for the workflow this loop belongs to. If not provided, it is
+            inherited from the current Flowcept context or generated as a UUID.
+        items_length : int, optional
+            Explicit number of items if ``items`` is an iterator without a defined length.
+            Default is ``0``.
+        capture_enabled : bool, optional
+            Whether to enable provenance/telemetry capture. If ``False``, the loop runs
+            without instrumentation. Default is ``True``.
+
+        Raises
+        ------
+        Exception
+            If ``items`` is not a supported type (sized iterable, integer, or iterator).
+
+        Notes
+        -----
+        - Each iteration is recorded with ``used`` (inputs) and optional ``generated``
+          values, plus telemetry if enabled.
+        - Iteration metadata is finalized at the end of each iteration and sent to the
+          active Flowcept interceptor.
+        """
         self._current_iteration_task = {}
         if not (INSTRUMENTATION_ENABLED and capture_enabled):
             # These do_nothing functions help reduce overhead if no instrumentation is needed
@@ -232,6 +258,51 @@ class FlowceptLightweightLoop:
         items_length=0,
         capture_enabled=True,
     ):
+        """
+        Initialize a FlowceptLightweightLoop instance for tracking iterations.
+
+        This constructor provides a lower-overhead loop wrapper compared to
+        ``FlowceptLoop``. Iterations are pre-registered as task objects, and capture
+        primarily updates ``used`` and ``generated`` fields as the loop progresses.
+
+        Parameters
+        ----------
+        items : Union[Sized, Iterator]
+            The items to iterate over. Must either be:
+            - A sized iterable (with ``__len__``).
+            - An explicit iterator (length must be given by ``items_length``).
+        loop_name : str, optional
+            A descriptive name for the loop. Used in provenance as the loop's activity
+            identifier. Default is ``"loop"``.
+        item_name : str, optional
+            The key name under which each iteration's item is recorded in provenance.
+            Default is ``"item"``.
+        parent_task_id : str, optional
+            The identifier of a parent task, if this loop is nested within another task.
+            Default is ``None``.
+        workflow_id : str, optional
+            Identifier for the workflow this loop belongs to. If not provided, it is
+            inherited from the current Flowcept context or generated as a UUID.
+        items_length : int, optional
+            Explicit number of items if ``items`` is an iterator without a defined length.
+            Default is ``0``.
+        capture_enabled : bool, optional
+            Whether to enable provenance/telemetry capture. If ``False``, the loop runs
+            without instrumentation. Default is ``True``.
+
+        Raises
+        ------
+        Exception
+            If ``items`` is neither a sized iterable nor an iterator.
+
+        Notes
+        -----
+        - This class is designed for high-performance scenarios with many iterations.
+        - Iteration tasks are pre-allocated, and provenance capture is batched via
+          the Flowcept interceptor.
+        - Compared to ``FlowceptLoop``, this class avoids per-iteration telemetry
+          overhead unless explicitly enabled.
+        """
         if isinstance(items, Iterator):
             self._iterator = items
         else:

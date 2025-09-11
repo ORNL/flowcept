@@ -176,6 +176,9 @@ QUERY_GUIDELINES = """
       -To select the first (or earliest) N workflow executions, use or adapt the following: `df.groupby('workflow_id', as_index=False).agg({{"started_at": 'min'}}).sort_values(by='started_at', ascending=True).head(N)['workflow_id']` - utilize `started_at` to sort!     
       -To select the last (or latest or most recent) N workflow executions, use or adapt the following: `df.groupby('workflow_id', as_index=False).agg({{"ended_at": 'max'}}).sort_values(by='ended_at', ascending=False).head(N)['workflow_id']` - utilize `ended_at` to sort!
       
+      -To select the first or earliest or initial tasks, use or adapt the following: `df.sort_values(by='started_at', ascending=True)`
+      -To select the last or final or most recent tasks, use or adapt the following: `df.sort_values(by='ended_at', ascending=False)`
+      
       -WHEN the user requests a "summary" of activities, you must incorporate relevant summary statistics such as min, max, and mean, into the code you generate.
       -Do NOT use df[0] or df[integer value] or df[df[<field name>].idxmax()] or df[df[<field name>].idxmin()] because these are obviously not valid Pandas Code!
       -**Do NOT use any of those: df[df['started_at'].idxmax()], df[df['started_at'].idxmin()], df[df['ended_at'].idxmin()], df[df['ended_at'].idxmax()]. Those are not valid Pandas Code.**
@@ -220,7 +223,16 @@ OUTPUT_FORMATTING = """
 """
 
 
-def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
+def generate_pandas_code_prompt(query: str, dynamic_schema, example_values, custom_user_guidances):
+    if custom_user_guidances is not None and isinstance(custom_user_guidances, list) and len(custom_user_guidances):
+        concatenated_guidance = "\n".join(f"- {msg}" for msg in custom_user_guidances)
+        custom_user_guidance_prompt = (
+            f"You MUST consider the following guidance from the user:\n"
+            f"{concatenated_guidance}"
+            "------------------------------------------------------"
+        )
+    else:
+        custom_user_guidance_prompt = ""
     prompt = (
         f"{ROLE}"
         f"{JOB}"
@@ -228,6 +240,7 @@ def generate_pandas_code_prompt(query: str, dynamic_schema, example_values):
         f"{get_df_schema_prompt(dynamic_schema, example_values)}"  # main tester
         f"{QUERY_GUIDELINES}"  # main tester
         f"{FEW_SHOTS}"  # main tester
+        f"{custom_user_guidance_prompt}"
         f"{OUTPUT_FORMATTING}"
         "User Query:"
         f"{query}"

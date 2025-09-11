@@ -26,7 +26,7 @@ render_title_with_logo(PAGE_TITLE, LOGO_PATH, logo_width=150, add_to_sidebar=Fal
 GREETING = (
     "Hi, there! I'm your **Workflow Provenance Assistant**.\n\n"
     "I am tracking workflow executions and I can:\n"
-    "- 🔍 Analyze running workflows\n"
+    "- 🔍 Query running workflows\n"
     "- 📊 Plot graphs\n"
     "- 🤖 Answer general questions about provenance data\n\n"
     "How can I help you today?"

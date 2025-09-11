@@ -435,18 +435,20 @@ Requires an active workflow (``with Flowcept(...)`` or ``Flowcept().start()``).
    with Flowcept(workflow_name="custom_tasks"):
        # Context-managed publish
        with FlowceptTask(activity_id="download", used={"url": "https://..."}) as t:
-           data = b"..."
-           t.add_generated({"bytes": len(data)})
+           data = b"..." # Some binary data
+           t.end(data=data, generated={"bytes": len(data)})
 
        # Or publish explicitly
        task = FlowceptTask(activity_id="parse", used={"bytes": len(data)})
-       task.add_generated({"records": 42})
+       task.end({"records": 42})
        task.send()  # publishes to MQ
 
 **Notes**:
 
 - Use **context** (``with FlowceptTask(...)``) *or* call ``send()`` explicitly.
 - Flows publish to the MQ; persistence/queries require a DB (e.g., MongoDB).
+- See also: `Consumer example <https://flowcept.readthedocs.io/en/latest/prov_storage.html#example-extending-the-base-consumer>`_
+- See also: `Ping pong example via PubSub with Flowcept <https://github.com/ORNL/flowcept/blob/main/examples/consumers/ping_pong_example.py>`_
 
 References & Examples
 ---------------------

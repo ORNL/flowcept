@@ -37,6 +37,7 @@ class FlowceptAppContext(BaseAppContext):
     tasks_schema: Dict | None  # TODO: we dont need to keep the tasks_schema in context, just in the manager's memory.
     value_examples: Dict | None
     tracker_config: Dict | None
+    custom_guidance: List[str] | None
 
 
 class FlowceptAgentContextManager(BaseAgentContextManager):
@@ -156,6 +157,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             df=pd.DataFrame(),
             tasks_schema={},
             value_examples={},
+            custom_guidance=[],
             tracker_config=self.tracker_config,
         )
         DEBUG = True  # TODO debugging!

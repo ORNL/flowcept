@@ -87,6 +87,7 @@ def run_df_query(llm, query: str, plot=False) -> ToolResult:
     df: pd.DataFrame = ctx.request_context.lifespan_context.df
     schema = ctx.request_context.lifespan_context.tasks_schema
     value_examples = ctx.request_context.lifespan_context.value_examples
+    custom_user_guidance = ctx.request_context.lifespan_context.custom_guidance
     if df is None or not len(df):
         return ToolResult(code=404, result="Current df is empty or null.")
 
@@ -99,13 +100,13 @@ def run_df_query(llm, query: str, plot=False) -> ToolResult:
         return run_df_code(user_code=query, df=df)
 
     if plot:
-        return generate_plot_code(llm, query, schema, value_examples, df)
+        return generate_plot_code(llm, query, schema, value_examples, df, custom_user_guidance=custom_user_guidance)
     else:
-        return generate_result_df(llm, query, schema, value_examples, df)
+        return generate_result_df(llm, query, schema, value_examples, df, custom_user_guidance=custom_user_guidance)
 
 
 @mcp_flowcept.tool()
-def generate_plot_code(llm, query, dynamic_schema, value_examples, df) -> ToolResult:
+def generate_plot_code(llm, query, dynamic_schema, value_examples, df, custom_user_guidance=None) -> ToolResult:
     """
     Generate DataFrame and plotting code from a natural language query using an LLM.
 
@@ -221,7 +222,9 @@ def generate_plot_code(llm, query, dynamic_schema, value_examples, df) -> ToolRe
 
 
 @mcp_flowcept.tool()
-def generate_result_df(llm, query: str, dynamic_schema, example_values, df, attempt_fix=True, summarize=True):
+def generate_result_df(
+    llm, query: str, dynamic_schema, example_values, df, custom_user_guidance=None, attempt_fix=True, summarize=True
+):
     """
     Generate a result DataFrame from a natural language query using an LLM.
 
@@ -297,7 +300,7 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df, atte
     if llm is None:
         llm = build_llm_model()
     try:
-        prompt = generate_pandas_code_prompt(query, dynamic_schema, example_values)
+        prompt = generate_pandas_code_prompt(query, dynamic_schema, example_values, custom_user_guidance)
         response = llm(prompt)
     except Exception as e:
         return ToolResult(code=400, result=str(e), extra=prompt)

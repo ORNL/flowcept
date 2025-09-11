@@ -25,7 +25,7 @@ from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 
 class Flowcept(object):
-    """Flowcept Controller class."""
+    """Main Flowcept controller class."""
 
     _db = None
     # TODO: rename current_workflow_id to workflow_id. This will be a major refactor
