@@ -41,7 +41,7 @@ def main():
     user_input = st.chat_input("Send a message")
     st.caption(
         "💡 Tip: Ask about workflow metrics, generate plots, or summarize data. Inputs are mapped to `used` "
-        "and outputs to `generated` fields."
+        "and outputs to `generated` fields. Use @record <your query guidance> if you have custom guidance."
     )
 
     if user_input:
