@@ -1,7 +1,7 @@
 """Controller module."""
 
 import os.path
-from typing import List, Dict
+from typing import List, Dict, Any, Union
 from uuid import uuid4
 
 from flowcept.commons.autoflush_buffer import AutoflushBuffer
@@ -175,25 +175,34 @@ class Flowcept(object):
         self._interceptor_instances[0]._mq_dao.bulk_publish(self.buffer)
 
     @staticmethod
-    def read_messages_file(file_path: str = None) -> List[Dict]:
+    def read_messages_file(
+            file_path: str | None = None,
+            return_df: bool = False
+    ) -> Union[List[Dict[str, Any]], "DataFrame"]:
         """
         Read a JSON Lines (JSONL) file containing captured Flowcept messages.
 
         This function loads a file where each line is a serialized JSON object.
         It joins the lines into a single JSON array and parses them efficiently
-        with ``orjson``.
+        with ``orjson``. If ``return_df`` is True, it returns a pandas DataFrame
+        created via ``pandas.json_normalize(..., sep='.')`` so nested fields become
+        dot-separated columns (for example, ``generated.attention``).
 
         Parameters
         ----------
         file_path : str, optional
-            Path to the messages file. If not provided, defaults to the
-            value of ``DUMP_BUFFER_PATH`` from the configuration.
-            If neither is provided, an assertion error is raised.
+            Path to the messages file. If not provided, defaults to the value of
+            ``DUMP_BUFFER_PATH`` from the configuration. If neither is provided,
+            an assertion error is raised.
+        return_df : bool, default False
+            If True, return a normalized pandas DataFrame. If False, return the
+            parsed list of dictionaries.
 
         Returns
         -------
-        List[dict]
-            A list of message objects (dictionaries) parsed from the file.
+        list of dict or pandas.DataFrame
+            A list of message objects when ``return_df`` is False,
+            otherwise a normalized DataFrame with dot-separated columns.
 
         Raises
         ------
@@ -203,35 +212,51 @@ class Flowcept(object):
             If the specified file does not exist.
         orjson.JSONDecodeError
             If the file contents cannot be parsed as valid JSON.
+        ModuleNotFoundError
+            If ``return_df`` is True but pandas is not installed.
 
         Examples
         --------
-        Read messages from a file explicitly:
+        Read messages as a list:
 
         >>> msgs = read_messages_file("offline_buffer.jsonl")
-        >>> print(len(msgs))
-        128
+        >>> len(msgs) > 0
+        True
 
-        Use the default dump buffer path from config:
+        Read messages as a normalized DataFrame:
 
-        >>> msgs = read_messages_file()
-        >>> for m in msgs[:2]:
-        ...     print(m["type"], m.get("workflow_id"))
-        task_start wf_123
-        task_end wf_123
+        >>> df = read_messages_file("offline_buffer.jsonl", return_df=True)
+        >>> "generated.attention" in df.columns
+        True
         """
+        import os
         import orjson
 
-        _buffer = []
         if file_path is None:
             file_path = DUMP_BUFFER_PATH
-        assert file_path is not None, "Please indicate file_path either in the argument or in the config file."
+        assert file_path is not None, (
+            "Please indicate file_path either in the argument or in the config file."
+        )
         if not os.path.exists(file_path):
-            raise f"File {file_path} has not been created. It will only be created if you run in fully offline mode."
+            raise FileNotFoundError(
+                f"File '{file_path}' was not found. It is created only in fully offline mode."
+            )
+
         with open(file_path, "rb") as f:
             lines = [ln for ln in f.read().splitlines() if ln]
-        _buffer = orjson.loads(b"[" + b",".join(lines) + b"]")
-        return _buffer
+
+        buffer: List[Dict[str, Any]] = orjson.loads(b"[" + b",".join(lines) + b"]")
+
+        if return_df:
+            try:
+                import pandas as pd
+            except ModuleNotFoundError as e:
+                raise ModuleNotFoundError(
+                    "pandas is required when return_df=True. Please install pandas."
+                ) from e
+            return pd.json_normalize(buffer, sep=".")
+
+        return buffer
 
     def save_workflow(self, interceptor: str, interceptor_instance: BaseInterceptor):
         """

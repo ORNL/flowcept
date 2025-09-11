@@ -70,6 +70,7 @@ class MQDaoRedis(MQDao):
                     except Exception as e:
                         self.logger.error(f"Failed to process message {message}")
                         self.logger.exception(e)
+                        continue
 
                     current_trials = 0
             except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
@@ -78,7 +79,7 @@ class MQDaoRedis(MQDao):
                 sleep(3)
             except Exception as e:
                 self.logger.exception(e)
-                break
+                continue
 
     def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         """Send the message."""
