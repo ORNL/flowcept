@@ -180,6 +180,8 @@ QUERY_GUIDELINES = """
       -To select the first or earliest or initial tasks, use or adapt the following: `df.sort_values(by='started_at', ascending=True)`
       -To select the last or final or most recent tasks, use or adapt the following: `df.sort_values(by='ended_at', ascending=False)`
       
+      -If user explicitly asks to display or show all columns or fields, do not project on any particular field or column. Just show all of them.
+      
       -WHEN the user requests a "summary" of activities, you must incorporate relevant summary statistics such as min, max, and mean, into the code you generate.
       -Do NOT use df[0] or df[integer value] or df[df[<field name>].idxmax()] or df[df[<field name>].idxmin()] because these are obviously not valid Pandas Code!
       -**Do NOT use any of those: df[df['started_at'].idxmax()], df[df['started_at'].idxmin()], df[df['ended_at'].idxmin()], df[df['ended_at'].idxmax()]. Those are not valid Pandas Code.**
