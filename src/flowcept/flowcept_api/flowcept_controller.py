@@ -1,7 +1,6 @@
 """Controller module."""
 
-import os.path
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any
 from uuid import uuid4
 
 from flowcept.commons.autoflush_buffer import AutoflushBuffer
@@ -175,10 +174,7 @@ class Flowcept(object):
         self._interceptor_instances[0]._mq_dao.bulk_publish(self.buffer)
 
     @staticmethod
-    def read_messages_file(
-            file_path: str | None = None,
-            return_df: bool = False
-    ) -> Union[List[Dict[str, Any]], "DataFrame"]:
+    def read_messages_file(file_path: str | None = None, return_df: bool = False):
         """
         Read a JSON Lines (JSONL) file containing captured Flowcept messages.
 
@@ -234,13 +230,9 @@ class Flowcept(object):
 
         if file_path is None:
             file_path = DUMP_BUFFER_PATH
-        assert file_path is not None, (
-            "Please indicate file_path either in the argument or in the config file."
-        )
+        assert file_path is not None, "Please indicate file_path either in the argument or in the config file."
         if not os.path.exists(file_path):
-            raise FileNotFoundError(
-                f"File '{file_path}' was not found. It is created only in fully offline mode."
-            )
+            raise FileNotFoundError(f"File '{file_path}' was not found. It is created only in fully offline mode.")
 
         with open(file_path, "rb") as f:
             lines = [ln for ln in f.read().splitlines() if ln]
@@ -251,9 +243,7 @@ class Flowcept(object):
             try:
                 import pandas as pd
             except ModuleNotFoundError as e:
-                raise ModuleNotFoundError(
-                    "pandas is required when return_df=True. Please install pandas."
-                ) from e
+                raise ModuleNotFoundError("pandas is required when return_df=True. Please install pandas.") from e
             return pd.json_normalize(buffer, sep=".")
 
         return buffer
