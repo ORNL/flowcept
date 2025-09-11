@@ -65,7 +65,7 @@ mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog", "cryptography"]
 nvidia = ["nvidia-ml-py"]
 mqtt = ["paho-mqtt"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
-llm_agent = ["mcp[cli]", "langchain_community", "langchain_openai", "streamlit", "PyMuPDF"]
+llm_agent = ["mcp[cli]", "langchain_community", "langchain_openai", "streamlit", "PyMuPDF", "matplotlib"]
 llm_google = ["flowcept[llm_agent]", "google-genai"]
 llm_agent_audio = ["flowcept[llm_agent]", "streamlit-mic-recorder", "SpeechRecognition", "pydub", "gTTS"]
 # System dependency (required for pydub)

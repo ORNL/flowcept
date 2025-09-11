@@ -176,6 +176,7 @@ QUERY_GUIDELINES = """
       -To select the first (or earliest) N workflow executions, use or adapt the following: `df.groupby('workflow_id', as_index=False).agg({{"started_at": 'min'}}).sort_values(by='started_at', ascending=True).head(N)['workflow_id']` - utilize `started_at` to sort!     
       -To select the last (or latest or most recent) N workflow executions, use or adapt the following: `df.groupby('workflow_id', as_index=False).agg({{"ended_at": 'max'}}).sort_values(by='ended_at', ascending=False).head(N)['workflow_id']` - utilize `ended_at` to sort!
       
+      -If the user does not ask for a specific workflow run, do not use `workflow_id` in your query. 
       -To select the first or earliest or initial tasks, use or adapt the following: `df.sort_values(by='started_at', ascending=True)`
       -To select the last or final or most recent tasks, use or adapt the following: `df.sort_values(by='ended_at', ascending=False)`
       

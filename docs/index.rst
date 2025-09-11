@@ -22,6 +22,7 @@ Flowcept
    prov_capture
    telemetry_capture
    prov_storage
+   prov_query
    schemas
    contributing
    cli-reference
