@@ -227,3 +227,116 @@ Flowcept looks for its settings in the following order:
 2. Environment variable ``FLOWCEPT_SETTINGS_PATH`` — if set, Flowcept will use this  
 3. Default sample file — `sample_settings.yaml <https://github.com/ORNL/flowcept/blob/main/resources/sample_settings.yaml>`_  
 
+Environment Variables
+---------------------
+
+.. note::
+   **Precedence:** Environment variables always override values in
+   ``~/.flowcept/settings.yaml`` and built-in defaults.
+
+General
+~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Variable
+     - Purpose / Default
+   * - ``FLOWCEPT_USE_DEFAULT``
+     - If ``true``, use built-in defaults and ignore external settings files. Default ``false``.
+   * - ``FLOWCEPT_SETTINGS_PATH``
+     - Path to a YAML settings file. If unset, Flowcept uses ``~/.flowcept/settings.yaml`` or the packaged sample.
+
+Message Queue (MQ)
+~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Variable
+     - Purpose / Default
+   * - ``MQ_ENABLED``
+     - Enable MQ publishing. Accepts string values. Recommended: ``true`` or ``false``. Default comes from settings file (often ``False``).
+   * - ``MQ_TYPE``
+     - MQ kind (e.g., ``redis``). Default ``redis``.
+   * - ``MQ_CHANNEL``
+     - Channel/topic name. Default ``interception``.
+   * - ``MQ_HOST``
+     - MQ host. Default ``localhost``.
+   * - ``MQ_PORT``
+     - MQ port (int). Default ``6379``.
+   * - ``MQ_URI``
+     - Full connection URI. Overrides host/port if set. Default unset.
+
+Key-Value DB (KVDB)
+~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Variable
+     - Purpose / Default
+   * - ``KVDB_HOST``
+     - KV host. Default ``localhost``.
+   * - ``KVDB_PORT``
+     - KV port (int). Default ``6379``.
+   * - ``KVDB_URI``
+     - Full connection URI. Default unset.
+
+MongoDB
+~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Variable
+     - Purpose / Default
+   * - ``MONGO_ENABLED``
+     - Enable MongoDB persistence. Parsed as boolean: ``"true"`` → enabled, anything else → disabled. Default from settings.
+   * - ``MONGO_URI``
+     - Full MongoDB URI. If set, overrides host/port. Default unset.
+   * - ``MONGO_HOST``
+     - Mongo host. Default ``localhost``.
+   * - ``MONGO_PORT``
+     - Mongo port (int). Default ``27017``.
+
+LMDB
+~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Variable
+     - Purpose / Default
+   * - ``LMDB_ENABLED``
+     - Enable LMDB persistence. Parsed as boolean: ``"true"`` to enable. Default from settings.
+
+Agent / MCP
+~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Variable
+     - Purpose / Default
+   * - ``AGENT_AUDIO``
+     - Enable agent audio. String accepted. Interpreted truthy for ``1``, ``true``, ``yes``, ``y``, ``t`` (case-insensitive). Default from settings (often ``false``).
+   * - ``AGENT_HOST``
+     - MCP host. Default ``localhost``.
+   * - ``AGENT_PORT``
+     - MCP port (int). Default ``8000``.
+
+Parsing Notes
+~~~~~~~~~~~~~
+
+- Ports (``*_PORT``) are cast to integers.
+- ``MONGO_ENABLED`` and ``LMDB_ENABLED`` are parsed strictly as booleans
+  using case-insensitive comparison to ``"true"``.
+- ``MQ_ENABLED`` is read as a string and used as-is; prefer ``true`` or ``false`` to avoid
+  surprises when checking truthiness in Python.
