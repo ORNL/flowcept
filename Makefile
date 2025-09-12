@@ -45,6 +45,7 @@ clean:
 	@find . -type d -name "*output_data*" -exec sh -c 'rm -rf "$$@" 2>/dev/null || true' sh {} +
 	@find . -type f -name "*nohup*" -exec sh -c 'rm -f "$$@" 2>/dev/null || true' sh {} +
 	@sh -c 'sphinx-build -M clean docs docs/_build > /dev/null 2>&1 || true'
+	@sh -c 'rm -f docs/generated/* 2>/dev/null || true'
 
 # Build the HTML documentation using Sphinx
 .PHONY: docs

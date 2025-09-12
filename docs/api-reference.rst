@@ -1,17 +1,6 @@
 API Reference
 =============
 
-.. autosummary::
-   :toctree: generated/
-   :recursive:
-
-   flowcept.Flowcept
-   flowcept.flowcept_api.db_api.DBAPI
-   flowcept.TaskObject
-   flowcept.WorkflowObject
-   flowcept.FlowceptTask
-   flowcept.FlowceptLoop
-   flowcept.FlowceptLightweightLoop
 
 Main Flowcept Object
 --------------------
@@ -63,7 +52,7 @@ Main Message Objects
    :members:
    :noindex:
 
-FlowceptTask object
+FlowceptTask
 -------------------
 
 .. autoclass:: flowcept.FlowceptTask
@@ -73,7 +62,7 @@ FlowceptTask object
    :show-inheritance:
    :noindex:
 
-FlowceptLoop object
+FlowceptLoop
 -------------------
 
 .. autoclass:: flowcept.FlowceptLoop
@@ -83,7 +72,7 @@ FlowceptLoop object
    :show-inheritance:
    :noindex:
 
-FlowceptLightweightLoop object
+FlowceptLightweightLoop
 ------------------------------
 
 .. autoclass:: flowcept.FlowceptLightweightLoop
