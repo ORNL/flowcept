@@ -470,7 +470,8 @@ def start_mongo() -> None:
     mongodb = databases.get("mongodb") or {}
 
     bin_path = mongodb.get("bin")
-    log_path = mongodb.get("log_path")
+    db_path = mongodb.get("db_path", None)
+    log_path = mongodb.get("log_path", None)
     lock_file_path = mongodb.get("lock_file_path")
 
     if not bin_path:
@@ -483,6 +484,8 @@ def start_mongo() -> None:
         parts += ["--fork", "--logpath", shlex.quote(str(log_path))]
     if lock_file_path:
         parts += ["--pidfilepath", shlex.quote(str(lock_file_path))]
+    if db_path:
+        parts += ["--dbpath", shlex.quote(str(db_path))]
 
     cmd = " ".join(parts)
     try:
