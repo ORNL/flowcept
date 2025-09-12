@@ -44,7 +44,7 @@ class Flowcept(object):
     def __init__(
         self,
         interceptors: List[str] = None,
-        bundle_exec_id=None,
+        bundle_exec_id: str = None,
         campaign_id: str = None,
         workflow_id: str = None,
         workflow_name: str = None,
@@ -68,7 +68,7 @@ class Flowcept(object):
             Examples: "instrumentation", "dask", "mlflow", ...
             The order of interceptors matters — place the outer-most interceptor first,
 
-        bundle_exec_id : Any, optional
+        bundle_exec_id : str, optional
             Identifier for grouping interceptors in a bundle, essential for the correct initialization and stop of
             interceptors. If not provided, a unique ID is assigned.
 
@@ -101,9 +101,9 @@ class Flowcept(object):
         self.buffer = None
         self._check_safe_stops = check_safe_stops
         if bundle_exec_id is None:
-            self._bundle_exec_id = id(self)
+            self.bundle_exec_id = str(id(self))
         else:
-            self._bundle_exec_id = bundle_exec_id
+            self.bundle_exec_id = str(bundle_exec_id)
 
         self.enabled = True
         self.is_started = False
@@ -154,7 +154,7 @@ class Flowcept(object):
                 Flowcept.current_workflow_id = self.current_workflow_id
 
                 interceptor_inst = BaseInterceptor.build(interceptor)
-                interceptor_inst.start(bundle_exec_id=self._bundle_exec_id, check_safe_stops=self._check_safe_stops)
+                interceptor_inst.start(bundle_exec_id=self.bundle_exec_id, check_safe_stops=self._check_safe_stops)
                 self._interceptor_instances.append(interceptor_inst)
                 if isinstance(interceptor_inst._mq_dao.buffer, AutoflushBuffer):
                     Flowcept.buffer = self.buffer = interceptor_inst._mq_dao.buffer.current_buffer
@@ -297,7 +297,7 @@ class Flowcept(object):
 
         from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
 
-        doc_inserter = DocumentInserter(check_safe_stops=self._check_safe_stops, bundle_exec_id=self._bundle_exec_id)
+        doc_inserter = DocumentInserter(check_safe_stops=self._check_safe_stops, bundle_exec_id=self.bundle_exec_id)
         doc_inserter.start()
         self._db_inserters.append(doc_inserter)
 
@@ -316,7 +316,7 @@ class Flowcept(object):
         if len(self._db_inserters):
             self.logger.info("Stopping DB Inserters...")
             for db_inserter in self._db_inserters:
-                db_inserter.stop(bundle_exec_id=self._bundle_exec_id)
+                db_inserter.stop(bundle_exec_id=self.bundle_exec_id)
 
         Flowcept.buffer = self.buffer = None
         self.is_started = False
@@ -346,8 +346,7 @@ class Flowcept(object):
         - The method tests the liveness of the MQ service using `MQDao`.
         - If `MONGO_ENABLED` is True, it also checks the liveness of the MongoDB service
           using `MongoDBDAO`.
-        - Logs errors if any service is not ready, and logs success when both services are
-        operational.
+        - Logs errors if any service is not ready, and logs success when both services are operational.
 
         Examples
         --------

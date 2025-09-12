@@ -27,19 +27,20 @@ Good practice is to cherry-pick the extras relevant to your workflow instead of 
 
 .. code-block:: bash
 
-   pip install flowcept[mongo]         # MongoDB support
-   pip install flowcept[mlflow]        # MLflow adapter
-   pip install flowcept[dask]          # Dask adapter
-   pip install flowcept[tensorboard]   # TensorBoard adapter
-   pip install flowcept[kafka]         # Kafka message queue
-   pip install flowcept[nvidia]        # NVIDIA GPU runtime capture
-   pip install flowcept[telemetry]     # CPU/GPU/memory telemetry capture
-   pip install flowcept[lmdb]          # LMDB lightweight database
-   pip install flowcept[mqtt]          # MQTT support
-   pip install flowcept[llm_agent]     # MCP agent, LangChain, Streamlit integration
-   pip install flowcept[llm_google]    # Google GenAI + Flowcept agent support
-   pip install flowcept[analytics]     # Extra analytics (seaborn, plotly, scipy)
-   pip install flowcept[dev]           # Developer dependencies (docs, tests, lint, etc.)
+   pip install flowcept[mongo]           # MongoDB support
+   pip install flowcept[mlflow]          # MLflow adapter
+   pip install flowcept[dask]            # Dask adapter
+   pip install flowcept[tensorboard]     # TensorBoard adapter
+   pip install flowcept[kafka]           # Kafka message queue
+   pip install flowcept[nvidia]          # NVIDIA GPU runtime capture
+   pip install flowcept[telemetry]       # CPU/GPU/memory telemetry capture
+   pip install flowcept[lmdb]            # LMDB lightweight database
+   pip install flowcept[mqtt]            # MQTT support
+   pip install flowcept[llm_agent]       # MCP agent, LangChain, Streamlit integration
+   pip install flowcept[llm_google]      # Google GenAI + Flowcept agent support
+   pip install flowcept[llm_agent_audio] # MCP agent with audio enabled (tts).
+   pip install flowcept[analytics]       # Extra analytics (seaborn, plotly, scipy)
+   pip install flowcept[dev]             # Developer dependencies (docs, tests, lint, etc.)
 
 Installing with Common Runtime Bundle
 --------------------------------------
@@ -58,9 +59,9 @@ You might choose ``flowcept[extras]`` if:
 
 .. warning::
 
-   If you only need one of these features, install it individually instead of ``extras``.
+   If you only need one of these features, install it individually.
 
-Install All Optional Dependencies at Once
+Install all optional dependencies at once
 ------------------------------------------
 
 Flowcept provides a combined ``all`` extra, but installing everything into a single environment is **not recommended for users**.  

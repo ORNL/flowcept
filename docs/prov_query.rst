@@ -1,17 +1,17 @@
 Provenance Querying
 ====================
 
-Flowcept captures detailed provenance about workflows, tasks, and artifacts. Once captured, there are multiple ways to query this provenance depending on your needs. This guide summarizes the main mechanisms available for querying Flowcept data.
+Flowcept captures detailed provenance about workflows, tasks, agents, and data artifacts (e.g., ML models). Once captured, there are multiple ways to query this provenance depending on your needs. This guide summarizes the main mechanisms available for querying Flowcept data.
 
 .. note::
 
-    Persistence is optional in Flowcept. You can configure Flowcept to use LMDB, MongoDB or both. LMDB is a lightweight file‑based database ideal for simple tests; MongoDB provides advanced query support and is required for Flowcept’s database API and CLI queries. Flowcept can write to both backends if both are enabled.
+    Persistence is optional in Flowcept. You can configure Flowcept to use LMDB, MongoDB or both. For more complex queries, we recommend using it with Mongo. The in-memory buffer data is also available with a list of raw JSON data, which can also be queried. See also: `provenance storage <https://flowcept.readthedocs.io/en/latest/prov_storage.html>`_.
 
 
 Querying with the Command‑Line Interface
 ----------------------------------------
 
-Flowcept provides a small CLI for quick database queries. The CLI requires MongoDB to be enabled【202622579855635†L68-L96】 and accessible from your environment. After installing Flowcept, run `flowcept --help` to see all available commands and options【463846373907647†L68-L83】. The usage pattern is:
+Flowcept provides a small CLI for quick database queries. The CLI requires MongoDB to be enabled. After installing Flowcept, you will be able to run queries from the CLI.  The usage pattern is:
 
 .. code-block:: console
 
@@ -19,9 +19,9 @@ Flowcept provides a small CLI for quick database queries. The CLI requires Mongo
 
 Important query‑oriented commands include:
 
-* ``workflow-count`` – count tasks, workflows and objects for a given workflow ID【463846373907647†L152-L166】.
-* ``query`` – run a MongoDB query against the tasks collection, with optional projection, sorting and limit【463846373907647†L168-L190】.
-* ``get-task`` – fetch a single task document by its ID【463846373907647†L198-L207】.
+* ``workflow-count`` – count tasks, workflows and objects for a given workflow ID.
+* ``query`` – run a MongoDB query against the tasks collection, with optional projection, sorting and limit.
+* ``get-task`` – fetch a single task document by its ID.
 
 Here’s an example session:
 
@@ -38,7 +38,7 @@ Here’s an example session:
     # fetch a task by ID
     flowcept --get-task --task-id=24aa4e52-9aec-4ef6-8cb7-cbd7c72d436e
 
-The CLI prints JSON results to stdout. For full usage details see the official CLI reference【463846373907647†L68-L83】.
+The CLI prints JSON results to stdout. For full usage details see the official CLI reference.
 
 Querying via the Python API (`Flowcept.db`)
 -------------------------------------------
@@ -75,7 +75,9 @@ The `DBAPI` exposes many other methods, such as `get_tasks_recursive` to retriev
 Accessing the In‑Memory Buffer
 ------------------------------
 
-During runtime Flowcept stores captured messages in an in‑memory buffer (`Flowcept.buffer`). This buffer is useful for debugging or lightweight scripts because it provides immediate access to the latest tasks and workflows without any additional services. In the example below we create two tasks that attach binary data and then inspect the buffer:
+During runtime Flowcept stores captured messages in an in‑memory buffer (`Flowcept.buffer`). This buffer is useful for debugging or lightweight scripts because it provides immediate access to the latest tasks and workflows without any additional services. However, if running online, be aware that this buffer is flushed (i.e., emptied) from times to times to the MQ.
+
+In the example below we create two tasks that attach binary data and then inspect the buffer:
 
 .. code-block:: python
 
@@ -167,7 +169,7 @@ The connection string, database name and authentication credentials are configur
 Working with LMDB
 -----------------
 
-If LMDB is enabled instead of MongoDB【202622579855635†L68-L96】 Flowcept stores data in a directory (default: ``flowcept_lmdb``). LMDB is a file‑based key–value store; it does not support ad‑hoc queries out of the box, but you can read the data programmatically. Flowcept’s `DBAPI` can export LMDB data into pandas DataFrames, allowing you to analyse offline runs without MongoDB:
+If LMDB is enabled instead of MongoDB Flowcept stores data in a directory (default: ``flowcept_lmdb``). LMDB is a file‑based key–value store; it does not support ad‑hoc queries out of the box, but you can read the data programmatically. Flowcept’s `DBAPI` can export LMDB data into pandas DataFrames, allowing you to analyse offline runs without MongoDB:
 
 .. code-block:: python
 
@@ -182,7 +184,7 @@ Alternatively, you can use the `lmdb` Python library to iterate over raw key–v
 Monitoring Provenance with Grafana
 ----------------------------------
 
-Flowcept supports streaming provenance into monitoring dashboards. A sample Docker compose file (`deployment/compose-grafana.yml`) runs Grafana along with MongoDB and Redis. Grafana is configured with a pre‑built MongoDB‑Grafana image and exposes a port (3000) for the dashboard【711366042692702†L292-L297】. To configure Grafana to query Flowcept’s MongoDB, create a new data source with the URL `mongodb://flowcept_mongo:27017` and specify the database name (usually `flowcept`). The compose file sets environment variables for the admin user and password so you can log in and create your own panels.
+Flowcept supports streaming provenance into monitoring dashboards. A sample Docker compose file (`deployment/compose-grafana.yml`) runs Grafana along with MongoDB and Redis. Grafana is configured with a pre‑built MongoDB‑Grafana image and exposes a port (3000) for the dashboard. To configure Grafana to query Flowcept’s MongoDB, create a new data source with the URL `mongodb://flowcept_mongo:27017` and specify the database name (usually `flowcept`). The compose file sets environment variables for the admin user and password so you can log in and create your own panels.
 
 Grafana can also connect directly to Redis or Kafka for near‑real‑time streaming. See the Grafana documentation for instructions on configuring those plugins.
 

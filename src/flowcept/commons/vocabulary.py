@@ -35,3 +35,23 @@ class Status(str, Enum):
     def get_finished_statuses():
         """Get finished status."""
         return [Status.FINISHED, Status.ERROR]
+
+
+class MimeType(Enum):
+    """MimeTypes used in Flowcept."""
+
+    JPEG = "image/jpeg"
+    PNG = "image/png"
+    GIF = "image/gif"
+    BMP = "image/bmp"
+    TIFF = "image/tiff"
+    WEBP = "image/webp"
+    SVG = "image/svg+xml"
+
+    # Documents
+    PDF = "application/pdf"
+
+    # Data formats
+    JSON = "application/json"
+    CSV = "text/csv"
+    JSONL = "application/x-ndjson"  # standard for JSON Lines

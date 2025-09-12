@@ -8,9 +8,7 @@ Flowcept Architecture
 Overview
 --------
 
-Rather than designing a new provenance system from scratch, Flowcept builds on a **reference architecture**
-(Figure below) that follows established distributed design principles and is extensible to support
-LLM-based provenance agents.  
+Flowcept follows established distributed design principles and is extensible to support multiple MQs as backends, multiple database models (e.g., Document, Relational, Graph), and LLM-based agents.
 This provides a flexible, loosely coupled framework that scales from small centralized workflows
 to large HPC workflows across the **Edge–Cloud–HPC (ECH)** continuum.
 
@@ -18,8 +16,6 @@ to large HPC workflows across the **Edge–Cloud–HPC (ECH)** continuum.
    :alt: Flowcept System Architecture
    :align: center
    :width: 100%
-
-   Reference architecture for distributed workflow provenance with a provenance AI agent.
 
 Capture Mechanisms
 ------------------
@@ -59,7 +55,7 @@ They can store provenance into different backends, depending on performance and 
 
 - **MongoDB** → efficient bulk writes and flexible aggregation queries.  
 - **LMDB** → lightweight key–value store, optimized for high-frequency inserts.  
-- **Neo4j** → graph database, enabling graph traversal and relationship queries.
+- **Custom** → Other storage mechanisms can be implemented by following Flowcept's Base Consumer class. See `here <https://flowcept.readthedocs.io/en/latest/prov_storage.html#provenance-consumer>`_.
 
 Access and Querying
 -------------------
@@ -69,6 +65,8 @@ Users can access provenance data through multiple interfaces:
 - **Query API** (language-agnostic, usable from Python or Jupyter)  
 - **Grafana dashboards** for monitoring and visualization  
 - **Natural language queries** through Flowcept’s LLM-powered agent (introduced in this work)
+
+See more about `querying <https://flowcept.readthedocs.io/en/latest/prov_query.html>`_.
 
 Deployment Flexibility
 ----------------------

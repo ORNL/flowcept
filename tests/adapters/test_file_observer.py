@@ -45,7 +45,7 @@ class TestFileObserver(unittest.TestCase):
             os.fsync(f.fileno())  # Ensure file system updates
 
         # Add a small delay to ensure the observer catches the event
-        time.sleep(0.5)
+        time.sleep(1)
 
         # Wait for the callback to be called (max wait 5 seconds)
         callback_triggered = self.callback_called_event.wait(timeout=5)

@@ -95,17 +95,13 @@ You should see two messages, each describing one executed task:
 Next Steps
 ----------
 
-For advanced usage, including:
+- `Advanced provenance capture methods <https://flowcept.readthedocs.io/en/latest/prov_query.html>`_
+- `Provenance querying <https://flowcept.readthedocs.io/en/latest/prov_query.html>`_
+- `Telemetry capture <https://flowcept.readthedocs.io/en/latest/telemetry_capture.html>`_
 
-- Online querying with databases (MongoDB, LMDB)
-- MCP agents and Grafana dashboards
-- Telemetry capture
-- Adapters (MLflow, Dask, TensorBoard)
-- PyTorch instrumentation
-- HPC optimization or federated runs
+Examples:
 
-see:
-
-- `Jupyter Notebooks <https://github.com/ORNL/flowcept/tree/main/notebooks>`_
 - `Examples directory <https://github.com/ORNL/flowcept/tree/main/examples>`_
-- `Complete documentation <https://flowcept.readthedocs.io/>`_
+- `Jupyter Notebooks <https://github.com/ORNL/flowcept/tree/main/notebooks>`_
+
+

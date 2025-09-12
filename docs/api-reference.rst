@@ -16,12 +16,13 @@ API Reference
 Main Flowcept Object
 --------------------
 
+See also: `Flowcept object <https://flowcept.readthedocs.io/en/latest/prov_capture.html>`_ in provenance capture methods.
+
 .. autoclass:: flowcept.Flowcept
    :members:
    :special-members: __init__
    :exclude-members: __weakref__, __dict__, __module__
-
-
+   :noindex:
 
 Flowcept.db: Querying the Database
 ----------------------------------
@@ -49,16 +50,18 @@ Typical usage:
    :members:
    :undoc-members:
    :show-inheritance:
-
+   :noindex:
 
 Main Message Objects
 ---------------------
 
 .. autoclass:: flowcept.TaskObject
    :members:
+   :noindex:
 
 .. autoclass:: flowcept.WorkflowObject
    :members:
+   :noindex:
 
 FlowceptTask object
 -------------------
@@ -68,6 +71,7 @@ FlowceptTask object
    :special-members: __init__
    :undoc-members:
    :show-inheritance:
+   :noindex:
 
 FlowceptLoop object
 -------------------
@@ -77,7 +81,7 @@ FlowceptLoop object
    :special-members: __init__
    :undoc-members:
    :show-inheritance:
-
+   :noindex:
 
 FlowceptLightweightLoop object
 ------------------------------
@@ -87,3 +91,4 @@ FlowceptLightweightLoop object
    :special-members: __init__
    :undoc-members:
    :show-inheritance:
+   :noindex:
