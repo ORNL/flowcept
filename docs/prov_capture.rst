@@ -485,7 +485,7 @@ See `MCP Agent example <https://github.com/ORNL/flowcept/blob/main/examples/agen
 
 
 Custom Task Creation (fully customizable)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------------------
 
 Build tasks programmatically with ``FlowceptTask``—useful for non-decorator flows or custom payloads.
 Requires an active workflow (``with Flowcept(...)`` or ``Flowcept().start()``).
@@ -505,6 +505,8 @@ Requires an active workflow (``with Flowcept(...)`` or ``Flowcept().start()``).
        task = FlowceptTask(activity_id="parse", used={"bytes": len(data)})
        task.end({"records": 42})
        task.send()  # publishes to MQ
+
+If you need to store something that is not publicly exposed in the API (yet), you can use the private instance of ``FlowceptTask._task`` to access the task object fields directly. If that happens, open an issue in the repository and we will try to expose that in the public API.
 
 **Notes**:
 

@@ -12,9 +12,9 @@ For optional persistence, you can choose between:
 - `MongoDB <https://www.mongodb.com/>`_  
   A robust, service-based database with advanced query support.  
   Required to use Flowcept's Query API (``flowcept.Flowcept.db``) for complex queries and features like ML model management or runtime queries (query while writing).  
-  To use MongoDB, start the service with ``make services-mongo``.
 
 Flowcept supports writing to both databases simultaneously (default), individually, or to neither, depending on configuration.
+See `setup instructions <https://flowcept.readthedocs.io/en/latest/setup.html#setup>`_.
 
 If persistence is disabled, captured data is sent to the MQ without any default consumer subscribing to it.  
 In this case, querying requires writing a custom consumer to subscribe and store the data.  

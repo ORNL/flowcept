@@ -106,6 +106,7 @@ databases:
     db: flowcept
     create_collection_index: true  # Whether flowcept should create collection indices if they haven't been created yet. This is done only at the Flowcept start up.
 #    bin: /usr/bin/mongod
+#    db_path:
 #    log_path: /var/log/mongodb/mongod.log
 #    lock_file_path: /var/run/mongod.pid
 
