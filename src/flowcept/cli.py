@@ -106,7 +106,7 @@ def stream_messages(messages_file_path: Optional[str] = None, keys_to_show: List
     Listen to Flowcept's message stream and optionally echo/save messages.
 
     Parameters.
-    ----------
+    -----------
     messages_file_path : str, optional
         If provided, append each message as JSON (one per line) to this file.
         If the file already exists, a new timestamped file is created instead.
@@ -350,7 +350,7 @@ def agent_client(tool_name: str, kwargs: str = None):
     """Agent Client.
 
     Parameters.
-    ----------
+    -----------
     tool_name : str
         Name of the tool
     kwargs : str, optional

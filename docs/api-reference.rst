@@ -1,27 +1,17 @@
 API Reference
 =============
 
-.. autosummary::
-   :toctree: generated/
-   :recursive:
-
-   flowcept.Flowcept
-   flowcept.flowcept_api.db_api.DBAPI
-   flowcept.TaskObject
-   flowcept.WorkflowObject
-   flowcept.FlowceptTask
-   flowcept.FlowceptLoop
-   flowcept.FlowceptLightweightLoop
 
 Main Flowcept Object
 --------------------
+
+See also: `Flowcept object <https://flowcept.readthedocs.io/en/latest/prov_capture.html>`_ in provenance capture methods.
 
 .. autoclass:: flowcept.Flowcept
    :members:
    :special-members: __init__
    :exclude-members: __weakref__, __dict__, __module__
-
-
+   :noindex:
 
 Flowcept.db: Querying the Database
 ----------------------------------
@@ -49,18 +39,20 @@ Typical usage:
    :members:
    :undoc-members:
    :show-inheritance:
-
+   :noindex:
 
 Main Message Objects
 ---------------------
 
 .. autoclass:: flowcept.TaskObject
    :members:
+   :noindex:
 
 .. autoclass:: flowcept.WorkflowObject
    :members:
+   :noindex:
 
-FlowceptTask object
+FlowceptTask
 -------------------
 
 .. autoclass:: flowcept.FlowceptTask
@@ -68,8 +60,9 @@ FlowceptTask object
    :special-members: __init__
    :undoc-members:
    :show-inheritance:
+   :noindex:
 
-FlowceptLoop object
+FlowceptLoop
 -------------------
 
 .. autoclass:: flowcept.FlowceptLoop
@@ -77,9 +70,9 @@ FlowceptLoop object
    :special-members: __init__
    :undoc-members:
    :show-inheritance:
+   :noindex:
 
-
-FlowceptLightweightLoop object
+FlowceptLightweightLoop
 ------------------------------
 
 .. autoclass:: flowcept.FlowceptLightweightLoop
@@ -87,3 +80,4 @@ FlowceptLightweightLoop object
    :special-members: __init__
    :undoc-members:
    :show-inheritance:
+   :noindex:

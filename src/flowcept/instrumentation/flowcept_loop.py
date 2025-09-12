@@ -49,6 +49,7 @@ class FlowceptLoop:
         ----------
         items : Union[Sized, Iterator, int]
             The items to iterate over. Can be:
+
             - A sized iterable (e.g., list, range).
             - An integer (interpreted as ``range(items)``).
             - An iterator (requires ``items_length`` if length cannot be inferred).
@@ -216,8 +217,7 @@ class FlowceptLightweightLoop:
 
     The `FlowceptLightweightLoop` class supports iterating over a collection of items or a numeric
     range while capturing metadata for each iteration and for the loop as a whole.
-    This is particularly useful in scenarios where tracking and instrumentation of loop executions
-     is required.
+    This is particularly useful in scenarios where tracking and instrumentation of loop executions is required.
 
     Parameters
     ----------
@@ -269,6 +269,7 @@ class FlowceptLightweightLoop:
         ----------
         items : Union[Sized, Iterator]
             The items to iterate over. Must either be:
+
             - A sized iterable (with ``__len__``).
             - An explicit iterator (length must be given by ``items_length``).
         loop_name : str, optional

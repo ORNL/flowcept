@@ -39,9 +39,10 @@ def main():
     st.caption(
         "💡 Quick help\n"
         "Ask about workflow metrics, plots, or summaries.\n\n"
-        "Inputs → used, outputs → generated.\n"
-        "Commands: @record <note> add • @show records list • reset context clear • save context save.\n"
-        "Tip: set result = df to run ad-hoc Python on the in-memory DataFrame."
+        "I have an internal DataFrame in my context to which you can ask direct questions."
+        "Tasks inputs are mapped to `used.*` fields, and outputs to `generated.*`\n"
+        "Commands: `@record <note>`; \n `@show records`; \n  `reset context` ; `save context` \n"
+        "Tip: Inputs like `result = df[some valid df query]` will run direct queries to the df in context."
     )
 
     user_input = st.chat_input("Send a message")

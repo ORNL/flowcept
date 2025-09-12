@@ -41,6 +41,11 @@ def __getattr__(name):
 
         return FlowceptLoop
 
+    elif name == "FlowceptLightweightLoop":
+        from flowcept.instrumentation.flowcept_loop import FlowceptLightweightLoop
+
+        return FlowceptLightweightLoop
+
     elif name == "telemetry_flowcept_task":
         from flowcept.instrumentation.flowcept_task import telemetry_flowcept_task
 
@@ -74,6 +79,7 @@ __all__ = [
     "TaskQueryAPI",
     "flowcept_task",
     "FlowceptLoop",
+    "FlowceptLightweightLoop",
     "FlowceptTask",
     "telemetry_flowcept_task",
     "lightweight_flowcept_task",

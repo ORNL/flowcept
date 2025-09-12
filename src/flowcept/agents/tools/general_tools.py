@@ -104,25 +104,6 @@ def reset_records() -> ToolResult:
     except Exception as e:
         return ToolResult(code=499, result=str(e))
 
-@mcp_flowcept.tool()
-def show_records() -> ToolResult:
-    """
-    Lists all recorded user guidance.
-    """
-    try:
-        ctx = mcp_flowcept.get_context()
-        custom_guidance: List = ctx.request_context.lifespan_context.custom_guidance
-        if not custom_guidance:
-            message = "There is no recorded user guidance."
-        else:
-            message = "This is the list of custom guidance I have in my memory:"
-            message += "\n".join(f"- {msg}" for msg in custom_guidance)
-
-        return ToolResult(code=201, result=message)
-    except Exception as e:
-        return ToolResult(code=499, result=str(e))
-
-
 
 @mcp_flowcept.tool()
 def prompt_handler(message: str) -> ToolResult:
