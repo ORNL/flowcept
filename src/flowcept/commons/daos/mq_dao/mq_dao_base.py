@@ -20,6 +20,7 @@ from flowcept.configs import (
     KVDB_ENABLED,
     MQ_ENABLED,
     DUMP_BUFFER_PATH,
+    DUMP_BUFFER_ENABLED,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -49,6 +50,10 @@ class MQDao(object):
             from flowcept.commons.daos.mq_dao.mq_dao_mofka import MQDaoMofka
 
             return MQDaoMofka(*args, **kwargs)
+        elif MQ_TYPE == "redis_streams":
+            from flowcept.commons.daos.mq_dao.mq_dao_redis_streams import MQDaoRedisStreams
+
+            return MQDaoRedisStreams(*args, **kwargs)
         else:
             raise NotImplementedError
 
@@ -96,16 +101,10 @@ class MQDao(object):
     def bulk_publish(self, buffer):
         """Publish it."""
         # self.logger.info(f"Going to flush {len(buffer)} to MQ...")
-        if flowcept.configs.DB_FLUSH_MODE == "offline":
-            if DUMP_BUFFER_PATH is not None:
-                import orjson
+        if DUMP_BUFFER_ENABLED and DUMP_BUFFER_PATH is not None:
+            from flowcept.commons.utils import buffer_to_disk
 
-                with open(DUMP_BUFFER_PATH, "wb", buffering=1_048_576) as f:
-                    for obj in buffer:
-                        obj.pop("data", None)  # We are not going to store data in the buffer file.
-                        f.write(orjson.dumps(obj))
-                        f.write(b"\n")
-                self.logger.info(f"Saved Flowcept messages into {DUMP_BUFFER_PATH}.")
+            buffer_to_disk(buffer, DUMP_BUFFER_PATH, self.logger)
         else:
             if MQ_CHUNK_SIZE > 1:
                 for chunk in chunked(buffer, MQ_CHUNK_SIZE):

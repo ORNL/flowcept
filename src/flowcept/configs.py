@@ -11,7 +11,7 @@ PROJECT_NAME = "flowcept"
 DEFAULT_SETTINGS = {
     "version": __version__,
     "log": {"log_file_level": "disable", "log_stream_level": "disable"},
-    "project": {"dump_buffer_path": "flowcept_messages.jsonl"},
+    "project": {"dump_buffer": {"enabled": True, "path": "flowcept_buffer.jsonl"}},
     "telemetry_capture": {},
     "instrumentation": {},
     "experiment": {},
@@ -27,7 +27,9 @@ DEFAULT_SETTINGS = {
     "agent": {},
 }
 
-USE_DEFAULT = os.getenv("FLOWCEPT_USE_DEFAULT", "False").lower() == "true"
+_TRUE_VALUES = {"1", "true", "yes", "y", "t"}
+
+USE_DEFAULT = os.getenv("FLOWCEPT_USE_DEFAULT", "False").lower() in _TRUE_VALUES
 
 if USE_DEFAULT:
     settings = DEFAULT_SETTINGS.copy()
@@ -158,10 +160,16 @@ PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get("replace_non_json_serializable", True)
 ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
-DUMP_BUFFER_PATH = settings["project"].get("dump_buffer_path", "flowcept_messages.jsonl")
+
+DUMP_BUFFER_ENABLED = (
+    os.getenv("DUMP_BUFFER", str(settings["project"]["dump_buffer"].get("enabled", "true"))).strip().lower()
+    in _TRUE_VALUES
+)
+DUMP_BUFFER_PATH = settings["project"]["dump_buffer"].get("path", "flowcept_buffer.jsonl")
 
 TELEMETRY_CAPTURE = settings.get("telemetry_capture", None)
-TELEMETRY_ENABLED = TELEMETRY_CAPTURE is not None and len(TELEMETRY_CAPTURE)
+TELEMETRY_ENABLED = os.getenv("TELEMETRY_ENABLED", "true").strip().lower() in _TRUE_VALUES
+TELEMETRY_ENABLED = TELEMETRY_ENABLED and (TELEMETRY_CAPTURE is not None) and (len(TELEMETRY_CAPTURE) > 0)
 
 ######################
 # SYS METADATA #
@@ -235,13 +243,9 @@ INSTRUMENTATION = settings.get("instrumentation", {})
 INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", True)
 
 AGENT = settings.get("agent", {})
-AGENT_AUDIO = os.getenv("AGENT_AUDIO", str(settings["agent"].get("audio_enabled", "false"))).strip().lower() in {
-    "1",
-    "true",
-    "yes",
-    "y",
-    "t",
-}
+AGENT_AUDIO = (
+    os.getenv("AGENT_AUDIO", str(settings["agent"].get("audio_enabled", "false"))).strip().lower() in _TRUE_VALUES
+)
 AGENT_HOST = os.getenv("AGENT_HOST", settings["agent"].get("mcp_host", "localhost"))
 AGENT_PORT = int(os.getenv("AGENT_PORT", settings["agent"].get("mcp_port", "8000")))
 

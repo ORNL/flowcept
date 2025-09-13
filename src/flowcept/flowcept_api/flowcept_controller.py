@@ -1,5 +1,6 @@
 """Controller module."""
 
+import os
 from typing import List, Dict, Any
 from uuid import uuid4
 
@@ -9,7 +10,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.utils import ClassProperty
+from flowcept.commons.utils import ClassProperty, buffer_to_disk
 from flowcept.configs import (
     MQ_INSTANCES,
     INSTRUMENTATION_ENABLED,
@@ -130,7 +131,7 @@ class Flowcept(object):
         self.workflow_args = workflow_args
 
     def start(self):
-        """Start it."""
+        """Start Flowcept Controller."""
         if self.is_started or not self.enabled:
             self.logger.warning("DB inserter may be already started or instrumentation is not set")
             return self
@@ -170,11 +171,88 @@ class Flowcept(object):
         self.logger.debug("Flowcept started successfully.")
         return self
 
+    def get_buffer(self, return_df: bool = False):
+        """
+        Retrieve the in-memory message buffer.
+
+        Parameters
+        ----------
+        return_df : bool, optional
+            If False (default), return the raw buffer as a list of dictionaries.
+            If True, normalize the buffer into a pandas DataFrame with dotted
+            notation for nested keys. Requires ``pandas`` to be installed.
+
+        Returns
+        -------
+        list of dict or pandas.DataFrame
+            - If ``return_df=False``: the buffer as a list of dictionaries.
+            - If ``return_df=True``: the buffer as a normalized DataFrame.
+
+        Raises
+        ------
+        ModuleNotFoundError
+            If ``return_df=True`` but ``pandas`` is not installed.
+
+        Examples
+        --------
+        >>> buf = flowcept.get_buffer()
+        >>> isinstance(buf, list)
+        True
+
+        >>> df = flowcept.get_buffer(return_df=True)
+        >>> "generated.attention" in df.columns
+        True
+        """
+        if return_df:
+            try:
+                import pandas as pd
+            except ModuleNotFoundError as e:
+                raise ModuleNotFoundError("pandas is required when return_df=True. Please install pandas.") from e
+            return pd.json_normalize(self.buffer, sep=".")
+        return self.buffer
+
     def _publish_buffer(self):
         self._interceptor_instances[0]._mq_dao.bulk_publish(self.buffer)
 
+    def dump_buffer(self, path: str = None):
+        """
+        Dump the current in-memory buffer to a JSON Lines (JSONL) file.
+
+        Each element of the buffer (a dictionary) is serialized as a single line
+        of JSON. If no path is provided, the default path from the settings file
+        is used.
+
+        Parameters
+        ----------
+        path : str, optional
+            Destination file path for the JSONL output. If not provided,
+            defaults to ``DUMP_BUFFER_PATH`` as configured in the settings.
+
+        Returns
+        -------
+        None
+            The buffer is written to disk, no value is returned.
+
+        Notes
+        -----
+        - The buffer is expected to be a list of dictionaries.
+        - Existing files at the specified path will be overwritten.
+        - Logging is performed through the class logger.
+
+        Examples
+        --------
+        >>> flowcept.dump_buffer("buffer.jsonl")
+        # Writes buffer contents to buffer.jsonl
+
+        >>> flowcept.dump_buffer()
+        # Writes buffer contents to the default path defined in settings
+        """
+        if path is None:
+            path = DUMP_BUFFER_PATH
+        buffer_to_disk(self.buffer, path, self.logger)
+
     @staticmethod
-    def read_messages_file(file_path: str | None = None, return_df: bool = False):
+    def read_buffer_file(file_path: str | None = None, return_df: bool = False):
         """
         Read a JSON Lines (JSONL) file containing captured Flowcept messages.
 
@@ -187,7 +265,7 @@ class Flowcept(object):
         Parameters
         ----------
         file_path : str, optional
-            Path to the messages file. If not provided, defaults to the value of
+            Path to the buffer file. If not provided, defaults to the value of
             ``DUMP_BUFFER_PATH`` from the configuration. If neither is provided,
             an assertion error is raised.
         return_df : bool, default False
@@ -215,13 +293,13 @@ class Flowcept(object):
         --------
         Read messages as a list:
 
-        >>> msgs = read_messages_file("offline_buffer.jsonl")
+        >>> msgs = read_buffer_file("offline_buffer.jsonl")
         >>> len(msgs) > 0
         True
 
         Read messages as a normalized DataFrame:
 
-        >>> df = read_messages_file("offline_buffer.jsonl", return_df=True)
+        >>> df = read_buffer_file("offline_buffer.jsonl", return_df=True)
         >>> "generated.attention" in df.columns
         True
         """
@@ -247,6 +325,51 @@ class Flowcept(object):
             return pd.json_normalize(buffer, sep=".")
 
         return buffer
+
+    def delete_buffer_file(self, path: str = None):
+        """
+        Delete the buffer file from disk if it exists.
+
+        If no path is provided, the default path from the settings file
+        is used. Logs whether the file was successfully removed or not found.
+
+        Parameters
+        ----------
+        path : str, optional
+            Path to the buffer JSONL file. If not provided,
+            defaults to ``DUMP_BUFFER_PATH`` as configured in the settings.
+
+        Returns
+        -------
+        None
+            The file is deleted from disk if it exists, no value is returned.
+
+        Notes
+        -----
+        - This operation only affects the file on disk. It does not clear
+          the in-memory buffer.
+        - Logging is performed through the class logger.
+
+        Examples
+        --------
+        >>> flowcept.delete_buffer_file("buffer.jsonl")
+        # Deletes buffer.jsonl if it exists
+
+        >>> flowcept.delete_buffer_file()
+        # Deletes the default buffer file defined in settings
+        """
+        if path is None:
+            path = DUMP_BUFFER_PATH
+
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+                self.logger.info(f"Buffer file deleted: {path}")
+            else:
+                self.logger.warning(f"No buffer file found at: {path}")
+        except Exception as e:
+            self.logger.error(f"Failed to delete buffer file: {path}")
+            self.logger.exception(e)
 
     def save_workflow(self, interceptor: str, interceptor_instance: BaseInterceptor):
         """
@@ -302,7 +425,7 @@ class Flowcept(object):
         self._db_inserters.append(doc_inserter)
 
     def stop(self):
-        """Stop it."""
+        """Stop Flowcept controller."""
         if not self.is_started or not self.enabled:
             self.logger.warning("Flowcept is already stopped or may never have been started!")
             return

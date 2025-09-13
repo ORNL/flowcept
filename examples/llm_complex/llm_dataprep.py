@@ -143,8 +143,6 @@ def get_raw_batch(raw_dataset, mapping, i, batch_size):
     return raw_batch
 
 
-
-
 def dataprep_workflow(data_dir="input_data",
                       tokenizer_type="basic_english",  # spacy, moses, toktok, revtok, subword
                       batch_size=20,
