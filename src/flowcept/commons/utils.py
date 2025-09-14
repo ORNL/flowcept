@@ -4,7 +4,7 @@ import argparse
 from datetime import datetime, timedelta, timezone
 import json
 from time import time, sleep
-from typing import Callable
+from typing import Callable, List, Dict
 import os
 import platform
 import subprocess
@@ -243,6 +243,24 @@ def get_current_config_values():
                 _vars[var_name] = val
     _vars["ADAPTERS"] = list(_vars.get("ADAPTERS", []))
     return _vars
+
+
+def buffer_to_disk(buffer: List[Dict], path: str, logger):
+    """
+    Append the in-memory buffer to a JSON Lines (JSONL) file on disk.
+    """
+    if not buffer:
+        logger.warning("The buffer is currently empty.")
+        return
+    with open(path, "ab", buffering=1_048_576) as f:
+        for obj in buffer:
+            obj.pop("data", None)  # We are not going to store data in the buffer file.
+            from orjson import orjson
+
+            f.write(orjson.dumps(obj))
+            f.write(b"\n")
+
+    logger.info(f"Saved Flowcept buffer into {path}.")
 
 
 class GenericJSONDecoder(json.JSONDecoder):

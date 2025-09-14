@@ -10,6 +10,7 @@
 **/*tensorboard_events*
 **/*.DS_Store*
 **/*.log
+**/*.jsonl
 **/*.pth
 **/*ipynb_checkpoints*
 **/*flowcept_lmdb

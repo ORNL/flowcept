@@ -7,7 +7,9 @@ project:
   performance_logging: false # Enable performance logging if true. Particularly useful for MQ flushes.
   enrich_messages: true # Add extra metadata to task messages, such as IP addresses and UTC timestamps.
   db_flush_mode: online # Mode for flushing DB entries: "online" or "offline". If online, flushes to the DB will happen before the workflow ends.
-  # dump_buffer_path: flowcept_messages.jsonl # This is useful if you need to run completely offline. If you omit this, even offline, buffer data will not be persisted.
+  dump_buffer: # This is particularly useful if you need to run completely offline. If you omit this, even offline, buffer data will not be persisted.
+    enabled: false
+    path: flowcept_buffer.jsonl
 
 log:
   log_path: "default" # Path for log file output; "default" will write the log in the directory where the main executable is running from.

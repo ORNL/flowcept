@@ -1,6 +1,6 @@
 """
 This is a very simple script to show the basic instrumentation capabilities of Flowcept, using its most straightforward
-way of capturing workflow provenance from functions: using @decorators.
+way of capturing workflow provenance from functions: using @decorators. It is meant to be executed in offline model.
 
 Flowcept will flush its internal buffer to a simple JSONL file in the end, if a `dump_buffer_path` is defined in
  the settings file (typically under ~/.flowcept/settings.yaml).
@@ -46,6 +46,6 @@ if __name__ == "__main__":
 
     main()
 
-    prov_messages = Flowcept.read_messages_file()
-    assert len(prov_messages) == 2
-    print(json.dumps(prov_messages, indent=2))
+    prov_buffer = Flowcept.read_buffer_file()
+    assert len(prov_buffer) == 2
+    print(json.dumps(prov_buffer, indent=2))

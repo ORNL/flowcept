@@ -469,6 +469,7 @@ def start_mongo() -> None:
     import time
     import socket
     from flowcept.configs import MONGO_HOST, MONGO_PORT, MONGO_URI
+
     def _port_open(host: str, port: int, timeout: float = 0.5) -> bool:
         try:
             with socket.create_connection((host, port), timeout=timeout):
@@ -482,6 +483,7 @@ def start_mongo() -> None:
         have_pymongo = False
         try:
             from pymongo import MongoClient  # optional
+
             have_pymongo = True
         except Exception:
             pass
@@ -496,6 +498,7 @@ def start_mongo() -> None:
 
             try:
                 from pymongo import MongoClient
+
                 client = MongoClient(uri or f"mongodb://{host}:{port}", serverSelectionTimeoutMS=800)
                 client.admin.command("ping")
                 return True

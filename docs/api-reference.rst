@@ -65,7 +65,9 @@ FlowceptTask
 FlowceptLoop
 -------------------
 
-.. autoclass:: flowcept.FlowceptLoop
+Can be imported via ``from flowcept import FlowceptLoop``
+
+.. autoclass:: flowcept.instrumentation.flowcept_loop.FlowceptLoop
    :members:
    :special-members: __init__
    :undoc-members:
@@ -75,7 +77,9 @@ FlowceptLoop
 FlowceptLightweightLoop
 ------------------------------
 
-.. autoclass:: flowcept.FlowceptLightweightLoop
+Can be imported via ``from flowcept import FlowceptLightweightLoop``
+
+.. autoclass:: flowcept.instrumentation.flowcept_loop.FlowceptLightweightLoop
    :members:
    :special-members: __init__
    :undoc-members:
