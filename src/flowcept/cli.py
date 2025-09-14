@@ -66,7 +66,7 @@ def init_settings(full: bool = False):
     settings_path_env = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
     if settings_path_env is not None:
         print(f"FLOWCEPT_SETTINGS_PATH environment variable is set to {settings_path_env}.")
-        dest_path = settings_path_env
+        dest_path = Path(settings_path_env)
     else:
         dest_path = Path(os.path.join(configs._SETTINGS_DIR, "settings.yaml"))
 
