@@ -7,15 +7,15 @@ Bibtex is available below.
 
 **Towards Lightweight Data Integration using Multi-workflow Provenance and Data Observability**  
 R. Souza, T. J. Skluzacek, S. R. Wilkinson, M. Ziatdinov, and R. Ferreira da Silva,  
-*IEEE International Conference on e-Science*, 2023.  
-[doi: 10.1109/e-Science58273.2023.10254822](https://doi.org/10.1109/e-Science58273.2023.10254822)  
+*IEEE International Conference on e-Science*, Limassol, Cyprus, 2023.  
+doi: [10.1109/e-Science58273.2023.10254822](https://doi.org/10.1109/e-Science58273.2023.10254822)  
 PDF: https://arxiv.org/pdf/2308.09004.pdf  
 
 ---
 
 **PROV-AGENT: Unified Provenance for Tracking AI Agent Interactions in Agentic Workflows**  
 R. Souza, A. Gueroudji, S. DeWitt, D. Rosendo, T. Ghosal, R. Ross, P. Balaprakash, and R. Ferreira da Silva,  
-*IEEE International Conference on e-Science*, Chicago, U.S.A., 2025.  
+*IEEE International Conference on e-Science*, Chicago, USA., 2025.  
 Publisher: IEEE.  
 PDF: https://arxiv.org/pdf/2508.02866  
 
@@ -24,15 +24,15 @@ PDF: https://arxiv.org/pdf/2508.02866
 **Workflow Provenance in the Computing Continuum for Responsible, Trustworthy, and Energy-Efficient AI**  
 R. Souza, S. Caino-Lores, M. Coletti, T. J. Skluzacek, A. Costan, F. Suter, M. Mattoso, and R. Ferreira da Silva,  
 *IEEE International Conference on e-Science*, Osaka, Japan, 2024.  
-[doi: 10.1109/e-Science62913.2024.10678731](https://doi.org/10.1109/e-Science62913.2024.10678731)  
+doi: [10.1109/e-Science62913.2024.10678731](https://doi.org/10.1109/e-Science62913.2024.10678731)  
 PDF: https://hal.science/hal-04902079v1/document  
 
 ---
 
 **LLM Agents for Interactive Workflow Provenance: Reference Architecture and Evaluation Methodology**  
 R. Souza, T. Poteet, B. Etz, D. Rosendo, A. Gueroudji, W. Shin, P. Balaprakash, and R. Ferreira da Silva,  
-*Workflows in Support of Large-Scale Science (WORKS) co-located with the ACM/IEEE International Conference for High Performance Computing, Networking, Storage, and Analysis (SC)*, St Louis, MO, USA, 2025.  
-[doi: 10.1145/3731599.3767582](https://doi.org/10.1145/3731599.3767582)  
+*Workflows in Support of Large-Scale Science (WORKS) co-located with the ACM/IEEE International Conference for High Performance Computing, Networking, Storage, and Analysis (SC)*, St. Louis, USA, 2025.  
+doi: [10.1145/3731599.3767582](https://doi.org/10.1145/3731599.3767582)  
 
 ### Bixtex
 
@@ -56,7 +56,6 @@ R. Souza, T. Poteet, B. Etz, D. Rosendo, A. Gueroudji, W. Shin, P. Balaprakash, 
   title     = {PROV-AGENT: Unified Provenance for Tracking {AI} Agent Interactions in Agentic Workflows},
   booktitle = {IEEE International Conference on e-Science},
   year      = {2025},
-  location  = {Chicago, U.S.A.},
   pdf = {https://arxiv.org/pdf/2508.02866},
   publisher = {IEEE},
   keywords = {Workflows, Agentic Workflows, Provenance, Lineage, Responsible AI, LLM, Agentic AI},
