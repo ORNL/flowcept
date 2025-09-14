@@ -1,236 +1,232 @@
-# Complex end-to-end Example on a LLM Training Workflow
+# Flowcept LLM Tutorial: Progressive Provenance Capture
 
-This illustrative example shows an LLM training workflow by fine-tuning hyperparameter (aka hyperparameter search) over Wikidata.
-It is similar to a parallel grid search using Dask to run the parallel model training.
+This tutorial shows how to capture provenance in **Flowcept** step by step, increasing detail from a simple campaign-level run to subworkflows, PyTorch model forwards, and loop instrumentation. You will see how the same training code yields richer provenance as you turn on different capture methods.
 
-## Campaign → Workflow → Task in this example
+> Code location: <https://github.com/ORNL/flowcept/tree/main/examples/llm_tutorial>
 
-- **Campaign** groups the whole experiment (data prep + search).
-- **Workflows**
-  - `Data Prep Workflow`
-  - `Search Workflow`, with **subworkflows**:
-    - `Module Layer Forward Train`
-    - `Module Layer Forward Test`
-- **Tasks** (inside `Search Workflow`)
-  - `model_train` (Dask) → many `Loop Iteration Task`s
-  - Each epoch iteration triggers parent-module forward tasks in the Train/Test subworkflows.
+---
 
-**Linkage via IDs**
-- Tasks → `workflow_id` → their workflow; Workflows/Tasks → `campaign_id` → the campaign
-- Subworkflows → `parent_workflow_id` → parent workflow
-- Subtasks → `parent_task_id` → parent task
+## Scripts at a glance
 
-```mermaid
-graph TD
-  Campaign[Campaign]
-  Campaign --> W_data_prep[Workflow: Data Prep]
-  Campaign --> W_search[Workflow: Search]
+| Script | Role | Key elements | Imported by |
+|---|---|---|---|
+| [`llm_train_campaign.py`](llm_train_campaign.py) | Orchestrates a hyperparameter campaign. Runs training jobs (optionally in parallel with Dask). Wires campaign/workflow IDs into runs. | `generate_configs`, `search_workflow`, `main` (argparse), Flowcept context management | Entry point |
+| [`llm_dataprep.py`](llm_dataprep.py) | Prepares the dataset (e.g., **WikiText-2**), tokenization, and splits. Emits a **Data Prep Workflow** when Flowcept is enabled. | `dataprep_workflow` | `llm_train_campaign.py` |
+| [`llm_model.py`](llm_model.py) | Defines the `TransformerModel`, the training and evaluation loops, and optional Flowcept **Torch instrumentation** (model forwards, per-epoch, per-batch). | `model_train`, `train_epoch`, `evaluate`, `@flowcept_torch`, `FlowceptEpochLoop` | `llm_train_campaign.py` |
+| `analysis.ipynb` | Example notebook to inspect provenance from saved JSONL buffer. | Reads JSONL via `Flowcept.read_messages_file(return_df=True)`; sample pandas queries | Standalone |
 
-  %% Search subworkflows
-  W_search --> SW_train[Subworkflow: Module Layer Forward Train]
-  W_search --> SW_test[Subworkflow: Module Layer Forward Test]
 
-  %% Search tasks
-  W_search --> T_main[Task: model_train (Dask)]
-  T_main --> T_loop[Task: Epochs Whole Loop]
-  T_loop --> T_iter[Task: Loop Iteration Task × N]
-  T_iter --> T_train_fw[(Parent module forward tasks — Train)]
-  T_iter --> T_test_fw[(Parent module forward tasks — Test)]
-```
+---
 
-### Hierarchy
+## Quick intro
+
+We run an LLM-style small (able to train on desktop's CPU) training on **WikiText-2**, then progressively enable provenance features in Flowcept. Start with a minimal Dask-driven search workflow, add a Data Prep workflow, then turn on per-epoch loop capture, parent model forwards, child layer forwards, and telemetry. You learn how **campaign → workflow → task** relationships look in the captured data.
+
+### Campaign Workflow Structure
 
 - **Campaign**
-  - **Workflow**: Data Prep
-  - **Workflow**: Search  
-    - **Subworkflow**: Module Layer Forward **Train**  
-    - **Subworkflow**: Module Layer Forward **Test**  
-    - **Task**: `model_train` (Dask)  
-      - **Task**: Epochs Whole Loop  
-        - **Task**: Loop Iteration Task × N  
-          - **Tasks**: Parent module forward tasks (Train/Test)
-
-
-
-
+  - **Workflow:** Data Prep
+  - **Workflow:** Search
+    - **Subworkflow:** Module Layer Forward Train
+    - **Subworkflow:** Module Layer Forward Test
+- **Task:** `model_train` (Dask)
+  - **Task:** Loop Iteration x N
+    - Parent module forwards - Train
+    - Parent module forwards - Test
+---
 
 ## Requirements
 
-`pip install flowcept[ml_dev,extras]`  # You can need to add nvidia/AMD GPU telemetry capture.
+- Python **3.10+**
+- **Flowcept** with ML extras and Dask:  
+  ```bash
+  pip install "flowcept[ml_dev,extras,dask]"
+  ```
 
-## Growing in complexity
+We expect familiarity with basic Flowcept concepts and with deep learning training basics.
 
-Run the [llm_train_campaign.py](llm_train_campaign.py) script by incrementally growing the complexity of the provenance capture by adjusting the settings file.
+---
 
-#### Disable telemetry
+## Setup
 
-Adjust the `settings.yaml`:
-```yaml
-telemetry_capture: ~  # Remember, ~ is the same as null. This will disable telemetry.
+```bash
+git clone https://github.com/ORNL/flowcept.git
+cd flowcept/examples/llm_tutorial
+conda activate flowpcept # or use venv
+pip install "flowcept[ml_dev,extras,dask]"
+# You may need to adjust PyTorch packages per your platform (see pytorch.org)
+flowcept --init-settings
 ```
 
-# 1. Search Workflow only
+Adjust your generated **settings.yaml** file as you move through the stages below. Initial settings:
 
-See the function `search_workflow` [here](llm_train_campaign.py). For each combination of hyperparameters, it will run the function `model_train` from [llm_model.py](llm_model.py) in parallel.
-
-Adjust the `settings.yaml`:
-```yaml
-instrumentation:
-  enabled: false
-``` 
-
-**Expected outcome:**
-
-`Flowcept.read_buffer_file(return_df=True)` should return 3 rows: two for the dask (`model_train`) tasks (init and end messages) and one for the workflow object.
-
-**Reason:** Here, we are running only with the Dask plugins. The default args of the [llm_train_campaign.py](llm_train_campaign.py) in this tutorial only runs one dask task (i.e., it evaluates only one combination of hyperparameters).  All other instrumentation is disabled. This is the level of granularity of most provenance systems.
-
-## 2. Adding the Data Prep workflow.
-
-See the `with Flowcept` block inside the [llm_dataprep.py](llm_dataprep.py).
-
-Adjust the `settings.yaml`:
-```yaml
-instrumentation:
-  enabled: true # This toggles data capture for instrumentation.
-  torch:
-    what: ~ # Scope of instrumentation: "parent_only" -- will capture only at the main model level, "parent_and_children" -- will capture the inner layers, or ~ (disable).
-    children_mode: ~   # What to capture if parent_and_children is chosen in the scope. Possible values: "tensor_inspection" (i.e., tensor metadata), "telemetry", "telemetry_and_tensor_inspection"
-    epoch_loop: ~ # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    batch_loop: ~ # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    capture_epochs_at_every: 1 # Will capture data at every N epochs; please use a value that is multiple of the total number of #epochs.
-    register_workflow: false
-```
-
-**Expected outcome:**
-
-`Flowcept.read_buffer_file(return_df=True)` should return 4 rows: same as before + the data prep workflow.
-
-**Reason:** By enabling the instrumentation but keeping all other PyTorch-related instrumentation disabled, only the Data Prep workflow is added to the buffer.
-
-
-## 3. Add Per-epoch Instrumentation
-
-See `FlowceptEpochLoop` usage in [llm_model.py](llm_model.py). 
-
-Adjust the `settings.yaml`:
-```yaml
-instrumentation:
-  enabled: true # This toggles data capture for instrumentation.
-  torch:
-    what: ~ # Scope of instrumentation: "parent_only" -- will capture only at the main model level, "parent_and_children" -- will capture the inner layers, or ~ (disable).
-    children_mode: ~   # What to capture if parent_and_children is chosen in the scope. Possible values: "tensor_inspection" (i.e., tensor metadata), "telemetry", "telemetry_and_tensor_inspection"
-    epoch_loop: default # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    batch_loop: ~ # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    capture_epochs_at_every: 1 # Will capture data at every N epochs; please use a value that is multiple of the total number of #epochs.
-    register_workflow: false # Will store the parent model forward as a workflow itself in the database.
-``` 
-
-**Expected outcome:**
-
-`Flowcept.read_buffer_file(return_df=True)` should return 8 rows: 4 as before plus 4 new rows, one per each epoch.
-
-**Reason:** The default arguments of [llm_train_campaign.py](llm_train_campaign.py) uses 4 epochs.
-Notice that every epoch iteration task has a `parent_task_id` that should point to the Dask task (the `model_train` task).
-
-## 4. Adding PyTorch Model Forwards
-
-If this is enabled, whenever a PyTorch model is invoked (e.g., whenever there is a call like `model(data)`, model prov. will be captured)
-
-See the `TransformerModel` class definition, especially the `@flowcept_torch` decorator, and see its instantiation in the file [llm_model.py](llm_model.py). In the instantiation, notice the arguments:
-```python    
-parent_workflow_id=workflow_id,
-campaign_id=campaign_id,
-get_profile=True,
-capture_enabled=with_flowcept
-```
-
-Adjust the `settings.yaml`:
-```yaml
-instrumentation:
-  enabled: true # This toggles data capture for instrumentation.
-  torch:
-    what: parent_only # Scope of instrumentation: "parent_only" -- will capture only at the main model level, "parent_and_children" -- will capture the inner layers, or ~ (disable).
-    children_mode: ~   # What to capture if parent_and_children is chosen in the scope. Possible values: "tensor_inspection" (i.e., tensor metadata), "telemetry", "telemetry_and_tensor_inspection"
-    epoch_loop: default # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    batch_loop: ~ # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    capture_epochs_at_every: 4 # Will capture data at every N epochs; please use a value that is multiple of the total number of #epochs.
-    register_workflow: false # Will store the parent model forward as a workflow itself in the database.
-```
-
-Setting `parent_only` capture means that only the high-level model pass will be captured. The inner layers (aka children modules) will not be captured. 
-Also, notice that we `set capture_epochs_at_every: 4`  because we know that the default setting has 4 epochs. This is just for didactic purposes, to only capture provenance at one epoch (out of the 4). 
-
-**Expected outcome:**
-
-`Flowcept.read_buffer_file(return_df=True)` should return 14 rows: 8 as before plus 6 new ones. 
-
-**Explanation:** Because of the default settings for train and eval batch sizes, and the default setting limits the number of samples in the input dataset to use, the number train batches is `2` and the number of test batches is `4`.
-In every batch, there will be a model pass.
-See the `model(data)` calls inside the functions `train_epoch` and `evaluate` in the [llm_model.py](llm_model.py) file.
-
-In each new row, observe the fields `used`, `generated`,  `custom_metadata`, `parent_task_id`, `subtype
-
-## 5. Saving the Model definition as a Flowcept workflow
-
-This enables storing high-level metadata about the model.
-
-Adjust the `settings.yaml`:
-```yaml
-instrumentation:
-  enabled: true # This toggles data capture for instrumentation.
-  torch:
-    what: parent_only # Scope of instrumentation: "parent_only" -- will capture only at the main model level, "parent_and_children" -- will capture the inner layers, or ~ (disable).
-    children_mode: ~   # What to capture if parent_and_children is chosen in the scope. Possible values: "tensor_inspection" (i.e., tensor metadata), "telemetry", "telemetry_and_tensor_inspection"
-    epoch_loop: default # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    batch_loop: ~ # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    capture_epochs_at_every: 4 # Will capture data at every N epochs; please use a value that is multiple of the total number of #epochs.
-    register_workflow: true # Will store the parent model forward as a workflow itself in the database.
-```
-
-**Expected outcome:**
-
-`Flowcept.read_buffer_file(return_df=True)`  should return 15 rows: 14 as before plus a new workflow row (`df[df.name == 'TransformerModel']`). Inspect it, particularly the fields `custom_metadata`, `parent_workflow_id` (which should point to the `SearchWorkflow` workflow).
-
-## 6. Adding PyTorch Model Forwards for Every Layer
-
-Adjust the `settings.yaml`:
-```yaml
-instrumentation:
-  enabled: true # This toggles data capture for instrumentation.
-  torch:
-    what: parent_only # Scope of instrumentation: "parent_only" -- will capture only at the main model level, "parent_and_children" -- will capture the inner layers, or ~ (disable).
-    children_mode: ~   # What to capture if parent_and_children is chosen in the scope. Possible values: "tensor_inspection" (i.e., tensor metadata), "telemetry", "telemetry_and_tensor_inspection"
-    epoch_loop: default # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    batch_loop: ~ # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    capture_epochs_at_every: 1 # Will capture data at every N epochs; please use a value that is multiple of the total number of #epochs.
-    register_workflow: true # Will store the parent model forward as a workflow itself in the database.
-```
-
-**Expected outcome:**
-
-`Flowcept.read_buffer_file(return_df=True)`  should return 33 rows: 15 as before + 6*3.
-
-**Explanation:** Explanation: We capture model forwards for every epoch. There are 4 epochs. Each epoch has 2 train forwards and 4 eval forwards, so 6 forwards per epoch. We previously captured one epoch (6 forwards). Now we capture all four, adding 18 rows and reaching 33 total.
-
-
-## 6. Running with Telemetry Capture and Message Enrichment
-
-Adjust the `settings.yaml`:
 ```yaml
 project:
-  enrich_messages: true # Add extra metadata to task messages, such as IP addresses and UTC timestamps.
-  
-telemetry_capture: 
-  cpu: true
+  enrich_messages: true # Add extra metadata to task messages, such as IP addresses of the node that executed the task, UTC timestamps, GitHub repo metadata.
+  db_flush_mode: offline # Mode for flushing DB entries: "online" or "offline". If online, flushes to the DB will happen before the workflow ends.
+  dump_buffer: # This is particularly useful if you need to run completely offline. If you omit this, even offline, buffer data will not be persisted.
+    enabled: true
+    path: flowcept_buffer.jsonl
 
 instrumentation:
-  enabled: true # This toggles data capture for instrumentation.
+  enabled: false
   torch:
-    what: parent_only # Scope of instrumentation: "parent_only" -- will capture only at the main model level, "parent_and_children" -- will capture the inner layers, or ~ (disable).
-    children_mode: ~   # What to capture if parent_and_children is chosen in the scope. Possible values: "tensor_inspection" (i.e., tensor metadata), "telemetry", "telemetry_and_tensor_inspection"
-    epoch_loop: default # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    batch_loop: ~ # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
-    capture_epochs_at_every: 1 # Will capture data at every N epochs; please use a value that is multiple of the total number of #epochs.
-    register_workflow: true # Will store the parent model forward as a workflow itself in the database.
+    what: ~                  # parent_only | parent_and_children | ~
+    children_mode: ~         # tensor_inspection | telemetry | telemetry_and_tensor_inspection
+    epoch_loop: ~            # default | lightweight | ~
+    batch_loop: ~            # default | lightweight | ~
+    capture_epochs_at_every: 1
+    register_workflow: false
+
+telemetry_capture: ~         #  control telemetry capture
 ```
+
+---
+
+## How to run
+
+1. Adjust `settings.yaml` for the desired capture level.
+2. Run the campaign entry point:
+   ```bash
+   python llm_train_campaign.py
+   ```
+3. Inspect the captured data:
+   
+ ```python
+ from flowcept import Flowcept
+ df = Flowcept.read_messages_file("flowcept_messages.jsonl", return_df=True)
+ print(df.shape, list(df.columns)[:12])
+  ```
+
+Inspect the workflow row.
+
+---
+
+## Progressive capture levels
+
+Each step below modifies `settings.yaml` minimally, so you can see how much additional provenance arrives.
+
+### 1) Search Workflow only
+
+- Set:
+  ```yaml
+  instrumentation:
+    enabled: false
+  ```
+- What runs: the Dask `model_train` task for one hyperparameter combination.
+- Expect roughly **3 rows** in JSONL: two for the Dask task (init and end) and one workflow record.
+
+### 2) Add the Data Prep workflow
+
+- Enable instrumentation but keep Torch off:
+  ```yaml
+  project:
+    enrich_messages: false # let's disable it for now, for clarity. We'll re-enable later.
+  instrumentation:
+    enabled: true
+    torch:
+      what: ~
+      children_mode: ~
+      epoch_loop: ~
+      batch_loop: ~
+      capture_epochs_at_every: 1
+      register_workflow: false
+  ```
+- `llm_dataprep.py` contributes a **Data Prep Workflow**.
+- Expect roughly **4 rows** total.
+
+### 3) Per-epoch instrumentation
+
+- Turn on epoch loop capture:
+  ```yaml
+  instrumentation:
+    enabled: true
+    torch:
+      what: ~
+      children_mode: ~
+      epoch_loop: default
+      batch_loop: ~
+      capture_epochs_at_every: 1
+      register_workflow: false
+  ```
+- Default epochs in the example are **4**.  
+- Expect **8 rows** total (adds one per epoch).
+
+### 4) Parent model forwards (no inner layers)
+
+- Capture only the top-level model call (`model(data)`):
+  ```yaml
+  instrumentation:
+    enabled: true
+    torch:
+      what: parent_only
+      children_mode: ~
+      epoch_loop: default
+      batch_loop: ~
+      capture_epochs_at_every: 4    # capture at a single epoch for clarity
+      register_workflow: false
+  ```
+- With the default small dataset, you will see **2 train** and **4 eval** forwards at the captured epoch.  
+- Expect **14 rows** total.
+
+### 5) Register the model definition as a workflow
+
+- Same as (4) but set:
+  ```yaml
+  instrumentation:
+    enabled: true
+    torch:
+      what: parent_only
+      children_mode: ~
+      epoch_loop: default
+      batch_loop: ~
+      capture_epochs_at_every: 4
+      register_workflow: true
+  ```
+- Adds a workflow row for the model (e.g., `TransformerModel`) that points to the search workflow.
+- Expect  **15 rows** total.
+
+### 6) Capture forwards for every layer and every epoch
+
+- Capture all inner layers and every epoch:
+  ```yaml
+  instrumentation:
+    enabled: true
+    torch:
+      what: parent_and_children
+      children_mode: tensor_inspection   # or telemetry / telemetry_and_tensor_inspection
+      epoch_loop: default
+      batch_loop: ~
+      capture_epochs_at_every: 1
+      register_workflow: true
+  ```
+- There are **4 epochs**, with **2 train** and **4 eval** forwards per epoch at the parent level, plus child forwards.  
+- Expect **33 rows** total for the parent-level events as described above; child-level events further increase detail depending on your `children_mode`.
+
+### 7) Enabling telemetry and message enrichment
+
+- Add host-level telemetry and extra metadata:
+  ```yaml
+  project:
+    enrich_messages: true
+
+  telemetry_capture:
+    cpu: true
+
+  instrumentation:
+    enabled: true
+    torch:
+      what: parent_only
+      epoch_loop: default
+      batch_loop: ~
+      capture_epochs_at_every: 1
+      register_workflow: true
+  ```
+
+---
+
+## Tips
+
+- Use `python llm_train_campaign.py --help` to see runtime flags.
+- In `analysis.ipynb`, start with `Flowcept.read_messages_file(..., return_df=True)` and filter on columns like `name`, `type`, `subtype`, `parent_task_id`, `workflow_id`, and `campaign_id`.
+

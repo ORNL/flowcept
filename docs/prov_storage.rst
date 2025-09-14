@@ -95,8 +95,15 @@ Delete a buffer file if needed:
 
 .. note::
 
-   This file-based approach is **particularly useful in offline mode** or small, centralized runs. In HPC or distributed environments, each process/node will create its **own** JSONL file, which you would need to gather and combine for analysis. For those cases, prefer **MongoDB** persistence or implement a **custom consumer** to centralize data during execution.
+   The file-based method is **best suited for offline mode** or small, centralized runs.
+   Each ``interceptor`` in a Flowcept instance maintains its own in-memory buffer.
+   In distributed settings (e.g., HPC jobs or distributed workflows), this creates separate buffer
+   files per interceptor. To run an end-to-end analysis, you must manually merge all files.
 
+   For distributed runs, prefer the **MongoDB** provenance storage option, which consolidates all
+   captured provenance into a single database automatically.
+   Alternatively, implement a **custom consumer** to centralize message ingestion and
+   enable real-time analysis.
 See also
 ^^^^^^^^
 
