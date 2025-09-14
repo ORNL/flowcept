@@ -381,10 +381,8 @@ Optimized for **HPC** and tight loops; minimal interception overhead:
 
 **When to use**: massive iteration counts, sensitive microbenchmarks, or very low overhead needs.
 
-
-
 Loop Instrumentation
-~~~~~~~~~~~~~~~~~~~~
+---------------------
 
 Instrument iterative loops directly (see
 `loop example <https://github.com/ORNL/flowcept/blob/main/examples/instrumented_loop_example.py>`_).  
@@ -403,10 +401,116 @@ Combine the context manager (below) with per-iteration tasks or custom events.
         loop.end_iter({"item": item, "loss": loss})
 
 
-FlowceptLoop vs FlowceptLightweightLoop
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-TODO
+FlowceptLoop vs FlowceptLightweightLoop
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Both classes instrument iterative code and attach each iteration to provenance. They differ in how they trade detail for speed.
+
+- **FlowceptLoop**: opens and closes a tiny “iteration task” around every `next()` call. It can attach `started_at`, `status`, and (if enabled) **per-iteration telemetry** at the end of each iteration. Messages are sent one by one. Works with sized iterables, integers, and iterators. If you pass a pure iterator without a known length, it will materialize it into a list unless you provide `items_length`.
+
+- **FlowceptLightweightLoop**: pre-allocates a task object for every iteration up front, updates `used` and `generated` as the loop progresses, and **sends everything in a single batch** when the loop ends. No per-iteration telemetry capture. Requires a known length. If you pass a pure iterator, you **must** provide `items_length`.
+
+When to use which
+~~~~~~~~~~~~~~~~~
+
+Choose **FlowceptLoop** if you need:
+- Per-iteration telemetry, `started_at`, and fine-grained timing.
+- Streaming of iteration records to the MQ/DB as the loop runs.
+- Constant memory usage independent of the number of iterations.
+
+Choose **FlowceptLightweightLoop** if you need:
+- The lowest overhead for very large loops.
+- A single batched publish at the end of the loop.
+- You can provide, or already have, the exact iteration count.
+
+Behavioral differences at a glance
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- **Telemetry**: FlowceptLoop records telemetry at the end of each iteration when telemetry is enabled. Lightweight does not.
+- **Publishing**: FlowceptLoop calls `intercept(...)` per iteration. Lightweight calls `intercept_many([...])` once after the loop finishes.
+- **Memory**: FlowceptLoop keeps only the current iteration in memory. Lightweight pre-allocates a list of task objects of size `len(items)`.
+- **Unknown lengths**: FlowceptLoop can materialize an unknown-length iterator into a list if you do not provide `items_length` (may be expensive). Lightweight requires a known `items_length` for iterators.
+
+API quick links
+~~~~~~~~~~~~~~~
+
+- `FlowceptLoop API <https://flowcept.readthedocs.io/en/latest/api-reference.html#flowceptloop>`_
+- `FlowceptLightweightLoop API <https://flowcept.readthedocs.io/en/latest/api-reference.html#flowceptlightweightloop>`_
+
+Examples
+~~~~~~~~
+
+Per-iteration telemetry and streaming
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   from time import sleep
+   from flowcept import Flowcept
+   from flowcept import FlowceptLoop
+
+   with Flowcept(workflow_name="telemetry_stream"):
+       loop = FlowceptLoop(range(5), loop_name="train_loop", item_name="epoch")
+       for epoch in loop:
+           loss = 0.1 * (5 - epoch)
+           sleep(0.02)
+           # Attach values produced inside this iteration
+           loop.end_iter({"loss": loss})
+
+   # Each iteration is sent with status and, if enabled, telemetry_at_end.
+
+Ultra-low overhead and batched publish
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   from flowcept import Flowcept
+   from flowcept import FlowceptLightweightLoop
+
+   data = [0, 1, 2, 3, 4]
+
+   with Flowcept(workflow_name="batched_publish"):
+       loop = FlowceptLightweightLoop(data, loop_name="eval_loop", item_name="batch")
+       for batch in loop:
+           metric = batch * 2
+           loop.end_iter({"metric": metric})
+
+   # All iteration tasks are published together after the loop completes.
+
+Iterating an unknown-length iterator
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   import itertools as it
+   from flowcept import Flowcept
+   from flowcept.instrumentation.loop import FlowceptLoop, FlowceptLightweightLoop
+
+   stream = it.islice(it.count(), 0, 100)  # iterator without __len__
+
+   with Flowcept(workflow_name="iterators"):
+       # Option A: FlowceptLoop can materialize if you do not know the length,
+       #           but this may be expensive for large streams.
+       loop_a = FlowceptLoop(stream, loop_name="loop_a", item_name="i", items_length=100)
+       for i in loop_a:
+           loop_a.end_iter({"v": i*i})
+
+       # Option B: Lightweight requires items_length for iterators.
+       stream2 = it.islice(it.count(), 0, 100)
+       loop_b = FlowceptLightweightLoop(stream2, loop_name="loop_b", item_name="i", items_length=100)
+       for i in loop_b:
+           loop_b.end_iter({"v": i*i})
+
+Tips and caveats
+~~~~~~~~~~~~~~~~
+
+- Set `item_name` to control the key stored under `used`, for example `{"epoch": 3}` instead of `{"item": 3}`.
+- Use `parent_task_id` to nest loop iterations under another task.
+- For very large loops where you only need `used` and `generated`, prefer Lightweight to reduce interceptor calls.
+- If you use FlowceptLoop with a huge iterator, pass `items_length` to avoid accidental materialization.
+- Both classes honor `INSTRUMENTATION_ENABLED` and `capture_enabled`. If disabled, they behave like regular iterators and `end_iter(...)` becomes a no-op.
+
 
 PyTorch Models
 ~~~~~~~~~~~~~~
@@ -512,6 +616,7 @@ If you need to store something that is not publicly exposed in the API (yet), yo
 
 - Use **context** (``with FlowceptTask(...)``) *or* call ``send()`` explicitly.
 - Flows publish to the MQ; persistence/queries require a DB (e.g., MongoDB).
+- See also: `FlowceptTask API reference <file:///Users/rsr/Documents/GDrive/ORNL/dev/flowcept/docs/_build/html/api-reference.html#flowcepttask>`_
 - See also: `Consumer example <https://flowcept.readthedocs.io/en/latest/prov_storage.html#example-extending-the-base-consumer>`_
 - See also: `Ping pong example via PubSub with Flowcept <https://github.com/ORNL/flowcept/blob/main/examples/consumers/ping_pong_example.py>`_
 

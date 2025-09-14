@@ -26,6 +26,84 @@ In this case, querying requires writing a custom consumer to subscribe and store
    If neither is enabled, an error occurs.  
    Data stored in MongoDB and LMDB are interchangeable and can be transferred between them.
 
+Saving the In-Memory Buffer to Disk
+-----------------------------------
+
+Flowcept can persist the in-memory message buffer to a **JSON Lines (JSONL)** file in both **offline** and **online** modes. This is useful for audits, simple centralized runs, and quick ad‑hoc analysis.
+
+Configuration
+^^^^^^^^^^^^^
+
+Default dumping is enabled and writes to ``flowcept_buffer.jsonl``:
+
+To favor local files (**offline**), set:
+
+.. code-block:: yaml
+
+   project:
+     db_flush_mode: offline   # keeps messages local (no DB writes)
+     dump_buffer:
+       enabled: true
+       path: flowcept_buffer.jsonl
+
+For standard **online** runs (DB writes enabled) while still keeping a file copy:
+
+.. code-block:: yaml
+
+   project:
+     db_flush_mode: online    # default
+     dump_buffer:
+       enabled: true
+       path: flowcept_buffer.jsonl
+
+Usage
+^^^^^
+
+Dump the buffer (during or at the end of a run):
+
+.. code-block:: python
+
+   from flowcept import Flowcept
+
+   with Flowcept(workflow_name="demo") as f:
+       # ... your tasks ...
+       f.dump_buffer()                   # uses settings path
+       f.dump_buffer("my_buffer.jsonl") # custom path
+
+Read the buffer file later (as list or DataFrame):
+
+.. code-block:: python
+
+   from flowcept import Flowcept
+
+   # 1) List of dicts
+   msgs = Flowcept.read_buffer_file("flowcept_buffer.jsonl")
+
+   # 2) DataFrame without flattening (nested dicts stay as objects)
+   df_raw = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=False)
+
+   # 3) DataFrame with dotted columns (normalized)
+   df_norm = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=True)
+
+Delete a buffer file if needed:
+
+.. code-block:: python
+
+   from flowcept import Flowcept
+   Flowcept.delete_buffer_file()                  # deletes default path from settings
+   Flowcept.delete_buffer_file("my_buffer.jsonl")
+
+.. note::
+
+   This file-based approach is **particularly useful in offline mode** or small, centralized runs. In HPC or distributed environments, each process/node will create its **own** JSONL file, which you would need to gather and combine for analysis. For those cases, prefer **MongoDB** persistence or implement a **custom consumer** to centralize data during execution.
+
+See also
+^^^^^^^^
+
+- `Buffer querying <https://flowcept.readthedocs.io/en/latest/prov_query.html#accessing-the-in-memory-buffer>`_
+- `Implementing a custom consumer <https://flowcept.readthedocs.io/en/latest/prov_storage.html#example-extending-the-base-consumer>`_
+- `Flowcept API Reference <https://flowcept.readthedocs.io/en/latest/api-reference.html#main-flowcept-object>`_
+
 ---
 
 Provenance Consumer
