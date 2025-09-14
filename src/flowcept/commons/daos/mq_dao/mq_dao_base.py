@@ -50,10 +50,6 @@ class MQDao(object):
             from flowcept.commons.daos.mq_dao.mq_dao_mofka import MQDaoMofka
 
             return MQDaoMofka(*args, **kwargs)
-        elif MQ_TYPE == "redis_streams":
-            from flowcept.commons.daos.mq_dao.mq_dao_redis_streams import MQDaoRedisStreams
-
-            return MQDaoRedisStreams(*args, **kwargs)
         else:
             raise NotImplementedError
 
@@ -101,9 +97,6 @@ class MQDao(object):
     def bulk_publish(self, buffer):
         """Publish it."""
         # self.logger.info(f"Going to flush {len(buffer)} to MQ...")
-        if DUMP_BUFFER_ENABLED and DUMP_BUFFER_PATH is not None:
-            from flowcept.commons.utils import buffer_to_disk
-            buffer_to_disk(buffer, DUMP_BUFFER_PATH, self.logger)
         if MQ_CHUNK_SIZE > 1:
             for chunk in chunked(buffer, MQ_CHUNK_SIZE):
                 self._bulk_publish(chunk)
@@ -171,6 +164,11 @@ class MQDao(object):
             self.started = True
 
     def _close_buffer(self):
+        if DUMP_BUFFER_ENABLED and DUMP_BUFFER_PATH is not None:
+            from flowcept.commons.utils import buffer_to_disk
+            _buf = self.buffer.current_buffer if isinstance(self.buffer, AutoflushBuffer) else self.buffer
+            buffer_to_disk(_buf, DUMP_BUFFER_PATH, self.logger)
+
         if flowcept.configs.DB_FLUSH_MODE == "online":
             if self._time_based_flushing_started:
                 self.buffer.stop()
@@ -178,7 +176,6 @@ class MQDao(object):
             else:
                 self.logger.error("MQ time-based flushing is not started")
         else:
-            self.bulk_publish(self.buffer)
             self.buffer = list()
 
     def _stop_timed(self, interceptor_instance_id: str, check_safe_stops: bool = True, bundle_exec_id: int = None):
