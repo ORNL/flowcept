@@ -103,14 +103,12 @@ class MQDao(object):
         # self.logger.info(f"Going to flush {len(buffer)} to MQ...")
         if DUMP_BUFFER_ENABLED and DUMP_BUFFER_PATH is not None:
             from flowcept.commons.utils import buffer_to_disk
-
             buffer_to_disk(buffer, DUMP_BUFFER_PATH, self.logger)
+        if MQ_CHUNK_SIZE > 1:
+            for chunk in chunked(buffer, MQ_CHUNK_SIZE):
+                self._bulk_publish(chunk)
         else:
-            if MQ_CHUNK_SIZE > 1:
-                for chunk in chunked(buffer, MQ_CHUNK_SIZE):
-                    self._bulk_publish(chunk)
-            else:
-                self._bulk_publish(buffer)
+            self._bulk_publish(buffer)
 
     def register_time_based_thread_init(self, interceptor_instance_id: str, exec_bundle_id=None):
         """Register the time."""
