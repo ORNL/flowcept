@@ -30,7 +30,8 @@ Flowcept captures and queries workflow provenance at runtime with minimal code c
 
 
 <h4 align="center">
-<a href="https://flowcept.readthedocs.io/">Documentation</a> &#9679; <a href="./docs/publications">Publications</a>
+  <a href="https://flowcept.readthedocs.io/">Documentation</a> &#8226; 
+  <a href="./docs/publications">Publications</a>
 </h4>
 
 
