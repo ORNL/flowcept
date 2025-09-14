@@ -3,31 +3,60 @@
 This illustrative example shows an LLM training workflow by fine-tuning hyperparameter (aka hyperparameter search) over Wikidata.
 It is similar to a parallel grid search using Dask to run the parallel model training.
 
-This is composed of two main workflows: Data Preparation and Model Search workflow
+## Campaign → Workflow → Task in this example
+
+- **Campaign** groups the whole experiment (data prep + search).
+- **Workflows**
+  - `Data Prep Workflow`
+  - `Search Workflow`, with **subworkflows**:
+    - `Module Layer Forward Train`
+    - `Module Layer Forward Test`
+- **Tasks** (inside `Search Workflow`)
+  - `model_train` (Dask) → many `Loop Iteration Task`s
+  - Each epoch iteration triggers parent-module forward tasks in the Train/Test subworkflows.
+
+**Linkage via IDs**
+- Tasks → `workflow_id` → their workflow; Workflows/Tasks → `campaign_id` → the campaign
+- Subworkflows → `parent_workflow_id` → parent workflow
+- Subtasks → `parent_task_id` → parent task
+
+```mermaid
+graph TD
+  Campaign[Campaign]
+  Campaign --> W_data_prep[Workflow: Data Prep]
+  Campaign --> W_search[Workflow: Search]
+
+  %% Search subworkflows
+  W_search --> SW_train[Subworkflow: Module Layer Forward Train]
+  W_search --> SW_test[Subworkflow: Module Layer Forward Test]
+
+  %% Search tasks
+  W_search --> T_main[Task: model_train (Dask)]
+  T_main --> T_loop[Task: Epochs Whole Loop]
+  T_loop --> T_iter[Task: Loop Iteration Task × N]
+  T_iter --> T_train_fw[(Parent module forward tasks — Train)]
+  T_iter --> T_test_fw[(Parent module forward tasks — Test)]
+```
+
+### Hierarchy
+
+- **Campaign**
+  - **Workflow**: Data Prep
+  - **Workflow**: Search  
+    - **Subworkflow**: Module Layer Forward **Train**  
+    - **Subworkflow**: Module Layer Forward **Test**  
+    - **Task**: `model_train` (Dask)  
+      - **Task**: Epochs Whole Loop  
+        - **Task**: Loop Iteration Task × N  
+          - **Tasks**: Parent module forward tasks (Train/Test)
+
+
+
+
 
 ## Requirements
 
 `pip install flowcept[ml_dev,extras]`  # You can need to add nvidia/AMD GPU telemetry capture.
-
-# Campaign > Workflow > Task structure
-
-    Campaign:
-        Data Prep Workflow
-        Search Workflow
-
-    Workflows:
-        Data Prep Workflow
-        Search workflow ->
-          Module Layer Forward Train Workflow
-          Module Layer Forward Test Workflow
-
-    Tasks:
-        Main workflow . Main model_train task (dask task) ->
-            Main workflow . Epochs Whole Loop
-                Main workflow . Loop Iteration Task
-                    Module Layer Forward Train Workflow . Parent module forward tasks
-
-            Module Layer Forward Test Workflow . Parent module forward tasks
 
 ## Growing in complexity
 
@@ -185,3 +214,23 @@ instrumentation:
 **Explanation:** Explanation: We capture model forwards for every epoch. There are 4 epochs. Each epoch has 2 train forwards and 4 eval forwards, so 6 forwards per epoch. We previously captured one epoch (6 forwards). Now we capture all four, adding 18 rows and reaching 33 total.
 
 
+## 6. Running with Telemetry Capture and Message Enrichment
+
+Adjust the `settings.yaml`:
+```yaml
+project:
+  enrich_messages: true # Add extra metadata to task messages, such as IP addresses and UTC timestamps.
+  
+telemetry_capture: 
+  cpu: true
+
+instrumentation:
+  enabled: true # This toggles data capture for instrumentation.
+  torch:
+    what: parent_only # Scope of instrumentation: "parent_only" -- will capture only at the main model level, "parent_and_children" -- will capture the inner layers, or ~ (disable).
+    children_mode: ~   # What to capture if parent_and_children is chosen in the scope. Possible values: "tensor_inspection" (i.e., tensor metadata), "telemetry", "telemetry_and_tensor_inspection"
+    epoch_loop: default # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
+    batch_loop: ~ # lightweight, ~ (disable), or default (default will use the default telemetry capture method)
+    capture_epochs_at_every: 1 # Will capture data at every N epochs; please use a value that is multiple of the total number of #epochs.
+    register_workflow: true # Will store the parent model forward as a workflow itself in the database.
+```
