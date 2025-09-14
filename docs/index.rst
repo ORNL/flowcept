@@ -1,10 +1,30 @@
 Flowcept
 ========
 
-.. image:: img/flowcept-logo.png
-   :alt: Flowcept Logo
-   :align: center
-   :width: 200px
+.. raw:: html
+
+   <style>
+     /* Show/hide logos based on Furo's theme attribute */
+     .logo-light { display: inline; }
+     .logo-dark  { display: none; }
+
+     html[data-theme="dark"] .logo-light { display: none; }
+     html[data-theme="dark"] .logo-dark  { display: inline; }
+
+     /* When Furo is in 'auto', follow the OS preference */
+     html[data-theme="auto"] .logo-light { display: inline; }
+     html[data-theme="auto"] .logo-dark  { display: none; }
+     @media (prefers-color-scheme: dark) {
+       html[data-theme="auto"] .logo-light { display: none; }
+       html[data-theme="auto"] .logo-dark  { display: inline; }
+     }
+   </style>
+
+   <p align="center">
+     <!-- Keep both images in the DOM and toggle via CSS -->
+     <img src="_static/flowcept-logo.png" alt="Flowcept Logo" width="200" class="logo-light">
+     <img src="_static/flowcept-logo-dark.png" alt="Flowcept Logo (Dark)" width="200" class="logo-dark">
+   </p>
 
 .. image:: https://img.shields.io/badge/GitHub-Flowcept-black?logo=github&logoColor=white
    :target: https://github.com/ORNL/flowcept

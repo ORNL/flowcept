@@ -70,6 +70,7 @@ Dump the buffer (during or at the end of a run):
        f.dump_buffer()                   # uses settings path
        f.dump_buffer("my_buffer.jsonl") # custom path
 
+
 Read the buffer file later (as list or DataFrame):
 
 .. code-block:: python
@@ -85,6 +86,7 @@ Read the buffer file later (as list or DataFrame):
    # 3) DataFrame with dotted columns (normalized)
    df_norm = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=True)
 
+
 Delete a buffer file if needed:
 
 .. code-block:: python
@@ -92,6 +94,7 @@ Delete a buffer file if needed:
    from flowcept import Flowcept
    Flowcept.delete_buffer_file()                  # deletes default path from settings
    Flowcept.delete_buffer_file("my_buffer.jsonl")
+
 
 .. note::
 
@@ -104,6 +107,7 @@ Delete a buffer file if needed:
    captured provenance into a single database automatically.
    Alternatively, implement a **custom consumer** to centralize message ingestion and
    enable real-time analysis.
+
 See also
 ^^^^^^^^
 
@@ -168,6 +172,7 @@ This can serve as a template for building custom provenance consumers.
        print("Starting consumer indefinitely. Press ctrl+c to stop")
        consumer = MyConsumer()
        consumer.start(daemon=False)
+
 
 **Notes**:
 

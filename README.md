@@ -1,10 +1,15 @@
 <p align="center">
   <picture>
+    <!-- Dark theme -->
+    <source srcset="./docs/img/flowcept-logo-dark.png" media="(prefers-color-scheme: dark)" />
+    <!-- Light theme -->
+    <source srcset="./docs/img/flowcept-logo.png" media="(prefers-color-scheme: light)" />
+    <!-- Fallback -->
     <img src="./docs/img/flowcept-logo.png" alt="Flowcept Logo" width="200"/>
   </picture>
 </p>
-<h3 align="center">Lightweight Distributed Workflow Provenance</h3>
 
+<h3 align="center">Lightweight Distributed Workflow Provenance</h3>
 
 
 ---
@@ -13,12 +18,22 @@ Flowcept captures and queries workflow provenance at runtime with minimal code c
 
 ---
 
+
 [![Documentation](https://img.shields.io/badge/docs-readthedocs.io-green.svg)](https://flowcept.readthedocs.io/)
 [![Build](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml)
 [![PyPI](https://badge.fury.io/py/flowcept.svg)](https://pypi.org/project/flowcept)
 [![Tests](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml)
 [![Code Formatting](https://github.com/ORNL/flowcept/actions/workflows/checks.yml/badge.svg?branch=dev)](https://github.com/ORNL/flowcept/actions/workflows/checks.yml)
 [![License: MIT](https://img.shields.io/github/license/ORNL/flowcept)](LICENSE)
+
+
+
+
+<h4 align="center">
+  <a href="https://flowcept.readthedocs.io/">Documentation</a> &#8226; 
+  <a href="./docs/publications">Publications</a>
+</h4>
+
 
 ---
 
