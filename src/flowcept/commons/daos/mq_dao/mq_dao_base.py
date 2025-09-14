@@ -19,8 +19,6 @@ from flowcept.configs import (
     MQ_TIMING,
     KVDB_ENABLED,
     MQ_ENABLED,
-    DUMP_BUFFER_PATH,
-    DUMP_BUFFER_ENABLED,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -164,10 +162,11 @@ class MQDao(object):
             self.started = True
 
     def _close_buffer(self):
-        if DUMP_BUFFER_ENABLED and DUMP_BUFFER_PATH is not None:
+        if flowcept.configs.DUMP_BUFFER_ENABLED and flowcept.configs.DUMP_BUFFER_PATH is not None:
             from flowcept.commons.utils import buffer_to_disk
+
             _buf = self.buffer.current_buffer if isinstance(self.buffer, AutoflushBuffer) else self.buffer
-            buffer_to_disk(_buf, DUMP_BUFFER_PATH, self.logger)
+            buffer_to_disk(_buf, flowcept.configs.DUMP_BUFFER_PATH, self.logger)
 
         if flowcept.configs.DB_FLUSH_MODE == "online":
             if self._time_based_flushing_started:

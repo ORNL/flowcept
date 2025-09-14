@@ -277,12 +277,15 @@ class DecoratorTests(unittest.TestCase):
 
     def test_online_offline(self):
         flowcept.configs.DB_FLUSH_MODE = "offline"
+        flowcept.configs.DUMP_BUFFER_ENABLED = True
         # flowcept.instrumentation.decorators.instrumentation_interceptor = (
         #     BaseInterceptor(plugin_key=None)
         # )
         print("Testing times with offline mode")
         self.test_decorated_function_timed()
+
         flowcept.configs.DB_FLUSH_MODE = "online"
+        flowcept.configs.DUMP_BUFFER_ENABLED = False
         # flowcept.instrumentation.decorators.instrumentation_interceptor = (
         #     BaseInterceptor(plugin_key=None)
         # )
@@ -308,7 +311,8 @@ class DecoratorTests(unittest.TestCase):
 
         overheads = calculate_overheads(decorated_stats, not_decorated_stats)
         logger = FlowceptLogger()
-        logger.critical(flowcept.configs.DB_FLUSH_MODE + ";" + str(overheads))
+        logger.critical(f"This is not critical. Just making sure we'll see the logs:"
+                        f" {flowcept.configs.DB_FLUSH_MODE} overheads: {overheads}")
 
         n = "00002"
         print(f"#n={n}: Online double buffers; buffer size 100")

@@ -11,7 +11,7 @@ PROJECT_NAME = "flowcept"
 DEFAULT_SETTINGS = {
     "version": __version__,
     "log": {"log_file_level": "disable", "log_stream_level": "disable"},
-    "project": {"dump_buffer": {"enabled": True, "path": "flowcept_buffer.jsonl"}},
+    "project": {"dump_buffer": {"enabled": True}},
     "telemetry_capture": {},
     "instrumentation": {},
     "experiment": {},
@@ -161,11 +161,16 @@ JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get("replace_non_json_serializable", True)
 ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
 
+_DEFAULT_DUMP_BUFFER_ENABLED = DB_FLUSH_MODE == "offline"
 DUMP_BUFFER_ENABLED = (
-    os.getenv("DUMP_BUFFER", str(settings["project"]["dump_buffer"].get("enabled", "true"))).strip().lower()
+    os.getenv(
+        "DUMP_BUFFER", str(settings["project"].get("dump_buffer", {}).get("enabled", _DEFAULT_DUMP_BUFFER_ENABLED))
+    )
+    .strip()
+    .lower()
     in _TRUE_VALUES
 )
-DUMP_BUFFER_PATH = settings["project"]["dump_buffer"].get("path", "flowcept_buffer.jsonl")
+DUMP_BUFFER_PATH = settings["project"].get("dump_buffer", {}).get("path", "flowcept_buffer.jsonl")
 
 TELEMETRY_CAPTURE = settings.get("telemetry_capture", None)
 TELEMETRY_ENABLED = os.getenv("TELEMETRY_ENABLED", "true").strip().lower() in _TRUE_VALUES
