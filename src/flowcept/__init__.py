@@ -64,7 +64,7 @@ def __getattr__(name):
         return FlowceptDaskWorkerAdapter
 
     elif name == "SETTINGS_PATH":
-        from configs import SETTINGS_PATH
+        from flowcept.configs import SETTINGS_PATH
 
         return SETTINGS_PATH
     elif name == "TaskQueryAPI":
