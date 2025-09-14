@@ -1,4 +1,4 @@
-"""FlowCept Loop module."""
+"""Flowcept Loop module."""
 
 import uuid
 from time import time
