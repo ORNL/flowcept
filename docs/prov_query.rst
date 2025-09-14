@@ -72,72 +72,85 @@ Below is a typical usage pattern:
 
 The `DBAPI` exposes many other methods, such as `get_tasks_recursive` to retrieve all descendants of a task, or `dump_tasks_to_file_recursive` to export tasks to Parquet. See the API reference for details.
 
-Accessing the In‑Memory Buffer
+Accessing the in-memory buffer
 ------------------------------
 
-During runtime Flowcept stores captured messages in an in‑memory buffer (`Flowcept.buffer`). This buffer is useful for debugging or lightweight scripts because it provides immediate access to the latest tasks and workflows without any additional services. However, if running online, be aware that this buffer is flushed (i.e., emptied) from times to times to the MQ.
-
-In the example below we create two tasks that attach binary data and then inspect the buffer:
+Flowcept keeps recently captured messages in memory as a list of dictionaries. This is handy for debugging and lightweight scripts. In online mode the buffer may be flushed to the MQ periodically.
 
 .. code-block:: python
 
-    from pathlib import Path
-    from flowcept import Flowcept
-    from flowcept.instrumentation.task import FlowceptTask
+   from flowcept import Flowcept
 
-    with Flowcept() as f:
-        used_args = {"a": 1}
-        # first task – attach a PDF
-        with FlowceptTask(used=used_args) as t:
-            img_path = Path("docs/img/architecture.pdf")
-            with open(img_path, "rb") as fp:
-                img_data = fp.read()
-            t.end(generated={"b": 2},
-                  data=img_data,
-                  custom_metadata={
-                      "mime_type": "application/pdf",
-                      "file_name": "architecture.pdf",
-                      "file_extension": "pdf"})
-            t.send()
-        # second task – attach a PNG
-        with FlowceptTask(used=used_args) as t:
-            img_path = Path("docs/img/flowcept-logo.png")
-            with open(img_path, "rb") as fp:
-                img_data = fp.read()
-            t.end(generated={"c": 2},
-                  data=img_data,
-                  custom_metadata={
-                      "mime_type": "image/png",
-                      "file_name": "flowcept-logo.png",
-                      "file_extension": "png"})
-            t.send()
+   with Flowcept(workflow_name="demo") as f:
+       # ... run your tasks ...
+       raw_list = f.get_buffer()                 # list[dict]
+       df = f.get_buffer(return_df=True)         # pandas.DataFrame with dotted columns
+       assert "generated.attention" in df.columns
 
-        # inspect the buffer
-        assert len(Flowcept.buffer) == 3  # includes the workflow message
-        assert Flowcept.buffer[1]["data"]  # binary data is captured as bytes
+Dumping the buffer to disk (online or offline)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-At any point inside the running workflow you can access `Flowcept.buffer` to retrieve a list of dictionaries representing messages. Each element contains the original JSON payload plus any binary `data` field. Because the buffer lives in memory, it reflects the most recent state of the workflow and is cleared when the process ends.
-
-Working Offline: Reading a Messages File
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-When persistence is enabled in offline mode, Flowcept dumps the buffer to a JSONL file. Use :func:`Flowcept.read_messages_file` to load these messages later. If you pass `return_df=True` Flowcept will normalise nested fields into dot‑separated columns and return a pandas DataFrame. This is handy for ad‑hoc analysis with pandas.
+You can persist the buffer to a JSON Lines file in both offline and online runs.
 
 .. code-block:: python
 
-    from flowcept import Flowcept
+   with Flowcept(workflow_name="demo") as f:
+       # ... run your tasks ...
+       f.dump_buffer()                  # uses settings path (see below)
+       f.dump_buffer(\"my_buffer.jsonl\") # custom path
 
-    # read JSON into a list of dicts
-    msgs = Flowcept.read_messages_file("offline_buffer.jsonl")
-    print(f"{len(msgs)} messages")
+Default configuration enables dumping to ``flowcept_buffer.jsonl``:
 
-    # read JSON into a pandas DataFrame
-    df = Flowcept.read_messages_file("offline_buffer.jsonl", return_df=True)
-    # dot‑notation columns allow easy selection; e.g., outputs of attention layers
-    print("generated.attention" in df.columns)
+- ``\"project\": {\"dump_buffer\": {\"enabled\": True, \"path\": \"flowcept_buffer.jsonl\"}}``
 
-Keep in mind that the JSONL file is only created when using fully offline mode. The path is configured in the settings file under ``DUMP_BUFFER_PATH``. If the file doesn’t exist, `read_messages_file` will raise an error.
+You can control DB flushing and the buffer path in your settings:
 
+.. code-block:: yaml
+
+   project:
+     db_flush_mode: online   # \"online\" or \"offline\"
+     dump_buffer:
+       enabled: true
+       path: flowcept_buffer.jsonl
+
+- **Offline mode**: set ``project.db_flush_mode: offline`` to keep messages local.
+- **Online mode**: keep ``online``; you can still dump and read the file at any time.
+
+Reading a buffer file (list or DataFrame)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use :meth:`Flowcept.read_buffer_file` to load a buffer file later. If no file path is provided, the one configured in the settings.yaml will be used.
+
+.. code-block:: python
+
+   from flowcept import Flowcept
+
+   # 1) List of dicts
+   msgs = Flowcept.read_buffer_file(\"flowcept_buffer.jsonl\")
+   print(f\"Loaded {len(msgs)} messages\")
+
+   # 2) DataFrame without flattening (nested dicts stay as objects)
+   df_raw = Flowcept.read_buffer_file(\"flowcept_buffer.jsonl\", return_df=True, normalize_df=False)
+
+   # 3) DataFrame with dotted columns (normalized)
+   df_norm = Flowcept.read_buffer_file(\"flowcept_buffer.jsonl\", return_df=True, normalize_df=True)
+   assert \"generated.attention\" in df_norm.columns
+
+Deleting a buffer file
+^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   from flowcept import Flowcept
+   Flowcept.delete_buffer_file()                 # deletes default path from settings
+   Flowcept.delete_buffer_file(\"my_buffer.jsonl\")
+
+Notes
+^^^^^
+
+- DataFrame returns require ``pandas``. If you installed Flowcept with optional extras, ``pandas`` is included.
+- Binary payloads, when present, are stored under the ``data`` key in the buffer messages. However, they are not stored in the buffer file.
+- See also: `persisting the in-memory buffer. <https://flowcept.readthedocs.io/en/latest/prov_storage.html#saving-the-in-memory-buffer-to-disk>`_
 
 Working Directly with MongoDB
 -----------------------------

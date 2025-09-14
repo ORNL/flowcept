@@ -59,15 +59,15 @@ Save the following script as ``quickstart.py`` and run ``python quickstart.py``:
    if __name__ == "__main__":
        main()
 
-       prov_messages = Flowcept.read_messages_file()
-       assert len(prov_messages) == 2
-       print(json.dumps(prov_messages, indent=2))
+       prov_buffer = Flowcept.read_buffer_file()
+       assert len(prov_buffer) == 2
+       print(json.dumps(prov_buffer, indent=2))
 
 Inspecting the Output
 ---------------------
 
-Flowcept writes provenance messages to ``flowcept_messages.jsonl``.  
-You should see two messages, each describing one executed task:
+Flowcept writes provenance messages to ``flowcept_buffer.jsonl``.
+You should see two tasks:
 
 .. code-block:: json
 

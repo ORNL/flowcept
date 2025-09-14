@@ -19,7 +19,6 @@ from flowcept.configs import (
     MQ_TIMING,
     KVDB_ENABLED,
     MQ_ENABLED,
-    DUMP_BUFFER_PATH,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -96,22 +95,11 @@ class MQDao(object):
     def bulk_publish(self, buffer):
         """Publish it."""
         # self.logger.info(f"Going to flush {len(buffer)} to MQ...")
-        if flowcept.configs.DB_FLUSH_MODE == "offline":
-            if DUMP_BUFFER_PATH is not None:
-                import orjson
-
-                with open(DUMP_BUFFER_PATH, "wb", buffering=1_048_576) as f:
-                    for obj in buffer:
-                        obj.pop("data", None)  # We are not going to store data in the buffer file.
-                        f.write(orjson.dumps(obj))
-                        f.write(b"\n")
-                self.logger.info(f"Saved Flowcept messages into {DUMP_BUFFER_PATH}.")
+        if MQ_CHUNK_SIZE > 1:
+            for chunk in chunked(buffer, MQ_CHUNK_SIZE):
+                self._bulk_publish(chunk)
         else:
-            if MQ_CHUNK_SIZE > 1:
-                for chunk in chunked(buffer, MQ_CHUNK_SIZE):
-                    self._bulk_publish(chunk)
-            else:
-                self._bulk_publish(buffer)
+            self._bulk_publish(buffer)
 
     def register_time_based_thread_init(self, interceptor_instance_id: str, exec_bundle_id=None):
         """Register the time."""
@@ -174,6 +162,12 @@ class MQDao(object):
             self.started = True
 
     def _close_buffer(self):
+        if flowcept.configs.DUMP_BUFFER_ENABLED and flowcept.configs.DUMP_BUFFER_PATH is not None:
+            from flowcept.commons.utils import buffer_to_disk
+
+            _buf = self.buffer.current_buffer if isinstance(self.buffer, AutoflushBuffer) else self.buffer
+            buffer_to_disk(_buf, flowcept.configs.DUMP_BUFFER_PATH, self.logger)
+
         if flowcept.configs.DB_FLUSH_MODE == "online":
             if self._time_based_flushing_started:
                 self.buffer.stop()
@@ -181,7 +175,6 @@ class MQDao(object):
             else:
                 self.logger.error("MQ time-based flushing is not started")
         else:
-            self.bulk_publish(self.buffer)
             self.buffer = list()
 
     def _stop_timed(self, interceptor_instance_id: str, check_safe_stops: bool = True, bundle_exec_id: int = None):

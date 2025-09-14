@@ -12,9 +12,9 @@ For optional persistence, you can choose between:
 - `MongoDB <https://www.mongodb.com/>`_  
   A robust, service-based database with advanced query support.  
   Required to use Flowcept's Query API (``flowcept.Flowcept.db``) for complex queries and features like ML model management or runtime queries (query while writing).  
-  To use MongoDB, start the service with ``make services-mongo``.
 
 Flowcept supports writing to both databases simultaneously (default), individually, or to neither, depending on configuration.
+See `setup instructions <https://flowcept.readthedocs.io/en/latest/setup.html#setup>`_.
 
 If persistence is disabled, captured data is sent to the MQ without any default consumer subscribing to it.  
 In this case, querying requires writing a custom consumer to subscribe and store the data.  
@@ -25,6 +25,91 @@ In this case, querying requires writing a custom consumer to subscribe and store
    If both MongoDB and LMDB are enabled, Flowcept defaults to MongoDB.  
    If neither is enabled, an error occurs.  
    Data stored in MongoDB and LMDB are interchangeable and can be transferred between them.
+
+Saving the In-Memory Buffer to Disk
+-----------------------------------
+
+Flowcept can persist the in-memory message buffer to a **JSON Lines (JSONL)** file in both **offline** and **online** modes. This is useful for audits, simple centralized runs, and quick ad‑hoc analysis.
+
+Configuration
+^^^^^^^^^^^^^
+
+Default dumping is enabled and writes to ``flowcept_buffer.jsonl``:
+
+To favor local files (**offline**), set:
+
+.. code-block:: yaml
+
+   project:
+     db_flush_mode: offline   # keeps messages local (no DB writes)
+     dump_buffer:
+       enabled: true
+       path: flowcept_buffer.jsonl
+
+For standard **online** runs (DB writes enabled) while still keeping a file copy:
+
+.. code-block:: yaml
+
+   project:
+     db_flush_mode: online    # default
+     dump_buffer:
+       enabled: true
+       path: flowcept_buffer.jsonl
+
+Usage
+^^^^^
+
+Dump the buffer (during or at the end of a run):
+
+.. code-block:: python
+
+   from flowcept import Flowcept
+
+   with Flowcept(workflow_name="demo") as f:
+       # ... your tasks ...
+       f.dump_buffer()                   # uses settings path
+       f.dump_buffer("my_buffer.jsonl") # custom path
+
+Read the buffer file later (as list or DataFrame):
+
+.. code-block:: python
+
+   from flowcept import Flowcept
+
+   # 1) List of dicts
+   msgs = Flowcept.read_buffer_file("flowcept_buffer.jsonl")
+
+   # 2) DataFrame without flattening (nested dicts stay as objects)
+   df_raw = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=False)
+
+   # 3) DataFrame with dotted columns (normalized)
+   df_norm = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=True)
+
+Delete a buffer file if needed:
+
+.. code-block:: python
+
+   from flowcept import Flowcept
+   Flowcept.delete_buffer_file()                  # deletes default path from settings
+   Flowcept.delete_buffer_file("my_buffer.jsonl")
+
+.. note::
+
+   The file-based method is **best suited for offline mode** or small, centralized runs.
+   Each ``interceptor`` in a Flowcept instance maintains its own in-memory buffer.
+   In distributed settings (e.g., HPC jobs or distributed workflows), this creates separate buffer
+   files per interceptor. To run an end-to-end analysis, you must manually merge all files.
+
+   For distributed runs, prefer the **MongoDB** provenance storage option, which consolidates all
+   captured provenance into a single database automatically.
+   Alternatively, implement a **custom consumer** to centralize message ingestion and
+   enable real-time analysis.
+See also
+^^^^^^^^
+
+- `Buffer querying <https://flowcept.readthedocs.io/en/latest/prov_query.html#accessing-the-in-memory-buffer>`_
+- `Implementing a custom consumer <https://flowcept.readthedocs.io/en/latest/prov_storage.html#example-extending-the-base-consumer>`_
+- `Flowcept API Reference <https://flowcept.readthedocs.io/en/latest/api-reference.html#main-flowcept-object>`_
 
 ---
 

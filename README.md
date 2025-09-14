@@ -71,7 +71,7 @@ def main():
 if __name__ == "__main__":
     main()
 
-    prov_messages = Flowcept.read_messages_file()
+    prov_messages = Flowcept.read_buffer_file()
     assert len(prov_messages) == 2
     print(json.dumps(prov_messages, indent=2))
 ```

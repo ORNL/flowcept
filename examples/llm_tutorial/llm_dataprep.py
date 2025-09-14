@@ -94,8 +94,8 @@ def get_wiki_text_dataset(train_data_path, val_data_path, test_data_path, dask_m
             device = torch.device(f"cuda:{gpu_id}")
             torch.cuda.set_device(device)
 
-        elif torch.backends.mps.is_available():
-            device = torch.device("mps")
+        # elif torch.backends.mps.is_available():
+        #     device = torch.device("mps")
         else:
             device = torch.device("cpu")
 
@@ -185,15 +185,14 @@ def dataprep_workflow(data_dir="input_data",
     # assert torch.equal(train_data, train_data_loaded), "Train data mismatch"
     # assert torch.equal(val_data, val_data_loaded), "Validation data mismatch"
     # assert torch.equal(test_data, test_data_loaded), "Test data mismatch"
-
-    used = {
+    wf_id = None
+    worflow_args = {
         "train_batch_size": batch_size,
         "val_batch_size": eval_batch_size,
         "test_batch_size": eval_batch_size,
         "subset_size": subset_size,
         "tokenizer_type": tokenizer_type,
-    }
-    generated = {
+
         "dataset_info": dataset_info,
         "ntokens": ntokens,
         "dataset_ref": dataset_info["dataset_ref"],
@@ -204,9 +203,12 @@ def dataprep_workflow(data_dir="input_data",
         "test_data_path": test_data_path,
         "val_data_path": val_data_path,
     }
-    generated.update(n_batches)
-    wf_id = save_workflow(campaign_id, used, generated, with_persistence)
-    return wf_id, generated
+    worflow_args.update(n_batches)
+    if with_persistence:
+        from flowcept import Flowcept
+        with Flowcept(workflow_name="DataPrepWorkflow", workflow_args=worflow_args, campaign_id=campaign_id) as f:
+            wf_id = f.current_workflow_id
+    return wf_id, worflow_args
 
 
 def download_files(batch_size, data_dir, eval_batch_size, subset_size, test_data_path, tokenizer_type, train_data_path,

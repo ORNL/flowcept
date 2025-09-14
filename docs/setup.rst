@@ -92,7 +92,7 @@ You can then install specific dependencies similarly as above:
 This follows the same pattern as above, allowing for a customized installation from source.
 
 Setup
-~~~~~
+-----
 
 The :doc:`quick_start` example works with just ``pip install flowcept``, no extra setup is required.
 

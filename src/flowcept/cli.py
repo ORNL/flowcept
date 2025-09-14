@@ -459,22 +459,84 @@ def start_mongo() -> None:
         databases:
             mongodb:
               - bin : str (required) path to the mongod executable
+              - db_path: str, required path to the db data directory
               - log_path : str, optional (adds --fork --logpath)
               - lock_file_path : str, optional (adds --pidfilepath)
 
+
     Builds and runs the startup command.
     """
+    import time
+    import socket
+    from flowcept.configs import MONGO_HOST, MONGO_PORT, MONGO_URI
+
+    def _port_open(host: str, port: int, timeout: float = 0.5) -> bool:
+        try:
+            with socket.create_connection((host, port), timeout=timeout):
+                return True
+        except OSError:
+            return False
+
+    def _await_mongo(host: str, port: int, uri: str | None, timeout: float = 20.0) -> bool:
+        """Wait until MongoDB is accepting connections (and ping if pymongo is available)."""
+        deadline = time.time() + timeout
+        have_pymongo = False
+        try:
+            from pymongo import MongoClient  # optional
+
+            have_pymongo = True
+        except Exception:
+            pass
+
+        while time.time() < deadline:
+            if not _port_open(host, port):
+                time.sleep(0.25)
+                continue
+
+            if not have_pymongo:
+                return True  # port is open; assume OK
+
+            try:
+                from pymongo import MongoClient
+
+                client = MongoClient(uri or f"mongodb://{host}:{port}", serverSelectionTimeoutMS=800)
+                client.admin.command("ping")
+                return True
+            except Exception:
+                time.sleep(0.25)
+
+        return False
+
+    def _tail(path: str, lines: int = 40) -> str:
+        try:
+            with open(path, "rb") as f:
+                f.seek(0, os.SEEK_END)
+                size = f.tell()
+                block = 1024
+                data = b""
+                while size > 0 and data.count(b"\n") <= lines:
+                    size = max(0, size - block)
+                    f.seek(size)
+                    data = f.read(min(block, size)) + data
+                return data.decode(errors="replace").splitlines()[-lines:]
+        except Exception:
+            return []
+
     # Safe nested gets
     settings = getattr(configs, "settings", {}) or {}
     databases = settings.get("databases") or {}
     mongodb = databases.get("mongodb") or {}
 
     bin_path = mongodb.get("bin")
-    log_path = mongodb.get("log_path")
-    lock_file_path = mongodb.get("lock_file_path")
+    db_path = mongodb.get("db_path")
+    log_path = mongodb.get("log_path", None)
+    lock_file_path = mongodb.get("lock_file_path", None)
 
     if not bin_path:
         print("Error: settings['databases']['mongodb']['bin'] is required.")
+        return
+    if not db_path:
+        print("Error: settings['databases']['mongodb']['db_path'] is required.")
         return
 
     # Build command
@@ -483,12 +545,29 @@ def start_mongo() -> None:
         parts += ["--fork", "--logpath", shlex.quote(str(log_path))]
     if lock_file_path:
         parts += ["--pidfilepath", shlex.quote(str(lock_file_path))]
+    if db_path:
+        parts += ["--dbpath", shlex.quote(str(db_path))]
 
     cmd = " ".join(parts)
     try:
+        # Background start returns immediately because --fork is set
         out = _run_command(cmd, check_output=True)
         if out:
             print(out)
+        print(f"mongod launched (logs: {log_path}). Waiting for readiness on {MONGO_HOST}:{MONGO_PORT} ...")
+
+        ok = _await_mongo(MONGO_HOST, MONGO_PORT, MONGO_URI, timeout=20.0)
+        if ok:
+            print("✅ MongoDB is up and responding.")
+        else:
+            print("❌ MongoDB did not become ready in time.")
+            if log_path:
+                last_lines = _tail(log_path, 60)
+                if last_lines:
+                    print("---- mongod last log lines ----")
+                    for line in last_lines:
+                        print(line)
+                    print("---- end ----")
     except subprocess.CalledProcessError as e:
         print(f"Failed to start MongoDB: {e}")
 
