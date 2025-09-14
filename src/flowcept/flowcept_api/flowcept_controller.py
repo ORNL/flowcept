@@ -53,6 +53,7 @@ class Flowcept(object):
         start_persistence=True,
         check_safe_stops=True,  # TODO add to docstring
         save_workflow=True,
+        delete_buffer_file=True,
         *args,
         **kwargs,
     ):
@@ -90,6 +91,9 @@ class Flowcept(object):
 
         save_workflow : bool, default=True
             If True, a workflow object message is sent.
+
+        delete_buffer_file : bool, default=True
+            if True, deletes an existing existing buffer file or ignores if it doesn't exist.
 
         Additional arguments (`*args`, `**kwargs`) are used for specific adapters.
             For example, when using the Dask interceptor, the `dask_client` argument
@@ -129,6 +133,9 @@ class Flowcept(object):
         self.campaign_id = campaign_id or str(uuid4())
         self.workflow_name = workflow_name
         self.workflow_args = workflow_args
+
+        if delete_buffer_file:
+            Flowcept.delete_buffer_file()
 
     def start(self):
         """Start Flowcept Controller."""
@@ -252,7 +259,7 @@ class Flowcept(object):
         buffer_to_disk(self.buffer, path, self.logger)
 
     @staticmethod
-    def read_buffer_file(file_path: str | None = None, return_df: bool = False):
+    def read_buffer_file(file_path: str | None = None, return_df: bool = False, normalize_df: bool = False):
         """
         Read a JSON Lines (JSONL) file containing captured Flowcept messages.
 
@@ -271,6 +278,9 @@ class Flowcept(object):
         return_df : bool, default False
             If True, return a normalized pandas DataFrame. If False, return the
             parsed list of dictionaries.
+        normalize_df: bool, default False
+            If True, normalize the inner dicts (e.g., used, generated, custom_metadata) as individual columns in the
+            returned DataFrame.
 
         Returns
         -------
@@ -310,7 +320,7 @@ class Flowcept(object):
             file_path = DUMP_BUFFER_PATH
         assert file_path is not None, "Please indicate file_path either in the argument or in the config file."
         if not os.path.exists(file_path):
-            raise FileNotFoundError(f"File '{file_path}' was not found. It is created only in fully offline mode.")
+            raise FileNotFoundError(f"Flowcept buffer file '{file_path}' was not found.")
 
         with open(file_path, "rb") as f:
             lines = [ln for ln in f.read().splitlines() if ln]
@@ -322,11 +332,15 @@ class Flowcept(object):
                 import pandas as pd
             except ModuleNotFoundError as e:
                 raise ModuleNotFoundError("pandas is required when return_df=True. Please install pandas.") from e
-            return pd.json_normalize(buffer, sep=".")
+            if normalize_df:
+                return pd.json_normalize(buffer, sep=".")
+            else:
+                return pd.read_json(file_path, lines=True)
 
         return buffer
 
-    def delete_buffer_file(self, path: str = None):
+    @staticmethod
+    def delete_buffer_file(path: str = None):
         """
         Delete the buffer file from disk if it exists.
 
@@ -364,12 +378,10 @@ class Flowcept(object):
         try:
             if os.path.exists(path):
                 os.remove(path)
-                self.logger.info(f"Buffer file deleted: {path}")
-            else:
-                self.logger.warning(f"No buffer file found at: {path}")
+                FlowceptLogger().info(f"Buffer file deleted: {path}")
         except Exception as e:
-            self.logger.error(f"Failed to delete buffer file: {path}")
-            self.logger.exception(e)
+            FlowceptLogger().error(f"Failed to delete buffer file: {path}")
+            FlowceptLogger().exception(e)
 
     def save_workflow(self, interceptor: str, interceptor_instance: BaseInterceptor):
         """
