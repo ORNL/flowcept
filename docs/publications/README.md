@@ -15,8 +15,7 @@ PDF: https://arxiv.org/pdf/2308.09004.pdf
 
 **PROV-AGENT: Unified Provenance for Tracking AI Agent Interactions in Agentic Workflows**  
 R. Souza, A. Gueroudji, S. DeWitt, D. Rosendo, T. Ghosal, R. Ross, P. Balaprakash, and R. Ferreira da Silva,  
-*IEEE International Conference on e-Science*, Chicago, USA., 2025.  
-Publisher: IEEE.  
+*IEEE International Conference on e-Science*, Chicago, USA., 2025.
 PDF: https://arxiv.org/pdf/2508.02866  
 
 ---
@@ -34,7 +33,26 @@ R. Souza, T. Poteet, B. Etz, D. Rosendo, A. Gueroudji, W. Shin, P. Balaprakash, 
 *Workflows in Support of Large-Scale Science (WORKS) co-located with the ACM/IEEE International Conference for High Performance Computing, Networking, Storage, and Analysis (SC)*, St. Louis, USA, 2025.  
 doi: [10.1145/3731599.3767582](https://doi.org/10.1145/3731599.3767582)  
 
-### Bixtex
+
+### Papers that used Flowcept
+
+
+**Toward a Persistent Event-Streaming System for High-Performance Computing Applications**
+M. Dorier, A. Gueroudji, V. Hayot-Sasson, H. Nguyen, S. Ockerman, R. Souza, T. Bicer, H. Pan, P. Carns, K. Chard, and others
+*Frontiers in High Performance Computing*, 2025.
+doi: [10.3389/fhpcp.2025.1638203](https://doi.org/10.3389/fhpcp.2025.1638203)
+PDF: https://web.cels.anl.gov/~woz/papers/Mofka_2025.pdf
+
+---
+
+**AI Agents for Enabling Autonomous Experiments at ORNL’s HPC and Manufacturing User Facilities**
+D. Rosendo, S. DeWitt, R. Souza, P. Austria, T. Ghosal, M. McDonnell, R. Miller, T. Skluzacek, J. Haley, B. Turcksin, and others
+*Extreme-Scale Experiment-in-the-Loop Computing (XLOOP) co-located with the ACM/IEEE International Conference for High Performance Computing, Networking, Storage, and Analysis (SC)*, 2025.
+PDF: https://rafaelsilva.com/files/publications/rosendo2025xloop.pdf
+
+--- 
+
+### Bibtex
 
 ```
 @inproceedings{souza2023towards,
@@ -47,7 +65,6 @@ doi: [10.1145/3731599.3767582](https://doi.org/10.1145/3731599.3767582)
   year={2023},
   abstract={Modern large-scale scientific discovery requires multidisciplinary collaboration across diverse computing facilities, including High Performance Computing (HPC) machines and the Edge-to-Cloud continuum. Integrated data analysis plays a crucial role in scientific discovery, especially in the current AI era, by enabling Responsible AI development, FAIR, Reproducibility, and User Steering. However, the heterogeneous nature of science poses challenges such as dealing with multiple supporting tools, cross-facility environments, and efficient HPC execution. Building on data observability, adapter system design, and provenance, we propose MIDA: an approach for lightweight runtime Multi-workflow Integrated Data Analysis. MIDA defines data observability strategies and adaptability methods for various parallel systems and machine learning tools. With observability, it intercepts the dataflows in the background without requiring instrumentation while integrating domain, provenance, and telemetry data at runtime into a unified database ready for user steering queries. We conduct experiments showing end-to-end multi-workflow analysis integrating data from Dask and MLFlow in a real distributed deep learning use case for materials science that runs on multiple environments with up to 276 GPUs in parallel. We show near-zero overhead running up to 100,000 tasks on 1,680 CPU cores on the Summit supercomputer.}
 }
-
 ```
 
 ```latex
@@ -87,5 +104,31 @@ doi: [10.1145/3731599.3767582](https://doi.org/10.1145/3731599.3767582)
   address   = {St Louis, MO, USA},
   doi       = {10.1145/3731599.3767582},
   keywords  = {scientific workflows, provenance, LLM agents, Large language models, AI agents, agentic workflows, agentic provenance}
+}
+```
+
+```latex
+@article{dorier2025toward,
+  author = {Dorier, Matthieu and Gueroudji, Amal and Hayot-Sasson, Valerie and Nguyen, Hai and Ockerman, Seth and Souza, Renan and Bicer, Tekin and Pan, Haochen and Carns, Philip and Chard, Kyle and others},
+  doi = {10.3389/fhpcp.2025.1638203},
+  journal = {Frontiers in High Performance Computing},
+  keyword = {HPC, I/O, Streaming, Mochi, Mofka, Kafka, Redpanda},
+  link = {https://www.frontiersin.org/journals/high-performance-computing/articles/10.3389/fhpcp.2025.1638203/abstract},
+  publisher = {Frontiers in High Performance Computing},
+  title = {Toward a Persistent Event-Streaming System for High-Performance Computing Applications},
+  volume = {3},
+  year = {2025}
+}
+```
+
+```latex
+@inproceedings{rosendo2025ai,
+  address = {St Louis, MO, USA},
+  author = {Rosendo, Daniel and DeWitt, Stephen and Souza, Renan and Austria, Phillipe and Ghosal, Tirthankar and McDonnell, Marshall and Miller, Ross and Skluzacek, Tyler J and Haley, James and Turcksin, Bruno and others},
+  booktitle = {Extreme-Scale Experiment-in-the-Loop Computing ({XLOOP}) co-located with the {ACM}/{IEEE} International Conference for High Performance Computing, Networking, Storage, and Analysis ({SC})},
+  pdf = {https://rafaelsilva.com/files/publications/rosendo2025xloop.pdf},
+  publisher = {ACM},
+  title = {AI Agents for Enabling Autonomous Experiments at ORNL’s HPC and Manufacturing User Facilities},
+  year = {2025}
 }
 ```

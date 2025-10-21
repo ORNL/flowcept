@@ -1,0 +1,102 @@
+@prefix prov_ag   <http://example.org/aiprov#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+prov_ag a owl:Ontology ;
+  rdfs:label "AI Agent Provenance Ontology (PROV-AGENT)" ;
+  rdfs:comment "Extends PROV-O to model agentic workflows, LLM calls, tools, and data per the given graph." ;
+  owl:imports <http://www.w3.org/ns/prov-o#> .
+
+### Core classes
+prov_agDataObject a owl:Class ;
+  rdfs:subClassOf prov:Entity ;
+  rdfs:label "DataObject" .
+
+prov_agDomainData a owl:Class ;
+  rdfs:subClassOf prov_agDataObject ,
+    [ a owl:Restriction ; owl:onProperty prov:wasGeneratedBy ; owl:someValuesFrom prov_agTask ] ;
+  rdfs:label "DomainData" .
+
+prov_agTelemetryData a owl:Class ;
+  rdfs:subClassOf prov_agDataObject ,
+    [ a owl:Restriction ; owl:onProperty prov:wasGeneratedBy ; owl:someValuesFrom prov_agTask ] ;
+  rdfs:label "TelemetryData" .
+
+prov_agSchedulingData a owl:Class ;
+  rdfs:subClassOf prov_agDataObject ,
+    [ a owl:Restriction ; owl:onProperty prov:wasGeneratedBy ; owl:someValuesFrom prov_agTask ] ;
+  rdfs:label "SchedulingData" .
+
+prov_agPrompt a owl:Class ;
+  rdfs:subClassOf prov_agDataObject ;
+  rdfs:label "Prompt" .
+
+prov_agResponseData a owl:Class ;
+  rdfs:subClassOf prov_agDataObject ,
+    [ a owl:Restriction ; owl:onProperty prov:wasGeneratedBy ; owl:someValuesFrom prov_agAIModelInvocation ] ;
+  rdfs:label "ResponseData" .
+
+prov_agModel a owl:Class ;
+  rdfs:subClassOf prov:Entity ;
+  rdfs:label "AI Model" .
+
+### Activities
+prov_agCampaign a owl:Class ;
+  rdfs:subClassOf prov:Activity ,
+    [ a owl:Restriction ; owl:onProperty prov_aghasMemberActivity ; owl:someValuesFrom prov_agWorkflow ] ;
+  rdfs:label "Campaign" .
+
+prov_agWorkflow a owl:Class ;
+  rdfs:subClassOf prov:Activity ,
+    [ a owl:Restriction ; owl:onProperty prov_aghasMemberActivity ; owl:someValuesFrom prov_agTask ] ,
+    [ a owl:Restriction ; owl:onProperty prov_aghasMemberActivity ; owl:someValuesFrom prov_agAgentTool ] ;
+  rdfs:label "Workflow" .
+
+prov_agTask a owl:Class ;
+  rdfs:subClassOf prov:Activity ,
+    [ a owl:Restriction ; owl:onProperty prov:used ; owl:someValuesFrom prov_agDomainData ] ,
+    [ a owl:Restriction ; owl:onProperty prov:generated ; owl:someValuesFrom prov_agDomainData ] ,
+    [ a owl:Restriction ; owl:onProperty prov:generated ; owl:someValuesFrom prov_agTelemetryData ] ,
+    [ a owl:Restriction ; owl:onProperty prov:generated ; owl:someValuesFrom prov_agSchedulingData ] ;
+  rdfs:label "Task" .
+
+prov_agAgentTool a owl:Class ;
+  rdfs:subClassOf prov:Activity ,
+    [ a owl:Restriction ; owl:onProperty prov:used ; owl:someValuesFrom prov_agDataObject ] ,
+    [ a owl:Restriction ; owl:onProperty prov:wasAssociatedWith ; owl:someValuesFrom prov_agAIAgent ] ,
+    [ a owl:Restriction ; owl:onProperty prov:wasInformedBy ; owl:someValuesFrom prov_agAIModelInvocation ] ;
+  rdfs:label "AgentTool" .
+
+prov_agAIModelInvocation a owl:Class ;
+  rdfs:subClassOf prov:Activity ,
+    [ a owl:Restriction ; owl:onProperty prov:used ; owl:someValuesFrom prov_agPrompt ] ,
+    [ a owl:Restriction ; owl:onProperty prov:used ; owl:someValuesFrom prov_agModel ] ;
+  rdfs:label "AI Model Invocation" .
+
+### Agent
+prov_agAIAgent a owl:Class ;
+  rdfs:subClassOf prov:SoftwareAgent ;
+  rdfs:label "AIAgent" .
+
+### Custom property to mirror diagram’s hadMember (Activity-to-Activity)
+prov_aghasMemberActivity a owl:ObjectProperty ;
+  rdfs:label "hadMember" ;
+  rdfs:comment "Structural membership of sub-activities within an activity, e.g., a workflow containing tasks or tools." ;
+  rdfs:domain prov:Activity ;
+  rdfs:range  prov:Activity ;
+  rdfs:subPropertyOf rdfs:member .
+
+### Useful PROV-aware inferences
+# If an entity wasGeneratedBy an activity that wasAssociatedWith an agent,
+# then attribute the entity to that agent.
+prov:wasAttributedTo owl:propertyChainAxiom ( prov:wasGeneratedBy prov:wasAssociatedWith ) .
+
+### Optional naming for convenience individuals (URIs to mint in data)
+# Classes above define the schema. Instances can use PROV-O relations directly, e.g.:
+# :t1 a prov_agTask ; prov:used :d_in .
+# :d_out a prov_agDomainData ; prov:wasGeneratedBy :t1 .
+# :tool1 a prov_agAgentTool ; prov:wasAssociatedWith :agent1 ; prov:wasInformedBy :llmCall1 .
+# :llmCall1 a prov_agAIModelInvocation ; prov:used :prompt1, :modelX .

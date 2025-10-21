@@ -166,6 +166,20 @@ def build_llm_model(
             from flowcept.agents.llms.gemini25 import Gemini25LLM
 
             llm = Gemini25LLM(**_model_kwargs)
+    elif _service_provider == "openai":
+        from langchain_openai import ChatOpenAI
+        api_key = os.environ.get("OPENAI_API_KEY", AGENT.get("api_key"))
+        base_url = os.environ.get("OPENAI_BASE_URL", AGENT.get("llm_server_url") or None)  # optional
+        org = os.environ.get("OPENAI_ORG_ID", AGENT.get("organization", None))  # optional
+
+        init_kwargs = {"api_key": api_key}
+        if base_url:
+            init_kwargs["base_url"] = base_url
+        if org:
+            init_kwargs["organization"] = org
+
+        # IMPORTANT: use the merged kwargs so `model` and temps flow through
+        llm = ChatOpenAI(**init_kwargs, **_model_kwargs)
 
     else:
         raise Exception("Currently supported providers are sambanova, openai, azure, and google.")
