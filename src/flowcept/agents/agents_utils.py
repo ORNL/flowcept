@@ -168,6 +168,7 @@ def build_llm_model(
             llm = Gemini25LLM(**_model_kwargs)
     elif _service_provider == "openai":
         from langchain_openai import ChatOpenAI
+
         api_key = os.environ.get("OPENAI_API_KEY", AGENT.get("api_key"))
         base_url = os.environ.get("OPENAI_BASE_URL", AGENT.get("llm_server_url") or None)  # optional
         org = os.environ.get("OPENAI_ORG_ID", AGENT.get("organization", None))  # optional
