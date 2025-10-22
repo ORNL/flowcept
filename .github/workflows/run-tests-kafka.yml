@@ -28,7 +28,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
+          # cache: "pip"
 
       - name: Run docker compose
         run: docker compose -f deployment/compose-kafka.yml up -d
