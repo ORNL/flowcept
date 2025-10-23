@@ -64,9 +64,9 @@ M. Dorier, A. Gueroudji, V. Hayot-Sasson, H. Nguyen, S. Ockerman, R. Souza, T. B
 D. Rosendo, S. DeWitt, R. Souza, P. Austria, T. Ghosal, M. McDonnell, R. Miller, T. Skluzacek, J. Haley, B. Turcksin, and others
 *Extreme-Scale Experiment-in-the-Loop Computing (XLOOP) co-located with the ACM/IEEE International Conference for High Performance Computing, Networking, Storage, and Analysis (SC)*, 2025. <br/>
 **About**: Leverages Flowcept’s agentic provenance to coordinate multi-agent experiments and connect agents with HPC simulations through a shared provenance stream. <br/>
+[[doi]](https://doi.org/10.1145/3731599.3767592)
 [[pdf]](https://rafaelsilva.com/files/publications/rosendo2025xloop.pdf)
 [[html]](https://camps.aptaracorp.com/ACM_PMS/PMS/ACM/SCWORKSHOPS25/253/0b09762d-8e84-11f0-957d-16ffd757ba29/OUT/scworkshops25-253.html)
-
 
 --- 
 
