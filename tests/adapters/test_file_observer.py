@@ -19,18 +19,20 @@ class TestFileObserver(unittest.TestCase):
         self.callback_called_event = threading.Event()
 
         # Define the callback function to be triggered on modification
-        def callback(file_path):
-            if file_path == self.test_file_name:
-                print(f"Callback triggered for {file_path}")
+        def callback(event):
+            if not event.is_directory and event.src_path == self.test_file_name:
+                print(f"Callback triggered for {event.src_path}")
                 self.callback_called_event.set()
+
+        watch_dir = os.path.dirname(self.test_file_name) or "."
 
         # Create an event handler and bind it to the callback
         self.event_handler = FileSystemEventHandler()
-        self.event_handler.on_modified = lambda event: callback(event.src_path)
+        self.event_handler.on_modified = lambda event: callback(event)
 
         # Set up watchdog observer
         self.observer = PollingObserver()
-        self.observer.schedule(self.event_handler, path=self.test_file_name, recursive=False)
+        self.observer.schedule(self.event_handler, path=watch_dir, recursive=False)
         self.observer.start()
 
     def tearDown(self):
@@ -46,10 +48,10 @@ class TestFileObserver(unittest.TestCase):
             f.flush()
             os.fsync(f.fileno())  # Ensure file system updates
 
-        # Add a small delay to ensure the observer catches the event
+        # Add a delay to ensure the observer catches the event
         time.sleep(2)
 
-        # Wait for the callback to be called (max wait 5 seconds)
+        # Wait for the callback to be called
         callback_triggered = self.callback_called_event.wait(timeout=10)
 
         # Assert that the callback was called
