@@ -13,6 +13,8 @@ class TestFileObserver(unittest.TestCase):
         self.test_file_name = self.test_file.name
         self.test_file.close()
 
+        time.sleep(1.1)
+
         # Thread event to signal that the callback was called
         self.callback_called_event = threading.Event()
 
