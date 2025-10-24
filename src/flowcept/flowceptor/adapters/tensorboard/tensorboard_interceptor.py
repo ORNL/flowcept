@@ -1,6 +1,7 @@
 """Tensorboard interceptor module."""
 
 import os
+from pathlib import Path
 from time import sleep
 
 from tbparse import SummaryReader
@@ -29,6 +30,8 @@ class TensorboardInterceptor(BaseInterceptor):
     def __init__(self, plugin_key="tensorboard"):
         super().__init__(plugin_key)
         self._observer: PollingObserver = None
+        if not Path(self.settings.file_path).is_dir():
+            raise Exception("Tensorboard Observer must observe directories.")
         self.state_manager = InterceptorStateManager(self.settings)
         self.state_manager.reset()
         self.log_metrics = set(self.settings.log_metrics)
@@ -108,13 +111,15 @@ class TensorboardInterceptor(BaseInterceptor):
 
     def observe(self):
         """Observe it."""
-        event_handler = InterceptionEventHandler(self, self.__class__.callback)
+        self.logger.debug("Observing")
+        event_handler = InterceptionEventHandler(self, self.settings.file_path, self.__class__.callback)
         while not os.path.isdir(self.settings.file_path):
             self.logger.debug(f"I can't watch the file {self.settings.file_path}, as it does not exist.")
             self.logger.debug(f"\tI will sleep for {self.settings.watch_interval_sec} s to see if it appears.")
             sleep(self.settings.watch_interval_sec)
 
         self._observer = PollingObserver()
+
         self._observer.schedule(event_handler, self.settings.file_path, recursive=True)
         self._observer.start()
         self.logger.debug(f"Watching {self.settings.file_path}")
