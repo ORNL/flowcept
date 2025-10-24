@@ -1,4 +1,4 @@
-flowcept_version: 0.9.16 # Version of the Flowcept package. This setting file is compatible with this version.
+flowcept_version: 0.9.17 # Version of the Flowcept package. This setting file is compatible with this version.
 
 project:
   debug: true # Toggle debug mode. This will add a property `debug: true` to all saved data, making it easier to retrieve/delete them later.
