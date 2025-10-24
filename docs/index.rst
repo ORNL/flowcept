@@ -18,6 +18,12 @@ Flowcept
        html[data-theme="auto"] .logo-light { display: none; }
        html[data-theme="auto"] .logo-dark  { display: inline; }
      }
+
+     .hero { text-align: center; margin: 1.25rem 0 0.25rem; }
+     .hero h1 { font-size: 2rem; line-height: 1.2; margin: 0; }
+     .tagline { text-align: center; font-size: 1.05rem; max-width: 60rem; margin: 0.25rem auto 1.25rem; }
+
+
    </style>
 
    <p align="center">
@@ -31,6 +37,18 @@ Flowcept
    :alt: GitHub
    :align: center
    :width: 120px
+
+.. raw:: html
+
+   <div class="hero">
+     <h4>Lightweight Distributed Workflow Provenance</h4>
+   </div>
+   <p class=\\"tagline\\">
+     Flowcept captures and queries workflow provenance at runtime with minimal code changes and low overhead.
+     It unifies data from diverse tools and workflows across the Edge–Cloud–HPC continuum and provides ML-aware capture,
+     MCP agents provenance, telemetry, extensible adapters, and flexible storage.
+   </p>
+
 
 .. toctree::
    :maxdepth: 2

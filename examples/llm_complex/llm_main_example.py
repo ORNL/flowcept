@@ -123,6 +123,13 @@ def search_workflow(ntokens, dataset_ref, train_data_path, val_data_path, test_d
 
 def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True):
     from distributed import Client
+    try:
+        # Downgrading eventual dask comm errors in the logs
+        import logging
+        logging.getLogger("distributed.worker").setLevel(logging.WARNING)
+        logging.getLogger("distributed.comm").setLevel(logging.WARNING)
+    except:
+        pass
 
     if start_dask_cluster:
         import subprocess
@@ -196,9 +203,17 @@ def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _
                 print("Flowcept consumer closed.")
         else:
             print("Closing dask...")
-            client.close()
-            cluster.close()
-            print("Dask closed.")
+            try:
+                client.close()
+                cluster.close()
+                print("Dask closed.")
+            except Exception as e:
+                print(f"Some exception when closing dask: {e}")
+                try:
+                    import logging
+                    logging.getLogger("distributed.worker").setLevel(logging.WARNING)
+                except:
+                    pass
             if _flowcept:
                 print("Now closing flowcept consumer...")
                 _flowcept.stop()

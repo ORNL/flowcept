@@ -7,48 +7,66 @@ Bibtex is available below.
 
 **Towards Lightweight Data Integration using Multi-workflow Provenance and Data Observability**  
 R. Souza, T. J. Skluzacek, S. R. Wilkinson, M. Ziatdinov, and R. Ferreira da Silva,  
-*IEEE International Conference on e-Science*, Limassol, Cyprus, 2023.  
-doi: [10.1109/e-Science58273.2023.10254822](https://doi.org/10.1109/e-Science58273.2023.10254822)  
-PDF: https://arxiv.org/pdf/2308.09004.pdf  
-
+*IEEE International Conference on e-Science*, Limassol, Cyprus, 2023.  <br/>
+**About**: Introduces Flowcept’s lightweight runtime provenance and data observability architecture and shows minimal-intrusion capture across heterogeneous workflows. <br/>
+[[doi]](https://doi.org/10.1109/e-Science58273.2023.10254822)
+[[pdf]](https://arxiv.org/pdf/2308.09004.pdf)  
 ---
 
 **PROV-AGENT: Unified Provenance for Tracking AI Agent Interactions in Agentic Workflows**  
 R. Souza, A. Gueroudji, S. DeWitt, D. Rosendo, T. Ghosal, R. Ross, P. Balaprakash, and R. Ferreira da Silva,  
-*IEEE International Conference on e-Science*, Chicago, USA., 2025.
-PDF: https://arxiv.org/pdf/2508.02866  
+*IEEE International Conference on e-Science*, Chicago, USA., 2025. <br/>
+**About**: Defines agentic provenance and a unified provenance model and tooling to capture, link, and query AI-agent interactions within agentic workflows. </br>
+[[doi]](https://doi.org/10.1109/eScience65000.2025.00093) 
+[[pdf]](https://arxiv.org/pdf/2508.02866)
+[[html]](https://arxiv.org/html/2508.02866v3) <br/>
+
 
 ---
 
 **Workflow Provenance in the Computing Continuum for Responsible, Trustworthy, and Energy-Efficient AI**  
 R. Souza, S. Caino-Lores, M. Coletti, T. J. Skluzacek, A. Costan, F. Suter, M. Mattoso, and R. Ferreira da Silva,  
-*IEEE International Conference on e-Science*, Osaka, Japan, 2024.  
-doi: [10.1109/e-Science62913.2024.10678731](https://doi.org/10.1109/e-Science62913.2024.10678731)  
-PDF: https://hal.science/hal-04902079v1/document  
+*IEEE International Conference on e-Science*, Osaka, Japan, 2024. <br/>
+**About**: Explains how end-to-end provenance across edge, cloud, and HPC supports responsible, trustworthy, and energy-aware AI workflows. <br/>
+[[doi]](https://doi.org/10.1109/e-Science62913.2024.10678731) 
+[[pdf]](https://hal.science/hal-04902079v1/document) <br/>
+
 
 ---
 
 **LLM Agents for Interactive Workflow Provenance: Reference Architecture and Evaluation Methodology**  
 R. Souza, T. Poteet, B. Etz, D. Rosendo, A. Gueroudji, W. Shin, P. Balaprakash, and R. Ferreira da Silva,  
 *Workflows in Support of Large-Scale Science (WORKS) co-located with the ACM/IEEE International Conference for High Performance Computing, Networking, Storage, and Analysis (SC)*, St. Louis, USA, 2025.  
-doi: [10.1145/3731599.3767582](https://doi.org/10.1145/3731599.3767582)  
+**About**: Presents a reference architecture and evaluation method for LLM agents that query and act on large-scale provenance databases. </br>
+[[doi]](https://doi.org/10.1145/3731599.3767582) 
+[[pdf]](https://arxiv.org/pdf/2509.13978)
+[[html]](https://arxiv.org/html/2509.13978)
 
+
+--- 
 
 ### Papers that used Flowcept
 
 
 **Toward a Persistent Event-Streaming System for High-Performance Computing Applications**
 M. Dorier, A. Gueroudji, V. Hayot-Sasson, H. Nguyen, S. Ockerman, R. Souza, T. Bicer, H. Pan, P. Carns, K. Chard, and others
-*Frontiers in High Performance Computing*, 2025.
-doi: [10.3389/fhpcp.2025.1638203](https://doi.org/10.3389/fhpcp.2025.1638203)
-PDF: https://web.cels.anl.gov/~woz/papers/Mofka_2025.pdf
+*Frontiers in High Performance Computing*, 2025. <br/>
+**About**: Demonstrates Flowcept generating high-volume provenance that is persistently streamed with Mofka for HPC applications. <br/>
+[[doi]](https://doi.org/10.3389/fhpcp.2025.1638203) 
+[[pdf]](https://web.cels.anl.gov/~woz/papers/Mofka_2025.pdf) 
+[[html]](https://www.frontiersin.org/journals/high-performance-computing/articles/10.3389/fhpcp.2025.1638203/full)
+<br/>
+
 
 ---
 
 **AI Agents for Enabling Autonomous Experiments at ORNL’s HPC and Manufacturing User Facilities**
 D. Rosendo, S. DeWitt, R. Souza, P. Austria, T. Ghosal, M. McDonnell, R. Miller, T. Skluzacek, J. Haley, B. Turcksin, and others
-*Extreme-Scale Experiment-in-the-Loop Computing (XLOOP) co-located with the ACM/IEEE International Conference for High Performance Computing, Networking, Storage, and Analysis (SC)*, 2025.
-PDF: https://rafaelsilva.com/files/publications/rosendo2025xloop.pdf
+*Extreme-Scale Experiment-in-the-Loop Computing (XLOOP) co-located with the ACM/IEEE International Conference for High Performance Computing, Networking, Storage, and Analysis (SC)*, 2025. <br/>
+**About**: Leverages Flowcept’s agentic provenance to coordinate multi-agent experiments and connect agents with HPC simulations through a shared provenance stream. <br/>
+[[doi]](https://doi.org/10.1145/3731599.3767592)
+[[pdf]](https://rafaelsilva.com/files/publications/rosendo2025xloop.pdf)
+[[html]](https://camps.aptaracorp.com/ACM_PMS/PMS/ACM/SCWORKSHOPS25/253/0b09762d-8e84-11f0-957d-16ffd757ba29/OUT/scworkshops25-253.html)
 
 --- 
 

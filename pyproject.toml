@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "flowcept"
 dynamic = ["version"]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 authors = [{name = "Oak Ridge National Laboratory"}]
 description = "Capture and query workflow provenance data using data observability"

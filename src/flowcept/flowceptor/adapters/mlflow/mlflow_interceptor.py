@@ -84,7 +84,7 @@ class MLFlowInterceptor(BaseInterceptor):
     def observe(self):
         """Observe it."""
         self.logger.debug("Observing")
-        event_handler = InterceptionEventHandler(self, self.__class__.callback)
+        event_handler = InterceptionEventHandler(self, self.settings.file_path, self.__class__.callback)
         while not os.path.isfile(self.settings.file_path):
             self.logger.warning(
                 f"I can't watch the file {self.settings.file_path},"
@@ -95,6 +95,7 @@ class MLFlowInterceptor(BaseInterceptor):
             sleep(self.settings.watch_interval_sec)
 
         self._observer = PollingObserver()
-        self._observer.schedule(event_handler, self.settings.file_path, recursive=True)
+        watch_dir = os.path.dirname(self.settings.file_path) or "."
+        self._observer.schedule(event_handler, watch_dir, recursive=True)
         self._observer.start()
-        self.logger.info(f"Watching {self.settings.file_path}")
+        self.logger.info(f"Watching directory {watch_dir} with file {self.settings.file_path} ")

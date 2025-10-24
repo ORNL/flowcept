@@ -20,6 +20,7 @@ Flowcept captures and queries workflow provenance at runtime with minimal code c
 
 
 [![Documentation](https://img.shields.io/badge/docs-readthedocs.io-green.svg)](https://flowcept.readthedocs.io/)
+[![Slack](https://img.shields.io/badge/Slack-%23flowcept%40Workflows%20Community-4A154B?logo=slack)](https://workflowscommunity.slack.com/archives/C06L5GYJKQS)
 [![Build](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/create-release-n-publish.yml)
 [![PyPI](https://badge.fury.io/py/flowcept.svg)](https://pypi.org/project/flowcept)
 [![Tests](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml)

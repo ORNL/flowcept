@@ -68,7 +68,9 @@ run_test() {
   echo "Ok, ran $test_path."
   if grep -iq "error" output.log; then
     echo "Test $test_path failed! See output.log for details."
+    echo "[BEGIN] Content of output.log"
     cat output.log
+    echo "[END] Content of output.log"
     exit 1
   fi
 
