@@ -1,4 +1,5 @@
 """Event handler module."""
+
 from pathlib import Path
 from watchdog.events import FileSystemEventHandler
 
