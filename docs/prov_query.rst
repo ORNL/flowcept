@@ -142,8 +142,8 @@ Deleting a buffer file
 .. code-block:: python
 
    from flowcept import Flowcept
-   Flowcept.delete_buffer_file()                 # deletes default path from settings
-   Flowcept.delete_buffer_file(\"my_buffer.jsonl\")
+   Flowcept.delete_buffer_file()                     # deletes default path from settings
+   Flowcept.delete_buffer_file("my_buffer.jsonl")
 
 Notes
 ^^^^^
