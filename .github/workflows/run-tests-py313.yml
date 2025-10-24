@@ -1,4 +1,4 @@
-name: Tests on Py313
+name: Tests on Py_gt_312
 on: [pull_request]
 
 jobs:
