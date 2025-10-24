@@ -67,7 +67,7 @@ def all():
         try:
             success = run_test(max_runs=3, config=config)
             if not success:
-                write_log(str(i) + "--> " + str(config))
+                write_log("GOT ERROR! " + str(i) + "--> " + str(config))
                 sys.exit(1)
         except Exception as e:
             write_exception(f"\n\n!!!!!!##### ERROR for combination {config}\n", e)
