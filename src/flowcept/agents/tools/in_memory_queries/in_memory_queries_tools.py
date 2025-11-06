@@ -63,11 +63,6 @@ def run_df_query(llm, query: str, plot=False) -> ToolResult:
 
     Examples
     --------
-    Reset the context:
-
-    >>> run_df_query(llm, "reset context")
-    ToolResult(code=201, result="Context Reset!")
-
     Save the current DataFrame:
 
     >>> run_df_query(llm, "save")
@@ -90,10 +85,6 @@ def run_df_query(llm, query: str, plot=False) -> ToolResult:
     custom_user_guidance = ctx.request_context.lifespan_context.custom_guidance
     if df is None or not len(df):
         return ToolResult(code=404, result="Current df is empty or null.")
-
-    if "reset context" in query:
-        ctx.request_context.lifespan_context.df = pd.DataFrame()
-        return ToolResult(code=201, result="Context Reset!")
     elif "save" in query:
         return save_df(df, schema, value_examples)
     elif "result = df" in query:

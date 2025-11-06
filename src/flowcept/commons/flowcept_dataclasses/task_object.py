@@ -136,6 +136,9 @@ class TaskObject:
     agent_id: str = None
     """Identifier of the agent responsible for executing this task (if any)."""
 
+    source_agent_id: str = None
+    """Identifier of the agent that sent this task to be executed (if any)."""
+
     _DEFAULT_ENRICH_VALUES = {
         "node_name": NODE_NAME,
         "login_name": LOGIN_NAME,

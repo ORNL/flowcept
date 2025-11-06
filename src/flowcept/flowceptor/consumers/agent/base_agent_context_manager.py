@@ -20,6 +20,12 @@ class BaseAppContext:
 
     tasks: List[Dict]
 
+    def reset_context(self):
+        """
+        Method to reset the variables in the context.
+        """
+        self.tasks = []
+
 
 class BaseAgentContextManager(BaseConsumer):
     """
@@ -45,8 +51,7 @@ class BaseAgentContextManager(BaseConsumer):
         """
         self._started = False
         super().__init__()
-        self.context = None
-        self.reset_context()
+        # self.context = BaseAppContext(tasks=[])
         self.agent_id = BaseAgentContextManager.agent_id
 
     def message_handler(self, msg_obj: Dict) -> bool:
@@ -77,11 +82,6 @@ class BaseAgentContextManager(BaseConsumer):
 
         return True
 
-    def reset_context(self):
-        """
-        Resets the internal context, clearing all stored task data.
-        """
-        self.context = BaseAppContext(tasks=[])
 
     @asynccontextmanager
     async def lifespan(self, app):
