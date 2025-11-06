@@ -125,8 +125,21 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                 self.logger.info(f"Going to ignore our own LLM messages: {task_msg}")
                 return True
 
-            self.msgs_counter += 1
             self.logger.debug("Received task msg!")
+            if task_msg.subtype == "call_agent_task" and task_msg.activity_id == "reset_user_context":
+                self.context.reset_context()
+                from flowcept.instrumentation.task_capture import FlowceptTask
+
+                FlowceptTask(
+                    agent_id=self.agent_id,
+                    generated={"msg": "Provenance Agent reset context."},
+                    subtype="agent_task",
+                    activity_id="reset_user_context",
+                ).send()
+                return
+
+            self.msgs_counter += 1
+
             self.context.tasks.append(msg_obj)
 
             task_summary = summarize_task(msg_obj, logger=self.logger)

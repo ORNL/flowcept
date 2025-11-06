@@ -82,7 +82,6 @@ class BaseAgentContextManager(BaseConsumer):
 
         return True
 
-
     @asynccontextmanager
     async def lifespan(self, app):
         """
