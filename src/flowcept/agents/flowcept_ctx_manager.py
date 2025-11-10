@@ -13,8 +13,6 @@ import pandas as pd
 
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager, BaseAppContext
 
-
-from flowcept.agents import agent_client
 from flowcept.commons.task_data_preprocess import summarize_task
 
 
@@ -126,17 +124,40 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                 return True
 
             self.logger.debug("Received task msg!")
-            if task_msg.subtype == "call_agent_task" and task_msg.activity_id == "reset_user_context":
-                self.context.reset_context()
-                from flowcept.instrumentation.task_capture import FlowceptTask
+            if task_msg.subtype == "call_agent_task":
 
-                FlowceptTask(
-                    agent_id=self.agent_id,
-                    generated={"msg": "Provenance Agent reset context."},
-                    subtype="agent_task",
-                    activity_id="reset_user_context",
-                ).send()
-                return
+                from flowcept.instrumentation.task_capture import FlowceptTask
+                if task_msg.activity_id == "reset_user_context":
+                    self.context.reset_context()
+
+                    FlowceptTask(
+                        agent_id=self.agent_id,
+                        generated={"msg": "Provenance Agent reset context."},
+                        subtype="agent_task",
+                        activity_id="reset_user_context",
+                    ).send()
+                    return True
+                elif task_msg.activity_id == "provenance_query":
+                    self.logger.info("Received a prov query message!")
+                    query_text = task_msg.used.get("query")
+                    from flowcept.agents import ToolResult
+                    from flowcept.agents.tools.general_tools import prompt_handler
+                    from flowcept.agents.agent_client import run_tool
+                    resp = run_tool(tool_name=prompt_handler, kwargs={"message": query_text})[0]
+
+                    tool_result = ToolResult(**json.loads(resp))
+                    if tool_result.result_is_str():
+                        generated = {"text": tool_result.result}
+                    else:
+                        generated = tool_result.result
+                    FlowceptTask(
+                        agent_id=self.agent_id,
+                        generated=generated,
+                        subtype="agent_task",
+                        activity_id="provenance_query_response",
+                    ).send()
+
+                    return True
 
             self.msgs_counter += 1
 
@@ -184,7 +205,8 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         Perform LLM-based analysis on the current chunk of task messages and send the results.
         """
         self.logger.debug(f"Going to begin LLM job! {self.msgs_counter}")
-        result = agent_client.run_tool("analyze_task_chunk")
+        from flowcept.agents.agent_client import run_tool
+        result = run_tool("analyze_task_chunk")
         if len(result):
             content = result[0].text
             if content != "Error executing tool":
@@ -194,7 +216,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             else:
                 self.logger.error(content)
 
-
 # Exporting the ctx_manager and the mcp_flowcept
 ctx_manager = FlowceptAgentContextManager()
 mcp_flowcept = FastMCP("FlowceptAgent", lifespan=ctx_manager.lifespan, stateless_http=True)
+

@@ -1,5 +1,6 @@
 import unittest
 from pathlib import Path
+from time import sleep
 
 from flowcept.commons.vocabulary import Status
 from flowcept import Flowcept, FlowceptTask
@@ -56,4 +57,15 @@ class ExplicitTaskTest(unittest.TestCase):
             assert len(Flowcept.buffer) == 3
             assert Flowcept.buffer[1]["data"]
             #assert Flowcept.buffer[1]["data"].startswith(b"\x89PNG")
+
+
+    def test_prov_query_msg(self):
+        with Flowcept():
+            FlowceptTask(
+                activity_id="provenance_query",
+                subtype="call_agent_task",
+                used={
+                    "query": "how many tasks?"
+                }
+            ).send()
 
