@@ -62,10 +62,41 @@ class ExplicitTaskTest(unittest.TestCase):
     def test_prov_query_msg(self):
         with Flowcept():
             FlowceptTask(
-                activity_id="provenance_query",
-                subtype="call_agent_task",
+                activity_id="hmi_message",
+                subtype="agent_task",
                 used={
-                    "query": "how many tasks?"
+                    "n": 1
                 }
+            ).send()
+            sleep(1)
+            FlowceptTask(
+                activity_id="reset_user_context",
+                subtype="call_agent_task",
+                used={}
+            ).send()
+            sleep(1)
+            FlowceptTask(
+                activity_id="hmi_message",
+                subtype="agent_task",
+                used={
+                    "n": 2
+                }
+            ).send()
+            sleep(1)
+            FlowceptTask(
+                activity_id="hmi_message",
+                subtype="agent_task",
+                used={
+                    "n": 3
+                }
+            ).send()
+
+
+    def test_prov_query_msg2(self):
+        with Flowcept():
+            FlowceptTask(
+                activity_id="reset_user_context",
+                subtype="call_agent_task",
+                used={}
             ).send()
 

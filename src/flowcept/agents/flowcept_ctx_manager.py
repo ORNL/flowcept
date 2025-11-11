@@ -129,7 +129,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                 from flowcept.instrumentation.task_capture import FlowceptTask
                 if task_msg.activity_id == "reset_user_context":
                     self.context.reset_context()
-
+                    self.msgs_counter = 0
                     FlowceptTask(
                         agent_id=self.agent_id,
                         generated={"msg": "Provenance Agent reset context."},
@@ -158,6 +158,10 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                     ).send()
 
                     return True
+
+            elif task_msg.subtype == "agent_task" and task_msg.agent_id is not None and task_msg.agent_id == self.agent_id:
+                self.logger.info(f"Ignoring agent tasks from myself: {task_msg}")
+                return True
 
             self.msgs_counter += 1
 
