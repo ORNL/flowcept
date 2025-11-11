@@ -75,8 +75,9 @@ class MQDaoRedis(MQDao):
                     current_trials = 0
             except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
                 current_trials += 1
-                self.logger.critical(f"Redis connection lost: {e}. Reconnecting in 3 seconds...")
+                self.logger.critical(f"Redis connection lost: {e}. Trying to reconnect in 3 seconds...")
                 sleep(3)
+                self.subscribe()
             except Exception as e:
                 self.logger.exception(e)
                 continue
