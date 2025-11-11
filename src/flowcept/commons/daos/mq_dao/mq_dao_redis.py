@@ -1,4 +1,5 @@
 """MQ redis module."""
+
 from threading import Thread
 from typing import Callable
 import redis

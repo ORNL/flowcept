@@ -320,9 +320,11 @@ class Flowcept(object):
             file_path = DUMP_BUFFER_PATH
         assert file_path is not None, "Please indicate file_path either in the argument or in the config file."
         if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Flowcept buffer file '{file_path}' was not found. "
-                                    f"Check your settings to see if you're dumping the data to a file and check if you"
-                                    f"have started Flowcept.")
+            raise FileNotFoundError(
+                f"Flowcept buffer file '{file_path}' was not found. "
+                f"Check your settings to see if you're dumping the data to a file and check if you"
+                f"have started Flowcept."
+            )
 
         with open(file_path, "rb") as f:
             lines = [ln for ln in f.read().splitlines() if ln]

@@ -125,8 +125,8 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 
             self.logger.debug("Received task msg!")
             if task_msg.subtype == "call_agent_task":
-
                 from flowcept.instrumentation.task_capture import FlowceptTask
+
                 if task_msg.activity_id == "reset_user_context":
                     self.context.reset_context()
                     self.msgs_counter = 0
@@ -143,6 +143,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                     from flowcept.agents import ToolResult
                     from flowcept.agents.tools.general_tools import prompt_handler
                     from flowcept.agents.agent_client import run_tool
+
                     resp = run_tool(tool_name=prompt_handler, kwargs={"message": query_text})[0]
 
                     tool_result = ToolResult(**json.loads(resp))
@@ -159,7 +160,11 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 
                     return True
 
-            elif task_msg.subtype == "agent_task" and task_msg.agent_id is not None and task_msg.agent_id == self.agent_id:
+            elif (
+                task_msg.subtype == "agent_task"
+                and task_msg.agent_id is not None
+                and task_msg.agent_id == self.agent_id
+            ):
                 self.logger.info(f"Ignoring agent tasks from myself: {task_msg}")
                 return True
 
@@ -210,6 +215,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         """
         self.logger.debug(f"Going to begin LLM job! {self.msgs_counter}")
         from flowcept.agents.agent_client import run_tool
+
         result = run_tool("analyze_task_chunk")
         if len(result):
             content = result[0].text
@@ -220,7 +226,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             else:
                 self.logger.error(content)
 
+
 # Exporting the ctx_manager and the mcp_flowcept
 ctx_manager = FlowceptAgentContextManager()
 mcp_flowcept = FastMCP("FlowceptAgent", lifespan=ctx_manager.lifespan, stateless_http=True)
-
