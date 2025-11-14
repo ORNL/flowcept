@@ -1,6 +1,7 @@
 from flowcept.agents.dynamic_schema_tracker import DynamicSchemaTracker
 from flowcept.agents.tools.in_memory_queries.pandas_agent_utils import load_saved_df
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import AGENT
 from mcp.server.fastmcp import FastMCP
 
@@ -42,6 +43,7 @@ class FlowceptAppContext(BaseAppContext):
     custom_guidance: List[str] | None
 
     def __init__(self):
+        self.logger = FlowceptLogger()
         self.reset_context()
 
     def reset_context(self):
@@ -65,13 +67,13 @@ class FlowceptAppContext(BaseAppContext):
             if os.path.exists(df_path):
                 self.logger.warning("Going to load df into context")
                 df = load_saved_df(df_path)
-                self.context.df = df
+                self.df = df
             if os.path.exists("/tmp/current_tasks_schema.json"):
                 with open("/tmp/current_tasks_schema.json") as f:
-                    self.context.tasks_schema = json.load(f)
+                    self.tasks_schema = json.load(f)
             if os.path.exists("/tmp/value_examples.json"):
                 with open("/tmp/value_examples.json") as f:
-                    self.context.value_examples = json.load(f)
+                    self.value_examples = json.load(f)
 
 
 class FlowceptAgentContextManager(BaseAgentContextManager):

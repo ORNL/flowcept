@@ -368,7 +368,7 @@ def generate_result_df(
             return_code = 303
 
     try:
-        result_df = format_result_df(result_df)
+        result_df_str = format_result_df(result_df)
     except Exception as e:
         return ToolResult(
             code=405,
@@ -378,7 +378,8 @@ def generate_result_df(
 
     this_result = {
         "result_code": result_code,
-        "result_df": result_df,
+        "result_df": result_df_str,
+        "result_df_markdown": result_df.to_markdown(index=False),
         "summary": summary,
         "summary_error": summary_error,
     }
