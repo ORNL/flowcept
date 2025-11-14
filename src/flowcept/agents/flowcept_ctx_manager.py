@@ -2,6 +2,7 @@ from flowcept.agents.dynamic_schema_tracker import DynamicSchemaTracker
 from flowcept.agents.tools.in_memory_queries.pandas_agent_utils import load_saved_df
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.commons.vocabulary import Status
 from flowcept.configs import AGENT
 from mcp.server.fastmcp import FastMCP
 
@@ -148,14 +149,23 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 
                     resp = run_tool(tool_name=prompt_handler, kwargs={"message": query_text})[0]
 
-                    tool_result = ToolResult(**json.loads(resp))
-                    if tool_result.result_is_str():
-                        generated = {"text": tool_result.result}
-                    else:
-                        generated = tool_result.result
+                    try:
+                        error = None
+                        status = Status.FINISHED
+                        tool_result = ToolResult(**json.loads(resp))
+                        if tool_result.result_is_str():
+                            generated = {"text": tool_result.result}
+                        else:
+                            generated = tool_result.result
+                    except Exception as e:
+                        status = Status.ERROR
+                        error = f"Could not convert the following into a ToolResult:\n{resp}\nException: {e}"
+                        generated = {"text": str(resp)}
                     FlowceptTask(
                         agent_id=self.agent_id,
                         generated=generated,
+                        stderr=error,
+                        status=status,
                         subtype="agent_task",
                         activity_id="provenance_query_response",
                     ).send()
