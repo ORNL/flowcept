@@ -1,4 +1,6 @@
 import os
+import re
+import unicodedata
 from typing import Union, Dict
 
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
@@ -194,3 +196,25 @@ def build_llm_model(
             if tool_task:
                 llm.parent_task_id = tool_task.task_id
     return llm
+
+
+def normalize_message(user_msg: str) -> str:
+    # 1) Strip leading/trailing whitespace
+    user_msg = user_msg.strip()
+
+    # 2) Unicode normalize to avoid weird characters (like fancy quotes, dashes)
+    user_msg = unicodedata.normalize("NFKC", user_msg)
+
+    # 3) Normalize dashes commonly used in chemistry (C–H, C—H, etc.)
+    user_msg = user_msg.replace("–", "-").replace("—", "-")
+
+    # 4) Collapse multiple spaces / newlines into a single space
+    user_msg = re.sub(r"\s+", " ", user_msg)
+
+    # 5) Remove trailing punctuation that doesn't change semantics
+    #    e.g., "?", "!", "." at the VERY end
+    user_msg = re.sub(r"[?!.\s]+$", "", user_msg)
+
+    user_msg = user_msg.lower()
+
+    return user_msg

@@ -1,7 +1,7 @@
 import json
 from typing import List
 
-from flowcept.agents.agents_utils import build_llm_model, ToolResult
+from flowcept.agents.agents_utils import build_llm_model, ToolResult, normalize_message
 from flowcept.agents.flowcept_ctx_manager import mcp_flowcept
 from flowcept.agents.prompts.general_prompts import ROUTING_PROMPT, SMALL_TALK_PROMPT
 
@@ -133,6 +133,7 @@ def prompt_handler(message: str) -> ToolResult:
     TextContent
         The AI response or routing feedback.
     """
+
     df_key_words = ["df", "save", "result = df"]
     for key in df_key_words:
         if key in message:
@@ -148,6 +149,8 @@ def prompt_handler(message: str) -> ToolResult:
         return reset_records()
 
     llm = build_llm_model()
+
+    message = normalize_message(message)
 
     prompt = ROUTING_PROMPT + message
     route = llm.invoke(prompt)
