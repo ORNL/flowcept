@@ -1,29 +1,92 @@
 # flake8: noqa: E501
 # flake8: noqa: D103
 
+
 def generate_common_task_fields(current_fields):
     # TODO: make this better
     common_task_fields = """
        | Column                        | Data Type | Description |
        |-------------------------------|-------------|
     """
-    common_task_fields += "| `workflow_id`                 | string | Workflow the task belongs to. Use this field when the query is asking about workflow execution |\n" if "workflow_id" in current_fields else ""
-    common_task_fields += "| `task_id`                     | string | Task identifier. |\n" if "task_id" in current_fields else ""
-    common_task_fields += "| `parent_task_id`              | string | A task may be directly linked to others. Use this field when the query asks for a task informed by (or associated with or linked to) other task.  |\n" if "parent_task_id" in current_fields else ""
-    common_task_fields += "| `activity_id`                 | string | Type of task (e.g., 'choose_option'). Use this for \"task type\" queries. One activity_id is linked to multiple task_ids. |\n" if "activity_id" in current_fields else ""
-    common_task_fields += "| `campaign_id`                 | string | A group of workflows. |\n" if "campaign_id" in current_fields else ""
-    common_task_fields += "| `hostname`                    | string | Compute node name. |\n" if "hostname" in current_fields else ""
-    common_task_fields += "| `agent_id`                    | string | Set if executed by an agent. |\n" if "agent_id" in current_fields else ""
-    common_task_fields += "| `started_at`                  | datetime64[ns, UTC] | Start time of a task. Always use this field when the query has any temporal reference related to the workflow execution, such as 'get the first 10 workflow executions' or 'the last workflow execution'. |\n" if "started_at" in current_fields else ""
-    common_task_fields += "| `ended_at`                    | datetime64[ns, UTC] | End time of a task. |\n" if "ended_at" in current_fields else ""
-    common_task_fields += "| `subtype`                     | string | Subtype of a task. |\n" if "subtype" in current_fields else ""
-    common_task_fields += "| `tags`                        | List[str] | List of descriptive tags. |\n" if "tags" in current_fields else ""
-    common_task_fields += "| `image`                       | blob | Raw binary data related to an image. |\n" if "image" in current_fields else ""
-    common_task_fields += "| `telemetry_summary.duration_sec` | float | Task duration (seconds). |\n" if "telemetry_summary.duration_sec" in current_fields else ""
-    common_task_fields += "| `telemetry_summary.cpu.percent_all_diff` | float | Difference in overall CPU utilization percentage across all cores between task end and start. |\n" if "telemetry_summary.cpu.percent_all_diff" in current_fields else ""
-    common_task_fields += "| `telemetry_summary.cpu.user_time_diff`   | float | Difference average per core CPU user time (seconds) between task start and end times. |\n" if "telemetry_summary.cpu.user_time_diff" in current_fields else ""
-    common_task_fields += "| `telemetry_summary.cpu.system_time_diff` | float | Difference in CPU system (kernel) time (seconds) used during the task execution. |\n" if "telemetry_summary.cpu.system_time_diff" in current_fields else ""
-    common_task_fields += "| `telemetry_summary.cpu.idle_time_diff`   | float | Difference in CPU idle time (seconds) during task end and start. |\n" if "telemetry_summary.cpu.idle_time_diff" in current_fields else ""
+    common_task_fields += (
+        "| `workflow_id`                 | string | Workflow the task belongs to. Use this field when the query is asking about workflow execution |\n"
+        if "workflow_id" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `task_id`                     | string | Task identifier. |\n" if "task_id" in current_fields else ""
+    )
+    common_task_fields += (
+        "| `parent_task_id`              | string | A task may be directly linked to others. Use this field when the query asks for a task informed by (or associated with or linked to) other task.  |\n"
+        if "parent_task_id" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `activity_id`                 | string | Type of task (e.g., 'choose_option'). Use this for \"task type\" queries. One activity_id is linked to multiple task_ids. |\n"
+        if "activity_id" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `campaign_id`                 | string | A group of workflows. |\n"
+        if "campaign_id" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `hostname`                    | string | Compute node name. |\n" if "hostname" in current_fields else ""
+    )
+    common_task_fields += (
+        "| `agent_id`                    | string | Set if executed by an agent. |\n"
+        if "agent_id" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `started_at`                  | datetime64[ns, UTC] | Start time of a task. Always use this field when the query has any temporal reference related to the workflow execution, such as 'get the first 10 workflow executions' or 'the last workflow execution'. |\n"
+        if "started_at" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `ended_at`                    | datetime64[ns, UTC] | End time of a task. |\n"
+        if "ended_at" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `subtype`                     | string | Subtype of a task. |\n" if "subtype" in current_fields else ""
+    )
+    common_task_fields += (
+        "| `tags`                        | List[str] | List of descriptive tags. |\n"
+        if "tags" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `image`                       | blob | Raw binary data related to an image. |\n"
+        if "image" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `telemetry_summary.duration_sec` | float | Task duration (seconds). |\n"
+        if "telemetry_summary.duration_sec" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `telemetry_summary.cpu.percent_all_diff` | float | Difference in overall CPU utilization percentage across all cores between task end and start. |\n"
+        if "telemetry_summary.cpu.percent_all_diff" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `telemetry_summary.cpu.user_time_diff`   | float | Difference average per core CPU user time (seconds) between task start and end times. |\n"
+        if "telemetry_summary.cpu.user_time_diff" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `telemetry_summary.cpu.system_time_diff` | float | Difference in CPU system (kernel) time (seconds) used during the task execution. |\n"
+        if "telemetry_summary.cpu.system_time_diff" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `telemetry_summary.cpu.idle_time_diff`   | float | Difference in CPU idle time (seconds) during task end and start. |\n"
+        if "telemetry_summary.cpu.idle_time_diff" in current_fields
+        else ""
+    )
 
     common_task_fields += "\n For any queries involving CPU, use fields that begin with telemetry_summary.cpu"
 

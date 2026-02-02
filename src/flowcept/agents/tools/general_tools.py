@@ -133,7 +133,6 @@ def prompt_handler(message: str) -> ToolResult:
     TextContent
         The AI response or routing feedback.
     """
-
     df_key_words = ["df", "save", "result = df"]
     for key in df_key_words:
         if key in message:

@@ -80,8 +80,9 @@ dev = [
     "nbmake",
     "pika",
     "pytest",
+    "pytest-timeout",
     "ruff",
-    "pyyaml",
+    "pyyaml"
 ]
 # Torch and some other ml-specific libs, only used for dev purposes, require the following specific versions.
 ml_dev = [

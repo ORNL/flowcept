@@ -199,6 +199,24 @@ def build_llm_model(
 
 
 def normalize_message(user_msg: str) -> str:
+    """
+    Normalize a user message into a canonical, comparison-friendly form.
+
+    The function standardizes text by trimming whitespace, applying Unicode
+    normalization, normalizing dash characters, collapsing repeated whitespace,
+    removing trailing punctuation that does not affect semantics, and converting
+    the result to lowercase.
+
+    Parameters
+    ----------
+    user_msg : str
+        Raw user input message.
+
+    Returns
+    -------
+    str
+        Normalized message suitable for matching, comparison, or hashing.
+    """
     # 1) Strip leading/trailing whitespace
     user_msg = user_msg.strip()
 

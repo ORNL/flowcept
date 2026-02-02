@@ -351,7 +351,6 @@ def exec_st_plot_code(code, result_df, st_module):
     >>> code = "st.line_chart(result)"
     >>> exec_st_plot_code(code, df, st)
     """
-
     # 1) Make a copy of result_df and rename columns with dots
     plot_df = result_df.copy()
     col_map = {}
