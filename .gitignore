@@ -34,3 +34,4 @@ core.*
 
 uv.lock
 examples/flowcept_messages.jsonl
+agents.md

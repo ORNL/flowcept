@@ -872,6 +872,7 @@ class MongoDBDAO(DocumentDBDAO):
     def close(self):
         """Close Mongo client."""
         if getattr(self, "_initialized"):
+            super().close()
             setattr(self, "_initialized", False)
             self._client.close()
 
