@@ -70,6 +70,24 @@ class TestMLFlow(unittest.TestCase):
             {"task_id": run_uuid},
         )
 
+    def test_callback_called_on_stop(self):
+        called_on_stop = {"flag": False}
+        with Flowcept("mlflow") as f:
+            interceptor = f._interceptor_instances[0]
+            file_path = interceptor.settings.file_path
+            self.simple_mlflow_run(file_path)
+
+            original_callback = interceptor.callback
+
+            def wrapped_callback():
+                if not interceptor.started:
+                    called_on_stop["flag"] = True
+                return original_callback()
+
+            interceptor.callback = wrapped_callback
+
+        assert called_on_stop["flag"]
+
     @unittest.skip("Skipping this test as we need to debug it further.")
     def test_multiple_tasks(self):
         run_ids = []

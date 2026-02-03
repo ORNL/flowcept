@@ -122,4 +122,5 @@ class TensorboardInterceptor(BaseInterceptor):
 
         self._observer.schedule(event_handler, self.settings.file_path, recursive=True)
         self._observer.start()
+        sleep(0.2)
         self.logger.debug(f"Watching {self.settings.file_path}")

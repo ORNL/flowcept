@@ -76,6 +76,8 @@ class MLFlowInterceptor(BaseInterceptor):
         sleep(1)
         super().stop(check_safe_stops)
         self.logger.debug("Interceptor stopping...")
+        # Flush any late writes before stopping the observer.
+        self.callback()
         self._observer.stop()
         self._observer_thread.join()
         self.logger.debug("Interceptor stopped.")
@@ -98,4 +100,5 @@ class MLFlowInterceptor(BaseInterceptor):
         watch_dir = os.path.dirname(self.settings.file_path) or "."
         self._observer.schedule(event_handler, watch_dir, recursive=True)
         self._observer.start()
+        sleep(0.2)
         self.logger.info(f"Watching directory {watch_dir} with file {self.settings.file_path} ")
