@@ -94,6 +94,7 @@ agent:
   service_provider: '?'
   model_kwargs: {}
   audio_enabled: false
+  debug: true
 
 databases:
 

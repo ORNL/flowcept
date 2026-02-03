@@ -134,7 +134,10 @@ class TaskObject:
     """User-defined tags attached to the task."""
 
     agent_id: str = None
-    """Identifier of the agent responsible for executing this task (if any)."""
+    """Identifier of the agent that executed (or is going to execute) this task."""
+
+    source_agent_id: str = None
+    """Identifier of the agent that sent this task to be executed (if any)."""
 
     _DEFAULT_ENRICH_VALUES = {
         "node_name": NODE_NAME,

@@ -1,5 +1,5 @@
 from time import time
-from typing import Dict, Any
+from typing import Dict, Any, List
 import os
 import threading
 import random
@@ -44,10 +44,13 @@ class FlowceptTask(object):
         campaign_id: str = None,
         activity_id: str = None,
         agent_id: str = None,
+        source_agent_id: str = None,
         parent_task_id: str = None,
         used: Dict = None,
         data: Any = None,
         subtype: str = None,
+        tags: List[str] = None,
+        adapter_id: str = None,
         custom_metadata: Dict = None,
         generated: Dict = None,
         started_at: float = None,
@@ -114,8 +117,11 @@ class FlowceptTask(object):
         self._task.parent_task_id = parent_task_id
         self._task.used = used
         self._task.data = data
+        self._task.tags = tags
         self._task.subtype = subtype
+        self._task.adapter_id = adapter_id
         self._task.agent_id = agent_id
+        self._task.source_agent_id = source_agent_id
         self._task.custom_metadata = custom_metadata
 
         self._ended = False
@@ -215,3 +221,6 @@ class FlowceptTask(object):
             self._task.ended_at = self._task.started_at  # message sents are not going to be analyzed for task duration
             self._interceptor.intercept(self._task.to_dict())
             self._ended = True
+
+    def __str__(self):
+        return str(self._task)

@@ -42,7 +42,7 @@ class MQDaoKafka(MQDao):
     def message_listener(self, message_handler: Callable):
         """Get message listener."""
         try:
-            while True:
+            while self._consumer is not None:
                 msg = self._consumer.poll(1.0)
                 if msg is None:
                     continue
@@ -59,7 +59,7 @@ class MQDaoKafka(MQDao):
         except Exception as e:
             self.logger.exception(e)
         finally:
-            self._consumer.close()
+            self.unsubscribe()
 
     def send_message(self, message: dict, channel=MQ_CHANNEL, serializer=msgpack.dumps):
         """Send the message."""

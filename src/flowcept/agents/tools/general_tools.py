@@ -1,7 +1,7 @@
 import json
 from typing import List
 
-from flowcept.agents.agents_utils import build_llm_model, ToolResult
+from flowcept.agents.agents_utils import build_llm_model, ToolResult, normalize_message
 from flowcept.agents.flowcept_ctx_manager import mcp_flowcept
 from flowcept.agents.prompts.general_prompts import ROUTING_PROMPT, SMALL_TALK_PROMPT
 
@@ -106,6 +106,19 @@ def reset_records() -> ToolResult:
 
 
 @mcp_flowcept.tool()
+def reset_context() -> ToolResult:
+    """
+    Resets all context.
+    """
+    try:
+        ctx = mcp_flowcept.get_context()
+        ctx.request_context.lifespan_context.reset_context()
+        return ToolResult(code=201, result="Context reset.")
+    except Exception as e:
+        return ToolResult(code=499, result=str(e))
+
+
+@mcp_flowcept.tool()
 def prompt_handler(message: str) -> ToolResult:
     """
     Routes a user message using an LLM to classify its intent.
@@ -120,19 +133,23 @@ def prompt_handler(message: str) -> ToolResult:
     TextContent
         The AI response or routing feedback.
     """
-    df_key_words = ["df", "save", "result = df", "reset context"]
+    df_key_words = ["df", "save", "result = df"]
     for key in df_key_words:
         if key in message:
             return run_df_query(llm=None, query=message, plot=False)
 
+    if "reset context" in message:
+        return reset_context()
     if "@record" in message:
         return record_guidance(message)
     if "@show records" in message:
         return show_records()
     if "@reset records" in message:
-        return reset_records(message)
+        return reset_records()
 
     llm = build_llm_model()
+
+    message = normalize_message(message)
 
     prompt = ROUTING_PROMPT + message
     route = llm.invoke(prompt)

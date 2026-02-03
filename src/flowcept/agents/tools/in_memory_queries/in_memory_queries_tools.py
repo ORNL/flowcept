@@ -63,11 +63,6 @@ def run_df_query(llm, query: str, plot=False) -> ToolResult:
 
     Examples
     --------
-    Reset the context:
-
-    >>> run_df_query(llm, "reset context")
-    ToolResult(code=201, result="Context Reset!")
-
     Save the current DataFrame:
 
     >>> run_df_query(llm, "save")
@@ -90,10 +85,6 @@ def run_df_query(llm, query: str, plot=False) -> ToolResult:
     custom_user_guidance = ctx.request_context.lifespan_context.custom_guidance
     if df is None or not len(df):
         return ToolResult(code=404, result="Current df is empty or null.")
-
-    if "reset context" in query:
-        ctx.request_context.lifespan_context.df = pd.DataFrame()
-        return ToolResult(code=201, result="Context Reset!")
     elif "save" in query:
         return save_df(df, schema, value_examples)
     elif "result = df" in query:
@@ -173,7 +164,7 @@ def generate_plot_code(llm, query, dynamic_schema, value_examples, df, custom_us
     >>> print(result.result["plot_code"])
     plt.bar(result_df["region"], result_df["total_sales"])
     """
-    plot_prompt = generate_plot_code_prompt(query, dynamic_schema, value_examples)
+    plot_prompt = generate_plot_code_prompt(query, dynamic_schema, value_examples, list(df.columns))
     try:
         response = llm(plot_prompt)
     except Exception as e:
@@ -300,7 +291,9 @@ def generate_result_df(
     if llm is None:
         llm = build_llm_model()
     try:
-        prompt = generate_pandas_code_prompt(query, dynamic_schema, example_values, custom_user_guidance)
+        prompt = generate_pandas_code_prompt(
+            query, dynamic_schema, example_values, custom_user_guidance, list(df.columns)
+        )
         response = llm(prompt)
     except Exception as e:
         return ToolResult(code=400, result=str(e), extra=prompt)
@@ -317,9 +310,10 @@ def generate_result_df(
                 extra={"generated_code": result_code, "exception": str(e), "prompt": prompt},
             )
         else:
-            tool_result = extract_or_fix_python_code(llm, result_code)
+            tool_result = extract_or_fix_python_code(llm, result_code, list(df.columns))
             if tool_result.code == 201:
                 new_result_code = tool_result.result
+                result_code = new_result_code
                 try:
                     result_df = safe_execute(df, new_result_code)
                 except Exception as e:
@@ -357,12 +351,7 @@ def generate_result_df(
     if summarize:
         try:
             tool_result = summarize_result(
-                llm,
-                result_code,
-                result_df,
-                query,
-                dynamic_schema,
-                example_values,
+                llm, result_code, result_df, query, dynamic_schema, example_values, list(df.columns)
             )
             if tool_result.is_success():
                 return_code = 301
@@ -377,7 +366,7 @@ def generate_result_df(
             return_code = 303
 
     try:
-        result_df = format_result_df(result_df)
+        result_df_str = format_result_df(result_df)
     except Exception as e:
         return ToolResult(
             code=405,
@@ -387,7 +376,8 @@ def generate_result_df(
 
     this_result = {
         "result_code": result_code,
-        "result_df": result_df,
+        "result_df": result_df_str,
+        "result_df_markdown": result_df.to_markdown(index=False),
         "summary": summary,
         "summary_error": summary_error,
     }
@@ -473,7 +463,7 @@ def run_df_code(user_code: str, df):
 
 
 @mcp_flowcept.tool()
-def extract_or_fix_python_code(llm, raw_text):
+def extract_or_fix_python_code(llm, raw_text, current_fields):
     """
     Extract or repair JSON code from raw text using an LLM.
 
@@ -523,7 +513,7 @@ def extract_or_fix_python_code(llm, raw_text):
     >>> print(res)
     ToolResult(code=499, result='LLM service unavailable')
     """
-    prompt = extract_or_fix_python_code_prompt(raw_text)
+    prompt = extract_or_fix_python_code_prompt(raw_text, current_fields)
     try:
         response = llm(prompt)
         return ToolResult(code=201, result=response)
@@ -582,14 +572,7 @@ def extract_or_fix_json_code(llm, raw_text) -> ToolResult:
 
 
 @mcp_flowcept.tool()
-def summarize_result(
-    llm,
-    code,
-    result,
-    query: str,
-    dynamic_schema,
-    example_values,
-) -> ToolResult:
+def summarize_result(llm, code, result, query: str, dynamic_schema, example_values, current_fields) -> ToolResult:
     """
     Summarize the pandas result with local reduction for large DataFrames.
     - For wide DataFrames, selects top columns based on variance and uniqueness.
@@ -597,7 +580,7 @@ def summarize_result(
     - Constructs a detailed prompt for the LLM with original column context.
     """
     summarized_df = summarize_df(result, code)
-    prompt = dataframe_summarizer_context(code, summarized_df, dynamic_schema, example_values, query)
+    prompt = dataframe_summarizer_context(code, summarized_df, dynamic_schema, example_values, query, current_fields)
     try:
         response = llm(prompt)
         return ToolResult(code=201, result=response)

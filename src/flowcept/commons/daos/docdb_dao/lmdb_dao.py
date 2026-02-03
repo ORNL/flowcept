@@ -115,6 +115,54 @@ class LMDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
+    def delete_task_keys(self, key_name, keys_list: List[str]) -> bool:
+        """Delete task documents by a key value list.
+
+        When deleting by task_id, deletes keys directly. Otherwise, scans
+        tasks and deletes matching entries.
+        """
+        if self._is_closed:
+            self._open()
+        if type(keys_list) is not list:
+            keys_list = [keys_list]
+        try:
+            with self._env.begin(write=True, db=self._tasks_db) as txn:
+                if key_name == "task_id":
+                    for key in keys_list:
+                        if key is None:
+                            continue
+                        txn.delete(str(key).encode())
+                else:
+                    cursor = txn.cursor()
+                    for key, value in cursor:
+                        entry = json.loads(value.decode())
+                        if entry.get(key_name) in keys_list:
+                            cursor.delete()
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
+    def count_tasks(self) -> int:
+        """Count number of docs in tasks collection."""
+        if self._is_closed:
+            self._open()
+        try:
+            return self._env.stat(db=self._tasks_db).get("entries", 0)
+        except Exception as e:
+            self.logger.exception(e)
+            return -1
+
+    def count_workflows(self) -> int:
+        """Count number of docs in workflows collection."""
+        if self._is_closed:
+            self._open()
+        try:
+            return self._env.stat(db=self._workflows_db).get("entries", 0)
+        except Exception as e:
+            self.logger.exception(e)
+            return -1
+
     @staticmethod
     def _match_filter(entry, filter):
         """

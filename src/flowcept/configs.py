@@ -155,14 +155,16 @@ DB_INSERTER_SLEEP_TRIALS_STOP = db_buffer_settings.get("stop_trials_sleep", 0.01
 ###########################
 
 DB_FLUSH_MODE = settings["project"].get("db_flush_mode", "offline")
-# DEBUG_MODE = settings["project"].get("debug", False)
 PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get("replace_non_json_serializable", True)
 ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
 
+# Default: enable dump buffer only when running in offline flush mode.
 _DEFAULT_DUMP_BUFFER_ENABLED = DB_FLUSH_MODE == "offline"
 DUMP_BUFFER_ENABLED = (
+    # Env var "DUMP_BUFFER" overrides settings.yaml.
+    # Falls back to settings project.dump_buffer.enabled, then to the default above.
     os.getenv(
         "DUMP_BUFFER", str(settings["project"].get("dump_buffer", {}).get("enabled", _DEFAULT_DUMP_BUFFER_ENABLED))
     )
@@ -170,6 +172,7 @@ DUMP_BUFFER_ENABLED = (
     .lower()
     in _TRUE_VALUES
 )
+# Path is only read from settings.yaml; env override is not supported here.
 DUMP_BUFFER_PATH = settings["project"].get("dump_buffer", {}).get("path", "flowcept_buffer.jsonl")
 
 TELEMETRY_CAPTURE = settings.get("telemetry_capture", None)
