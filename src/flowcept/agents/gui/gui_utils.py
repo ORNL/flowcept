@@ -351,10 +351,28 @@ def exec_st_plot_code(code, result_df, st_module):
     >>> code = "st.line_chart(result)"
     >>> exec_st_plot_code(code, df, st)
     """
-    print("Plot code \n", code)
+    # 1) Make a copy of result_df and rename columns with dots
+    plot_df = result_df.copy()
+    col_map = {}
+
+    for col in plot_df.columns:
+        if "." in col:
+            new_col = col.replace(".", "_")
+            col_map[col] = new_col
+            plot_df.rename(columns={col: new_col}, inplace=True)
+
+    # 2) Rewrite the code so column names match the renamed columns
+    sanitized_code = code
+    for old, new in col_map.items():
+        # replace only inside quotes: 'generated.bd_enthalpy' → 'generated_bd_enthalpy'
+        sanitized_code = sanitized_code.replace(f"'{old}'", f"'{new}'")
+        sanitized_code = sanitized_code.replace(f'"{old}"', f'"{new}"')
+
+    print("SANITIZED CODE:\n", sanitized_code)
+    print(f"Renamed DF columms: {plot_df}")
     exec(
-        code,
-        {"result": result_df, "st": st_module, "plt": __import__("matplotlib.pyplot"), "alt": __import__("altair")},
+        sanitized_code,
+        {"result": plot_df, "st": st_module, "plt": __import__("matplotlib.pyplot"), "alt": __import__("altair")},
     )
 
 

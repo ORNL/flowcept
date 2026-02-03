@@ -28,7 +28,7 @@ ROUTING_PROMPT = (
     # "- in_context_query: if the user asks questions about tasks or data in running workflow (or a workflow that ran recently) or if the user mentions the in-memory 'df' or a dataframe.\n"
     # "- historical_prov_query: if the user wants to query historical provenance data\n"
     "- in_chat_query: if the user appears to be asking about something that has said recently in this chat.\n"
-    "- unknown: if you don't know.\n"
+    "- in_context_query: if you don't know.\n"
     "Respond with only the route label."
     "User message is below:\n "
 )

@@ -1,5 +1,6 @@
 """MQ redis module."""
 
+from threading import Thread
 from typing import Callable
 import redis
 
@@ -14,12 +15,15 @@ from flowcept.configs import MQ_CHANNEL, MQ_HOST, MQ_PORT, MQ_PASSWORD, MQ_URI, 
 class MQDaoRedis(MQDao):
     """MQ redis class."""
 
-    MESSAGE_TYPES_IGNORE = {"psubscribe"}
+    MESSAGE_TYPES_IGNORE = {"psubscribe", "subscribe", "pong"}
 
     def __init__(self, adapter_settings=None):
         super().__init__(adapter_settings)
 
         self._consumer = None
+        self._ping_thread = None
+        self._ping_stop = False
+
         use_same_as_kv = MQ_SETTINGS.get("same_as_kvdb", False)
         if use_same_as_kv:
             if KVDB_ENABLED:
@@ -37,6 +41,26 @@ class MQDaoRedis(MQDao):
         """
         self._consumer = self._producer.pubsub()
         self._consumer.psubscribe(MQ_CHANNEL)
+        self._start_ping_thread()
+
+    def _start_ping_thread(self, interval: int = 30):
+        """Start a background thread to ping Redis pubsub periodically."""
+        if self._ping_thread and self._ping_thread.is_alive():
+            return
+
+        self._ping_stop = False
+
+        def _pinger():
+            while not self._ping_stop:
+                try:
+                    if self._consumer is not None:
+                        self._consumer.ping()
+                except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+                    self.logger.critical(f"Redis PubSub ping failed: {e}")
+                sleep(interval)
+
+        self._ping_thread = Thread(target=_pinger, daemon=True)
+        self._ping_thread.start()
 
     def unsubscribe(self):
         """
@@ -75,8 +99,15 @@ class MQDaoRedis(MQDao):
                     current_trials = 0
             except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
                 current_trials += 1
-                self.logger.critical(f"Redis connection lost: {e}. Reconnecting in 3 seconds...")
+                self.logger.critical(f"Redis connection lost: {e}. Trying to reconnect in 3 seconds...")
                 sleep(3)
+                try:
+                    self.subscribe()
+                    self.logger.warning(f"Redis reconnected after {current_trials} trials.")
+                    current_trials = 0
+                except Exception as e:
+                    self.logger.critical(f"Redis error when trying to reconnect: {e}.")
+
             except Exception as e:
                 self.logger.exception(e)
                 continue

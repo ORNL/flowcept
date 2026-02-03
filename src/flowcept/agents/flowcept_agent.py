@@ -20,10 +20,13 @@ def main():
     def run():
         uvicorn.run(mcp_flowcept.streamable_http_app, host=AGENT_HOST, port=AGENT_PORT, lifespan="on")
 
-    Thread(target=run).start()
+    server_thread = Thread(target=run, daemon=False)
+    server_thread.start()
     sleep(2)
     # Wake up tool call
     print(run_tool(check_liveness, host=AGENT_HOST, port=AGENT_PORT)[0])
+
+    server_thread.join()
 
 
 if __name__ == "__main__":

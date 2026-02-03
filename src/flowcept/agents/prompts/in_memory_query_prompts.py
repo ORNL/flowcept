@@ -1,31 +1,116 @@
 # flake8: noqa: E501
 # flake8: noqa: D103
 
-COMMON_TASK_FIELDS = """
-    | Column                        | Data Type | Description |
-    |-------------------------------|-------------|
-    | `workflow_id`                 | string | Workflow the task belongs to. Use this field when the query is asking about workflow execution |
-    | `task_id`                     | string | Task identifier. |
-    | `parent_task_id`              | string | A task may be directly linked to others. Use this field when the query asks for a task informed by (or associated with or linked to) other task.  |
-    | `activity_id`                 | string | Type of task (e.g., 'choose_option'). Use this for "task type" queries. One activity_id is linked to multiple task_ids. |
-    | `campaign_id`                 | string | A group of workflows. |
-    | `hostname`                    | string | Compute node name. |
-    | `agent_id`                    | string | Set if executed by an agent. |
-    | `started_at`                  | datetime64[ns, UTC] | Start time of a task. Always use this field when the query is has any temporal reference related to the workflow execution, such as 'get the first 10 workflow executions' or 'the last workflow execution'. |
-    | `ended_at`                    | datetime64[ns, UTC] | End time of a task. | 
-    | `subtype`                     | string | Subtype of a task. |
-    | `tags`                        | List[str] | List of descriptive tags. |
-    | `image`                        | blob | Raw binary data related to an image. |
-    | `telemetry_summary.duration_sec` | float | Task duration (seconds). |
-    | `telemetry_summary.cpu.percent_all_diff` | float | Difference in overall CPU utilization percentage across all cores between task end and start.|
-    | `telemetry_summary.cpu.user_time_diff`   | float |  Difference average per core CPU user time ( seconds ) between task start and end times.|
-    | `telemetry_summary.cpu.system_time_diff` | float |  Difference in CPU system (kernel) time (seconds) used during the task execution.|
-    | `telemetry_summary.cpu.idle_time_diff`   | float |  Difference in CPU idle time (seconds) during task end and start.|
-    ---
-    For any queries involving CPU, use fields that begin with telemetry_summary.cpu
+
+def generate_common_task_fields(current_fields):
+    # TODO: make this better
+    common_task_fields = """
+       | Column                        | Data Type | Description |
+       |-------------------------------|-------------|
     """
+    common_task_fields += (
+        "| `workflow_id`                 | string | Workflow the task belongs to. Use this field when the query is asking about workflow execution |\n"
+        if "workflow_id" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `task_id`                     | string | Task identifier. |\n" if "task_id" in current_fields else ""
+    )
+    common_task_fields += (
+        "| `parent_task_id`              | string | A task may be directly linked to others. Use this field when the query asks for a task informed by (or associated with or linked to) other task.  |\n"
+        if "parent_task_id" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `activity_id`                 | string | Type of task (e.g., 'choose_option'). Use this for \"task type\" queries. One activity_id is linked to multiple task_ids. |\n"
+        if "activity_id" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `campaign_id`                 | string | A group of workflows. |\n"
+        if "campaign_id" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `hostname`                    | string | Compute node name. |\n" if "hostname" in current_fields else ""
+    )
+    common_task_fields += (
+        "| `agent_id`                    | string | Set if executed by an agent. |\n"
+        if "agent_id" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `started_at`                  | datetime64[ns, UTC] | Start time of a task. Always use this field when the query has any temporal reference related to the workflow execution, such as 'get the first 10 workflow executions' or 'the last workflow execution'. |\n"
+        if "started_at" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `ended_at`                    | datetime64[ns, UTC] | End time of a task. |\n"
+        if "ended_at" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `subtype`                     | string | Subtype of a task. |\n" if "subtype" in current_fields else ""
+    )
+    common_task_fields += (
+        "| `tags`                        | List[str] | List of descriptive tags. |\n"
+        if "tags" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `image`                       | blob | Raw binary data related to an image. |\n"
+        if "image" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `telemetry_summary.duration_sec` | float | Task duration (seconds). |\n"
+        if "telemetry_summary.duration_sec" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `telemetry_summary.cpu.percent_all_diff` | float | Difference in overall CPU utilization percentage across all cores between task end and start. |\n"
+        if "telemetry_summary.cpu.percent_all_diff" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `telemetry_summary.cpu.user_time_diff`   | float | Difference average per core CPU user time (seconds) between task start and end times. |\n"
+        if "telemetry_summary.cpu.user_time_diff" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `telemetry_summary.cpu.system_time_diff` | float | Difference in CPU system (kernel) time (seconds) used during the task execution. |\n"
+        if "telemetry_summary.cpu.system_time_diff" in current_fields
+        else ""
+    )
+    common_task_fields += (
+        "| `telemetry_summary.cpu.idle_time_diff`   | float | Difference in CPU idle time (seconds) during task end and start. |\n"
+        if "telemetry_summary.cpu.idle_time_diff" in current_fields
+        else ""
+    )
+
+    common_task_fields += "\n For any queries involving CPU, use fields that begin with telemetry_summary.cpu"
+
+    return common_task_fields
+
 
 DF_FORM = "The user has a pandas DataFrame called `df`, created from flattened task objects using `pd.json_normalize`."
+
+CURRENT_DF_COLUMNS_PROMPT = """
+### ABSOLUTE FIELD CONSTRAINT -- THIS IS CRITICAL
+
+The following list is the ONLY valid field names in df. Treat this as the schema:
+
+ALLOWED_FIELDS = [COLS]
+
+You MUST treat this list as authoritative.
+
+- You may only use fields names that appear EXACTLY (string match) in ALLOWED_FIELDS.
+- You are NOT allowed to create new field names by:
+  - adding or removing prefixes like "used." or "generated."
+  - combining words
+  - guessing.
+- If a field name is not in ALLOWED_FIELDS, you MUST NOT use it.
+"""
 
 
 def get_example_values_prompt(example_values):
@@ -39,7 +124,7 @@ def get_example_values_prompt(example_values):
     return values_prompt
 
 
-def get_df_schema_prompt(dynamic_schema, example_values):
+def get_df_schema_prompt(dynamic_schema, example_values, current_fields):
     schema_prompt = f"""
      ## DATAFRAME STRUCTURE
 
@@ -53,14 +138,19 @@ def get_df_schema_prompt(dynamic_schema, example_values):
         The schema for these fields is defined in the dictionary below.
         It maps each activity ID to its inputs (i) and outputs (o), using flattened field names that include `used.` or `generated.` prefixes to indicate the role the field played in the task. These names match the columns in the dataframe `df`.
         
-        ```python
         {dynamic_schema}
-        ```
         Use this schema and fields to understand what inputs and outputs are valid for each activity.
+        
+        IMPORTANT: The user might say used for outputs or generated for inputs, which might confuse you. Do not get tricked by the user.
+         Ignore the natural-language words "used" and "generated".
+            - The English phrase "used in the calculation" does NOT mean you must use a `used.` column.
+            - The English word "generated" in the question does NOT force you to use a `generated.` column either.
+
+         ALWAYS CHECK THE ALLOWED_FIELDS list before proceeding. THIS IS CRITICAL.
                 
         ### 2. Additional fields for tasks:
 
-        {COMMON_TASK_FIELDS}
+        {generate_common_task_fields(current_fields)}
         ---
     """
 
@@ -70,12 +160,12 @@ def get_df_schema_prompt(dynamic_schema, example_values):
     return prompt
 
 
-def generate_plot_code_prompt(query, dynamic_schema, example_values) -> str:
+def generate_plot_code_prompt(query, dynamic_schema, example_values, current_fields) -> str:
     PLOT_PROMPT = f"""
         You are a Streamlit chart expert.
         {DF_FORM}
 
-        {get_df_schema_prompt(dynamic_schema, example_values)}
+        {get_df_schema_prompt(dynamic_schema, example_values, current_fields)}
         
         ### 3. Guidelines
 
@@ -121,10 +211,14 @@ def generate_plot_code_prompt(query, dynamic_schema, example_values) -> str:
           "plot_code": "import matplotlib.pyplot as plt\nplt.hist(result['n_controls'])\nst.pyplot(plt)"
         }}
 
+        Your response must be only the raw Python code in the format:
+        result = ...
+        Except for the `result` variable, YOU MUST NEVER CREATE ANY OTHER VARIABLE. NEVER!  
+
         User request:
         {query}
 
-        THE OUTPUT MUST BE A VALID JSON ONLY. DO NOT SAY ANYTHING ELSE.
+        
 
     """
     return PLOT_PROMPT
@@ -139,7 +233,7 @@ QUERY_GUIDELINES = """
 
     - Use `df` as the base DataFrame.
     - Use `activity_id` to filter by task type (valid values = schema keys).
-    - Use `used.` for parameters (inputs) and `generated.` for outputs (metrics).
+    - ONLY IF the ALLOWED_FIELDS list allow, use `used.` for parameters (inputs) and `generated.` for outputs (metrics).
     - Use `telemetry_summary.duration_sec` for performance-related questions.
     - Use `hostname` when user mentions *where* a task ran.
     - Use `agent_id` when the user refers to agents (non-null means task was agent-run).
@@ -153,7 +247,7 @@ QUERY_GUIDELINES = """
     **THE COLUMN 'used' DOES NOT EXIST**
     **THE COLUMN 'generated' DOES NOT EXIST**
     - **When filtering by `activity_id`, only select columns that belong to that activity’s schema.**
-      - Use only `used.` and `generated.` fields listed in the schema for that `activity_id`.
+      - Always observing the ALLOWED_FIELDS list, use only `used.` and `generated.` fields listed in the schema for that `activity_id`.
      - Explicitly list the selected columns — **never return all columns**
     - **Only include telemetry columns if used in the query logic.**
       -THERE IS NOT A FIELD NAMED `telemetry_summary.start_time` or `telemetry_summary.end_time` or `used.start_time` or `used.end_time`. Use `started_at` and `ended_at` instead when you want to find the duration of a task, activity, or workflow execution.
@@ -187,6 +281,17 @@ QUERY_GUIDELINES = """
       -**Do NOT use any of those: df[df['started_at'].idxmax()], df[df['started_at'].idxmin()], df[df['ended_at'].idxmin()], df[df['ended_at'].idxmax()]. Those are not valid Pandas Code.**
       - When the query mentions "each task", or "each activity", or "each workflow", make sure you show (project) the correct id column in the results (i.e., respectively: `task_id`, `activity_id`, `workflow_id`) to identify those in the results. 
       - Use df[<role>.field_name] == True or df[<role>.field_name] == False when user queries boolean fields, where <role> is either used or generated, depending on the field name. Make sure field_name is a valid field in the DataFrame.  
+    
+    If the query asks you to report which values appear in one or more columns
+        (for example “which X were used”, “list all Y”, “what X and Y were generated”), then:
+
+            For each relevant column, select that column from df.            
+            Call .dropna() on that column to remove missing values.            
+            After dropping NaNs, apply .unique(), .value_counts(), or any other aggregation as needed.            
+            Select that column.            
+            Call .dropna() on it.            
+            Then call .unique(), .value_counts(), or any other aggregation.
+            
 
     - **Do not include metadata columns unless explicitly required by the user query.**
 """
@@ -200,15 +305,16 @@ FEW_SHOTS = """
     # Q: How many tasks for each activity?
     result = df['activity_id'].value_counts()
 
-    # Q: What is the average loss across all tasks?
-    result = df['generated.loss'].mean()
-
-    # Q: select the 'choose_option' tasks executed by the agent, and show the planned controls, generated option, scores, explanations
-    result = df[(df['activity_id'] == 'choose_option') & (df['agent_id'].notna())][['used.planned_controls', 'generated.option', 'used.scores.scores', 'generated.explanation']].copy()
-
-    # Q: Show duration and generated scores for 'simulate_layer' tasks
-    result = df[df['activity_id'] == 'simulate_layer'][['telemetry_summary.duration_sec', 'generated.scores']]
 """
+# # Q: What is the average loss across all tasks?
+# result = df['generated.loss'].mean()
+#
+# # Q: select the 'choose_option' tasks executed by the agent, and show the planned controls, generated option, scores, explanations
+# result = df[(df['activity_id'] == 'choose_option') & (df['agent_id'].notna())][
+#     ['used.planned_controls', 'generated.option', 'used.scores.scores', 'generated.explanation']].copy()
+#
+# # Q: Show duration and generated scores for 'simulate_layer' tasks
+# result = df[df['activity_id'] == 'simulate_layer'][['telemetry_summary.duration_sec', 'generated.scores']]
 
 OUTPUT_FORMATTING = """
     6. Final Instructions
@@ -226,7 +332,7 @@ OUTPUT_FORMATTING = """
 """
 
 
-def generate_pandas_code_prompt(query: str, dynamic_schema, example_values, custom_user_guidances):
+def generate_pandas_code_prompt(query: str, dynamic_schema, example_values, custom_user_guidances, current_fields):
     if custom_user_guidances is not None and isinstance(custom_user_guidances, list) and len(custom_user_guidances):
         concatenated_guidance = "\n".join(f"- {msg}" for msg in custom_user_guidances)
         custom_user_guidance_prompt = (
@@ -236,11 +342,14 @@ def generate_pandas_code_prompt(query: str, dynamic_schema, example_values, cust
         )
     else:
         custom_user_guidance_prompt = ""
+
+    curr_cols = CURRENT_DF_COLUMNS_PROMPT.replace("[COLS]", str(current_fields))
     prompt = (
         f"{ROLE}"
         f"{JOB}"
         f"{DF_FORM}"
-        f"{get_df_schema_prompt(dynamic_schema, example_values)}"  # main tester
+        f"{curr_cols}"
+        f"{get_df_schema_prompt(dynamic_schema, example_values, current_fields)}"  # main tester
         f"{QUERY_GUIDELINES}"  # main tester
         f"{FEW_SHOTS}"  # main tester
         f"{custom_user_guidance_prompt}"
@@ -251,7 +360,7 @@ def generate_pandas_code_prompt(query: str, dynamic_schema, example_values, cust
     return prompt
 
 
-def dataframe_summarizer_context(code, reduced_df, dynamic_schema, example_values, query) -> str:
+def dataframe_summarizer_context(code, reduced_df, dynamic_schema, example_values, query, current_fields) -> str:
     job = "You are a Workflow Provenance Specialist analyzing a DataFrame that was obtained to answer a query."
 
     if "image" in reduced_df.columns:
@@ -272,7 +381,7 @@ def dataframe_summarizer_context(code, reduced_df, dynamic_schema, example_value
     {reduced_df}
     
     **Original df (before reduction) had this schema:
-    {get_df_schema_prompt(dynamic_schema, example_values)}
+    {get_df_schema_prompt(dynamic_schema, example_values, current_fields)}
     
     Your task is to find a concise and direct answer as an English sentence to the user query.
         
@@ -310,7 +419,7 @@ def extract_or_fix_json_code_prompt(raw_text) -> str:
     return prompt
 
 
-def extract_or_fix_python_code_prompt(raw_text):
+def extract_or_fix_python_code_prompt(raw_text, current_fields):
     prompt = f"""
     You are a Pandas DataFrame code extractor and fixer. Pandas is a well-known data science Python library for querying datasets. 
     You are given a raw user message that may include explanations, markdown fences, or partial DataFrame code that queries a DataFrame `df`.
@@ -319,9 +428,13 @@ def extract_or_fix_python_code_prompt(raw_text):
     1. Check if the message contains a valid DataFrame code.
     2. If it does, extract the code.
     3. If there are any syntax errors, fix them.
-    4. Return only the corrected DataFrame query code — no explanations, no comments, no markdown.
+    4. Carefully analyze the list of columns in the query. The query must only use fields in this list:
+        ALLOWED_FIELDS = {current_fields}.
+       If there are fields not in this list, replace the fields to match according to the ALLOWED_FIELDS list.  
+    5. Return only the corrected DataFrame query code — no explanations, no comments, no markdown.
 
     The output must be valid Python code, and must not include any other text.
+    Your output can only contain fields in the ALLOWED_FIELDS list.
     This output will be parsed by another program.
     
     ONCE AGAIN, ONLY PRODUCE THE PYTHON CODE. DO NOT SAY ANYTHING ELSE!

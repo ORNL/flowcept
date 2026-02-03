@@ -1,6 +1,7 @@
 import os
 import time
 import unittest
+from pathlib import Path
 from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
 import tempfile
@@ -20,7 +21,7 @@ class TestFileObserver(unittest.TestCase):
 
         # Define the callback function to be triggered on modification
         def callback(event):
-            if not event.is_directory and event.src_path == self.test_file_name:
+            if not event.is_directory and Path(event.src_path).resolve() == Path(self.test_file_name).resolve():
                 print(f"Callback triggered for {event.src_path}")
                 self.callback_called_event.set()
 
@@ -29,11 +30,13 @@ class TestFileObserver(unittest.TestCase):
         # Create an event handler and bind it to the callback
         self.event_handler = FileSystemEventHandler()
         self.event_handler.on_modified = lambda event: callback(event)
+        self.event_handler.on_created = lambda event: callback(event)
 
         # Set up watchdog observer
         self.observer = PollingObserver()
         self.observer.schedule(self.event_handler, path=watch_dir, recursive=False)
         self.observer.start()
+        time.sleep(0.2)
 
     def tearDown(self):
         # Stop the observer and remove the temporary file

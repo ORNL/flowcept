@@ -5,6 +5,7 @@ import random
 from unittest.mock import patch
 import pandas as pd
 from time import time, sleep
+from pathlib import Path
 
 import unittest
 
@@ -259,6 +260,36 @@ class DecoratorTests(unittest.TestCase):
                 assert t["generated"]["z"] == 6
                 assert t["generated"]["w"] == 7
 
+    def test_dump_buffer_offline_mode(self):
+        logger = FlowceptLogger()
+        if flowcept.configs.DB_FLUSH_MODE != "offline":
+            logger.warning(
+                "Skipping test_dump_buffer_offline_mode because "
+                f"DB_FLUSH_MODE is '{flowcept.configs.DB_FLUSH_MODE}', expected 'offline'."
+            )
+            return
+        if not flowcept.configs.DUMP_BUFFER_ENABLED:
+            logger.warning(
+                "Skipping test_dump_buffer_offline_mode because "
+                "DUMP_BUFFER_ENABLED is False; expected True to persist buffer."
+            )
+            return
+
+        buffer_path = Path(flowcept.configs.DUMP_BUFFER_PATH or "flowcept_buffer.jsonl")
+        if buffer_path.exists():
+            buffer_path.unlink()
+
+        with Flowcept(start_persistence=False):
+            decorated_static_function2(x=1)
+
+        assert buffer_path.exists()
+        with buffer_path.open("rb") as f:
+            first_line = f.readline()
+            assert first_line
+            assert b'"type":"workflow"' in first_line or b'"type":"task"' in first_line
+
+        buffer_path.unlink()
+
     @patch("sys.argv", ["script_name", "--a", "123", "--b", "abc", "--unknown_arg", "unk", "['a']"])
     def test_argparse(self):
         known_args, unknown_args = parse_args()
@@ -325,5 +356,3 @@ class DecoratorTests(unittest.TestCase):
         print("Threshold: ", threshold)
         print("Overheads: " + str(overheads))
         assert all(map(lambda v: v < threshold, overheads))
-
-

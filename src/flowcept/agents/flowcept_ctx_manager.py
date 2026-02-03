@@ -1,6 +1,9 @@
 from flowcept.agents.dynamic_schema_tracker import DynamicSchemaTracker
 from flowcept.agents.tools.in_memory_queries.pandas_agent_utils import load_saved_df
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
+from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.commons.vocabulary import Status
+from flowcept.configs import AGENT
 from mcp.server.fastmcp import FastMCP
 
 import json
@@ -12,9 +15,10 @@ import pandas as pd
 
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager, BaseAppContext
 
-
-from flowcept.agents import agent_client
 from flowcept.commons.task_data_preprocess import summarize_task
+
+
+AGENT_DEBUG = AGENT.get("debug", False)
 
 
 @dataclass
@@ -39,6 +43,39 @@ class FlowceptAppContext(BaseAppContext):
     tracker_config: Dict | None
     custom_guidance: List[str] | None
 
+    def __init__(self):
+        self.logger = FlowceptLogger()
+        self.reset_context()
+
+    def reset_context(self):
+        """
+        Reset the agent's context to a clean state, initializing a new QA setup.
+        """
+        self.tasks = []
+        self.task_summaries = []
+        self.critical_tasks = []
+        self.df = pd.DataFrame()
+        self.tasks_schema = {}
+        self.value_examples = {}
+        self.custom_guidance = []
+        self.tracker_config = {}
+
+        if AGENT_DEBUG:
+            from flowcept.commons.flowcept_logger import FlowceptLogger
+
+            FlowceptLogger().warning("Running agent in DEBUG mode!")
+            df_path = "/tmp/current_agent_df.csv"
+            if os.path.exists(df_path):
+                self.logger.warning("Going to load df into context")
+                df = load_saved_df(df_path)
+                self.df = df
+            if os.path.exists("/tmp/current_tasks_schema.json"):
+                with open("/tmp/current_tasks_schema.json") as f:
+                    self.tasks_schema = json.load(f)
+            if os.path.exists("/tmp/value_examples.json"):
+                with open("/tmp/value_examples.json") as f:
+                    self.value_examples = json.load(f)
+
 
 class FlowceptAgentContextManager(BaseAgentContextManager):
     """
@@ -61,7 +98,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
     """
 
     def __init__(self):
-        self.context: FlowceptAppContext = None
+        self.context = FlowceptAppContext()
         self.tracker_config = dict(max_examples=3, max_str_len=50)
         self.schema_tracker = DynamicSchemaTracker(**self.tracker_config)
         self.msgs_counter = 0
@@ -82,7 +119,6 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         bool
             True if the message was handled successfully.
         """
-        print("Received:", msg_obj)
         msg_type = msg_obj.get("type", None)
         if msg_type == "task":
             task_msg = TaskObject.from_dict(msg_obj)
@@ -90,8 +126,62 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                 self.logger.info(f"Going to ignore our own LLM messages: {task_msg}")
                 return True
 
-            self.msgs_counter += 1
             self.logger.debug("Received task msg!")
+            if task_msg.subtype == "call_agent_task":
+                from flowcept.instrumentation.task_capture import FlowceptTask
+
+                if task_msg.activity_id == "reset_user_context":
+                    self.context.reset_context()
+                    self.msgs_counter = 0
+                    FlowceptTask(
+                        agent_id=self.agent_id,
+                        generated={"msg": "Provenance Agent reset context."},
+                        subtype="agent_task",
+                        activity_id="reset_user_context",
+                    ).send()
+                    return True
+                elif task_msg.activity_id == "provenance_query":
+                    self.logger.info("Received a prov query message!")
+                    query_text = task_msg.used.get("query")
+                    from flowcept.agents import ToolResult
+                    from flowcept.agents.tools.general_tools import prompt_handler
+                    from flowcept.agents.agent_client import run_tool
+
+                    resp = run_tool(tool_name=prompt_handler, kwargs={"message": query_text})[0]
+
+                    try:
+                        error = None
+                        status = Status.FINISHED
+                        tool_result = ToolResult(**json.loads(resp))
+                        if tool_result.result_is_str():
+                            generated = {"text": tool_result.result}
+                        else:
+                            generated = tool_result.result
+                    except Exception as e:
+                        status = Status.ERROR
+                        error = f"Could not convert the following into a ToolResult:\n{resp}\nException: {e}"
+                        generated = {"text": str(resp)}
+                    FlowceptTask(
+                        agent_id=self.agent_id,
+                        generated=generated,
+                        stderr=error,
+                        status=status,
+                        subtype="agent_task",
+                        activity_id="provenance_query_response",
+                    ).send()
+
+                    return True
+
+            elif (
+                task_msg.subtype == "agent_task"
+                and task_msg.agent_id is not None
+                and task_msg.agent_id == self.agent_id
+            ):
+                self.logger.info(f"Ignoring agent tasks from myself: {task_msg}")
+                return True
+
+            self.msgs_counter += 1
+
             self.context.tasks.append(msg_obj)
 
             task_summary = summarize_task(msg_obj, logger=self.logger)
@@ -136,7 +226,9 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         Perform LLM-based analysis on the current chunk of task messages and send the results.
         """
         self.logger.debug(f"Going to begin LLM job! {self.msgs_counter}")
-        result = agent_client.run_tool("analyze_task_chunk")
+        from flowcept.agents.agent_client import run_tool
+
+        result = run_tool("analyze_task_chunk")
         if len(result):
             content = result[0].text
             if content != "Error executing tool":
@@ -146,36 +238,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             else:
                 self.logger.error(content)
 
-    def reset_context(self):
-        """
-        Reset the agent's context to a clean state, initializing a new QA setup.
-        """
-        self.context = FlowceptAppContext(
-            tasks=[],
-            task_summaries=[],
-            critical_tasks=[],
-            df=pd.DataFrame(),
-            tasks_schema={},
-            value_examples={},
-            custom_guidance=[],
-            tracker_config=self.tracker_config,
-        )
-        DEBUG = True  # TODO debugging!
-        if DEBUG:
-            self.logger.warning("Running agent in DEBUG mode!")
-            df_path = "/tmp/current_agent_df.csv"
-            if os.path.exists(df_path):
-                self.logger.warning("Going to load df into context")
-                df = load_saved_df(df_path)
-                self.context.df = df
-            if os.path.exists("/tmp/current_tasks_schema.json"):
-                with open("/tmp/current_tasks_schema.json") as f:
-                    self.context.tasks_schema = json.load(f)
-            if os.path.exists("/tmp/value_examples.json"):
-                with open("/tmp/value_examples.json") as f:
-                    self.context.value_examples = json.load(f)
-
 
 # Exporting the ctx_manager and the mcp_flowcept
 ctx_manager = FlowceptAgentContextManager()
-mcp_flowcept = FastMCP("FlowceptAgent", require_session=False, lifespan=ctx_manager.lifespan, stateless_http=True)
+mcp_flowcept = FastMCP("FlowceptAgent", lifespan=ctx_manager.lifespan, stateless_http=True)

@@ -2,13 +2,16 @@ import unittest
 import uuid
 from time import sleep
 import numpy as np
-
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import Flowcept
+from flowcept import configs
 from flowcept.commons.utils import assert_by_querying_tasks_until
+from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 
 
 class TestMLFlow(unittest.TestCase):
+    created_task_ids = []
+
     def __init__(self, *args, **kwargs):
         super(TestMLFlow, self).__init__(*args, **kwargs)
         self.logger = FlowceptLogger()
@@ -26,32 +29,45 @@ class TestMLFlow(unittest.TestCase):
             mlflow.log_metric("loss", np.random.random())
         return run.info.run_id
 
+    def _cleanup_task_ids(self, task_ids):
+        dao = DocumentDBDAO.get_instance(create_indices=False)
+        dao.delete_task_keys("task_id", task_ids)
+
     def test_get_runs(self):
+        run_uuid = None
         with Flowcept("mlflow") as f:
             file_path = f._interceptor_instances[0].settings.file_path
-            self.simple_mlflow_run(file_path)
+            run_uuid = self.simple_mlflow_run(file_path)
             runs = f._interceptor_instances[0].dao.get_finished_run_uuids()
         assert runs is not None and len(runs) > 0
         for run in runs:
             assert isinstance(run[0], str)
             self.logger.debug(run[0])
+        if run_uuid is not None:
+            self.__class__.created_task_ids.append(run_uuid)
+            self._cleanup_task_ids([run_uuid])
 
     def test_get_run_data(self):
+        run_uuid = None
         with Flowcept("mlflow") as f:
             file_path = f._interceptor_instances[0].settings.file_path
             run_uuid = self.simple_mlflow_run(file_path)
             run_data = f._interceptor_instances[0].dao.get_run_data(run_uuid)
 
         assert run_data.task_id == run_uuid
+        if run_uuid is not None:
+            self.__class__.created_task_ids.append(run_uuid)
+            self._cleanup_task_ids([run_uuid])
 
     def test_check_state_manager(self):
+        run_uuid = None
         with Flowcept("mlflow") as f:
             interceptor = f._interceptor_instances[0]
             file_path = interceptor.settings.file_path
             interceptor.state_manager.reset()
             interceptor.state_manager.add_element_id("dummy-value")
 
-            self.simple_mlflow_run(file_path)
+            run_uuid = self.simple_mlflow_run(file_path)
         runs = interceptor.dao.get_finished_run_uuids()
         assert len(runs) > 0
         for run_tuple in runs:
@@ -60,15 +76,32 @@ class TestMLFlow(unittest.TestCase):
             if not interceptor.state_manager.has_element_id(run_uuid):
                 self.logger.debug(f"We need to intercept {run_uuid}")
                 interceptor.state_manager.add_element_id(run_uuid)
+        if run_uuid is not None:
+            self.__class__.created_task_ids.append(run_uuid)
+            self._cleanup_task_ids([run_uuid])
 
     def test_observer_and_consumption(self):
+        self.logger.warning(f"test_observer_and_consumption DB_FLUSH_MODE={configs.DB_FLUSH_MODE}")
+        if configs.DB_FLUSH_MODE != "online":
+            msg = (
+                "Skipping assertion in test_observer_and_consumption because "
+                f"DB_FLUSH_MODE is '{configs.DB_FLUSH_MODE}', expected 'online'."
+            )
+            self.logger.warning(msg)
+            return
+        run_uuid = None
         with Flowcept(interceptors="mlflow") as f:
             file_path = f._interceptor_instances[0].settings.file_path
             run_uuid = self.simple_mlflow_run(file_path)
         print(run_uuid)
-        assert assert_by_querying_tasks_until(
-            {"task_id": run_uuid},
-        )
+        try:
+            assert assert_by_querying_tasks_until(
+                {"task_id": run_uuid},
+            )
+        finally:
+            if run_uuid is not None:
+                self.__class__.created_task_ids.append(run_uuid)
+                self._cleanup_task_ids([run_uuid])
 
     @unittest.skip("Skipping this test as we need to debug it further.")
     def test_multiple_tasks(self):
@@ -92,6 +125,9 @@ class TestMLFlow(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        if cls.created_task_ids:
+            dao = DocumentDBDAO.get_instance(create_indices=False)
+            dao.delete_task_keys("task_id", cls.created_task_ids)
         Flowcept.db.close()
 
 
