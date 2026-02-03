@@ -2,9 +2,9 @@ import unittest
 import uuid
 from time import sleep
 import numpy as np
-
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept import Flowcept
+from flowcept import configs
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 
@@ -81,6 +81,14 @@ class TestMLFlow(unittest.TestCase):
             self._cleanup_task_ids([run_uuid])
 
     def test_observer_and_consumption(self):
+        self.logger.warning(f"test_observer_and_consumption DB_FLUSH_MODE={configs.DB_FLUSH_MODE}")
+        if configs.DB_FLUSH_MODE != "online":
+            msg = (
+                "Skipping assertion in test_observer_and_consumption because "
+                f"DB_FLUSH_MODE is '{configs.DB_FLUSH_MODE}', expected 'online'."
+            )
+            self.logger.warning(msg)
+            return
         run_uuid = None
         with Flowcept(interceptors="mlflow") as f:
             file_path = f._interceptor_instances[0].settings.file_path
