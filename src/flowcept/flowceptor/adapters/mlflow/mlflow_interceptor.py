@@ -50,9 +50,10 @@ class MLFlowInterceptor(BaseInterceptor):
         interesting change, it calls self.intercept; otherwise, let it
         go....
         """
+        intercepted = 0
         runs = self.dao.get_finished_run_uuids()
         if not runs:
-            return
+            return intercepted
         for run_uuid_tuple in runs:
             run_uuid = run_uuid_tuple[0]
             if not self.state_manager.has_element_id(run_uuid):
@@ -63,6 +64,8 @@ class MLFlowInterceptor(BaseInterceptor):
                     continue
                 task_msg = self.prepare_task_msg(run_data).to_dict()
                 self.intercept(task_msg)
+                intercepted += 1
+        return intercepted
 
     def start(self, bundle_exec_id, check_safe_stops) -> "MLFlowInterceptor":
         """Start it."""
@@ -77,7 +80,10 @@ class MLFlowInterceptor(BaseInterceptor):
         self.logger.debug("Interceptor stopping...")
         # Flush any late writes before stopping the observer.
         try:
-            self.callback()
+            intercepted = self.callback()
+            if intercepted == 0:
+                sleep(self.settings.watch_interval_sec)
+                self.callback()
         except Exception as e:
             self.logger.exception(e)
         super().stop(check_safe_stops)
