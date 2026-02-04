@@ -9,7 +9,7 @@ from flowcept.version import __version__
 PROJECT_NAME = "flowcept"
 
 DEFAULT_SETTINGS = {
-    "version": __version__,
+    "flowcept_version": __version__,
     "log": {"log_file_level": "disable", "log_stream_level": "disable"},
     "project": {"dump_buffer": {"enabled": True}},
     "telemetry_capture": {},
@@ -81,7 +81,7 @@ FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 
 MQ_INSTANCES = settings["mq"].get("instances", None)
 MQ_SETTINGS = settings["mq"]
-MQ_ENABLED = os.getenv("MQ_ENABLED", settings["mq"].get("enabled", True))
+MQ_ENABLED = os.getenv("MQ_ENABLED", str(settings["mq"].get("enabled", True))).strip().lower() in _TRUE_VALUES
 MQ_TYPE = os.getenv("MQ_TYPE", settings["mq"].get("type", "redis"))
 MQ_CHANNEL = os.getenv("MQ_CHANNEL", settings["mq"].get("channel", "interception"))
 MQ_PASSWORD = settings["mq"].get("password", None)
@@ -103,6 +103,11 @@ KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
 KVDB_URI = os.getenv("KVDB_URI", settings["kv_db"].get("uri", None))
 KVDB_ENABLED = settings["kv_db"].get("enabled", False)
 
+if MQ_ENABLED and not KVDB_ENABLED:
+    raise ValueError(
+        "Invalid configuration: MQ is enabled but kv_db is disabled. "
+        "Enable kv_db.enabled (and KVDB) when MQ is enabled."
+    )
 
 DATABASES = settings.get("databases", {})
 
@@ -159,6 +164,12 @@ PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get("replace_non_json_serializable", True)
 ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
+
+if DB_FLUSH_MODE == "online" and not MQ_ENABLED:
+    raise ValueError(
+        "Invalid configuration: project.db_flush_mode is 'online' but MQ is disabled. "
+        "Enable mq.enabled (or MQ_ENABLED=true) or set project.db_flush_mode to 'offline'."
+    )
 
 # Default: enable dump buffer only when running in offline flush mode.
 _DEFAULT_DUMP_BUFFER_ENABLED = DB_FLUSH_MODE == "offline"

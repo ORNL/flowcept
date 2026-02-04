@@ -1,9 +1,6 @@
 # Use the command `make build` to build this image.
-FROM miniconda:local
-
-RUN apt-get update && \
-    apt-get install -y vim curl wget make patch gcc \
-    && rm -rf /var/lib/apt/lists/*
+# Use conda-forge base image consistently across local/CI.
+FROM condaforge/miniforge3:23.11.0-0
 
 WORKDIR /flowcept
 

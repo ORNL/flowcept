@@ -1,7 +1,5 @@
 """Key value module."""
 
-from flowcept.commons.daos.redis_conn import RedisConn
-
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
     KVDB_HOST,
@@ -26,11 +24,22 @@ class KeyValueDAO:
 
     def __init__(self):
         if not hasattr(self, "_initialized"):
-            self._initialized = True
             self.logger = FlowceptLogger()
+            from flowcept.commons.daos.redis_conn import RedisConn
+
             self.redis_conn = RedisConn.build_redis_conn_pool(
                 host=KVDB_HOST, port=KVDB_PORT, password=KVDB_PASSWORD, uri=KVDB_URI
             )
+
+            self._initialized = True
+
+    @staticmethod
+    def get_set_name(set_id: str, exec_bundle_id=None) -> str:
+        """Return a consistent set name for KVDB sets."""
+        set_name = set_id
+        if exec_bundle_id is not None:
+            set_name += "_" + str(exec_bundle_id)
+        return set_name
 
     def delete_set(self, set_name: str):
         """Delete it."""

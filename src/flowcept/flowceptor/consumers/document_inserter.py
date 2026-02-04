@@ -197,6 +197,24 @@ class DocumentInserter(BaseConsumer):
                     f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
                 )
             return "continue"
+        elif message["info"] == "mq_flush_complete":
+            exec_bundle_id = message.get("exec_bundle_id", None)
+            interceptor_instance_id = message.get("interceptor_instance_id")
+            self.logger.info(
+                f"DocInserter id {id(self)}. Received mq_flush_complete message "
+                f"from the interceptor {'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
+            )
+            if self.check_safe_stops:
+                self.logger.info(
+                    f"Begin register_flush_complete "
+                    f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
+                )
+                self._mq_dao.register_flush_complete(interceptor_instance_id, exec_bundle_id)
+                self.logger.info(
+                    f"Done register_flush_complete "
+                    f"{'' if exec_bundle_id is None else exec_bundle_id}_{interceptor_instance_id}!"
+                )
+            return "continue"
         elif message["info"] == "stop_document_inserter":
             exec_bundle_id = message.get("exec_bundle_id", None)
             if self._bundle_exec_id == exec_bundle_id:
@@ -297,7 +315,10 @@ class DocumentInserter(BaseConsumer):
             return self
         if self.check_safe_stops:
             trial = 0
-            while not self._mq_dao.all_time_based_threads_ended(bundle_exec_id):
+            while not (
+                self._mq_dao.all_time_based_threads_ended(bundle_exec_id)
+                and self._mq_dao.all_flush_complete_received(bundle_exec_id)
+            ):
                 self.logger.debug(
                     f"# time_based_threads for bundle_exec_id {bundle_exec_id} is"
                     f"{self._mq_dao._keyvalue_dao.set_count(bundle_exec_id)}"

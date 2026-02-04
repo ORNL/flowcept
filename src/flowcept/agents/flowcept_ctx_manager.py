@@ -103,7 +103,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         self.schema_tracker = DynamicSchemaTracker(**self.tracker_config)
         self.msgs_counter = 0
         self.context_chunk_size = 1  # Should be in the settings
-        super().__init__()
+        super().__init__(allow_mq_disabled=True)
 
     def message_handler(self, msg_obj: Dict):
         """
@@ -133,12 +133,15 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                 if task_msg.activity_id == "reset_user_context":
                     self.context.reset_context()
                     self.msgs_counter = 0
-                    FlowceptTask(
-                        agent_id=self.agent_id,
-                        generated={"msg": "Provenance Agent reset context."},
-                        subtype="agent_task",
-                        activity_id="reset_user_context",
-                    ).send()
+                    if self._mq_dao is None:
+                        self.logger.warning("MQ is disabled; skipping reset_user_context response message.")
+                    else:
+                        FlowceptTask(
+                            agent_id=self.agent_id,
+                            generated={"msg": "Provenance Agent reset context."},
+                            subtype="agent_task",
+                            activity_id="reset_user_context",
+                        ).send()
                     return True
                 elif task_msg.activity_id == "provenance_query":
                     self.logger.info("Received a prov query message!")
@@ -161,14 +164,17 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                         status = Status.ERROR
                         error = f"Could not convert the following into a ToolResult:\n{resp}\nException: {e}"
                         generated = {"text": str(resp)}
-                    FlowceptTask(
-                        agent_id=self.agent_id,
-                        generated=generated,
-                        stderr=error,
-                        status=status,
-                        subtype="agent_task",
-                        activity_id="provenance_query_response",
-                    ).send()
+                    if self._mq_dao is None:
+                        self.logger.warning("MQ is disabled; skipping provenance_query response message.")
+                    else:
+                        FlowceptTask(
+                            agent_id=self.agent_id,
+                            generated=generated,
+                            stderr=error,
+                            status=status,
+                            subtype="agent_task",
+                            activity_id="provenance_query_response",
+                        ).send()
 
                     return True
 
@@ -200,12 +206,10 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                         ]
                     )
                 except Exception as e:
-                    self.logger.error(
-                        f"Could not add these tasks to buffer!\n"
-                        f"{
-                            self.context.task_summaries[self.msgs_counter - self.context_chunk_size : self.msgs_counter]
-                        }"
-                    )
+                    task_slice = self.context.task_summaries[
+                        self.msgs_counter - self.context_chunk_size : self.msgs_counter
+                    ]
+                    self.logger.error(f"Could not add these tasks to buffer!\n{task_slice}")
                     self.logger.exception(e)
 
                 # self.monitor_chunk()
@@ -232,9 +236,12 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         if len(result):
             content = result[0].text
             if content != "Error executing tool":
-                msg = {"type": "flowcept_agent", "info": "monitor", "content": content}
-                self._mq_dao.send_message(msg)
-                self.logger.debug(str(content))
+                if self._mq_dao is None:
+                    self.logger.warning("MQ is disabled; skipping monitor message.")
+                else:
+                    msg = {"type": "flowcept_agent", "info": "monitor", "content": content}
+                    self._mq_dao.send_message(msg)
+                    self.logger.debug(str(content))
             else:
                 self.logger.error(content)
 
