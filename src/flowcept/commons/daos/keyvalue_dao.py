@@ -32,6 +32,14 @@ class KeyValueDAO:
                 host=KVDB_HOST, port=KVDB_PORT, password=KVDB_PASSWORD, uri=KVDB_URI
             )
 
+    @staticmethod
+    def get_set_name(set_id: str, exec_bundle_id=None) -> str:
+        """Return a consistent set name for KVDB sets."""
+        set_name = set_id
+        if exec_bundle_id is not None:
+            set_name += "_" + str(exec_bundle_id)
+        return set_name
+
     def delete_set(self, set_name: str):
         """Delete it."""
         self.redis_conn.delete(set_name)
