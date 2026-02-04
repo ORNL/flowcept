@@ -190,6 +190,10 @@ class MQDao(object):
 
     def _stop(self, interceptor_instance_id: str = None, check_safe_stops: bool = True, bundle_exec_id: int = None):
         """Stop MQ publisher."""
+        if not flowcept.configs.MQ_ENABLED:
+            self.logger.debug("MQ is disabled; skipping MQ stop procedure.")
+            self.started = False
+            return
         self.logger.debug(f"MQ pub received stop sign: bundle={bundle_exec_id}, interceptor={interceptor_instance_id}")
         self._close_buffer()
         self.logger.debug("Flushed MQ for the last time!")

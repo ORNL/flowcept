@@ -9,7 +9,7 @@ from flowcept.version import __version__
 PROJECT_NAME = "flowcept"
 
 DEFAULT_SETTINGS = {
-    "version": __version__,
+    "flowcept_version": __version__,
     "log": {"log_file_level": "disable", "log_stream_level": "disable"},
     "project": {"dump_buffer": {"enabled": True}},
     "telemetry_capture": {},
@@ -81,7 +81,7 @@ FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 
 MQ_INSTANCES = settings["mq"].get("instances", None)
 MQ_SETTINGS = settings["mq"]
-MQ_ENABLED = os.getenv("MQ_ENABLED", settings["mq"].get("enabled", True))
+MQ_ENABLED = os.getenv("MQ_ENABLED", str(settings["mq"].get("enabled", True))).strip().lower() in _TRUE_VALUES
 MQ_TYPE = os.getenv("MQ_TYPE", settings["mq"].get("type", "redis"))
 MQ_CHANNEL = os.getenv("MQ_CHANNEL", settings["mq"].get("channel", "interception"))
 MQ_PASSWORD = settings["mq"].get("password", None)
