@@ -57,6 +57,7 @@ Flowcept
    quick_start
    architecture
    setup
+   agent
    prov_capture
    telemetry_capture
    prov_storage
