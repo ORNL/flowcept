@@ -172,6 +172,7 @@ class MQDao(object):
             if self._time_based_flushing_started:
                 self.buffer.stop()
                 self._time_based_flushing_started = False
+                self.logger.debug("MQ time-based flushed for the last time!")
             else:
                 self.logger.error("MQ time-based flushing is not started")
         else:
@@ -190,14 +191,11 @@ class MQDao(object):
 
     def _stop(self, interceptor_instance_id: str = None, check_safe_stops: bool = True, bundle_exec_id: int = None):
         """Stop MQ publisher."""
-        if not flowcept.configs.MQ_ENABLED:
-            self.logger.debug("MQ is disabled; skipping MQ stop procedure.")
-            self.started = False
-            return
-        self.logger.debug(f"MQ pub received stop sign: bundle={bundle_exec_id}, interceptor={interceptor_instance_id}")
         self._close_buffer()
-        self.logger.debug("Flushed MQ for the last time!")
-        if check_safe_stops:
+        if flowcept.configs.MQ_ENABLED and check_safe_stops:
+            self.logger.debug(
+                f"MQ pub received stop sign: bundle={bundle_exec_id}, interceptor={interceptor_instance_id}"
+            )
             self.logger.debug(f"Sending stop msg. Bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}")
             self._send_mq_dao_time_thread_stop(interceptor_instance_id, bundle_exec_id)
         self.started = False
