@@ -206,11 +206,12 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                         ]
                     )
                 except Exception as e:
+                    task_slice = self.context.task_summaries[
+                        self.msgs_counter - self.context_chunk_size : self.msgs_counter
+                    ]
                     self.logger.error(
-                        f"Could not add these tasks to buffer!\n"
-                        f"{
-                            self.context.task_summaries[self.msgs_counter - self.context_chunk_size : self.msgs_counter]
-                        }"
+                        "Could not add these tasks to buffer!\n"
+                        f"{task_slice}"
                     )
                     self.logger.exception(e)
 

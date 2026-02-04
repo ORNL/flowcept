@@ -3,6 +3,7 @@ import os
 from threading import Thread
 
 from flowcept.agents import check_liveness
+from flowcept.agents.tools.general_tools import prompt_handler
 from flowcept.agents.agent_client import run_tool
 from flowcept.agents.flowcept_ctx_manager import mcp_flowcept, ctx_manager
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -22,6 +23,7 @@ class FlowceptAgent:
         self.buffer_path = buffer_path
         self.logger = FlowceptLogger()
         self._server_thread: Thread | None = None
+        self._server = None
 
     def _load_buffer_once(self) -> int:
         path = self.buffer_path or DUMP_BUFFER_PATH
@@ -46,7 +48,9 @@ class FlowceptAgent:
         return count
 
     def _run_server(self):
-        uvicorn.run(mcp_flowcept.streamable_http_app, host=AGENT_HOST, port=AGENT_PORT, lifespan="on")
+        config = uvicorn.Config(mcp_flowcept.streamable_http_app, host=AGENT_HOST, port=AGENT_PORT, lifespan="on")
+        self._server = uvicorn.Server(config)
+        self._server.run()
 
     def start(self):
         if not MQ_ENABLED:
@@ -57,9 +61,21 @@ class FlowceptAgent:
         self.logger.info(f"Flowcept agent server started on {AGENT_HOST}:{AGENT_PORT}")
         return self
 
+    def stop(self):
+        if self._server is not None:
+            self._server.should_exit = True
+        if self._server_thread is not None:
+            self._server_thread.join(timeout=5)
+
     def wait(self):
         if self._server_thread is not None:
             self._server_thread.join()
+
+    def query(self, message: str):
+        """
+        Send a prompt to the agent's main router tool and return the response.
+        """
+        return run_tool(tool_name=prompt_handler, kwargs={"message": message})[0]
 
 
 def main():

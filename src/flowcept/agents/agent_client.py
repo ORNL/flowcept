@@ -1,4 +1,6 @@
 import asyncio
+import json
+import re
 from typing import Dict, List, Callable
 
 from flowcept.configs import AGENT_HOST, AGENT_PORT
@@ -48,10 +50,14 @@ def run_tool(
                 result: List[TextContent] = await session.call_tool(tool_name, arguments=kwargs)
                 actual_result = []
                 for r in result.content:
-                    if isinstance(r, str):
-                        actual_result.append(r)
-                    else:
-                        actual_result.append(r.text)
+                    text = r if isinstance(r, str) else r.text
+                    try:
+                        json.loads(text)
+                        actual_result.append(text)
+                    except Exception:
+                        match = re.search(r"Error code:\\s*(\\d+)", text)
+                        code = int(match.group(1)) if match else 400
+                        actual_result.append(json.dumps({"code": code, "result": text, "tool_name": tool_name}))
 
                 return actual_result
 
