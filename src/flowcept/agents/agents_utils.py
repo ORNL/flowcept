@@ -155,7 +155,7 @@ def build_llm_model(
         from langchain_openai import ChatOpenAI
 
         api_key = os.environ.get("OPENAI_API_KEY", AGENT.get("api_key", None))
-        llm = ChatOpenAI(openai_api_key=api_key, **model_kwargs)
+        llm = ChatOpenAI(openai_api_key=api_key, **_model_kwargs)
     elif _service_provider == "google":
         if "claude" in _model_kwargs["model"]:
             api_key = os.environ.get("GOOGLE_API_KEY", AGENT.get("api_key", None))
