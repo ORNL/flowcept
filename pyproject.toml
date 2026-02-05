@@ -130,5 +130,12 @@ packages = ["src/flowcept"]
 [tool.hatch.build.targets.wheel.force-include]
 "resources/sample_settings.yaml" = "resources/sample_settings.yaml"
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:websockets\\.legacy is deprecated:DeprecationWarning",
+    "ignore:websockets\\.server\\.WebSocketServerProtocol is deprecated:DeprecationWarning",
+    "ignore:Use `streamable_http_client` instead\\.:DeprecationWarning",
+]
+
 [project.scripts]
 flowcept = "flowcept.cli:main"

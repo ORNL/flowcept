@@ -124,7 +124,7 @@ Optional Arguments
 
 When creating a ``Flowcept`` instance (with or without a context manager), you can pass:
 
-- **interceptors**: list of interceptors (e.g., ``"instrumentation"``, ``"dask"``, ``"mlflow"``). Defaults to ``["instrumentation"]`` if enabled.
+- **interceptors**: list of interceptors (e.g., ``"instrumentation"``, ``"dask"``, ``"mlflow"``). Defaults to ``["instrumentation"]`` if enabled. Instrumentation defaults to enabled unless explicitly set to ``false`` in settings.
 - **bundle_exec_id**: identifier for grouping interceptors. Defaults to ``id(self)``.
 - **campaign_id**: unique identifier for the campaign. Defaults to a generated UUID.
 - **workflow_id**: unique identifier for the workflow. Defaults to a generated UUID.

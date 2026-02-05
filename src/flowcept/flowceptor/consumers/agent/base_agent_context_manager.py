@@ -45,12 +45,12 @@ class BaseAgentContextManager(BaseConsumer):
 
     agent_id = None
 
-    def __init__(self):
+    def __init__(self, allow_mq_disabled: bool = False):
         """
         Initializes the agent and resets its context state.
         """
         self._started = False
-        super().__init__()
+        super().__init__(allow_mq_disabled=allow_mq_disabled)
         # self.context = BaseAppContext(tasks=[])
         self.agent_id = BaseAgentContextManager.agent_id
 
