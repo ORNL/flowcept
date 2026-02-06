@@ -195,7 +195,15 @@ def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _
         if start_dask_cluster or scheduler_file:
             print("Closing dask...")
             sleep(10)
+            try:
+                client.retire_workers(close_workers=True)
+            except Exception as e:
+                print(f"Some exception when retiring workers: {e}")
             client.shutdown()
+            try:
+                client.close()
+            except Exception as e:
+                print(f"Some exception when closing client: {e}")
             print("Dask closed.")
             if _flowcept:
                 print("Now closing flowcept consumer...")
@@ -204,6 +212,10 @@ def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _
         else:
             print("Closing dask...")
             try:
+                try:
+                    client.retire_workers(close_workers=True)
+                except Exception as e:
+                    print(f"Some exception when retiring workers: {e}")
                 client.close()
                 cluster.close()
                 print("Dask closed.")
@@ -628,4 +640,3 @@ def main():
 if __name__ == "__main__":
     main()
     sys.exit(0)
-

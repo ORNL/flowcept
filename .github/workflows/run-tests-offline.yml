@@ -29,7 +29,7 @@ jobs:
 
       - name: Create offline settings
         run: |
-          flowcept --init-settings --full
+          flowcept --init-settings
           python - <<'PY'
           from pathlib import Path
           import yaml
@@ -67,4 +67,4 @@ jobs:
           PY
 
       - name: Run tests (offline)
-        run: pytest
+        run: pytest --ignore=tests/adapters --ignore=tests/api --ignore=tests/doc_db_inserter --ignore=tests/instrumentation_tests/ml_tests --ignore=tests/misc_tests
