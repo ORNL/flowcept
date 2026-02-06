@@ -78,7 +78,11 @@ class MLFlowInterceptor(BaseInterceptor):
         """Stop it."""
         sleep(1)
         self.logger.debug("Interceptor stopping...")
-        # Flush any late writes before stopping the observer.
+        if self._observer is not None:
+            self._observer.stop()
+            if self._observer_thread is not None:
+                self._observer_thread.join()
+        # Flush any late writes after stopping the observer.
         try:
             intercepted = self.callback()
             if intercepted == 0:
@@ -87,10 +91,6 @@ class MLFlowInterceptor(BaseInterceptor):
         except Exception as e:
             self.logger.exception(e)
         super().stop(check_safe_stops)
-        if self._observer is not None:
-            self._observer.stop()
-            if self._observer_thread is not None:
-                self._observer_thread.join()
         self.logger.debug("Interceptor stopped.")
         return True
 
