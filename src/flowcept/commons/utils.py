@@ -248,7 +248,7 @@ def get_current_config_values():
 
 
 def generate_pseudo_id() -> str:
-    """Lightweight id generator"""
+    """Lightweight id generator."""
     pid = os.getpid()
     tid = threading.get_ident()
     rand = random.getrandbits(32)
