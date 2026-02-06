@@ -336,10 +336,10 @@ class DocumentInserter(BaseConsumer):
                     break
             self._mq_dao.delete_current_campaign_id()
 
-        self.logger.info("Waiting for document inserter stop signal.")
+        self.logger.info("Sending message to stop document inserter.")
+        self._mq_dao.send_document_inserter_stop(exec_bundle_id=self._bundle_exec_id)
+        self.logger.info(f"Doc Inserter {id(self)} Sent message to stop itself.")
         self._main_thread.join()
-        # Flush and stop the buffer threads before closing DAO connections.
-        self.buffer.stop()
         for dao in self._doc_daos:
             self.logger.info(f"Closing document_inserter {dao.__class__.__name__} connection.")
             dao.close()
