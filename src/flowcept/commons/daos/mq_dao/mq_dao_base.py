@@ -204,13 +204,17 @@ class MQDao(object):
     def _stop(self, interceptor_instance_id: str = None, check_safe_stops: bool = True, bundle_exec_id: int = None):
         """Stop MQ publisher."""
         self._close_buffer()
-        if check_safe_stops and MQ_ENABLED:
-            self.logger.debug(
-                f"Sending flush-complete msg. Bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}"
-            )
-            self._send_mq_dao_flush_complete(interceptor_instance_id, bundle_exec_id)
-            self.logger.debug(f"Sending stop msg. Bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}")
-            self._send_mq_dao_time_thread_stop(interceptor_instance_id, bundle_exec_id)
+        if MQ_ENABLED:
+            if check_safe_stops:
+                self.logger.debug(
+                    f"Sending flush-complete msg. Bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}"
+                )
+                self._send_mq_dao_flush_complete(interceptor_instance_id, bundle_exec_id)
+                self.logger.debug(
+                    f"Sending stop msg. Bundle: {bundle_exec_id}; interceptor id: {interceptor_instance_id}"
+                )
+                self._send_mq_dao_time_thread_stop(interceptor_instance_id, bundle_exec_id)
+            self.send_document_inserter_stop(exec_bundle_id=bundle_exec_id)
         self.started = False
 
     def _send_mq_dao_time_thread_stop(self, interceptor_instance_id, exec_bundle_id=None):
