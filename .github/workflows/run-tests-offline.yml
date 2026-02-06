@@ -29,17 +29,23 @@ jobs:
 
       - name: Create offline settings
         run: |
-          flowcept --init-settings
+          flowcept --init-settings --full
           python - <<'PY'
           from pathlib import Path
           import yaml
           settings_path = Path.home() / ".flowcept" / "settings.yaml"
           data = yaml.safe_load(settings_path.read_text())
           project = data.setdefault("project", {})
+          project["db_flush_mode"] = "offline"
           dump_buffer = project.setdefault("dump_buffer", {})
           dump_buffer["enabled"] = True
           dump_buffer["append_workflow_id_to_path"] = True
           dump_buffer["append_id_to_path"] = True
+          data.setdefault("mq", {})["enabled"] = False
+          data.setdefault("kv_db", {})["enabled"] = False
+          databases = data.setdefault("databases", {})
+          databases.setdefault("mongodb", {})["enabled"] = False
+          databases.setdefault("lmdb", {})["enabled"] = False
           settings_path.write_text(yaml.safe_dump(data, sort_keys=False))
           PY
 

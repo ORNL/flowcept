@@ -4,7 +4,6 @@ import argparse
 import threading
 from datetime import datetime, timedelta, timezone
 import json
-import random
 from time import time, sleep
 from typing import Callable, List, Dict
 import os
@@ -251,7 +250,7 @@ def generate_pseudo_id() -> str:
     """Lightweight pseudo id generator."""
     pid = os.getpid()
     tid = threading.get_ident()
-    #rand = random.getrandbits(32)
+    # rand = random.getrandbits(32)
     return f"{pid}_{tid}"
 
 

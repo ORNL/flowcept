@@ -116,7 +116,6 @@ class Flowcept(object):
         self.buffer = None
         self._check_safe_stops = check_safe_stops
 
-
         self.enabled = True
         self.is_started = False
         self.args = args
