@@ -37,6 +37,9 @@ jobs:
           python --version
 
       - name: Test basic example without any external service
+        env:
+          MONGO_ENABLED: false
+          LMDB_ENABLED: false
         run: |
           pip install .
           pip list
