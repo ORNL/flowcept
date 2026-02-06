@@ -1,11 +1,13 @@
 name: Run Tests (Full Offline)
-on: [pull_request]
+on:
+  pull_request:
+  schedule:
+    - cron: '0 12 * * *'  # Runs every day at 12 PM UTC (7 AM EST)
+
 
 jobs:
   tests-offline:
     runs-on: ubuntu-latest
-    env:
-      FLOWCEPT_SETTINGS_PATH: ${{ runner.temp }}/flowcept_offline_settings.yaml
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,7 +33,7 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import yaml
-          settings_path = Path("${{ runner.temp }}/flowcept_offline_settings.yaml")
+          settings_path = Path.home() / ".flowcept" / "settings.yaml"
           data = yaml.safe_load(settings_path.read_text())
           project = data.setdefault("project", {})
           dump_buffer = project.setdefault("dump_buffer", {})
