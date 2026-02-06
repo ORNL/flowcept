@@ -248,11 +248,11 @@ def get_current_config_values():
 
 
 def generate_pseudo_id() -> str:
-    """Lightweight id generator."""
+    """Lightweight pseudo id generator."""
     pid = os.getpid()
     tid = threading.get_ident()
-    rand = random.getrandbits(32)
-    return f"{pid}_{tid}_{rand}"
+    #rand = random.getrandbits(32)
+    return f"{pid}_{tid}"
 
 
 def buffer_to_disk(buffer: List[Dict], path: str, logger):

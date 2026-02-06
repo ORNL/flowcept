@@ -3,7 +3,6 @@
 import os
 from pathlib import Path
 from typing import List, Dict, Any
-from uuid import uuid4
 
 import flowcept
 from flowcept.commons.autoflush_buffer import AutoflushBuffer
@@ -12,7 +11,12 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.utils import ClassProperty, buffer_to_disk, resolve_dump_buffer_path
+from flowcept.commons.utils import (
+    ClassProperty,
+    buffer_to_disk,
+    resolve_dump_buffer_path,
+    generate_pseudo_id,
+)
 from flowcept.configs import (
     MQ_INSTANCES,
     INSTRUMENTATION_ENABLED,
@@ -111,7 +115,7 @@ class Flowcept(object):
         self.buffer = None
         self._check_safe_stops = check_safe_stops
         if bundle_exec_id is None:
-            self.bundle_exec_id = str(id(self))
+            self.bundle_exec_id = generate_pseudo_id()
         else:
             self.bundle_exec_id = str(bundle_exec_id)
 
@@ -134,7 +138,7 @@ class Flowcept(object):
         self._interceptor_instances = None
         self._should_save_workflow = save_workflow
         self._workflow_saved = False  # This is to ensure that the wf is saved only once.
-        self.current_workflow_id = workflow_id or str(uuid4())
+        self.current_workflow_id = workflow_id or generate_pseudo_id()
         self.campaign_id = campaign_id or str(uuid4())
         self.workflow_name = workflow_name
         self.workflow_args = workflow_args
