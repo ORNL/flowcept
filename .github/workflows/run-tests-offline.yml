@@ -1,0 +1,62 @@
+name: Run Tests (Full Offline)
+on: [pull_request]
+
+jobs:
+  tests-offline:
+    runs-on: ubuntu-latest
+    env:
+      FLOWCEPT_SETTINGS_PATH: ${{ runner.temp }}/flowcept_offline_settings.yaml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Upgrade pip
+        run: |
+          python -m pip install --upgrade pip
+          python --version
+
+      - name: Install dependencies
+        run: |
+          python -m pip install .[all]
+          python -m pip install .[ml_dev]
+
+      - name: Create offline settings
+        run: |
+          flowcept --init-settings
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          settings_path = Path("${{ runner.temp }}/flowcept_offline_settings.yaml")
+          data = yaml.safe_load(settings_path.read_text())
+          project = data.setdefault("project", {})
+          dump_buffer = project.setdefault("dump_buffer", {})
+          dump_buffer["enabled"] = True
+          dump_buffer["append_workflow_id_to_path"] = True
+          dump_buffer["append_id_to_path"] = True
+          settings_path.write_text(yaml.safe_dump(data, sort_keys=False))
+          PY
+
+      - name: Verify offline settings
+        run: |
+          python - <<'PY'
+          import flowcept.configs as c
+          assert c.DB_FLUSH_MODE == "offline", f"DB_FLUSH_MODE={c.DB_FLUSH_MODE}"
+          assert not c.MQ_ENABLED, f"MQ_ENABLED={c.MQ_ENABLED}"
+          assert not c.KVDB_ENABLED, f"KVDB_ENABLED={c.KVDB_ENABLED}"
+          assert not c.MONGO_ENABLED, f"MONGO_ENABLED={c.MONGO_ENABLED}"
+          assert not c.LMDB_ENABLED, f"LMDB_ENABLED={c.LMDB_ENABLED}"
+          print("Offline guardrails passed.")
+          print("DUMP_BUFFER_ENABLED:", c.DUMP_BUFFER_ENABLED)
+          print("DUMP_BUFFER_PATH:", c.DUMP_BUFFER_PATH)
+          print("APPEND_WORKFLOW_ID_TO_PATH:", c.APPEND_WORKFLOW_ID_TO_PATH)
+          print("APPEND_ID_TO_PATH:", c.APPEND_ID_TO_PATH)
+          print("DELETE_BUFFER_FILE:", c.DELETE_BUFFER_FILE)
+          PY
+
+      - name: Run tests (offline)
+        run: pytest

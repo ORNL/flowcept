@@ -1,3 +1,4 @@
+import multiprocessing
 import numpy as np
 import psutil
 import uuid
@@ -5,6 +6,8 @@ import random
 from unittest.mock import patch
 import pandas as pd
 from time import time, sleep
+import tempfile
+import os
 from pathlib import Path
 
 import unittest
@@ -127,6 +130,22 @@ def calculate_overheads(decorated, not_decorated):
     mean_diff = sum(abs(decorated[key] - not_decorated[key]) for key in keys) / len(keys)
     overheads = [mean_diff / not_decorated[key] * 100 for key in keys]
     return overheads
+
+
+@flowcept_task
+def _buffer_worker_task(x):
+    return x + 1
+
+
+def _buffer_worker(base_path: str, workflow_id: str):
+    with Flowcept(
+        workflow_id=workflow_id,
+        start_persistence=False,
+        save_workflow=False,
+        check_safe_stops=False,
+    ) as f:
+        _buffer_worker_task(1)
+        f.dump_buffer(path=base_path)
 
 
 def print_system_stats():
@@ -356,3 +375,35 @@ class DecoratorTests(unittest.TestCase):
         print("Threshold: ", threshold)
         print("Overheads: " + str(overheads))
         assert all(map(lambda v: v < threshold, overheads))
+
+    def test_consolidate_buffer_files(self):
+        print(flowcept.configs.SETTINGS_PATH)
+        if flowcept.configs.DB_FLUSH_MODE != "offline":
+            FlowceptLogger().warning("Skipping consolidate_buffer_files because DB_FLUSH_MODE is not offline.")
+            self.skipTest("DB_FLUSH_MODE is not offline.")
+        if not flowcept.configs.APPEND_WORKFLOW_ID_TO_PATH:
+            FlowceptLogger().warning("Skipping consolidate_buffer_files because append_workflow_id_to_path is false.")
+            self.skipTest("append_workflow_id_to_path is false.")
+        if not flowcept.configs.APPEND_ID_TO_PATH:
+            FlowceptLogger().warning("Skipping consolidate_buffer_files because append_id_to_path is false.")
+            self.skipTest("append_id_to_path is false.")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            base_path = os.path.join(tmp_dir, "flowcept_buffer.jsonl")
+            workflow_id = str(uuid.uuid4())
+            n_procs = 3
+            procs = [
+                multiprocessing.Process(target=_buffer_worker, args=(base_path, workflow_id))
+                for _ in range(n_procs)
+            ]
+            for proc in procs:
+                proc.start()
+            for proc in procs:
+                proc.join()
+
+            pattern = f"flowcept_buffer_{workflow_id}_*.jsonl"
+            matches = list(Path(tmp_dir).glob(pattern))
+            assert len(matches) == n_procs
+
+            msgs = Flowcept.read_buffer_file(file_path=base_path, consolidate=True, workflow_id=workflow_id)
+            assert len(msgs) == n_procs

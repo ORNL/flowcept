@@ -10,6 +10,8 @@ project:
   dump_buffer: # This is particularly useful if you need to run completely offline. If you omit this, even offline, buffer data will not be persisted.
     enabled: false
     path: flowcept_buffer.jsonl
+    append_workflow_id_to_path: true
+    delete_previous_file: false
 
 log:
   log_path: "default" # Path for log file output; "default" will write the log in the directory where the main executable is running from.

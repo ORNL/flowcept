@@ -6,6 +6,7 @@ from omegaconf import OmegaConf, DictConfig
 
 from flowcept.version import __version__
 from flowcept.commons.utils import get_utc_now, get_git_info
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
     settings,
     FLOWCEPT_USER,
@@ -13,6 +14,8 @@ from flowcept.configs import (
     EXTRA_METADATA,
     ENVIRONMENT_ID,
     SETTINGS_PATH,
+    ENRICH_MESSAGES,
+    FLOWCEPT_DOCS_BASE_URL,
 )
 
 
@@ -134,12 +137,16 @@ class WorkflowObject:
             )
             self.extra_metadata = _extra_metadata
 
-        if self.code_repository is None:
+        if ENRICH_MESSAGES and self.code_repository is None:
             try:
                 self.code_repository = get_git_info()
             except Exception as e:
-                print(e)
-                pass
+                FlowceptLogger().warning(
+                    "Git metadata is unavailable. Install flowcept[extras] to enable git info, "
+                    "or set project.enrich_messages=false to disable this lookup. "
+                    f"See {FLOWCEPT_DOCS_BASE_URL}/prov_capture.html#message-enrichment. "
+                    f"Details: {e}"
+                )
 
         if self.flowcept_version is None:
             self.flowcept_version = __version__

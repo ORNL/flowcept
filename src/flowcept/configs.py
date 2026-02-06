@@ -7,6 +7,7 @@ import getpass
 from flowcept.version import __version__
 
 PROJECT_NAME = "flowcept"
+FLOWCEPT_DOCS_BASE_URL = "https://flowcept.readthedocs.io/en/latest"
 
 DEFAULT_SETTINGS = {
     "flowcept_version": __version__,
@@ -103,12 +104,6 @@ KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
 KVDB_URI = os.getenv("KVDB_URI", settings["kv_db"].get("uri", None))
 KVDB_ENABLED = settings["kv_db"].get("enabled", False)
 
-if MQ_ENABLED and not KVDB_ENABLED:
-    raise ValueError(
-        "Invalid configuration: MQ is enabled but kv_db is disabled. "
-        "Enable kv_db.enabled (and KVDB) when MQ is enabled."
-    )
-
 DATABASES = settings.get("databases", {})
 
 
@@ -185,6 +180,9 @@ DUMP_BUFFER_ENABLED = (
 )
 # Path is only read from settings.yaml; env override is not supported here.
 DUMP_BUFFER_PATH = settings["project"].get("dump_buffer", {}).get("path", "flowcept_buffer.jsonl")
+APPEND_WORKFLOW_ID_TO_PATH = settings["project"].get("dump_buffer", {}).get("append_workflow_id_to_path", False)
+APPEND_ID_TO_PATH = settings["project"].get("dump_buffer", {}).get("append_id_to_path", False)
+DELETE_BUFFER_FILE = settings["project"].get("dump_buffer", {}).get("delete_previous_file", True)
 
 TELEMETRY_CAPTURE = settings.get("telemetry_capture", None)
 TELEMETRY_ENABLED = os.getenv("TELEMETRY_ENABLED", "true").strip().lower() in _TRUE_VALUES
@@ -275,3 +273,22 @@ ADAPTERS = set()
 
 for adapter in settings.get("adapters", set()):
     ADAPTERS.add(settings["adapters"][adapter].get("kind"))
+
+
+##########
+# Config guardrails
+#####
+
+if MQ_ENABLED and not KVDB_ENABLED:
+    raise ValueError(
+        "Invalid configuration: MQ is enabled but kv_db is disabled. "
+        "Enable kv_db.enabled (and KVDB) when MQ is enabled."
+    )
+
+if DB_FLUSH_MODE == "offline" and (MQ_ENABLED or MONGO_ENABLED or LMDB_ENABLED or KVDB_ENABLED):
+    raise ValueError(
+        "Invalid configuration: project.db_flush_mode is 'offline' but MQ/DBs are enabled.\n"
+        f"mq.enabled={MQ_ENABLED}, kv_db.enabled={KVDB_ENABLED}, "
+        f"databases.mongodb.enabled={MONGO_ENABLED}, databases.lmdb.enabled={LMDB_ENABLED}.\n"
+        "Disable mq.enabled, kv_db.enabled, and databases when running offline."
+    )
