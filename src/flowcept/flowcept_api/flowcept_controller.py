@@ -115,10 +115,7 @@ class Flowcept(object):
         self._db_inserters: List = []
         self.buffer = None
         self._check_safe_stops = check_safe_stops
-        if bundle_exec_id is None:
-            self.bundle_exec_id = workflow_id + generate_pseudo_id()
-        else:
-            self.bundle_exec_id = str(bundle_exec_id)
+
 
         self.enabled = True
         self.is_started = False
@@ -141,6 +138,12 @@ class Flowcept(object):
         self._workflow_saved = False  # This is to ensure that the wf is saved only once.
         self.current_workflow_id = workflow_id or str(uuid4())
         self.campaign_id = campaign_id or str(uuid4())
+
+        if bundle_exec_id is None:
+            self.bundle_exec_id = self.current_workflow_id + generate_pseudo_id()
+        else:
+            self.bundle_exec_id = str(bundle_exec_id)
+
         self.workflow_name = workflow_name
         self.workflow_args = workflow_args
         should_delete_buffer_file = (
