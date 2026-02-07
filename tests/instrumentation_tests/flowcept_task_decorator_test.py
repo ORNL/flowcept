@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 
 import unittest
+import pytest
 
 import flowcept
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -279,6 +280,7 @@ class DecoratorTests(unittest.TestCase):
                 assert t["generated"]["z"] == 6
                 assert t["generated"]["w"] == 7
 
+    @pytest.mark.safeoffline
     def test_dump_buffer_offline_mode(self):
         logger = FlowceptLogger()
         if flowcept.configs.DB_FLUSH_MODE != "offline":
@@ -342,6 +344,7 @@ class DecoratorTests(unittest.TestCase):
         print("Testing times with online mode")
         self.test_decorated_function_timed()
 
+    @pytest.mark.safeoffline
     def test_decorated_function_timed(self):
         print()
         times = []
@@ -376,6 +379,7 @@ class DecoratorTests(unittest.TestCase):
         print("Overheads: " + str(overheads))
         assert all(map(lambda v: v < threshold, overheads))
 
+    @pytest.mark.safeoffline
     def test_consolidate_buffer_files(self):
         print(flowcept.configs.SETTINGS_PATH)
         if flowcept.configs.DB_FLUSH_MODE != "offline":

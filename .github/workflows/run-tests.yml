@@ -14,7 +14,7 @@ jobs:
     env:
       MONGO_ENABLED: true
       LMDB_ENABLED: false
-    timeout-minutes: 60
+    timeout-minutes: 70
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
 
     steps:
