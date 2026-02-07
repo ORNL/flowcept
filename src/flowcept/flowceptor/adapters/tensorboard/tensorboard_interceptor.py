@@ -104,8 +104,16 @@ class TensorboardInterceptor(BaseInterceptor):
         """Stop it."""
         sleep(1)
         self.logger.debug("Interceptor stopping...")
+        if self._observer is not None:
+            self._observer.stop()
+        try:
+            intercepted = self.callback()
+            if intercepted == 0:
+                sleep(self.settings.watch_interval_sec)
+                self.callback()
+        except Exception as e:
+            self.logger.exception(e)
         super().stop(check_safe_stops)
-        self._observer.stop()
         self.logger.debug("Interceptor stopped.")
         return True
 

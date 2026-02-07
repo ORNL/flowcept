@@ -14,7 +14,7 @@ jobs:
     env:
       MONGO_ENABLED: true
       LMDB_ENABLED: false
-    timeout-minutes: 60
+    timeout-minutes: 70
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
 
     steps:
@@ -36,7 +36,18 @@ jobs:
           python -m pip install --upgrade pip
           python --version
 
+      - name: Install package and dependencies
+        run: |
+          pip install ruff
+          pip install .[docs]
+
+      - name: Run linter and formatter checks using ruff
+        run: make checks
+
       - name: Test basic example without any external service
+        env:
+          MONGO_ENABLED: false
+          LMDB_ENABLED: false
         run: |
           pip install .
           pip list

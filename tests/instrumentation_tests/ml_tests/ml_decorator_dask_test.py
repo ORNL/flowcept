@@ -1,5 +1,9 @@
 import unittest
 
+import pytest
+
+pytest.importorskip("torch")
+
 from flowcept import TaskQueryAPI, Flowcept
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -18,6 +22,7 @@ class MLDecoratorDaskTests(unittest.TestCase):
         super(MLDecoratorDaskTests, self).__init__(*args, **kwargs)
         self.logger = FlowceptLogger()
 
+    @pytest.mark.safeoffline
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_model_trains_with_dask(self):
         # wf_id = f"{uuid4()}"

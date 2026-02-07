@@ -1,6 +1,6 @@
 name: (Without Mongo) Simple Tests
 on:
-  push:
+  pull_request:
   schedule:
     - cron: '0 12 * * *'  # Runs every day at 12 PM UTC (7 AM EST)
 

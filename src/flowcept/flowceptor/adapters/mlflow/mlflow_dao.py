@@ -39,7 +39,7 @@ class MLFlowDAO:
     def _get_db_engine(sqlite_file):
         try:
             db_uri = f"sqlite:///{sqlite_file}"
-            engine = create_engine(db_uri)
+            engine = create_engine(db_uri, connect_args={"timeout": 5})
             return engine
         except Exception:
             raise Exception(f"Could not create DB engine with uri: {db_uri}")

@@ -8,7 +8,7 @@ from time import time
 import flowcept.commons
 from flowcept.commons.autoflush_buffer import AutoflushBuffer
 from flowcept.commons.daos.keyvalue_dao import KeyValueDAO
-from flowcept.commons.utils import chunked
+from flowcept.commons.utils import chunked, buffer_to_disk, resolve_dump_buffer_path
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import (
     MQ_CHANNEL,
@@ -20,6 +20,9 @@ from flowcept.configs import (
     MQ_TIMING,
     KVDB_ENABLED,
     MQ_ENABLED,
+    DUMP_BUFFER_PATH,
+    APPEND_WORKFLOW_ID_TO_PATH,
+    APPEND_ID_TO_PATH,
 )
 
 from flowcept.commons.utils import GenericJSONEncoder
@@ -165,11 +168,15 @@ class MQDao(object):
             self.started = True
 
     def _close_buffer(self):
-        if flowcept.configs.DUMP_BUFFER_ENABLED and flowcept.configs.DUMP_BUFFER_PATH is not None:
-            from flowcept.commons.utils import buffer_to_disk
-
+        if flowcept.configs.DUMP_BUFFER_ENABLED and DUMP_BUFFER_PATH is not None:
             _buf = self.buffer.current_buffer if isinstance(self.buffer, AutoflushBuffer) else self.buffer
-            buffer_to_disk(_buf, flowcept.configs.DUMP_BUFFER_PATH, self.logger)
+            dump_path = resolve_dump_buffer_path(
+                DUMP_BUFFER_PATH,
+                flowcept.Flowcept.current_workflow_id,
+                APPEND_WORKFLOW_ID_TO_PATH,
+                APPEND_ID_TO_PATH,
+            )
+            buffer_to_disk(_buf, dump_path, self.logger)
 
         if flowcept.configs.DB_FLUSH_MODE == "online":
             if self._time_based_flushing_started:

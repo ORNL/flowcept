@@ -1,4 +1,4 @@
-name: (With and Without Mongo) Inside a Container
+name: Inside a Container
 on: [pull_request]
 
 jobs:

@@ -1,5 +1,9 @@
 import unittest
 
+import pytest
+
+pytest.importorskip("torch")
+
 from torch import nn
 
 from flowcept import Flowcept
@@ -18,6 +22,7 @@ class MLDecoratorTests(unittest.TestCase):
         assert model.state_dict() == new_model.state_dict()
 
     @staticmethod
+    @pytest.mark.safeoffline
     def test_cnn_model_trainer():
         # Disable model mgmt if mongo not enabled
         if not MONGO_ENABLED:
@@ -49,4 +54,3 @@ class MLDecoratorTests(unittest.TestCase):
             model_doc = Flowcept.db.load_torch_model(loaded_model, result["best_obj_id"])
             print(model_doc)
             assert len(loaded_model(result["test_data"]))
-
