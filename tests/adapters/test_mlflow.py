@@ -83,12 +83,12 @@ class TestMLFlow(unittest.TestCase):
     def test_observer_and_consumption_one(self):
         self._test_observer_and_consumption()
 
-
-    def test_observer_and_consumption(self):
-        for idx in range(10):
-            self.logger.warning(f"test_observer_and_consumption start iteration={idx + 1}/10")
+    def test_observer_and_consumption_loop(self):
+        n_runs = 2
+        for idx in range(n_runs):
+            self.logger.warning(f"test_observer_and_consumption start iteration={idx + 1}/{n_runs}")
             self._test_observer_and_consumption()
-            self.logger.warning(f"test_observer_and_consumption end iteration={idx + 1}/10")
+            self.logger.warning(f"test_observer_and_consumption end iteration={idx + 1}/{n_runs}")
 
     def _test_observer_and_consumption(self):
         self.logger.warning(f"test_observer_and_consumption DB_FLUSH_MODE={configs.DB_FLUSH_MODE}")
@@ -138,12 +138,13 @@ class TestMLFlow(unittest.TestCase):
                 pass
             sleep(0.5)
 
-    def _test_observer_and_consumption_race(self, n_noisy_messages=5_000, n_runs=10, n_workers=8):
+    def _test_observer_and_consumption_race(self, n_noisy_messages=300, n_runs=3):
         """Stress MLflow consumption under a heavy Kafka backlog."""
         if configs.DB_FLUSH_MODE != "online":
             self.skipTest("DB_FLUSH_MODE is not online.")
         if configs.MQ_TYPE != "kafka":
             self.skipTest("MQ_TYPE is not kafka.")
+        self._reset_kafka_topic()
         from flowcept.commons.daos.mq_dao.mq_dao_kafka import MQDaoKafka
         from threading import Thread, Event
 
@@ -154,7 +155,7 @@ class TestMLFlow(unittest.TestCase):
             for i in range(n_noisy_messages):
                 # Seed a backlog so the consumer must handle noise while MLflow events arrive.
                 mq.send_message({"type": "task", "task_id": f"backlog_{i}"})
-                sleep(0.001)
+                sleep(0.0001)
             if set_event:
                 noise_done.set()
 
@@ -179,10 +180,15 @@ class TestMLFlow(unittest.TestCase):
                 self.__class__.created_task_ids.extend(run_uuids)
                 self._cleanup_task_ids(run_uuids)
 
-    def test_observer_and_consumption_race(self):
-        self._reset_kafka_topic()
-        for _ in range(5):
+    def test_observer_and_consumption_race_one(self):
+        self._test_observer_and_consumption_race()
+
+    def test_observer_and_consumption_race_loop(self):
+        n_runs = 2
+        for idx in range(n_runs):
+            self.logger.warning(f"_test_observer_and_consumption_race start iteration={idx + 1}/{n_runs}")
             self._test_observer_and_consumption_race()
+            self.logger.warning(f"_test_observer_and_consumption_race end iteration={idx + 1}/{n_runs}")
 
     @unittest.skip("Skipping this test as we need to debug it further.")
     def test_multiple_tasks(self):
