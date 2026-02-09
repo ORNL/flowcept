@@ -303,13 +303,23 @@ class DecoratorTests(unittest.TestCase):
         with Flowcept(start_persistence=False):
             decorated_static_function2(x=1)
 
-        assert buffer_path.exists()
-        with buffer_path.open("rb") as f:
+        stem = buffer_path.stem
+        suffix = buffer_path.suffix or ".jsonl"
+        if flowcept.configs.APPEND_WORKFLOW_ID_TO_PATH and Flowcept.current_workflow_id:
+            stem = f"{stem}_{Flowcept.current_workflow_id}"
+        if flowcept.configs.APPEND_ID_TO_PATH:
+            pattern = f"{stem}_*{suffix}"
+        else:
+            pattern = f"{stem}{suffix}"
+        matches = list(buffer_path.parent.glob(pattern))
+        assert matches
+        with matches[0].open("rb") as f:
             first_line = f.readline()
             assert first_line
             assert b'"type":"workflow"' in first_line or b'"type":"task"' in first_line
 
-        buffer_path.unlink()
+        for path in matches:
+            path.unlink()
 
     @patch("sys.argv", ["script_name", "--a", "123", "--b", "abc", "--unknown_arg", "unk", "['a']"])
     def test_argparse(self):

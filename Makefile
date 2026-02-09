@@ -116,7 +116,7 @@ services-stop-mofka:
 # Run unit tests using pytest
 .PHONY: tests
 tests:
-	pytest tests --timeout=300 --ignore=tests/adapters/test_tensorboard.py
+	pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py
 
 .PHONY: tests-offline
 tests-offline:

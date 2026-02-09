@@ -80,9 +80,15 @@ class TestMLFlow(unittest.TestCase):
             self.__class__.created_task_ids.append(run_uuid)
             self._cleanup_task_ids([run_uuid])
 
+    def test_observer_and_consumption_one(self):
+        self._test_observer_and_consumption()
+
+
     def test_observer_and_consumption(self):
-        for _ in range(10):
+        for idx in range(10):
+            self.logger.warning(f"test_observer_and_consumption start iteration={idx + 1}/10")
             self._test_observer_and_consumption()
+            self.logger.warning(f"test_observer_and_consumption end iteration={idx + 1}/10")
 
     def _test_observer_and_consumption(self):
         self.logger.warning(f"test_observer_and_consumption DB_FLUSH_MODE={configs.DB_FLUSH_MODE}")
