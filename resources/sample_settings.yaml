@@ -10,6 +10,8 @@ project:
   dump_buffer: # This is particularly useful if you need to run completely offline. If you omit this, even offline, buffer data will not be persisted.
     enabled: false
     path: flowcept_buffer.jsonl
+    append_workflow_id_to_path: true
+    delete_previous_file: false
 
 log:
   log_path: "default" # Path for log file output; "default" will write the log in the directory where the main executable is running from.
@@ -45,6 +47,7 @@ mq:
   # uri: ?
   # instances: ["localhost:6379"] # We can have multiple MQ instances being accessed by the consumers but each interceptor will currently access one single MQ..
   port: 6379
+  # group_id: auto  # Kafka-only consumer group id. Use "auto" to generate a unique group per run.
   # group_file: mofka.json
   channel: interception
   buffer_size: 50
@@ -158,4 +161,3 @@ adapters:
     worker_should_get_output: true
     scheduler_create_timestamps: true
     worker_create_timestamps: false
-

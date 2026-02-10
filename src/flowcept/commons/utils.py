@@ -1,6 +1,7 @@
 """Utilities."""
 
 import argparse
+import threading
 from datetime import datetime, timedelta, timezone
 import json
 from time import time, sleep
@@ -245,6 +246,14 @@ def get_current_config_values():
     return _vars
 
 
+def generate_pseudo_id() -> str:
+    """Lightweight pseudo id generator."""
+    pid = os.getpid()
+    tid = threading.get_ident()
+    # rand = random.getrandbits(32)
+    return f"{pid}_{tid}"
+
+
 def buffer_to_disk(buffer: List[Dict], path: str, logger):
     """
     Append the in-memory buffer to a JSON Lines (JSONL) file on disk.
@@ -261,6 +270,30 @@ def buffer_to_disk(buffer: List[Dict], path: str, logger):
             f.write(b"\n")
 
     logger.info(f"Saved Flowcept buffer into {path}.")
+
+
+def resolve_dump_buffer_path(
+    path: str,
+    workflow_id: str,
+    append_workflow_id: bool,
+    append_id: bool = False,
+) -> str:
+    """Return the dump buffer path, optionally appending workflow and unique IDs."""
+    if not append_workflow_id and not append_id:
+        return path
+    from pathlib import Path
+
+    path_obj = Path(path)
+    name_parts = [path_obj.stem]
+    if append_workflow_id and workflow_id:
+        name_parts.append(workflow_id)
+    if append_id:
+        name_parts.append(generate_pseudo_id())
+    suffix = path_obj.suffix
+    new_name = "_".join(name_parts)
+    if suffix:
+        new_name = f"{new_name}{suffix}"
+    return str(path_obj.with_name(new_name))
 
 
 class GenericJSONDecoder(json.JSONDecoder):

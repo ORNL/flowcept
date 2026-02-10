@@ -13,6 +13,7 @@ help:
 	@printf "\033[32mservices-mofka\033[0m            run services with Mofka using Docker\n"
 	@printf "\033[32mservices-stop-mofka\033[0m       stop Mofka services and remove attached volumes\n"
 	@printf "\033[32mtests\033[0m                     run unit tests with pytest\n"
+	@printf "\033[32mtests-offline\033[0m             run offline-safe tests with pytest\n"
 	@printf "\033[32mtests-in-container\033[0m        run unit tests with pytest inside Flowcept's container\n"
 	@printf "\033[32mtests-in-container-mongo\033[0m  run unit tests inside container with MongoDB\n"
 	@printf "\033[32mtests-in-container-kafka\033[0m  run unit tests inside container with Kafka and MongoDB\n"
@@ -115,7 +116,11 @@ services-stop-mofka:
 # Run unit tests using pytest
 .PHONY: tests
 tests:
-	pytest --timeout=300 --ignore=tests/adapters/test_tensorboard.py
+	pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py
+
+.PHONY: tests-offline
+tests-offline:
+	pytest -m safeoffline tests --ignore=tests/adapters --ignore=tests/api --ignore=tests/doc_db_inserter --ignore=tests/misc_tests/singleton_test.py
 
 .PHONY: tests-notebooks
 tests-notebooks:

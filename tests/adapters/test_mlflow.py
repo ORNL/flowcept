@@ -80,7 +80,17 @@ class TestMLFlow(unittest.TestCase):
             self.__class__.created_task_ids.append(run_uuid)
             self._cleanup_task_ids([run_uuid])
 
-    def test_observer_and_consumption(self):
+    def test_observer_and_consumption_one(self):
+        self._test_observer_and_consumption()
+
+    def test_observer_and_consumption_loop(self):
+        n_runs = 2
+        for idx in range(n_runs):
+            self.logger.warning(f"test_observer_and_consumption start iteration={idx + 1}/{n_runs}")
+            self._test_observer_and_consumption()
+            self.logger.warning(f"test_observer_and_consumption end iteration={idx + 1}/{n_runs}")
+
+    def _test_observer_and_consumption(self):
         self.logger.warning(f"test_observer_and_consumption DB_FLUSH_MODE={configs.DB_FLUSH_MODE}")
         if configs.DB_FLUSH_MODE != "online":
             msg = (
@@ -89,7 +99,7 @@ class TestMLFlow(unittest.TestCase):
             )
             self.logger.warning(msg)
             return
-        run_uuid = None
+
         with Flowcept(interceptors="mlflow") as f:
             file_path = f._interceptor_instances[0].settings.file_path
             run_uuid = self.simple_mlflow_run(file_path)
@@ -102,6 +112,83 @@ class TestMLFlow(unittest.TestCase):
             if run_uuid is not None:
                 self.__class__.created_task_ids.append(run_uuid)
                 self._cleanup_task_ids([run_uuid])
+
+    def _reset_kafka_topic(self):
+        if configs.MQ_TYPE != "kafka":
+            return
+        from confluent_kafka.admin import AdminClient, NewTopic
+
+        topic = configs.MQ_CHANNEL
+        admin = AdminClient({"bootstrap.servers": f"{configs.MQ_HOST}:{configs.MQ_PORT}"})
+        delete_futures = admin.delete_topics([topic], operation_timeout=10)
+        try:
+            delete_futures[topic].result()
+        except Exception:
+            pass
+        create_futures = admin.create_topics([NewTopic(topic, num_partitions=1, replication_factor=1)])
+        try:
+            create_futures[topic].result()
+        except Exception:
+            pass
+        for _ in range(10):
+            try:
+                if topic in admin.list_topics(timeout=5).topics:
+                    break
+            except Exception:
+                pass
+            sleep(0.5)
+
+    def _test_observer_and_consumption_race(self, n_noisy_messages=300, n_runs=3):
+        """Stress MLflow consumption under a heavy Kafka backlog."""
+        if configs.DB_FLUSH_MODE != "online":
+            self.skipTest("DB_FLUSH_MODE is not online.")
+        if configs.MQ_TYPE != "kafka":
+            self.skipTest("MQ_TYPE is not kafka.")
+        self._reset_kafka_topic()
+        from flowcept.commons.daos.mq_dao.mq_dao_kafka import MQDaoKafka
+        from threading import Thread, Event
+
+        noise_done = Event()
+        mq = MQDaoKafka()
+
+        def _noise_publisher(set_event=True):
+            for i in range(n_noisy_messages):
+                # Seed a backlog so the consumer must handle noise while MLflow events arrive.
+                mq.send_message({"type": "task", "task_id": f"backlog_{i}"})
+                sleep(0.0001)
+            if set_event:
+                noise_done.set()
+
+        _noise_publisher(False)
+
+        run_uuids = []
+        noise_thread = Thread(target=_noise_publisher, daemon=True)
+        noise_thread.start()
+        with Flowcept(interceptors="mlflow") as f:
+            file_path = f._interceptor_instances[0].settings.file_path
+            for _ in range(n_runs):
+                run_uuid = self.simple_mlflow_run(file_path, epochs=2, batch_size=8)
+                run_uuids.append(run_uuid)
+        noise_thread.join()
+        try:
+            for run_uuid in run_uuids:
+                assert assert_by_querying_tasks_until(
+                    {"task_id": run_uuid},
+                )
+        finally:
+            if run_uuids:
+                self.__class__.created_task_ids.extend(run_uuids)
+                self._cleanup_task_ids(run_uuids)
+
+    def test_observer_and_consumption_race_one(self):
+        self._test_observer_and_consumption_race()
+
+    def test_observer_and_consumption_race_loop(self):
+        n_runs = 2
+        for idx in range(n_runs):
+            self.logger.warning(f"_test_observer_and_consumption_race start iteration={idx + 1}/{n_runs}")
+            self._test_observer_and_consumption_race()
+            self.logger.warning(f"_test_observer_and_consumption_race end iteration={idx + 1}/{n_runs}")
 
     @unittest.skip("Skipping this test as we need to debug it further.")
     def test_multiple_tasks(self):

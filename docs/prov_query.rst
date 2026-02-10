@@ -112,9 +112,15 @@ You can control DB flushing and the buffer path in your settings:
      dump_buffer:
        enabled: true
        path: flowcept_buffer.jsonl
+       append_workflow_id_to_path: false
+       append_id_to_path: false
+       delete_previous_file: true
 
 - **Offline mode**: set ``project.db_flush_mode: offline`` to keep messages local.
 - **Online mode**: keep ``online``; you can still dump and read the file at any time.
+- **append_workflow_id_to_path**: when true, Flowcept writes ``flowcept_buffer_<workflow_id>.jsonl`` (before the extension).
+- **append_id_to_path**: when true, Flowcept appends a unique ID to reduce collisions for parallel writers (for example, ``flowcept_buffer_<workflow_id>_<id>.jsonl``).
+- **delete_previous_file**: when true, Flowcept deletes the existing buffer file at startup (before a new run).
 
 Reading a buffer file (list or DataFrame)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -135,6 +141,26 @@ Use :meth:`Flowcept.read_buffer_file` to load a buffer file later. If no file pa
    # 3) DataFrame with dotted columns (normalized)
    df_norm = Flowcept.read_buffer_file(\"flowcept_buffer.jsonl\", return_df=True, normalize_df=True)
    assert \"generated.attention\" in df_norm.columns
+
+Consolidating multiple buffer files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When ``append_workflow_id_to_path`` and ``append_id_to_path`` are enabled, parallel runs can produce multiple JSONL
+files for the same workflow. Use ``consolidate=True`` to merge them before reading:
+
+.. code-block:: python
+
+   from flowcept import Flowcept
+
+   msgs = Flowcept.read_buffer_file(
+       file_path="flowcept_buffer.jsonl",
+       consolidate=True,
+       workflow_id="your-workflow-id",
+   )
+   print(f"Loaded {len(msgs)} messages")
+
+By default, ``cleanup_files=True`` removes the intermediate files and keeps a single consolidated
+``flowcept_buffer_<workflow_id>.jsonl`` file.
 
 Deleting a buffer file
 ^^^^^^^^^^^^^^^^^^^^^^

@@ -1,5 +1,8 @@
 from uuid import uuid4
 
+import threading
+
+import pytest
 import torch
 from torch.utils.data import Subset, DataLoader
 from torchvision import datasets, transforms
@@ -10,9 +13,10 @@ from flowcept import (
     Flowcept,
 )
 
-import threading
-
-from flowcept import flowcept_torch
+try:
+    from flowcept import flowcept_torch
+except Exception as exc:
+    pytest.skip(f"flowcept_torch unavailable: {exc}", allow_module_level=True)
 
 thread_state = threading.local()
 

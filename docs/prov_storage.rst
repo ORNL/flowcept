@@ -30,6 +30,7 @@ Saving the In-Memory Buffer to Disk
 -----------------------------------
 
 Flowcept can persist the in-memory message buffer to a **JSON Lines (JSONL)** file in both **offline** and **online** modes. This is useful for audits, simple centralized runs, and quick ad‑hoc analysis.
+Offline mode keeps all messages in memory until they are dumped, so it is not intended for very large-scale runs. For large workflows, use MQ + DB persistence to avoid memory pressure.
 
 Configuration
 ^^^^^^^^^^^^^
@@ -192,6 +193,7 @@ Key responsibilities:
 - **Task handling:** Enriches task messages with telemetry summaries and critical task tags, generates IDs if missing, and ensures status consistency.  
 - **Workflow handling:** Converts workflow messages into :class:`WorkflowObject` instances and persists them.  
 - **Control handling:** Responds to control messages (e.g., safe stop signals).  
+- **Message enrichment:** When ``project.enrich_messages`` is enabled, Flowcept adds extra metadata to messages, including Git repository info (if available).  
 
 The consumer runs in its own thread (or synchronously, if configured) and ensures reliable, structured persistence of provenance data.
 

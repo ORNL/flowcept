@@ -20,7 +20,7 @@ class FlowceptAgent:
     Flowcept agent server wrapper with optional offline buffer loading.
     """
 
-    def __init__(self, buffer_path: str | None = None):
+    def __init__(self, buffer_path: str | None = None, buffer_messages: list[dict] | None = None):
         """
         Initialize a FlowceptAgent.
 
@@ -29,11 +29,34 @@ class FlowceptAgent:
         buffer_path : str or None
             Optional path to a JSONL buffer file. When MQ is disabled, the agent
             loads this file once at startup.
+        buffer_messages : list[dict] or None
+            Optional list of buffer messages to load directly into the agent context.
         """
         self.buffer_path = buffer_path
+        self.buffer_messages = buffer_messages
         self.logger = FlowceptLogger()
         self._server_thread: Thread | None = None
         self._server = None
+
+    def _load_buffer_messages(self, messages: list[dict]) -> int:
+        """
+        Load a list of message objects into the agent context.
+
+        Returns
+        -------
+        int
+            Number of messages loaded.
+        """
+        count = 0
+        if ctx_manager.agent_id is None:
+            agent_id = str(uuid4())
+            BaseAgentContextManager.agent_id = agent_id
+            ctx_manager.agent_id = agent_id
+        for msg_obj in messages:
+            ctx_manager.message_handler(msg_obj)
+            count += 1
+        self.logger.info(f"Loaded {count} messages from buffer list.")
+        return count
 
     def _load_buffer_once(self) -> int:
         """
@@ -81,7 +104,10 @@ class FlowceptAgent:
             The current instance.
         """
         if not MQ_ENABLED:
-            self._load_buffer_once()
+            if self.buffer_messages is not None:
+                self._load_buffer_messages(self.buffer_messages)
+            else:
+                self._load_buffer_once()
 
         self._server_thread = Thread(target=self._run_server, daemon=False)
         self._server_thread.start()

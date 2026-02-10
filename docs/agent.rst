@@ -35,6 +35,8 @@ This is a minimal offline example:
 
    # Start the agent from the buffer file and query it
    agent = FlowceptAgent(buffer_path="flowcept_buffer.jsonl")
+   # Or load a list of messages directly
+   # agent = FlowceptAgent(buffer_messages=msgs)
    agent.start()
    resp = agent.query("how many tasks?")
    print(json.loads(resp))

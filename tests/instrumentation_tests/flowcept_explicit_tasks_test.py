@@ -1,4 +1,6 @@
 import unittest
+
+import pytest
 from pathlib import Path
 from time import sleep
 
@@ -29,12 +31,13 @@ class ExplicitTaskTest(unittest.TestCase):
         assert task["status"] == Status.FINISHED.value
         assert "generated" not in task
 
+    @pytest.mark.safeoffline
     def test_data_files(self):
         with Flowcept() as f:
             used_args = {"a": 1}
             with FlowceptTask(used=used_args) as t:
                 repo_root = Path(__file__).resolve().parents[2]
-                img_path = repo_root / "docs" / "img" / "architecture.pdf"
+                img_path = repo_root / "docs" / "img" / "architecture-diagram.png"
                 with open(img_path, "rb") as fp:
                     img_data = fp.read()
 
@@ -59,6 +62,7 @@ class ExplicitTaskTest(unittest.TestCase):
             #assert Flowcept.buffer[1]["data"].startswith(b"\x89PNG")
 
 
+    @pytest.mark.safeoffline
     def test_prov_query_msg(self):
         with Flowcept():
             FlowceptTask(
@@ -92,6 +96,7 @@ class ExplicitTaskTest(unittest.TestCase):
             ).send()
 
 
+    @pytest.mark.safeoffline
     def test_prov_query_msg2(self):
         with Flowcept():
             FlowceptTask(
@@ -99,4 +104,3 @@ class ExplicitTaskTest(unittest.TestCase):
                 subtype="call_agent_task",
                 used={}
             ).send()
-
