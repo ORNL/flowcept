@@ -97,18 +97,18 @@ You can persist the buffer to a JSON Lines file in both offline and online runs.
    with Flowcept(workflow_name="demo") as f:
        # ... run your tasks ...
        f.dump_buffer()                  # uses settings path (see below)
-       f.dump_buffer(\"my_buffer.jsonl\") # custom path
+       f.dump_buffer("my_buffer.jsonl") # custom path
 
 Default configuration enables dumping to ``flowcept_buffer.jsonl``:
 
-- ``\"project\": {\"dump_buffer\": {\"enabled\": True, \"path\": \"flowcept_buffer.jsonl\"}}``
+- ``"project": {"dump_buffer": {"enabled": True, "path": "flowcept_buffer.jsonl"}}``
 
 You can control DB flushing and the buffer path in your settings:
 
 .. code-block:: yaml
 
    project:
-     db_flush_mode: online   # \"online\" or \"offline\"
+     db_flush_mode: online   # "online" or "offline"
      dump_buffer:
        enabled: true
        path: flowcept_buffer.jsonl
@@ -132,15 +132,15 @@ Use :meth:`Flowcept.read_buffer_file` to load a buffer file later. If no file pa
    from flowcept import Flowcept
 
    # 1) List of dicts
-   msgs = Flowcept.read_buffer_file(\"flowcept_buffer.jsonl\")
-   print(f\"Loaded {len(msgs)} messages\")
+   msgs = Flowcept.read_buffer_file("flowcept_buffer.jsonl")
+   print(f"Loaded {len(msgs)} messages")
 
    # 2) DataFrame without flattening (nested dicts stay as objects)
-   df_raw = Flowcept.read_buffer_file(\"flowcept_buffer.jsonl\", return_df=True, normalize_df=False)
+   df_raw = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=False)
 
    # 3) DataFrame with dotted columns (normalized)
-   df_norm = Flowcept.read_buffer_file(\"flowcept_buffer.jsonl\", return_df=True, normalize_df=True)
-   assert \"generated.attention\" in df_norm.columns
+   df_norm = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=True)
+   assert "generated.attention" in df_norm.columns
 
 Consolidating multiple buffer files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
