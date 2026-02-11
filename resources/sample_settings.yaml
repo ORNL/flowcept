@@ -8,10 +8,11 @@ project:
   enrich_messages: true # Add extra metadata to task messages, such as IP addresses of the node that executed the task, UTC timestamps, GitHub repo metadata.
   db_flush_mode: online # Mode for flushing DB entries: "online" or "offline". If online, flushes to the DB will happen before the workflow ends.
   dump_buffer: # This is particularly useful if you need to run completely offline. If you omit this, even offline, buffer data will not be persisted.
-    enabled: false
-    path: flowcept_buffer.jsonl
-    append_workflow_id_to_path: true
-    delete_previous_file: false
+    enabled: false # If true, persist the in-memory buffer to JSONL on disk during/at the end of a run.
+    path: flowcept_buffer.jsonl # Base JSONL path used by dump_buffer() and read_buffer_file() when no explicit path is passed.
+    append_id_to_path: true # If true, append a unique suffix to reduce collisions across parallel writers (e.g., *_<id>.jsonl).
+    append_workflow_id_to_path: true # If true, append the workflow_id before the file extension (e.g., *_<workflow_id>.jsonl).
+    delete_previous_file: false # If true, delete any existing buffer file at startup before writing a new one.
 
 log:
   log_path: "default" # Path for log file output; "default" will write the log in the directory where the main executable is running from.

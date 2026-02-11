@@ -146,7 +146,12 @@ Consolidating multiple buffer files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When ``append_workflow_id_to_path`` and ``append_id_to_path`` are enabled, parallel runs can produce multiple JSONL
-files for the same workflow. Use ``consolidate=True`` to merge them before reading:
+files for the same workflow. Use ``consolidate=True`` to merge them before reading. This mode:
+
+- Requires ``workflow_id``; it is used to match file names.
+- Writes a consolidated file named ``<base>_<workflow_id>.jsonl`` (based on the base path).
+- Optionally deletes the split files when ``cleanup_files=True`` (default).
+- Returns the consolidated file path; if only a consolidated file exists, nothing is deleted and it is read directly.
 
 .. code-block:: python
 
@@ -161,6 +166,11 @@ files for the same workflow. Use ``consolidate=True`` to merge them before readi
 
 By default, ``cleanup_files=True`` removes the intermediate files and keeps a single consolidated
 ``flowcept_buffer_<workflow_id>.jsonl`` file.
+
+.. note::
+   If you used ``append_id_to_path``, pass the same base ``file_path`` used in settings (the ``path`` value in
+   ``project.dump_buffer``), not one of the split file names. The consolidator looks for files that match the base
+   name pattern ``<base>_<workflow_id>*``. When ``consolidate=True``, you must also pass ``workflow_id``.
 
 Deleting a buffer file
 ^^^^^^^^^^^^^^^^^^^^^^

@@ -87,6 +87,9 @@ Read the buffer file later (as list or DataFrame):
    # 3) DataFrame with dotted columns (normalized)
    df_norm = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=True)
 
+.. note::
+   For consolidation behavior (``consolidate=True``), including split-file patterns and cleanup, see
+   `Consolidating multiple buffer files <https://flowcept.readthedocs.io/en/latest/prov_query.html#consolidating-multiple-buffer-files>`_.
 
 Delete a buffer file if needed:
 
