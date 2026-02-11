@@ -16,6 +16,11 @@ autosummary_generate = True
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
+# Reusable base URL for intra-doc links in .rst files.
+rst_epilog = """
+.. |docs_base| replace:: https://flowcept.readthedocs.io/en/latest
+"""
+
 # -- HTML output -------------------------------------------------------------
 html_theme = "furo"
 html_title = "Flowcept"

@@ -5,7 +5,7 @@ Flowcept captures detailed provenance about workflows, tasks, agents, and data a
 
 .. note::
 
-    Persistence is optional in Flowcept. You can configure Flowcept to use LMDB, MongoDB or both. For more complex queries, we recommend using it with Mongo. The in-memory buffer data is also available with a list of raw JSON data, which can also be queried. See also: `provenance storage <https://flowcept.readthedocs.io/en/latest/prov_storage.html>`_.
+    Persistence is optional in Flowcept. You can configure Flowcept to use LMDB, MongoDB or both. For more complex queries, we recommend using it with Mongo. The in-memory buffer data is also available with a list of raw JSON data, which can also be queried. See also: `provenance storage <prov_storage.html>`_.
 
 
 Querying with the Command‑Line Interface
@@ -186,7 +186,7 @@ Notes
 
 - DataFrame returns require ``pandas``. If you installed Flowcept with optional extras, ``pandas`` is included.
 - Binary payloads, when present, are stored under the ``data`` key in the buffer messages. However, they are not stored in the buffer file.
-- See also: `persisting the in-memory buffer. <https://flowcept.readthedocs.io/en/latest/prov_storage.html#saving-the-in-memory-buffer-to-disk>`_
+- See also: `persisting the in-memory buffer. <prov_storage.html#saving-the-in-memory-buffer-to-disk>`_
 
 Working Directly with MongoDB
 -----------------------------

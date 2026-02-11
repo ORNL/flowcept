@@ -55,7 +55,7 @@ They can store provenance into different backends, depending on performance and 
 
 - **MongoDB** → efficient bulk writes and flexible aggregation queries.  
 - **LMDB** → lightweight key–value store, optimized for high-frequency inserts.  
-- **Custom** → Other storage mechanisms can be implemented by following Flowcept's Base Consumer class. See `here <https://flowcept.readthedocs.io/en/latest/prov_storage.html#provenance-consumer>`_.
+- **Custom** → Other storage mechanisms can be implemented by following Flowcept's Base Consumer class. See `here <prov_storage.html#provenance-consumer>`_.
 
 Access and Querying
 -------------------
@@ -66,7 +66,7 @@ Users can access provenance data through multiple interfaces:
 - **Grafana dashboards** for monitoring and visualization  
 - **Natural language queries** through Flowcept’s LLM-powered agent (introduced in this work)
 
-See more about `querying <https://flowcept.readthedocs.io/en/latest/prov_query.html>`_.
+See more about `querying <prov_query.html>`_.
 
 Deployment Flexibility
 ----------------------

@@ -5,7 +5,7 @@ API Reference
 Main Flowcept Object
 --------------------
 
-See also: `Flowcept object <https://flowcept.readthedocs.io/en/latest/prov_capture.html>`_ in provenance capture methods.
+See also: `Flowcept object <prov_capture.html>`_ in provenance capture methods.
 
 .. autoclass:: flowcept.Flowcept
    :members:

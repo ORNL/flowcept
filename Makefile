@@ -53,6 +53,7 @@ clean:
 .PHONY: docs
 docs:
 	sphinx-build -M html docs docs/_build
+	@echo "Docs built: open docs/_build/html/index.html"
 
 # Run services using Docker
 services:
