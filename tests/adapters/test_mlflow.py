@@ -178,6 +178,8 @@ class TestMLFlow(unittest.TestCase):
             for run_uuid in run_uuids:
                 assert assert_by_querying_tasks_until(
                     {"task_id": run_uuid},
+                    max_trials=30,
+                    max_time=120,
                 )
         finally:
             if run_uuids:
