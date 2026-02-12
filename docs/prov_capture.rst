@@ -610,11 +610,45 @@ Requires an active workflow (``with Flowcept(...)`` or ``Flowcept().start()``).
        task.end({"records": 42})
        task.send()  # publishes to MQ
 
+Custom task usage patterns (explicit end vs send)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   from time import sleep
+   from flowcept import Flowcept, FlowceptTask
+   from uuid import uuid4
+
+   flowcept = Flowcept(
+       start_persistence=False,
+       save_workflow=True,
+       workflow_name="MyFirstWorkflow",
+   )
+   flowcept.start()
+
+   agent1 = uuid4()
+   FlowceptTask(activity_id="super_func1", used={"x": 1}, agent_id=agent1, tags=["tag1"]).send()
+
+   with FlowceptTask(activity_id="super_func2", used={"y": 1}, agent_id=agent1, tags=["tag2"]) as t2:
+       sleep(0.5)
+       t2.end(generated={"o": 3})
+
+   t3 = FlowceptTask(activity_id="super_func3", used={"z": 1}, agent_id=agent1, tags=["tag3"])
+   sleep(0.1)
+   t3.end(generated={"w": 1})
+
+   flowcept.stop()
+
+   flowcept_messages = Flowcept.read_buffer_file()
+   assert len(flowcept_messages) == 4
+
 If you need to store something that is not publicly exposed in the API (yet), you can use the private instance of ``FlowceptTask._task`` to access the task object fields directly. If that happens, open an issue in the repository and we will try to expose that in the public API.
 
 **Notes**:
 
 - Use **context** (``with FlowceptTask(...)``) *or* call ``send()`` explicitly.
+- If you pass any end-like fields at construction (``generated``, ``ended_at``, ``stdout``, ``stderr``, or ``status``), the task auto-calls ``end(...)`` during ``__init__`` (defaulting ``status`` to ``FINISHED`` when not provided).
+- ``end()`` finalizes the task (captures end telemetry/status and any outputs) and publishes; ``send()`` only publishes if not ended, without end-telemetry/status/output capture (it sets ``ended_at = started_at``).
 - Flows publish to the MQ; persistence/queries require a DB (e.g., MongoDB).
 - See also: `FlowceptTask API reference <file:///Users/rsr/Documents/GDrive/ORNL/dev/flowcept/docs/_build/html/api-reference.html#flowcepttask>`_
 - See also: `Consumer example <prov_storage.html#example-extending-the-base-consumer>`_

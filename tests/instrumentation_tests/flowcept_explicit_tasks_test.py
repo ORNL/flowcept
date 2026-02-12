@@ -1,4 +1,5 @@
 import unittest
+import uuid
 
 import pytest
 from pathlib import Path
@@ -30,6 +31,30 @@ class ExplicitTaskTest(unittest.TestCase):
         assert task["used"]["a"] == 1
         assert task["status"] == Status.FINISHED.value
         assert "generated" not in task
+
+    @pytest.mark.safeoffline
+    def test_custom_tasks(self):
+
+        flowcept = Flowcept(start_persistence=False, save_workflow=True, workflow_name="MyFirstWorkflow").start()
+
+        agent1 = uuid.uuid4()
+        t1 = FlowceptTask(activity_id="super_func1", used={"x":1}, agent_id=agent1, tags=["tag1"]).send()
+
+        with FlowceptTask(activity_id="super_func2", used={"y": 1}, agent_id=agent1, tags=["tag2"]) as t2:
+            sleep(0.5)
+            t2.end(generated={"o": 3})
+
+        t3 = FlowceptTask(activity_id="super_func3", used={"z": 1}, agent_id=agent1, tags=["tag3"])
+        sleep(0.1)
+        t3.end(generated={"w":1})
+
+        flowcept.stop()
+
+        flowcept_messages = Flowcept.read_buffer_file()
+        for msg in flowcept_messages:
+            print(msg)
+        assert len(flowcept_messages) == 4
+
 
     @pytest.mark.safeoffline
     def test_data_files(self):

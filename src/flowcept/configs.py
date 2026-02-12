@@ -12,7 +12,7 @@ FLOWCEPT_DOCS_BASE_URL = "https://flowcept.readthedocs.io/en/latest"
 DEFAULT_SETTINGS = {
     "flowcept_version": __version__,
     "log": {"log_file_level": "disable", "log_stream_level": "disable"},
-    "project": {"dump_buffer": {"enabled": True}},
+    "project": {"dump_buffer": {"enabled": True}, "enrich_messages": False},
     "telemetry_capture": {},
     "instrumentation": {},
     "experiment": {},
