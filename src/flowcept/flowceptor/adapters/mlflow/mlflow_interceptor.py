@@ -1,7 +1,7 @@
 """Interceptor module."""
 
 import os
-from time import sleep
+from time import sleep, monotonic
 from threading import Thread
 
 from watchdog.observers.polling import PollingObserver
@@ -82,17 +82,44 @@ class MLFlowInterceptor(BaseInterceptor):
             self._observer.stop()
             if self._observer_thread is not None:
                 self._observer_thread.join()
-        # Flush any late writes after stopping the observer.
-        try:
-            intercepted = self.callback()
-            if intercepted == 0:
-                sleep(self.settings.watch_interval_sec)
-                self.callback()
-        except Exception as e:
-            self.logger.exception(e)
+
+        # Drain late MLflow sqlite writes before shutdown.
+        self._drain_late_writes()
         super().stop(check_safe_stops)
         self.logger.debug("Interceptor stopped.")
         return True
+
+    def _drain_late_writes(self):
+        """Retry callback for a bounded period to absorb late MLflow writes."""
+        max_wait_sec = 3.0
+        poll_sec = min(max(self.settings.watch_interval_sec, 0.05), 0.2)
+        idle_polls_to_stop = 3
+        idle_polls = 0
+        total_intercepted = 0
+        t0 = monotonic()
+
+        while monotonic() - t0 < max_wait_sec:
+            try:
+                intercepted = self.callback()
+            except Exception as e:
+                self.logger.exception(e)
+                break
+
+            total_intercepted += intercepted
+            if intercepted > 0:
+                idle_polls = 0
+            else:
+                idle_polls += 1
+                if idle_polls >= idle_polls_to_stop:
+                    break
+
+            sleep(poll_sec)
+
+        self.logger.debug(
+            "Late MLflow drain complete: intercepted=%s, elapsed=%.3fs",
+            total_intercepted,
+            monotonic() - t0,
+        )
 
     def observe(self):
         """Observe it."""

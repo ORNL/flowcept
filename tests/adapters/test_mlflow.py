@@ -1,4 +1,6 @@
+import os
 import unittest
+import os
 import uuid
 from time import sleep
 import numpy as np
@@ -84,7 +86,7 @@ class TestMLFlow(unittest.TestCase):
         self._test_observer_and_consumption()
 
     def test_observer_and_consumption_loop(self):
-        n_runs = 2
+        n_runs = int(os.getenv("TEST_MLFLOW_OBSERVER_CONSUMPTION_LOOPS", "2"))
         for idx in range(n_runs):
             self.logger.warning(f"test_observer_and_consumption start iteration={idx + 1}/{n_runs}")
             self._test_observer_and_consumption()
@@ -142,24 +144,20 @@ class TestMLFlow(unittest.TestCase):
         """Stress MLflow consumption under a heavy Kafka backlog."""
         if configs.DB_FLUSH_MODE != "online":
             self.skipTest("DB_FLUSH_MODE is not online.")
-        if configs.MQ_TYPE != "kafka":
-            self.skipTest("MQ_TYPE is not kafka.")
-        self._reset_kafka_topic()
-        from flowcept.commons.daos.mq_dao.mq_dao_kafka import MQDaoKafka
-        from threading import Thread, Event
+        if configs.MQ_TYPE == "kafka":
+            self._reset_kafka_topic()
+        from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
+        from threading import Thread
 
-        noise_done = Event()
-        mq = MQDaoKafka()
+        mq = MQDao.build()
 
-        def _noise_publisher(set_event=True):
+        def _noise_publisher():
             for i in range(n_noisy_messages):
                 # Seed a backlog so the consumer must handle noise while MLflow events arrive.
                 mq.send_message({"type": "task", "task_id": f"backlog_{i}"})
                 sleep(0.0001)
-            if set_event:
-                noise_done.set()
 
-        _noise_publisher(False)
+        _noise_publisher()
 
         run_uuids = []
         noise_thread = Thread(target=_noise_publisher, daemon=True)
