@@ -147,27 +147,33 @@ class TestMLFlow(unittest.TestCase):
         if configs.MQ_TYPE == "kafka":
             self._reset_kafka_topic()
         from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
-        from threading import Thread
+        from threading import Thread, Event
 
         mq = MQDao.build()
+        stop_noise = Event()
 
         def _noise_publisher():
-            for i in range(n_noisy_messages):
+            i = 0
+            while i < n_noisy_messages and not stop_noise.is_set():
                 # Seed a backlog so the consumer must handle noise while MLflow events arrive.
                 mq.send_message({"type": "task", "task_id": f"backlog_{i}"})
                 sleep(0.0001)
+                i += 1
 
         _noise_publisher()
 
         run_uuids = []
         noise_thread = Thread(target=_noise_publisher, daemon=True)
-        noise_thread.start()
         with Flowcept(interceptors="mlflow") as f:
+            noise_thread.start()
             file_path = f._interceptor_instances[0].settings.file_path
             for _ in range(n_runs):
                 run_uuid = self.simple_mlflow_run(file_path, epochs=2, batch_size=8)
                 run_uuids.append(run_uuid)
-        noise_thread.join()
+            # Stop noise before Flowcept shutdown to avoid producer-vs-stop races
+            # that can drop late messages unrelated to MLflow interception itself.
+            stop_noise.set()
+            noise_thread.join()
         try:
             for run_uuid in run_uuids:
                 assert assert_by_querying_tasks_until(
