@@ -72,6 +72,24 @@ jobs:
 
       - name: Test with pytest and redis
         run: |
+          echo "=== Runtime facts before Redis pytest ==="
+          python - <<'PY'
+          import flowcept.configs as c
+          print(f"SETTINGS_PATH={c.SETTINGS_PATH}")
+          print(f"DB_FLUSH_MODE={c.DB_FLUSH_MODE}")
+          print(f"MQ_ENABLED={c.MQ_ENABLED}")
+          print(f"MQ_TYPE={c.MQ_TYPE}")
+          print(f"MQ_HOST={c.MQ_HOST}")
+          print(f"MQ_PORT={c.MQ_PORT}")
+          print(f"MONGO_ENABLED={c.MONGO_ENABLED}")
+          print(f"LMDB_ENABLED={c.LMDB_ENABLED}")
+          PY
+          echo "=== Filesystem ==="
+          stat -f -c %T . || stat -f %T . || true
+          df -h . || true
+          echo "=== inotify limits ==="
+          cat /proc/sys/fs/inotify/max_user_watches || true
+          cat /proc/sys/fs/inotify/max_user_instances || true
           make tests
 
       - name: Test notebooks with pytest and redis
@@ -101,6 +119,24 @@ jobs:
         run: |
           export MQ_TYPE=kafka
           export MQ_PORT=9092
+          echo "=== Runtime facts before Kafka pytest ==="
+          python - <<'PY'
+          import flowcept.configs as c
+          print(f"SETTINGS_PATH={c.SETTINGS_PATH}")
+          print(f"DB_FLUSH_MODE={c.DB_FLUSH_MODE}")
+          print(f"MQ_ENABLED={c.MQ_ENABLED}")
+          print(f"MQ_TYPE={c.MQ_TYPE}")
+          print(f"MQ_HOST={c.MQ_HOST}")
+          print(f"MQ_PORT={c.MQ_PORT}")
+          print(f"MONGO_ENABLED={c.MONGO_ENABLED}")
+          print(f"LMDB_ENABLED={c.LMDB_ENABLED}")
+          PY
+          echo "=== Filesystem ==="
+          stat -f -c %T . || stat -f %T . || true
+          df -h . || true
+          echo "=== inotify limits ==="
+          cat /proc/sys/fs/inotify/max_user_watches || true
+          cat /proc/sys/fs/inotify/max_user_instances || true
           make tests
 
       - name: Stop docker compose with kafka
