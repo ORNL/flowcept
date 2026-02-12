@@ -59,11 +59,14 @@ class MLFlowInterceptor(BaseInterceptor):
             if not self.state_manager.has_element_id(run_uuid):
                 self.logger.debug(f"We need to intercept this Run: {run_uuid}")
                 run_data = self.dao.get_run_data(run_uuid)
-                self.state_manager.add_element_id(run_uuid)
                 if not run_data:
+                    # Do not mark as seen yet. MLflow can expose the finished run before
+                    # all associated rows are queryable; we'll retry on the next callback.
+                    self.logger.debug(f"Run data not ready yet for {run_uuid}; will retry.")
                     continue
                 task_msg = self.prepare_task_msg(run_data).to_dict()
                 self.intercept(task_msg)
+                self.state_manager.add_element_id(run_uuid)
                 intercepted += 1
         return intercepted
 
