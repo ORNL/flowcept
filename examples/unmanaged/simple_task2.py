@@ -1,7 +1,15 @@
+"""
+This example shows different ways of creating Flowcept tasks.
+"""
 import uuid
 from time import sleep
 
-from flowcept import Flowcept, FlowceptTask
+from flowcept import Flowcept, FlowceptTask, flowcept_task
+
+
+@flowcept_task(output_names="beta")
+def super_func4(alpha):
+    return alpha*1.1
 
 
 if __name__ == "__main__":
@@ -27,7 +35,9 @@ if __name__ == "__main__":
     sleep(0.1)
     t3.end(generated={"w": 1})
 
+    super_func4(alpha=0.5)
+
     flowcept.stop()
 
     flowcept_messages = Flowcept.read_buffer_file()
-    assert len(flowcept_messages) == 4
+    assert len(flowcept_messages) == 5
