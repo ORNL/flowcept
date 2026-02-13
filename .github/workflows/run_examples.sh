@@ -60,7 +60,8 @@ run_test() {
     pip install .[ml_dev]
     echo "Defining python path for llm_complex..."
   elif [[ "$test_type" == "unmanaged/simple_task2.py" ]]; then
-    FLOWCEPT_USE_DEFAULT=true
+    export FLOWCEPT_USE_DEFAULT=true
+    rm -f flowcept_buffer.jsonl
   fi
 
   echo "Running $test_path ..."
