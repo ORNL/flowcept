@@ -184,7 +184,12 @@ _DEFAULT_DUMP_BUFFER_ENABLED = DB_FLUSH_MODE == "offline"
 DUMP_BUFFER_ENABLED = (
     # Env var "DUMP_BUFFER" overrides settings.yaml.
     # Falls back to settings project.dump_buffer.enabled, then to the default above.
-    _get_env_bool("DUMP_BUFFER", settings["project"].get("dump_buffer", {}).get("enabled", _DEFAULT_DUMP_BUFFER_ENABLED))
+    _get_env_bool(
+        "DUMP_BUFFER",
+        settings["project"].get("dump_buffer", {}).get(
+            "enabled", _DEFAULT_DUMP_BUFFER_ENABLED
+        ),
+    )
 )
 # Path is only read from settings.yaml; env override is not supported here.
 DUMP_BUFFER_PATH = settings["project"].get("dump_buffer", {}).get("path", "flowcept_buffer.jsonl")
