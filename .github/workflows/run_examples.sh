@@ -66,6 +66,7 @@ run_test() {
 
   echo "Running $test_path ..."
   python "$test_path" | tee output.log
+  unset FLOWCEPT_USE_DEFAULT
   echo "Ok, ran $test_path."
 
   if grep -iq "error" output.log; then
