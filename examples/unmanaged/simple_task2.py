@@ -15,10 +15,11 @@ def super_func4(alpha):
 if __name__ == "__main__":
     agent1 = str(uuid.uuid4())
     campaign_id = "my_super_campaign"
+    workflow_name = "My First Workflow"
 
     flowcept = Flowcept(start_persistence=False,
                         save_workflow=True,
-                        workflow_name="MyFirstWorkflow",
+                        workflow_name=workflow_name,
                         campaign_id=campaign_id).start()
 
     # Direct task event emission:
