@@ -14,7 +14,7 @@ The ``Flowcept()`` Object
 The ``Flowcept`` object is the main runtime controller API. Its ``.start()`` method has two main purposes (which can be individually toggled enabled/disabled via constructor arguments):
 
 - To establish the communication with the MQ service
-- To begin the data consumers for database persistence (see also `here <https://flowcept.readthedocs.io/en/latest/prov_storage.html#document-inserter>`_).
+- To begin the data consumers for database persistence (see also `here <prov_storage.html#document-inserter>`_).
 
 It can be used in two main ways:
 
@@ -155,7 +155,7 @@ Notes
 - Without persistence, messages are published only to MQ (not DB).
 - In offline mode, provenance can be dumped to a JSONL file and loaded with ``Flowcept.read_messages_file()``.
 - Both context manager and manual start/stop provide the same functionality—choose whichever fits your code structure.
-- `Full API reference <https://flowcept.readthedocs.io/en/latest/api-reference.html#main-flowcept-object>`_ for the ``Flowcept`` object.
+- `Full API reference <api-reference.html#main-flowcept-object>`_ for the ``Flowcept`` object.
 
 
 Data Observability Adapters
@@ -169,7 +169,7 @@ Supported adapters:
 - **Dask** — `Dask example <https://github.com/ORNL/flowcept/blob/main/examples/dask_example.py>`_
 - **TensorBoard** — `TensorBoard example <https://github.com/ORNL/flowcept/blob/main/examples/tensorboard_example.py>`_
 
-Install the extras you need (see `installation <https://flowcept.readthedocs.io/en/latest/setup.html>`_), then configure the adapter in your settings file.
+Install the extras you need (see `installation <setup.html>`_), then configure the adapter in your settings file.
 Adapters capture runs, tasks, metrics, and artifacts and push them through Flowcept’s pipeline (MQ → DB).
 
 See the `contributing <https://github.com/ORNL/flowcept/blob/main/CONTRIBUTING.md#checklist-for-creating-a-new-flowcept-adapter>`_ page for how to add new adapters.
@@ -435,8 +435,8 @@ Behavioral differences at a glance
 API quick links
 ~~~~~~~~~~~~~~~
 
-- `FlowceptLoop API <https://flowcept.readthedocs.io/en/latest/api-reference.html#flowceptloop>`_
-- `FlowceptLightweightLoop API <https://flowcept.readthedocs.io/en/latest/api-reference.html#flowceptlightweightloop>`_
+- `FlowceptLoop API <api-reference.html#flowceptloop>`_
+- `FlowceptLightweightLoop API <api-reference.html#flowceptlightweightloop>`_
 
 Examples
 ~~~~~~~~
@@ -610,14 +610,48 @@ Requires an active workflow (``with Flowcept(...)`` or ``Flowcept().start()``).
        task.end({"records": 42})
        task.send()  # publishes to MQ
 
+Custom task usage patterns (explicit end vs send)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   from time import sleep
+   from flowcept import Flowcept, FlowceptTask
+   from uuid import uuid4
+
+   flowcept = Flowcept(
+       start_persistence=False,
+       save_workflow=True,
+       workflow_name="MyFirstWorkflow",
+   )
+   flowcept.start()
+
+   agent1 = uuid4()
+   FlowceptTask(activity_id="super_func1", used={"x": 1}, agent_id=agent1, tags=["tag1"]).send()
+
+   with FlowceptTask(activity_id="super_func2", used={"y": 1}, agent_id=agent1, tags=["tag2"]) as t2:
+       sleep(0.5)
+       t2.end(generated={"o": 3})
+
+   t3 = FlowceptTask(activity_id="super_func3", used={"z": 1}, agent_id=agent1, tags=["tag3"])
+   sleep(0.1)
+   t3.end(generated={"w": 1})
+
+   flowcept.stop()
+
+   flowcept_messages = Flowcept.read_buffer_file()
+   assert len(flowcept_messages) == 4
+
 If you need to store something that is not publicly exposed in the API (yet), you can use the private instance of ``FlowceptTask._task`` to access the task object fields directly. If that happens, open an issue in the repository and we will try to expose that in the public API.
 
 **Notes**:
 
 - Use **context** (``with FlowceptTask(...)``) *or* call ``send()`` explicitly.
+- If you pass any end-like fields at construction (``generated``, ``ended_at``, ``stdout``, ``stderr``, or ``status``), the task auto-calls ``end(...)`` during ``__init__`` (defaulting ``status`` to ``FINISHED`` when not provided).
+- ``end()`` finalizes the task (captures end telemetry/status and any outputs) and publishes; ``send()`` only publishes if not ended, without end-telemetry/status/output capture (it sets ``ended_at = started_at``).
 - Flows publish to the MQ; persistence/queries require a DB (e.g., MongoDB).
 - See also: `FlowceptTask API reference <file:///Users/rsr/Documents/GDrive/ORNL/dev/flowcept/docs/_build/html/api-reference.html#flowcepttask>`_
-- See also: `Consumer example <https://flowcept.readthedocs.io/en/latest/prov_storage.html#example-extending-the-base-consumer>`_
+- See also: `Consumer example <prov_storage.html#example-extending-the-base-consumer>`_
 - See also: `Ping pong example via PubSub with Flowcept <https://github.com/ORNL/flowcept/blob/main/examples/consumers/ping_pong_example.py>`_
 
 References & Examples

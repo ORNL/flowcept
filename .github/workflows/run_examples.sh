@@ -42,8 +42,6 @@ run_test() {
     pip install .[mongo] > /dev/null 2>&1
   fi
 
-
-  # The following block is only needed to install special dependencies.
   if [[ "$test_type" =~ "mlflow" ]]; then
     echo "Installing mlflow"
     pip install .[mlflow] > /dev/null 2>&1
@@ -61,11 +59,16 @@ run_test() {
     pip install .[dask] > /dev/null 2>&1
     pip install .[ml_dev]
     echo "Defining python path for llm_complex..."
+  elif [[ "$test_type" == "unmanaged/simple_task2.py" ]]; then
+    export FLOWCEPT_USE_DEFAULT=true
+    rm -f flowcept_buffer.jsonl
   fi
 
   echo "Running $test_path ..."
   python "$test_path" | tee output.log
+  unset FLOWCEPT_USE_DEFAULT
   echo "Ok, ran $test_path."
+
   if grep -iq "error" output.log; then
     echo "Test $test_path failed! See output.log for details."
     echo "[BEGIN] Content of output.log"
@@ -86,7 +89,7 @@ echo "Using examples directory: $EXAMPLES_DIR"
 echo "With Mongo? ${WITH_MONGO}"
 
 # Define the test cases
-default_tests=("instrumented_simple_example.py" "instrumented_loop_example.py" "distributed_consumer_example.py" "dask_example.py" "mlflow_example.py" "single_layer_perceptron_example.py" "llm_complex/llm_main_example.py" "unmanaged/main.py")
+default_tests=("unmanaged/simple_task2.py" "instrumented_simple_example.py" "instrumented_loop_example.py" "distributed_consumer_example.py" "dask_example.py" "mlflow_example.py" "single_layer_perceptron_example.py" "llm_complex/llm_main_example.py" "unmanaged/main.py")
 # Removing tensorboard_example.py from the list above while the dataset link is not fixed.
 
 # Use the third argument if provided, otherwise use default tests

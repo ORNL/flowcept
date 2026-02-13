@@ -14,7 +14,7 @@ For optional persistence, you can choose between:
   Required to use Flowcept's Query API (``flowcept.Flowcept.db``) for complex queries and features like ML model management or runtime queries (query while writing).  
 
 Flowcept supports writing to both databases simultaneously (default), individually, or to neither, depending on configuration.
-See `setup instructions <https://flowcept.readthedocs.io/en/latest/setup.html#setup>`_.
+See `setup instructions <setup.html#setup>`_.
 
 If persistence is disabled, captured data is sent to the MQ without any default consumer subscribing to it.  
 In this case, querying requires writing a custom consumer to subscribe and store the data.  
@@ -87,6 +87,9 @@ Read the buffer file later (as list or DataFrame):
    # 3) DataFrame with dotted columns (normalized)
    df_norm = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=True)
 
+.. note::
+   For consolidation behavior (``consolidate=True``), including split-file patterns and cleanup, see
+   `Consolidating multiple buffer files <prov_query.html#consolidating-multiple-buffer-files>`_.
 
 Delete a buffer file if needed:
 
@@ -112,9 +115,9 @@ Delete a buffer file if needed:
 See also
 ^^^^^^^^
 
-- `Buffer querying <https://flowcept.readthedocs.io/en/latest/prov_query.html#accessing-the-in-memory-buffer>`_
-- `Implementing a custom consumer <https://flowcept.readthedocs.io/en/latest/prov_storage.html#example-extending-the-base-consumer>`_
-- `Flowcept API Reference <https://flowcept.readthedocs.io/en/latest/api-reference.html#main-flowcept-object>`_
+- `Buffer querying <prov_query.html#accessing-the-in-memory-buffer>`_
+- `Implementing a custom consumer <prov_storage.html#example-extending-the-base-consumer>`_
+- `Flowcept API Reference <api-reference.html#main-flowcept-object>`_
 
 ---
 

@@ -95,9 +95,9 @@ You should see two tasks:
 Next Steps
 ----------
 
-- `Advanced provenance capture methods <https://flowcept.readthedocs.io/en/latest/prov_query.html>`_
-- `Provenance querying <https://flowcept.readthedocs.io/en/latest/prov_query.html>`_
-- `Telemetry capture <https://flowcept.readthedocs.io/en/latest/telemetry_capture.html>`_
+- `Advanced provenance capture methods <prov_query.html>`_
+- `Provenance querying <prov_query.html>`_
+- `Telemetry capture <telemetry_capture.html>`_
 
 Examples:
 

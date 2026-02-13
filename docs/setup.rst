@@ -231,8 +231,11 @@ Environment Variables
 ---------------------
 
 .. note::
-   **Precedence:** Environment variables always override values in
-   ``~/.flowcept/settings.yaml`` and built-in defaults.
+   **Precedence:** Environment variables override values in
+   ``~/.flowcept/settings.yaml`` and packaged sample settings.
+   If ``FLOWCEPT_USE_DEFAULT=true``, Flowcept runs in strict default mode:
+   external settings files and runtime env overrides (MQ/DB host/ports/toggles, etc.)
+   are ignored.
 
 General
 ~~~~~~~
@@ -244,7 +247,7 @@ General
    * - Variable
      - Purpose / Default
    * - ``FLOWCEPT_USE_DEFAULT``
-     - If ``true``, use built-in defaults and ignore external settings files. Default ``false``.
+     - If ``true``, use built-in defaults in strict mode. External settings files and runtime env overrides are ignored. Default ``false``.
    * - ``FLOWCEPT_SETTINGS_PATH``
      - Path to a YAML settings file. If unset, Flowcept uses ``~/.flowcept/settings.yaml`` or the packaged sample.
 

@@ -12,7 +12,7 @@ FLOWCEPT_DOCS_BASE_URL = "https://flowcept.readthedocs.io/en/latest"
 DEFAULT_SETTINGS = {
     "flowcept_version": __version__,
     "log": {"log_file_level": "disable", "log_stream_level": "disable"},
-    "project": {"dump_buffer": {"enabled": True}},
+    "project": {"dump_buffer": {"enabled": True}, "enrich_messages": False},
     "telemetry_capture": {},
     "instrumentation": {},
     "experiment": {},
@@ -32,8 +32,22 @@ _TRUE_VALUES = {"1", "true", "yes", "y", "t"}
 
 USE_DEFAULT = os.getenv("FLOWCEPT_USE_DEFAULT", "False").lower() in _TRUE_VALUES
 
+
+def _get_env(name: str, default=None):
+    """Return env var value unless strict default mode is enabled."""
+    if USE_DEFAULT:
+        return default
+    return os.getenv(name, default)
+
+
+def _get_env_bool(name: str, default=False) -> bool:
+    """Parse truthy env var values, unless strict default mode is enabled."""
+    return str(_get_env(name, str(default))).strip().lower() in _TRUE_VALUES
+
+
 if USE_DEFAULT:
     settings = DEFAULT_SETTINGS.copy()
+    SETTINGS_PATH = "FLOWCEPT_DEFAULT_SETTINGS"
 
 else:
     from omegaconf import OmegaConf
@@ -82,14 +96,14 @@ FLOWCEPT_USER = settings["experiment"].get("user", "blank_user")
 
 MQ_INSTANCES = settings["mq"].get("instances", None)
 MQ_SETTINGS = settings["mq"]
-MQ_ENABLED = os.getenv("MQ_ENABLED", str(settings["mq"].get("enabled", True))).strip().lower() in _TRUE_VALUES
-MQ_TYPE = os.getenv("MQ_TYPE", settings["mq"].get("type", "redis"))
-MQ_CHANNEL = os.getenv("MQ_CHANNEL", settings["mq"].get("channel", "interception"))
+MQ_ENABLED = _get_env_bool("MQ_ENABLED", settings["mq"].get("enabled", True))
+MQ_TYPE = _get_env("MQ_TYPE", settings["mq"].get("type", "redis"))
+MQ_CHANNEL = _get_env("MQ_CHANNEL", settings["mq"].get("channel", "interception"))
 MQ_PASSWORD = settings["mq"].get("password", None)
-MQ_HOST = os.getenv("MQ_HOST", settings["mq"].get("host", "localhost"))
-MQ_PORT = int(os.getenv("MQ_PORT", settings["mq"].get("port", "6379")))
-MQ_URI = os.getenv("MQ_URI", settings["mq"].get("uri", None))
-MQ_GROUP_ID = os.getenv("MQ_GROUP_ID", settings["mq"].get("group_id", "auto"))
+MQ_HOST = _get_env("MQ_HOST", settings["mq"].get("host", "localhost"))
+MQ_PORT = int(_get_env("MQ_PORT", settings["mq"].get("port", "6379")))
+MQ_URI = _get_env("MQ_URI", settings["mq"].get("uri", None))
+MQ_GROUP_ID = _get_env("MQ_GROUP_ID", settings["mq"].get("group_id", "auto"))
 MQ_BUFFER_SIZE = settings["mq"].get("buffer_size", 1)
 MQ_INSERTION_BUFFER_TIME = settings["mq"].get("insertion_buffer_time_secs", 1)
 MQ_TIMING = settings["mq"].get("timing", False)
@@ -100,9 +114,9 @@ MQ_CHUNK_SIZE = int(settings["mq"].get("chunk_size", -1))
 #####################
 
 KVDB_PASSWORD = settings["kv_db"].get("password", None)
-KVDB_HOST = os.getenv("KVDB_HOST", settings["kv_db"].get("host", "localhost"))
-KVDB_PORT = int(os.getenv("KVDB_PORT", settings["kv_db"].get("port", "6379")))
-KVDB_URI = os.getenv("KVDB_URI", settings["kv_db"].get("uri", None))
+KVDB_HOST = _get_env("KVDB_HOST", settings["kv_db"].get("host", "localhost"))
+KVDB_PORT = int(_get_env("KVDB_PORT", settings["kv_db"].get("port", "6379")))
+KVDB_URI = _get_env("KVDB_URI", settings["kv_db"].get("uri", None))
 KVDB_ENABLED = settings["kv_db"].get("enabled", False)
 
 DATABASES = settings.get("databases", {})
@@ -113,14 +127,16 @@ DATABASES = settings.get("databases", {})
 ######################
 _mongo_settings = DATABASES.get("mongodb", None)
 MONGO_ENABLED = False
+MONGO_URI = None
+MONGO_HOST = None
+MONGO_PORT = None
+MONGO_DB = PROJECT_NAME
+MONGO_CREATE_INDEX = True
 if _mongo_settings:
-    if "MONGO_ENABLED" in os.environ:
-        MONGO_ENABLED = os.environ.get("MONGO_ENABLED").lower() == "true"
-    else:
-        MONGO_ENABLED = _mongo_settings.get("enabled", False)
-    MONGO_URI = os.environ.get("MONGO_URI") or _mongo_settings.get("uri")
-    MONGO_HOST = os.environ.get("MONGO_HOST") or _mongo_settings.get("host", "localhost")
-    MONGO_PORT = int(os.environ.get("MONGO_PORT") or _mongo_settings.get("port", 27017))
+    MONGO_ENABLED = _get_env_bool("MONGO_ENABLED", _mongo_settings.get("enabled", False))
+    MONGO_URI = _get_env("MONGO_URI", _mongo_settings.get("uri"))
+    MONGO_HOST = _get_env("MONGO_HOST", _mongo_settings.get("host", "localhost"))
+    MONGO_PORT = int(_get_env("MONGO_PORT", _mongo_settings.get("port", 27017)))
     MONGO_DB = _mongo_settings.get("db", PROJECT_NAME)
     MONGO_CREATE_INDEX = _mongo_settings.get("create_collection_index", True)
 
@@ -130,10 +146,7 @@ if _mongo_settings:
 LMDB_SETTINGS = DATABASES.get("lmdb", {})
 LMDB_ENABLED = False
 if LMDB_SETTINGS:
-    if "LMDB_ENABLED" in os.environ:
-        LMDB_ENABLED = os.environ.get("LMDB_ENABLED").lower() == "true"
-    else:
-        LMDB_ENABLED = LMDB_SETTINGS.get("enabled", False)
+    LMDB_ENABLED = _get_env_bool("LMDB_ENABLED", LMDB_SETTINGS.get("enabled", False))
 
 # if not LMDB_ENABLED and not MONGO_ENABLED:
 #     # At least one of these variables need to be enabled.
@@ -172,12 +185,10 @@ _DEFAULT_DUMP_BUFFER_ENABLED = DB_FLUSH_MODE == "offline"
 DUMP_BUFFER_ENABLED = (
     # Env var "DUMP_BUFFER" overrides settings.yaml.
     # Falls back to settings project.dump_buffer.enabled, then to the default above.
-    os.getenv(
-        "DUMP_BUFFER", str(settings["project"].get("dump_buffer", {}).get("enabled", _DEFAULT_DUMP_BUFFER_ENABLED))
+    _get_env_bool(
+        "DUMP_BUFFER",
+        settings["project"].get("dump_buffer", {}).get("enabled", _DEFAULT_DUMP_BUFFER_ENABLED),
     )
-    .strip()
-    .lower()
-    in _TRUE_VALUES
 )
 # Path is only read from settings.yaml; env override is not supported here.
 DUMP_BUFFER_PATH = settings["project"].get("dump_buffer", {}).get("path", "flowcept_buffer.jsonl")
@@ -186,7 +197,7 @@ APPEND_ID_TO_PATH = settings["project"].get("dump_buffer", {}).get("append_id_to
 DELETE_BUFFER_FILE = settings["project"].get("dump_buffer", {}).get("delete_previous_file", True)
 
 TELEMETRY_CAPTURE = settings.get("telemetry_capture", None)
-TELEMETRY_ENABLED = os.getenv("TELEMETRY_ENABLED", "true").strip().lower() in _TRUE_VALUES
+TELEMETRY_ENABLED = _get_env_bool("TELEMETRY_ENABLED", True)
 TELEMETRY_ENABLED = TELEMETRY_ENABLED and (TELEMETRY_CAPTURE is not None) and (len(TELEMETRY_CAPTURE) > 0)
 
 ######################
@@ -261,11 +272,9 @@ INSTRUMENTATION = settings.get("instrumentation", {})
 INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", True)
 
 AGENT = settings.get("agent", {})
-AGENT_AUDIO = (
-    os.getenv("AGENT_AUDIO", str(settings["agent"].get("audio_enabled", "false"))).strip().lower() in _TRUE_VALUES
-)
-AGENT_HOST = os.getenv("AGENT_HOST", settings["agent"].get("mcp_host", "localhost"))
-AGENT_PORT = int(os.getenv("AGENT_PORT", settings["agent"].get("mcp_port", "8000")))
+AGENT_AUDIO = _get_env_bool("AGENT_AUDIO", settings["agent"].get("audio_enabled", "false"))
+AGENT_HOST = _get_env("AGENT_HOST", settings["agent"].get("mcp_host", "localhost"))
+AGENT_PORT = int(_get_env("AGENT_PORT", settings["agent"].get("mcp_port", "8000")))
 
 ####################
 # Enabled ADAPTERS #

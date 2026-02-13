@@ -23,6 +23,7 @@ Identifiers
 - **group_id**: Identifier grouping related tasks, e.g., loop iterations (string)
 - **parent_task_id**: Identifier of the parent task, if nested (string)
 - **agent_id**: Identifier of the agent responsible for executing the task (string)
+- **source_agent_id**: Identifier of the agent that sent this task for execution (string)
 - **adapter_id**: Identifier of the adapter that produced this task (string)
 - **environment_id**: Identifier of the environment where the task ran (string)
 
@@ -69,86 +70,11 @@ Telemetry Data Schema
 ---------------------
 
 If telemetry capture is enabled, telemetry snapshots are stored in ``telemetry_at_start`` and ``telemetry_at_end``. 
-Each is a dictionary with the following structure:
+Each is a dictionary created from :class:`flowcept.commons.flowcept_dataclasses.telemetry.Telemetry`, and includes
+the enabled telemetry blocks (``cpu``, ``process``, ``memory``, ``disk``, ``network``, and optional ``gpu``).
 
-CPU
-~~~
-
-- **times_avg**: Dictionary with CPU times
-  - **user**, **nice**, **system**, **idle**
-- **percent_all**: Overall CPU usage percentage
-- **frequency**: CPU frequency
-- **times_per_cpu**: List of dictionaries of per-core times
-- **percent_per_cpu**: List of per-core usage percentages
-
-Process
-~~~~~~~
-
-- **pid**: Process ID
-- **memory**: Dictionary with memory stats
-  - **rss**, **vms**, **pfaults**, **pageins**
-- **memory_percent**: Memory usage percentage
-- **cpu_times**: Dictionary with CPU times
-  - **user**, **system**, **children_user**, **children_system**
-- **cpu_percent**: CPU usage percentage
-- **executable**: Path to executable
-- **cmd_line**: Command line arguments
-- **num_open_file_descriptors**, **num_connections**, **num_open_files**, **num_threads**
-- **num_ctx_switches**: Dictionary with
-  - **voluntary**, **involuntary**
-
-Memory
-~~~~~~
-
-- **virtual**: Dictionary with virtual memory stats
-  - **total**, **available**, **percent**, **used**, **free**, **active**, **inactive**, **wired**
-- **swap**: Dictionary with swap memory stats
-  - **total**, **used**, **free**, **percent**, **sin**, **sout**
-
-Disk
-~~~~
-
-- **disk_usage**: Dictionary with usage stats
-  - **total**, **used**, **free**, **percent**
-- **io_sum**: Dictionary with I/O stats
-  - **read_count**, **write_count**, **read_bytes**, **write_bytes**, **read_time**, **write_time**
-
-Network
-~~~~~~~
-
-- **netio_sum**: Dictionary with aggregate network I/O
-  - **bytes_sent**, **bytes_recv**, **packets_sent**, **packets_recv**, **errin**, **errout**, **dropin**, **dropout**
-- **netio_per_interface**: Dictionary keyed by interface with same metrics
-
-GPU
-~~~
-
-GPU telemetry data, if available, is in the ``gpu`` field. Structure depends on vendor.
-
-**Common Fields**
-
-- **gpu_ix**: GPU index (int)
-- **used**: Memory used (bytes)
-- **temperature**: Dictionary or integer temperature
-- **power**: Dictionary or value of power usage
-- **id**: Device UUID
-- **name**: GPU name (NVIDIA only)
-- **activity**: GPU activity percentage (AMD only)
-- **others**: Clock/performance data (AMD only)
-
-**AMD GPU**
-
-- **temperature**: edge, hotspot, mem, vrgfx, vrmem, hbm, fan_speed
-- **power**: average_socket_power, energy_accumulator
-- **others**: current_gfxclk, current_socclk, current_uclk, current_vclk0, current_dclk0
-
-**NVIDIA GPU**
-
-- **temperature**: Celsius value
-- **power**: Milliwatts usage
-- **used**: Memory used (bytes)
-- **name**: Model name
-- **id**: Device UUID
+For the complete list of telemetry keys and their meanings (including platform-dependent fields),
+see `Telemetry capture <telemetry_capture.html>`_.
 
 Notes
 -----

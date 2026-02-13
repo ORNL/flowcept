@@ -5,7 +5,7 @@ Flowcept captures detailed provenance about workflows, tasks, agents, and data a
 
 .. note::
 
-    Persistence is optional in Flowcept. You can configure Flowcept to use LMDB, MongoDB or both. For more complex queries, we recommend using it with Mongo. The in-memory buffer data is also available with a list of raw JSON data, which can also be queried. See also: `provenance storage <https://flowcept.readthedocs.io/en/latest/prov_storage.html>`_.
+    Persistence is optional in Flowcept. You can configure Flowcept to use LMDB, MongoDB or both. For more complex queries, we recommend using it with Mongo. The in-memory buffer data is also available with a list of raw JSON data, which can also be queried. See also: `provenance storage <prov_storage.html>`_.
 
 
 Querying with the Command‑Line Interface
@@ -97,18 +97,18 @@ You can persist the buffer to a JSON Lines file in both offline and online runs.
    with Flowcept(workflow_name="demo") as f:
        # ... run your tasks ...
        f.dump_buffer()                  # uses settings path (see below)
-       f.dump_buffer(\"my_buffer.jsonl\") # custom path
+       f.dump_buffer("my_buffer.jsonl") # custom path
 
 Default configuration enables dumping to ``flowcept_buffer.jsonl``:
 
-- ``\"project\": {\"dump_buffer\": {\"enabled\": True, \"path\": \"flowcept_buffer.jsonl\"}}``
+- ``"project": {"dump_buffer": {"enabled": True, "path": "flowcept_buffer.jsonl"}}``
 
 You can control DB flushing and the buffer path in your settings:
 
 .. code-block:: yaml
 
    project:
-     db_flush_mode: online   # \"online\" or \"offline\"
+     db_flush_mode: online   # "online" or "offline"
      dump_buffer:
        enabled: true
        path: flowcept_buffer.jsonl
@@ -132,21 +132,26 @@ Use :meth:`Flowcept.read_buffer_file` to load a buffer file later. If no file pa
    from flowcept import Flowcept
 
    # 1) List of dicts
-   msgs = Flowcept.read_buffer_file(\"flowcept_buffer.jsonl\")
-   print(f\"Loaded {len(msgs)} messages\")
+   msgs = Flowcept.read_buffer_file("flowcept_buffer.jsonl")
+   print(f"Loaded {len(msgs)} messages")
 
    # 2) DataFrame without flattening (nested dicts stay as objects)
-   df_raw = Flowcept.read_buffer_file(\"flowcept_buffer.jsonl\", return_df=True, normalize_df=False)
+   df_raw = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=False)
 
    # 3) DataFrame with dotted columns (normalized)
-   df_norm = Flowcept.read_buffer_file(\"flowcept_buffer.jsonl\", return_df=True, normalize_df=True)
-   assert \"generated.attention\" in df_norm.columns
+   df_norm = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=True)
+   assert "generated.attention" in df_norm.columns
 
 Consolidating multiple buffer files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When ``append_workflow_id_to_path`` and ``append_id_to_path`` are enabled, parallel runs can produce multiple JSONL
-files for the same workflow. Use ``consolidate=True`` to merge them before reading:
+files for the same workflow. Use ``consolidate=True`` to merge them before reading. This mode:
+
+- Requires ``workflow_id``; it is used to match file names.
+- Writes a consolidated file named ``<base>_<workflow_id>.jsonl`` (based on the base path).
+- Optionally deletes the split files when ``cleanup_files=True`` (default).
+- Returns the consolidated file path; if only a consolidated file exists, nothing is deleted and it is read directly.
 
 .. code-block:: python
 
@@ -162,6 +167,11 @@ files for the same workflow. Use ``consolidate=True`` to merge them before readi
 By default, ``cleanup_files=True`` removes the intermediate files and keeps a single consolidated
 ``flowcept_buffer_<workflow_id>.jsonl`` file.
 
+.. note::
+   If you used ``append_id_to_path``, pass the same base ``file_path`` used in settings (the ``path`` value in
+   ``project.dump_buffer``), not one of the split file names. The consolidator looks for files that match the base
+   name pattern ``<base>_<workflow_id>*``. When ``consolidate=True``, you must also pass ``workflow_id``.
+
 Deleting a buffer file
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -176,7 +186,7 @@ Notes
 
 - DataFrame returns require ``pandas``. If you installed Flowcept with optional extras, ``pandas`` is included.
 - Binary payloads, when present, are stored under the ``data`` key in the buffer messages. However, they are not stored in the buffer file.
-- See also: `persisting the in-memory buffer. <https://flowcept.readthedocs.io/en/latest/prov_storage.html#saving-the-in-memory-buffer-to-disk>`_
+- See also: `persisting the in-memory buffer. <prov_storage.html#saving-the-in-memory-buffer-to-disk>`_
 
 Working Directly with MongoDB
 -----------------------------

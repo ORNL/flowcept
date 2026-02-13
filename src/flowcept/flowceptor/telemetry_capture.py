@@ -356,7 +356,9 @@ class TelemetryCapture:
             if capt_cpu:
                 cpu.times_avg = psutil.cpu_times(percpu=False)._asdict()
                 cpu.percent_all = psutil.cpu_percent()
-                cpu.frequency = psutil.cpu_freq().current
+                # psutil.cpu_freq() may return None in some containerized environments.
+                cpu_freq = psutil.cpu_freq()
+                cpu.frequency = cpu_freq.current if cpu_freq is not None else None
 
             if capt_per_cpu:
                 cpu.times_per_cpu = [c._asdict() for c in psutil.cpu_times(percpu=True)]

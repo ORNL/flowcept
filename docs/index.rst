@@ -43,7 +43,7 @@ Flowcept
    <div class="hero">
      <h4>Lightweight Distributed Workflow Provenance</h4>
    </div>
-   <p class=\\"tagline\\">
+  <p class="tagline">
      Flowcept captures and queries workflow provenance at runtime with minimal code changes and low overhead.
      It unifies data from diverse tools and workflows across the Edge–Cloud–HPC continuum and provides ML-aware capture,
      MCP agents provenance, telemetry, extensible adapters, and flexible storage.

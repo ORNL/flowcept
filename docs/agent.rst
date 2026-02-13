@@ -5,7 +5,7 @@ The Flowcept Agent is an MCP-powered LLM interface for querying provenance data.
 (e.g., ``prompt_handler``) that route natural-language questions to in-memory queries over captured task summaries.
 
 Online-first design
-------------------
+-------------------
 Like Flowcept as a whole, the agent is designed to run **while a workflow is still executing**. In online mode,
 it consumes messages from the MQ (typically Redis) so it can respond to queries in near real time. This is the
 recommended setup for interactive RAG/MCP analysis during live runs.
