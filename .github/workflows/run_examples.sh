@@ -64,8 +64,29 @@ run_test() {
   fi
 
   echo "Running $test_path ..."
-  python "$test_path" | tee output.log
+  if [[ "$test_type" == "unmanaged/simple_task2.py" ]]; then
+    # Keep this example deterministic: use default settings and a fresh local buffer file.
+    rm -f flowcept_buffer*.jsonl
+    FLOWCEPT_USE_DEFAULT=true python "$test_path" | tee output.log
+  else
+    python "$test_path" | tee output.log
+  fi
   echo "Ok, ran $test_path."
+  if [[ "$test_type" == "unmanaged/simple_task2.py" ]]; then
+    echo "[BEGIN] simple_task2 buffer files"
+    shopt -s nullglob
+    buffer_files=(flowcept_buffer*.jsonl)
+    if [[ ${#buffer_files[@]} -eq 0 ]]; then
+      echo "No flowcept_buffer*.jsonl files found."
+    else
+      for bf in "${buffer_files[@]}"; do
+        echo "--- ${bf} ---"
+        cat "${bf}"
+      done
+    fi
+    shopt -u nullglob
+    echo "[END] simple_task2 buffer files"
+  fi
   if grep -iq "error" output.log; then
     echo "Test $test_path failed! See output.log for details."
     echo "[BEGIN] Content of output.log"
