@@ -146,7 +146,7 @@ adapters:
     file_path: mlflow.db
     log_params: ['*']
     log_metrics: ['*']
-    watch_interval_sec: 2
+    watch_interval_sec: 1
 
   tensorboard:
     kind: tensorboard

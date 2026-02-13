@@ -1,0 +1,33 @@
+import uuid
+from time import sleep
+
+from flowcept import Flowcept, FlowceptTask
+
+
+if __name__ == "__main__":
+    agent1 = str(uuid.uuid4())
+    campaign_id = "my_super_campaign"
+
+    flowcept = Flowcept(start_persistence=False,
+                        save_workflow=True,
+                        workflow_name="MyFirstWorkflow",
+                        campaign_id=campaign_id).start()
+
+    # Direct task event emission:
+    FlowceptTask(activity_id="super_func1", used={"x": 1}, agent_id=agent1, tags=["tag1"]).send()
+
+    # Register the event start, save it in a local buffer
+    with FlowceptTask(activity_id="super_func2", used={"y": 1}, agent_id=agent1, tags=["tag2"]) as t2:
+        sleep(0.5)
+        t2.end(generated={"o": 3})
+        # Register the event end, emit the complete task event
+
+    # Same as t2 but without context management
+    t3 = FlowceptTask(activity_id="super_func3", used={"z": 1}, agent_id=agent1, tags=["tag3"])
+    sleep(0.1)
+    t3.end(generated={"w": 1})
+
+    flowcept.stop()
+
+    flowcept_messages = Flowcept.read_buffer_file()
+    assert len(flowcept_messages) == 4

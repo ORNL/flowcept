@@ -86,7 +86,7 @@ echo "Using examples directory: $EXAMPLES_DIR"
 echo "With Mongo? ${WITH_MONGO}"
 
 # Define the test cases
-default_tests=("instrumented_simple_example.py" "instrumented_loop_example.py" "distributed_consumer_example.py" "dask_example.py" "mlflow_example.py" "single_layer_perceptron_example.py" "llm_complex/llm_main_example.py" "unmanaged/main.py")
+default_tests=("instrumented_simple_example.py" "instrumented_loop_example.py" "distributed_consumer_example.py" "dask_example.py" "mlflow_example.py" "single_layer_perceptron_example.py" "llm_complex/llm_main_example.py" "unmanaged/main.py" "unmanaged/simple_task2.py")
 # Removing tensorboard_example.py from the list above while the dataset link is not fixed.
 
 # Use the third argument if provided, otherwise use default tests
