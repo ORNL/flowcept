@@ -44,6 +44,7 @@ def _get_env_bool(name: str, default=False) -> bool:
     """Parse truthy env var values, unless strict default mode is enabled."""
     return str(_get_env(name, str(default))).strip().lower() in _TRUE_VALUES
 
+
 if USE_DEFAULT:
     settings = DEFAULT_SETTINGS.copy()
     SETTINGS_PATH = "FLOWCEPT_DEFAULT_SETTINGS"
@@ -186,9 +187,7 @@ DUMP_BUFFER_ENABLED = (
     # Falls back to settings project.dump_buffer.enabled, then to the default above.
     _get_env_bool(
         "DUMP_BUFFER",
-        settings["project"].get("dump_buffer", {}).get(
-            "enabled", _DEFAULT_DUMP_BUFFER_ENABLED
-        ),
+        settings["project"].get("dump_buffer", {}).get("enabled", _DEFAULT_DUMP_BUFFER_ENABLED),
     )
 )
 # Path is only read from settings.yaml; env override is not supported here.
