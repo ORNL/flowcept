@@ -75,6 +75,8 @@ jobs:
           echo "=== Runtime facts before Redis pytest ==="
           python - <<'PY'
           import flowcept.configs as c
+          from flowcept.commons.settings_factory import get_settings
+          ml = get_settings("mlflow")
           print(f"SETTINGS_PATH={c.SETTINGS_PATH}")
           print(f"DB_FLUSH_MODE={c.DB_FLUSH_MODE}")
           print(f"MQ_ENABLED={c.MQ_ENABLED}")
@@ -83,6 +85,8 @@ jobs:
           print(f"MQ_PORT={c.MQ_PORT}")
           print(f"MONGO_ENABLED={c.MONGO_ENABLED}")
           print(f"LMDB_ENABLED={c.LMDB_ENABLED}")
+          print(f"MLFLOW_WATCH_INTERVAL_SEC={ml.watch_interval_sec if ml else 'N/A'}")
+          print(f"MLFLOW_FILE_PATH={ml.file_path if ml else 'N/A'}")
           PY
           echo "=== Filesystem ==="
           stat -f -c %T . || stat -f %T . || true
@@ -122,6 +126,8 @@ jobs:
           echo "=== Runtime facts before Kafka pytest ==="
           python - <<'PY'
           import flowcept.configs as c
+          from flowcept.commons.settings_factory import get_settings
+          ml = get_settings("mlflow")
           print(f"SETTINGS_PATH={c.SETTINGS_PATH}")
           print(f"DB_FLUSH_MODE={c.DB_FLUSH_MODE}")
           print(f"MQ_ENABLED={c.MQ_ENABLED}")
@@ -130,6 +136,8 @@ jobs:
           print(f"MQ_PORT={c.MQ_PORT}")
           print(f"MONGO_ENABLED={c.MONGO_ENABLED}")
           print(f"LMDB_ENABLED={c.LMDB_ENABLED}")
+          print(f"MLFLOW_WATCH_INTERVAL_SEC={ml.watch_interval_sec if ml else 'N/A'}")
+          print(f"MLFLOW_FILE_PATH={ml.file_path if ml else 'N/A'}")
           PY
           echo "=== Filesystem ==="
           stat -f -c %T . || stat -f %T . || true
