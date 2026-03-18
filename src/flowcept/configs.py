@@ -177,7 +177,10 @@ ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
 if DB_FLUSH_MODE == "online" and not MQ_ENABLED:
     raise ValueError(
         "Invalid configuration: project.db_flush_mode is 'online' but MQ is disabled. "
-        "Enable mq.enabled (or MQ_ENABLED=true) or set project.db_flush_mode to 'offline'."
+        "Enable mq.enabled (or MQ_ENABLED=true) or set project.db_flush_mode to 'offline'.\n"
+        "Quick fix with profiles:\n"
+        "  flowcept --config-profile full-online -y\n"
+        "  flowcept --config-profile full-offline -y"
     )
 
 # Default: enable dump buffer only when running in offline flush mode.
@@ -289,16 +292,12 @@ for adapter in settings.get("adapters", set()):
 # Config guardrails
 #####
 
-if MQ_ENABLED and not KVDB_ENABLED:
-    raise ValueError(
-        "Invalid configuration: MQ is enabled but kv_db is disabled. "
-        "Enable kv_db.enabled (and KVDB) when MQ is enabled."
-    )
-
 if DB_FLUSH_MODE == "offline" and (MQ_ENABLED or MONGO_ENABLED or LMDB_ENABLED or KVDB_ENABLED):
     raise ValueError(
         "Invalid configuration: project.db_flush_mode is 'offline' but MQ/DBs are enabled.\n"
         f"mq.enabled={MQ_ENABLED}, kv_db.enabled={KVDB_ENABLED}, "
         f"databases.mongodb.enabled={MONGO_ENABLED}, databases.lmdb.enabled={LMDB_ENABLED}.\n"
-        "Disable mq.enabled, kv_db.enabled, and databases when running offline."
+        "Disable mq.enabled, kv_db.enabled, and databases when running offline.\n"
+        "Quick fix with profile:\n"
+        "  flowcept --config-profile full-offline -y"
     )

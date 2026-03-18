@@ -49,6 +49,13 @@ CONFIG_PROFILES = {
         "databases.mongodb.enabled": True,
         "databases.lmdb.enabled": False,
     },
+    "mq-only": {
+        "project.db_flush_mode": "online",
+        "mq.enabled": True,
+        "kv_db.enabled": False,
+        "databases.mongodb.enabled": False,
+        "databases.lmdb.enabled": False,
+    },
     "full-offline": {
         "project.db_flush_mode": "offline",
         "project.dump_buffer.enabled": True,
@@ -156,7 +163,7 @@ def apply_config_profile(config_profile: str, yes: bool = False):
     Parameters
     ----------
     config_profile : str
-        Profile name. Supported values: full-online, full-offline.
+        Profile name. Supported values: full-online, mq-only, full-offline.
     yes : bool, optional
         If true, skip confirmation prompt and apply changes immediately.
     """
@@ -868,7 +875,7 @@ def main():  # noqa: D103
         "--config-profile",
         type=str,
         choices=sorted(CONFIG_PROFILES.keys()),
-        help="Apply a predefined settings profile: full-online or full-offline.",
+        help="Apply a predefined settings profile: full-online, mq-only, or full-offline.",
     )
     parser.add_argument(
         "-y",
@@ -925,6 +932,8 @@ def main():  # noqa: D103
         print("Profile Commands:\n")
         print("  flowcept --config-profile full-online [-y]")
         print("      Configure settings for fully online mode (MQ + KV + Mongo enabled).")
+        print("  flowcept --config-profile mq-only [-y]")
+        print("      Configure settings for MQ-only mode (MQ enabled; KV and DocDBs disabled).")
         print("  flowcept --config-profile full-offline [-y]")
         print("      Configure settings for fully offline mode (MQ + KV + Mongo disabled).")
         print("")
