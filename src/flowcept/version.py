@@ -4,4 +4,4 @@
 # The expected format is: <Major>.<Minor>.<Patch>
 # This file is supposed to be automatically modified by the CI Bot.
 # See .github/workflows/version_bumper.py
-__version__ = "0.10.1"
+__version__ = "0.10.2"
