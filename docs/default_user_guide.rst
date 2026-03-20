@@ -31,11 +31,12 @@ For software developers, this is the recommended first read before drilling into
 Quick profile switch
 --------------------
 
-Use CLI profiles to switch between common online/offline settings quickly:
+Use CLI profiles to switch between common runtime settings quickly:
 
 .. code-block:: shell
 
    flowcept --config-profile full-online
+   flowcept --config-profile mq-only
    flowcept --config-profile full-offline
 
 The CLI prints exactly which keys will change, asks for confirmation, and writes to

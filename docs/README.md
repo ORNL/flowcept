@@ -77,6 +77,7 @@ Quick config profiles (recommended):
 
 ```bash
 flowcept --config-profile full-online
+flowcept --config-profile mq-only
 flowcept --config-profile full-offline
 ```
 
@@ -100,6 +101,13 @@ Current profile behavior:
   - `kv_db.enabled: true`
   - `databases.mongodb.enabled: true`
   - `databases.lmdb.enabled: false`
+- `mq-only`:
+  - `project.db_flush_mode: online`
+  - `mq.enabled: true`
+  - `kv_db.enabled: false`
+  - `databases.mongodb.enabled: false`
+  - `databases.lmdb.enabled: false`
+  - Use `Flowcept(check_safe_stops=False)` with this profile.
 - `full-offline`:
   - `project.db_flush_mode: offline`
   - `project.dump_buffer.enabled: true`
@@ -526,7 +534,9 @@ Read more:
 - Symptom: `ValueError` about `db_flush_mode` vs MQ/DB settings
   - Fix: keep config consistent:
     - Offline mode: disable MQ/KV/DBs
-    - Online mode: enable MQ + KV, and optionally DBs
+    - Online mode: use `flowcept --config-profile full-online -y` or `flowcept --config-profile mq-only -y`
+- Symptom: `ValueError` about `check_safe_stops=True` requiring KV while MQ is enabled
+  - Fix: either use `flowcept --config-profile full-online -y`, or keep `mq-only` and instantiate `Flowcept(check_safe_stops=False)`
 - Symptom: REST API import/start failures (`fastapi`/`uvicorn` missing)
   - Fix: `pip install flowcept[webservice,mongo]`
 - Symptom: `Flowcept.db` queries fail due to missing Mongo deps
@@ -552,6 +562,7 @@ pip install flowcept[report_pdf]
 # Init settings
 flowcept --init-settings
 flowcept --config-profile full-online
+flowcept --config-profile mq-only
 flowcept --config-profile full-offline
 flowcept --show-settings
 

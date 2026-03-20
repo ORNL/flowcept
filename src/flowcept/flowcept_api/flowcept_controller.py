@@ -116,6 +116,14 @@ class Flowcept(object):
         """
         self.logger = FlowceptLogger()
         self.logger.debug(f"Using settings file: {SETTINGS_PATH}")
+        if MQ_ENABLED and check_safe_stops and not KVDB_ENABLED:
+            raise ValueError(
+                "Invalid runtime configuration: check_safe_stops=True requires kv_db.enabled=True when mq.enabled=True."
+                "\n"
+                "Quick fix with profiles:\n"
+                "  flowcept --config-profile full-online -y\n"
+                "  flowcept --config-profile mq-only -y  # and instantiate Flowcept(check_safe_stops=False)"
+            )
         self._enable_persistence = start_persistence
         self._db_inserters: List = []
         self.buffer = None

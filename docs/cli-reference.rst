@@ -34,6 +34,7 @@ Flowcept provides quick settings profiles to switch between common runtime modes
 .. code-block:: shell
 
    flowcept --config-profile full-online
+   flowcept --config-profile mq-only
    flowcept --config-profile full-offline
 
 Behavior:
@@ -55,6 +56,13 @@ Current profile values:
   - ``kv_db.enabled: true``
   - ``databases.mongodb.enabled: true``
   - ``databases.lmdb.enabled: false``
+- ``mq-only``:
+  - ``project.db_flush_mode: online``
+  - ``mq.enabled: true``
+  - ``kv_db.enabled: false``
+  - ``databases.mongodb.enabled: false``
+  - ``databases.lmdb.enabled: false``
+  - Use ``Flowcept(check_safe_stops=False)`` with this profile.
 - ``full-offline``:
   - ``project.db_flush_mode: offline``
   - ``project.dump_buffer.enabled: true``
