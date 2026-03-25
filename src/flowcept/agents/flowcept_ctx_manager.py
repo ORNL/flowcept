@@ -256,6 +256,7 @@ if "allowed_hosts" in AGENT:
         enable_dns_rebinding_protection=True,
         allowed_hosts=AGENT.get("allowed_hosts"),
     )
+
 mcp_flowcept = FastMCP(
     "FlowceptAgent",
     lifespan=ctx_manager.lifespan,
