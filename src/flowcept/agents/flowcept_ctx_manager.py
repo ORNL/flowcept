@@ -252,6 +252,7 @@ ctx_manager = FlowceptAgentContextManager()
 agent_transport_security = None
 if "allowed_hosts" in AGENT:
     from mcp.server.transport_security import TransportSecuritySettings
+
     agent_transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=AGENT.get("allowed_hosts"),
