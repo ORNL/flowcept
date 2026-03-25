@@ -248,7 +248,20 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 
 # Exporting the ctx_manager and the mcp_flowcept
 ctx_manager = FlowceptAgentContextManager()
-mcp_flowcept = FastMCP("FlowceptAgent", lifespan=ctx_manager.lifespan, stateless_http=True)
+
+agent_transport_security = None
+if "allowed_hosts" in AGENT:
+    from mcp.server.transport_security import TransportSecuritySettings
+    agent_transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=AGENT.get("allowed_hosts"),
+    )
+mcp_flowcept = FastMCP(
+    "FlowceptAgent",
+    lifespan=ctx_manager.lifespan,
+    stateless_http=True,
+    transport_security=agent_transport_security if agent_transport_security else None,
+)
 
 EMPTY_DF_MESSAGE = "Current df is empty or null."
 

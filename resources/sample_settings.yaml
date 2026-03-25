@@ -92,6 +92,8 @@ agent:
   enabled: false
   mcp_host: localhost
   mcp_port: 8000
+  allowed_hosts:
+    - "0.1.2.3:*"
   llm_server_url: '?'
   api_key: '?'
   model: '?'
