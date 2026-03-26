@@ -30,6 +30,7 @@ run_test() {
   with_mongo="$2"
   echo "Test type=${test_type}"
   echo "Starting $test_path"
+  echo "With Mongo? $with_mongo"
 
   pip uninstall flowcept -y > /dev/null 2>&1 || true  # Ignore errors during uninstall
 
@@ -39,10 +40,11 @@ run_test() {
   pip list
 
   if [[ "$with_mongo" == "true" ]]; then
-    flowcept --config-profile full-online -y
     pip install .[mongo] > /dev/null 2>&1
   fi
 
+  flowcept --init-settings
+  flowcept --config-profile full-online -y
   cat ~/.flowcept/settings.yaml
 
   if [[ "$test_type" =~ "mlflow" ]]; then
