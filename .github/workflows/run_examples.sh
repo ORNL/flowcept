@@ -53,6 +53,7 @@ run_test() {
   elif [[ "$test_type" =~ "dask" ]]; then
     echo "Installing dask"
     pip install .[dask] > /dev/null 2>&1
+    python -c "from flowcept.flowceptor.adapters.dask.dask_dataclasses import DaskSettings; DaskSettings().save_settings()"
   elif [[ "$test_type" =~ "tensorboard" ]]; then
     echo "Installing tensorboard"
     pip install .[tensorboard] > /dev/null 2>&1
