@@ -390,13 +390,25 @@ def _format_single_field_value(value: Any) -> str:
     return _safe_sample(value, max_len=140)
 
 
-def _build_activity_io_summary(tasks_sorted: List[Dict[str, Any]]) -> List[str]:
-    """Build markdown lines for aggregated used/generated summaries by activity."""
+def _build_activity_io_summary(
+    tasks_sorted: List[Dict[str, Any]],
+    heading: str = "##",
+) -> List[str]:
+    """Build markdown lines for aggregated used/generated summaries by activity.
+
+    Parameters
+    ----------
+    tasks_sorted:
+        Flat list of task records sorted by start time.
+    heading:
+        Markdown heading prefix for the section (default ``"##"``).
+        Pass ``"####"`` to nest this section inside a deeper heading.
+    """
     by_activity: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
     for task in tasks_sorted:
         by_activity[_to_str(task.get("activity_id"))].append(task)
 
-    lines: List[str] = ["## Per Activity Details"]
+    lines: List[str] = [f"{heading} Per Activity Details"]
     activity_used_field_counts: List[Tuple[str, int]] = []
     activity_generated_field_counts: List[Tuple[str, int]] = []
     variability_candidates: List[Tuple[str, str, float]] = []
@@ -487,9 +499,246 @@ def _build_activity_io_summary(tasks_sorted: List[Dict[str, Any]]) -> List[str]:
             "- Highest numeric variability fields: " + ", ".join(f"`{a}:{f}` (range={v:.3f})" for a, f, v in top_var)
         )
     if insight_lines:
-        lines.append("### Interpretation & Insights")
+        lines.append(f"{heading}# Interpretation & Insights")
         lines.extend(insight_lines)
     lines.append("")
+    return lines
+
+
+def _build_per_activity_resource_section(
+    tasks_sorted: List[Dict[str, Any]],
+    heading: str = "##",
+) -> List[str]:
+    """Build markdown lines for the per-activity resource usage section.
+
+    Returns an empty list when no telemetry data is present.
+
+    Parameters
+    ----------
+    tasks_sorted:
+        Flat list of task records (sorted by start time is preferred but not required).
+    heading:
+        Markdown heading prefix for the section (default ``"##"``).
+        Pass ``"####"`` to nest this section inside a deeper heading.
+    """
+    telemetry_available = any(
+        isinstance(t.get("telemetry_at_start"), dict) and isinstance(t.get("telemetry_at_end"), dict)
+        for t in tasks_sorted
+    )
+    if not telemetry_available:
+        return []
+
+    activity_order: List[str] = []
+    activity_elapsed: Dict[str, List[float]] = defaultdict(list)
+    activity_cpu_user: Dict[str, float] = defaultdict(float)
+    activity_cpu_system: Dict[str, float] = defaultdict(float)
+    activity_cpu_percent: Dict[str, List[float]] = defaultdict(list)
+    activity_memory: Dict[str, float] = defaultdict(float)
+    activity_read: Dict[str, float] = defaultdict(float)
+    activity_write: Dict[str, float] = defaultdict(float)
+    activity_read_ops: Dict[str, float] = defaultdict(float)
+    activity_write_ops: Dict[str, float] = defaultdict(float)
+    activity_process_cpu: Dict[str, float] = defaultdict(float)
+    activity_net_sent: Dict[str, float] = defaultdict(float)
+    activity_net_recv: Dict[str, float] = defaultdict(float)
+    activity_gpu: Dict[str, float] = defaultdict(float)
+
+    for task in tasks_sorted:
+        activity = _to_str(task.get("activity_id"))
+        if activity not in activity_order:
+            activity_order.append(activity)
+        start = task.get("telemetry_at_start", {}) if isinstance(task.get("telemetry_at_start"), dict) else {}
+        end = task.get("telemetry_at_end", {}) if isinstance(task.get("telemetry_at_end"), dict) else {}
+        delta = _compute_telemetry_delta(start, end)
+        elapsed_value = elapsed_seconds(task.get("started_at"), task.get("ended_at"))
+        if elapsed_value is not None:
+            activity_elapsed[activity].append(elapsed_value)
+        activity_cpu_user[activity] += delta["cpu_user"] or 0.0
+        activity_cpu_system[activity] += delta["cpu_system"] or 0.0
+        activity_memory[activity] += delta["memory_used"] or 0.0
+        activity_read[activity] += delta["read_bytes"] or 0.0
+        activity_write[activity] += delta["write_bytes"] or 0.0
+        activity_read_ops[activity] += delta["read_count"] or 0.0
+        activity_write_ops[activity] += delta["write_count"] or 0.0
+        if delta["cpu_percent"] is not None:
+            activity_cpu_percent[activity].append(delta["cpu_percent"])
+        process_cpu = (
+            _delta(
+                _deep_get(start, ["process", "cpu_percent"]),
+                _deep_get(end, ["process", "cpu_percent"]),
+            )
+            or 0.0
+        )
+        activity_process_cpu[activity] += process_cpu
+        net_sent = (
+            _delta(
+                _deep_get(start, ["network", "netio_sum", "bytes_sent"]),
+                _deep_get(end, ["network", "netio_sum", "bytes_sent"]),
+            )
+            or 0.0
+        )
+        net_recv = (
+            _delta(
+                _deep_get(start, ["network", "netio_sum", "bytes_recv"]),
+                _deep_get(end, ["network", "netio_sum", "bytes_recv"]),
+            )
+            or 0.0
+        )
+        activity_net_sent[activity] += net_sent
+        activity_net_recv[activity] += net_recv
+        task_gpu_delta = 0.0
+        start_gpu = start.get("gpu", {}) if isinstance(start.get("gpu"), dict) else {}
+        end_gpu = end.get("gpu", {}) if isinstance(end.get("gpu"), dict) else {}
+        for gpu_key, gpu_end_val in end_gpu.items():
+            if not isinstance(gpu_end_val, dict):
+                continue
+            flat_end: Dict[str, float] = {}
+            _flatten_numeric("", gpu_end_val, flat_end)
+            flat_start: Dict[str, float] = {}
+            gpu_start = start_gpu.get(gpu_key, {}) if isinstance(start_gpu.get(gpu_key), dict) else {}
+            _flatten_numeric("", gpu_start, flat_start)
+            for metric, v_end in flat_end.items():
+                if "used" not in metric.lower() or "gpu" in metric.lower():
+                    continue
+                v_start = flat_start.get(metric)
+                if v_start is not None and v_end >= v_start:
+                    task_gpu_delta += v_end - v_start
+                else:
+                    task_gpu_delta += v_end
+        activity_gpu[activity] += task_gpu_delta
+
+    resource_rows: List[List[Any]] = []
+    for activity in activity_order:
+        elapsed_values = sorted(activity_elapsed.get(activity, []))
+        elapsed_median = _percentile(elapsed_values, 0.50) if elapsed_values else None
+        cpu_percent_values = activity_cpu_percent.get(activity, [])
+        cpu_percent_avg = (sum(cpu_percent_values) / len(cpu_percent_values)) if cpu_percent_values else None
+        resource_rows.append([
+            activity,
+            _fmt_seconds(elapsed_median),
+            _fmt_seconds(activity_cpu_user.get(activity)),
+            _fmt_seconds(activity_cpu_system.get(activity)),
+            _fmt_percent(cpu_percent_avg),
+            _fmt_bytes(activity_memory.get(activity)),
+            _fmt_bytes(activity_read.get(activity)),
+            _fmt_bytes(activity_write.get(activity)),
+            _fmt_count(activity_read_ops.get(activity)),
+            _fmt_count(activity_write_ops.get(activity)),
+        ])
+
+    io_heavy = sorted(
+        [(a, activity_read.get(a, 0.0), activity_write.get(a, 0.0)) for a in activity_order],
+        key=lambda x: x[1] + x[2],
+        reverse=True,
+    )
+    cpu_heavy = sorted(
+        [
+            (
+                a,
+                (sum(activity_cpu_percent.get(a, [])) / len(activity_cpu_percent.get(a, [])))
+                if activity_cpu_percent.get(a)
+                else 0.0,
+            )
+            for a in activity_order
+        ],
+        key=lambda x: x[1],
+        reverse=True,
+    )
+    mem_heavy = sorted(
+        [(a, activity_memory.get(a, 0.0)) for a in activity_order],
+        key=lambda x: x[1],
+        reverse=True,
+    )
+    process_cpu_heavy = sorted(
+        [(a, activity_process_cpu.get(a, 0.0)) for a in activity_order],
+        key=lambda x: x[1],
+        reverse=True,
+    )
+    network_heavy = sorted(
+        [(a, activity_net_sent.get(a, 0.0), activity_net_recv.get(a, 0.0)) for a in activity_order],
+        key=lambda x: x[1] + x[2],
+        reverse=True,
+    )
+    gpu_heavy = sorted(
+        [(a, activity_gpu.get(a, 0.0)) for a in activity_order],
+        key=lambda x: x[1],
+        reverse=True,
+    )
+
+    per_activity_headers = [
+        "Activity",
+        "Elapsed (s)",
+        "CPU User (s)",
+        "CPU System (s)",
+        "CPU (%)",
+        "Memory Delta",
+        "Read",
+        "Write",
+        "Read Ops",
+        "Write Ops",
+    ]
+    per_activity_headers, resource_rows = _filter_all_empty_columns(
+        per_activity_headers,
+        resource_rows,
+        keep_indices=[0, 1],
+    )
+    per_activity_insight_lines: List[str] = []
+    if any((read_b + write_b) > 0 for _, read_b, write_b in io_heavy):
+        per_activity_insight_lines.append("- Most IO-heavy Activities (Read + Write):")
+        for name, read_b, write_b in io_heavy[:5]:
+            if read_b + write_b <= 0:
+                continue
+            per_activity_insight_lines.append(
+                f"  - `{name}`: Read={_fmt_bytes(read_b)}, Write={_fmt_bytes(write_b)}"
+            )
+    if any(cpu_pct > 0 for _, cpu_pct in cpu_heavy):
+        per_activity_insight_lines.append("- Most CPU-active Activities:")
+        for name, cpu_pct in cpu_heavy[:5]:
+            if cpu_pct <= 0:
+                continue
+            per_activity_insight_lines.append(f"  - `{name}`: CPU={_fmt_percent(cpu_pct)}")
+    if any(mem > 0 for _, mem in mem_heavy):
+        per_activity_insight_lines.append("- Largest memory growth Activities:")
+        for name, mem in mem_heavy[:5]:
+            if mem <= 0:
+                continue
+            per_activity_insight_lines.append(f"  - `{name}`: Memory Delta={_fmt_bytes(mem)}")
+    if any((sent + recv) > 0 for _, sent, recv in network_heavy):
+        per_activity_insight_lines.append("- Most network-active Activities:")
+        for name, sent, recv in network_heavy[:5]:
+            if sent + recv <= 0:
+                continue
+            per_activity_insight_lines.append(
+                f"  - `{name}`: Sent={_fmt_bytes(sent)}, Received={_fmt_bytes(recv)}"
+            )
+    if any(proc_cpu > 0 for _, proc_cpu in process_cpu_heavy):
+        per_activity_insight_lines.append("- Highest process CPU delta Activities:")
+        for name, proc_cpu in process_cpu_heavy[:5]:
+            if proc_cpu <= 0:
+                continue
+            per_activity_insight_lines.append(f"  - `{name}`: Process CPU Delta={_fmt_percent(proc_cpu)}")
+    if any(gpu_delta > 0 for _, gpu_delta in gpu_heavy):
+        per_activity_insight_lines.append("- Highest GPU memory delta Activities:")
+        for name, gpu_delta in gpu_heavy[:5]:
+            if gpu_delta <= 0:
+                continue
+            per_activity_insight_lines.append(f"  - `{name}`: GPU Used Delta={_fmt_bytes(gpu_delta)}")
+
+    per_activity_has_resource_values = any(
+        any(not _is_empty_metric(cell) for cell in row[2:]) for row in resource_rows
+    )
+    if not bool(per_activity_has_resource_values or per_activity_insight_lines):
+        return []
+
+    lines: List[str] = []
+    lines.append(f"{heading} Per-activity Resource Usage")
+    if per_activity_has_resource_values:
+        lines.append(_render_table(per_activity_headers, resource_rows))
+        lines.append("")
+    if per_activity_insight_lines:
+        lines.append(f"{heading}# Interpretation & Insights")
+        lines.extend(per_activity_insight_lines)
+        lines.append("")
     return lines
 
 
