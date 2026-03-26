@@ -54,7 +54,7 @@ jobs:
         run: |
           pip install .
           pip list
-          flowcept --init-settings
+          flowcept --init-settings -y
           python examples/start_here.py
           pip uninstall flowcept -y 
           rm ~/.flowcept/settings.yaml

@@ -91,13 +91,14 @@ def show_settings():
     )
 
 
-def init_settings(full: bool = False):
+def init_settings(full: bool = False, yes: bool = False):
     """
     Create a new settings.yaml file in your home directory under ~/.flowcept.
 
     Parameters
     ----------
     full : bool, optional -- Run with full to generate a complete version of the settings file.
+    yes : bool, optional -- Auto-confirm overwrite if the settings file already exists.
     """
     settings_path_env = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
     if settings_path_env is not None:
@@ -107,10 +108,13 @@ def init_settings(full: bool = False):
         dest_path = Path(os.path.join(configs._SETTINGS_DIR, "settings.yaml"))
 
     if dest_path.exists():
-        overwrite = input(f"{dest_path} already exists. Overwrite? (y/N): ").strip().lower()
-        if overwrite != "y":
-            print("Operation aborted.")
-            return
+        if yes:
+            print(f"{dest_path} already exists. Overwriting (--yes flag set).")
+        else:
+            overwrite = input(f"{dest_path} already exists. Overwrite? (y/N): ").strip().lower()
+            if overwrite != "y":
+                print("Operation aborted.")
+                return
 
     os.makedirs(configs._SETTINGS_DIR, exist_ok=True)
 
@@ -892,6 +896,8 @@ def main():  # noqa: D103
         parser.add_argument(flag, action="store_true", help=short_help)
 
         for pname, param in inspect.signature(func).parameters.items():
+            if pname == "yes":  # already registered as a global -y/--yes flag
+                continue
             arg_name = f"--{pname.replace('_', '-')}"
             params_doc = _parse_numpy_doc(doc).get(pname, {})
 
