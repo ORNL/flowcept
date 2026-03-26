@@ -44,6 +44,7 @@ from flowcept.report.renderers.provenance_card_markdown import (
 # Shared formatting helpers
 # ---------------------------------------------------------------------------
 
+
 def _to_str(value: Any, default: str = "unknown") -> str:
     if value is None:
         return default
@@ -112,6 +113,7 @@ def _render_host_list(hostnames: List[str]) -> str:
 # Section builders shared by both campaign types
 # ---------------------------------------------------------------------------
 
+
 def _render_summary_section(
     campaign_id: Optional[str],
     campaign_type: str,
@@ -162,10 +164,7 @@ def _render_campaign_level_summary(
 
     # Top slowest activities (mirrors Workflow-level Summary top-5 slowest)
     top_slowest = sorted(
-        [
-            (_to_str(row.get("activity_id")), as_float(row.get("elapsed_median")))
-            for row in activities
-        ],
+        [(_to_str(row.get("activity_id")), as_float(row.get("elapsed_median"))) for row in activities],
         key=lambda x: x[1] if x[1] is not None else -1,
         reverse=True,
     )[:5]
@@ -193,6 +192,7 @@ def _render_footer(lines: List[str]) -> None:
 # ---------------------------------------------------------------------------
 # Type 1 — Replicated runs renderer
 # ---------------------------------------------------------------------------
+
 
 def _render_replicated(
     workflows: List[Dict[str, Any]],
@@ -257,19 +257,23 @@ def _render_replicated(
         wf_min, wf_max, wf_elapsed = workflow_bounds(wf_tasks)
         status_counts = Counter(str(t.get("status", "unknown")) for t in wf_tasks)
         status_str = ", ".join(f"{s}:{c}" for s, c in sorted(status_counts.items())) or "-"
-        rows.append([
-            i,
-            f"`{_short_id(wid)}`",
-            fmt_timestamp_utc(wf_min) if wf_min else "-",
-            _fmt_seconds(wf_elapsed),
-            status_str,
-        ])
+        rows.append(
+            [
+                i,
+                f"`{_short_id(wid)}`",
+                fmt_timestamp_utc(wf_min) if wf_min else "-",
+                _fmt_seconds(wf_elapsed),
+                status_str,
+            ]
+        )
         elapsed_per_run.append(wf_elapsed)
 
-    lines.append(_render_table(
-        ["Run #", "Workflow ID", "Started (UTC)", "Elapsed", "Status counts"],
-        rows,
-    ))
+    lines.append(
+        _render_table(
+            ["Run #", "Workflow ID", "Started (UTC)", "Elapsed", "Status counts"],
+            rows,
+        )
+    )
     lines.append("")
 
     # Timing insights (same subsection as single-workflow card)
@@ -331,6 +335,7 @@ def _render_replicated(
 # ---------------------------------------------------------------------------
 # Type 2 — Pipeline renderer
 # ---------------------------------------------------------------------------
+
 
 def _render_pipeline_stage_flow(workflows: List[Dict[str, Any]]) -> str:
     """Render a linear stage-flow diagram for pipeline campaigns."""
@@ -409,20 +414,24 @@ def _render_pipeline(
         status_counts = Counter(str(t.get("status", "unknown")) for t in wf_tasks)
         status_str = ", ".join(f"{s}:{c}" for s, c in sorted(status_counts.items())) or "-"
         hostnames = extract_hostnames_from_workflow(wf)
-        overview_rows.append([
-            i,
-            name,
-            f"`{_short_id(wid)}`",
-            fmt_timestamp_utc(wf_min) if wf_min else "-",
-            _fmt_seconds(wf_elapsed),
-            status_str,
-            _render_host_list(hostnames),
-        ])
+        overview_rows.append(
+            [
+                i,
+                name,
+                f"`{_short_id(wid)}`",
+                fmt_timestamp_utc(wf_min) if wf_min else "-",
+                _fmt_seconds(wf_elapsed),
+                status_str,
+                _render_host_list(hostnames),
+            ]
+        )
 
-    lines.append(_render_table(
-        ["Stage #", "Workflow name", "Workflow ID", "Started (UTC)", "Elapsed", "Status counts", "Host(s)"],
-        overview_rows,
-    ))
+    lines.append(
+        _render_table(
+            ["Stage #", "Workflow name", "Workflow ID", "Started (UTC)", "Elapsed", "Status counts", "Host(s)"],
+            overview_rows,
+        )
+    )
     lines.append("")
 
     # ------------------------------------------------------------------
@@ -477,6 +486,7 @@ def _render_pipeline(
 # Shared helpers
 # ---------------------------------------------------------------------------
 
+
 def _render_object_summary(objects: List[Dict[str, Any]], lines: List[str]) -> None:
     """Append a compact object artifact summary section (mirrors single-workflow card)."""
     summary = summarize_objects(objects)
@@ -499,6 +509,7 @@ def _render_object_summary(objects: List[Dict[str, Any]], lines: List[str]) -> N
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
+
 
 def render_provenance_campaign_card_markdown(
     dataset: Dict[str, Any],

@@ -613,18 +613,20 @@ def _build_per_activity_resource_section(
         elapsed_median = _percentile(elapsed_values, 0.50) if elapsed_values else None
         cpu_percent_values = activity_cpu_percent.get(activity, [])
         cpu_percent_avg = (sum(cpu_percent_values) / len(cpu_percent_values)) if cpu_percent_values else None
-        resource_rows.append([
-            activity,
-            _fmt_seconds(elapsed_median),
-            _fmt_seconds(activity_cpu_user.get(activity)),
-            _fmt_seconds(activity_cpu_system.get(activity)),
-            _fmt_percent(cpu_percent_avg),
-            _fmt_bytes(activity_memory.get(activity)),
-            _fmt_bytes(activity_read.get(activity)),
-            _fmt_bytes(activity_write.get(activity)),
-            _fmt_count(activity_read_ops.get(activity)),
-            _fmt_count(activity_write_ops.get(activity)),
-        ])
+        resource_rows.append(
+            [
+                activity,
+                _fmt_seconds(elapsed_median),
+                _fmt_seconds(activity_cpu_user.get(activity)),
+                _fmt_seconds(activity_cpu_system.get(activity)),
+                _fmt_percent(cpu_percent_avg),
+                _fmt_bytes(activity_memory.get(activity)),
+                _fmt_bytes(activity_read.get(activity)),
+                _fmt_bytes(activity_write.get(activity)),
+                _fmt_count(activity_read_ops.get(activity)),
+                _fmt_count(activity_write_ops.get(activity)),
+            ]
+        )
 
     io_heavy = sorted(
         [(a, activity_read.get(a, 0.0), activity_write.get(a, 0.0)) for a in activity_order],
@@ -688,9 +690,7 @@ def _build_per_activity_resource_section(
         for name, read_b, write_b in io_heavy[:5]:
             if read_b + write_b <= 0:
                 continue
-            per_activity_insight_lines.append(
-                f"  - `{name}`: Read={_fmt_bytes(read_b)}, Write={_fmt_bytes(write_b)}"
-            )
+            per_activity_insight_lines.append(f"  - `{name}`: Read={_fmt_bytes(read_b)}, Write={_fmt_bytes(write_b)}")
     if any(cpu_pct > 0 for _, cpu_pct in cpu_heavy):
         per_activity_insight_lines.append("- Most CPU-active Activities:")
         for name, cpu_pct in cpu_heavy[:5]:
@@ -708,9 +708,7 @@ def _build_per_activity_resource_section(
         for name, sent, recv in network_heavy[:5]:
             if sent + recv <= 0:
                 continue
-            per_activity_insight_lines.append(
-                f"  - `{name}`: Sent={_fmt_bytes(sent)}, Received={_fmt_bytes(recv)}"
-            )
+            per_activity_insight_lines.append(f"  - `{name}`: Sent={_fmt_bytes(sent)}, Received={_fmt_bytes(recv)}")
     if any(proc_cpu > 0 for _, proc_cpu in process_cpu_heavy):
         per_activity_insight_lines.append("- Highest process CPU delta Activities:")
         for name, proc_cpu in process_cpu_heavy[:5]:
@@ -724,9 +722,7 @@ def _build_per_activity_resource_section(
                 continue
             per_activity_insight_lines.append(f"  - `{name}`: GPU Used Delta={_fmt_bytes(gpu_delta)}")
 
-    per_activity_has_resource_values = any(
-        any(not _is_empty_metric(cell) for cell in row[2:]) for row in resource_rows
-    )
+    per_activity_has_resource_values = any(any(not _is_empty_metric(cell) for cell in row[2:]) for row in resource_rows)
     if not bool(per_activity_has_resource_values or per_activity_insight_lines):
         return []
 
