@@ -284,6 +284,7 @@ for adapter in settings.get("adapters", set()):
 # Config guardrails
 #####
 
+
 def validate_config():
     """Validate runtime configuration. Call this before starting Flowcept, not at import time."""
     if DB_FLUSH_MODE == "online" and not MQ_ENABLED:

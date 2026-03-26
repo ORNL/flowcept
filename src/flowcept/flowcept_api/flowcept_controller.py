@@ -117,6 +117,7 @@ class Flowcept(object):
         self.logger = FlowceptLogger()
         self.logger.debug(f"Using settings file: {SETTINGS_PATH}")
         from flowcept.configs import validate_config
+
         validate_config()
         if MQ_ENABLED and check_safe_stops and not KVDB_ENABLED:
             raise ValueError(
