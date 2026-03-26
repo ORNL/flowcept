@@ -39,8 +39,11 @@ run_test() {
   pip list
 
   if [[ "$with_mongo" == "true" ]]; then
+    flowcept --config-profile full-online -y
     pip install .[mongo] > /dev/null 2>&1
   fi
+
+  cat ~/.flowcept/settings.yaml
 
   if [[ "$test_type" =~ "mlflow" ]]; then
     echo "Installing mlflow"
