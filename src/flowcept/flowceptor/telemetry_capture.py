@@ -14,7 +14,7 @@ from flowcept.configs import (
 )
 from flowcept.commons.flowcept_dataclasses.telemetry import Telemetry
 
-if TELEMETRY_CAPTURE is not None and len(TELEMETRY_CAPTURE):
+if TELEMETRY_CAPTURE is not None and any(TELEMETRY_CAPTURE.values()):
     import psutil
     import cpuinfo
 

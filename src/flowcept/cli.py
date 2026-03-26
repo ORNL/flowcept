@@ -48,6 +48,7 @@ CONFIG_PROFILES = {
         "kv_db.enabled": True,
         "databases.mongodb.enabled": True,
         "databases.lmdb.enabled": False,
+        "db_buffer.insertion_buffer_time_secs": 5,
     },
     "mq-only": {
         "project.db_flush_mode": "online",

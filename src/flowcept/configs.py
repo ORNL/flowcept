@@ -168,7 +168,7 @@ DB_INSERTER_SLEEP_TRIALS_STOP = db_buffer_settings.get("stop_trials_sleep", 0.01
 # PROJECT SYSTEM SETTINGS #
 ###########################
 
-DB_FLUSH_MODE = settings["project"].get("db_flush_mode", "offline")
+DB_FLUSH_MODE = _get_env("DB_FLUSH_MODE", settings["project"].get("db_flush_mode", "offline"))
 PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get("replace_non_json_serializable", True)
