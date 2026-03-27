@@ -11,7 +11,6 @@ from flowcept.flowceptor.adapters.base_interceptor import (
 )
 from flowcept.commons.utils import get_utc_now, replace_non_serializable
 from flowcept.configs import (
-    TELEMETRY_CAPTURE,
     REPLACE_NON_JSON_SERIALIZABLE,
     ENRICH_MESSAGES,
     INSTRUMENTATION,
@@ -100,7 +99,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
             task_msg.task_id = task_id
 
             if ts.state == "executing":
-                if TELEMETRY_CAPTURE is not None:
+                if self.telemetry_capture is not None:
                     task_msg.telemetry_at_start = self.telemetry_capture.capture()
                 task_msg.status = Status.RUNNING
                 task_msg.address = self._worker.worker_address
@@ -114,7 +113,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
                     task_msg.ended_at = get_utc_now()
                 else:
                     get_times_from_task_state(task_msg, ts)
-                if TELEMETRY_CAPTURE is not None:
+                if self.telemetry_capture is not None:
                     task_msg.telemetry_at_end = self.telemetry_capture.capture()
 
             elif ts.state == "error":
@@ -127,7 +126,7 @@ class DaskWorkerInterceptor(BaseInterceptor):
                     "exception": ts.exception_text,
                     "traceback": ts.traceback_text,
                 }
-                if TELEMETRY_CAPTURE is not None:
+                if self.telemetry_capture is not None:
                     task_msg.telemetry_at_end = self.telemetry_capture.capture()
             else:
                 return
