@@ -50,13 +50,15 @@ run_test() {
   if [[ "$test_type" =~ "mlflow" ]]; then
     echo "Installing mlflow"
     pip install .[mlflow] > /dev/null 2>&1
+    flowcept --init-settings --mlflow -y
   elif [[ "$test_type" =~ "dask" ]]; then
     echo "Installing dask"
     pip install .[dask] > /dev/null 2>&1
-    python -c "from flowcept.flowceptor.adapters.dask.dask_dataclasses import DaskSettings; DaskSettings().save_settings()"
+    flowcept --init-settings --dask -y
   elif [[ "$test_type" =~ "tensorboard" ]]; then
     echo "Installing tensorboard"
     pip install .[tensorboard] > /dev/null 2>&1
+    flowcept --init-settings --tensorboard -y
   elif [[ "$test_type" =~ "single_layer_perceptron" ]]; then
     echo "Installing ml_dev dependencies"
     pip install .[ml_dev] > /dev/null 2>&1

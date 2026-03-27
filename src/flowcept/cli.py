@@ -92,7 +92,13 @@ def show_settings():
     )
 
 
-def init_settings(full: bool = False, yes: bool = False):
+def init_settings(
+    full: bool = False,
+    yes: bool = False,
+    dask: bool = False,
+    mlflow: bool = False,
+    tensorboard: bool = False,
+):
     """
     Create a new settings.yaml file in your home directory under ~/.flowcept.
 
@@ -100,6 +106,9 @@ def init_settings(full: bool = False, yes: bool = False):
     ----------
     full : bool, optional -- Run with full to generate a complete version of the settings file.
     yes : bool, optional -- Auto-confirm overwrite if the settings file already exists.
+    dask : bool, optional -- Add default dask adapter settings under adapters.dask.
+    mlflow : bool, optional -- Add default mlflow adapter settings under adapters.mlflow.
+    tensorboard : bool, optional -- Add default tensorboard adapter settings under adapters.tensorboard.
     """
     settings_path_env = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
     if settings_path_env is not None:
@@ -131,6 +140,24 @@ def init_settings(full: bool = False, yes: bool = False):
         cfg = OmegaConf.create(configs.DEFAULT_SETTINGS)
         OmegaConf.save(cfg, dest_path)
         print(f"Generated default settings under {dest_path}.")
+
+    if dask:
+        from flowcept.flowceptor.adapters.dask.dask_dataclasses import DaskSettings
+
+        DaskSettings().save_settings()
+        print("Added adapters.dask settings.")
+
+    if mlflow:
+        from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import MLFlowSettings
+
+        MLFlowSettings().save_settings()
+        print("Added adapters.mlflow settings.")
+
+    if tensorboard:
+        from flowcept.flowceptor.adapters.tensorboard.tensorboard_dataclasses import TensorboardSettings
+
+        TensorboardSettings().save_settings()
+        print("Added adapters.tensorboard settings.")
 
 
 def _resolve_user_settings_path() -> Path:
