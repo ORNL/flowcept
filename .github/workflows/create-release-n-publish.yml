@@ -135,6 +135,7 @@ jobs:
 
       - name: Test notebooks
         run: |
+          flowcept --init-settings --dask --mlflow -y
           # export FLOWCEPT_SETTINGS_PATH=~/.flowcept/settings.yaml
           python src/flowcept/flowcept_webserver/app.py &
           sleep 3
@@ -148,4 +149,3 @@ jobs:
           make clean
           find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
           docker image prune -a -f
-

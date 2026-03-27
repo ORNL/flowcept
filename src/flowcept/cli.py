@@ -110,6 +110,8 @@ def init_settings(
     mlflow : bool, optional -- Add default mlflow adapter settings under adapters.mlflow.
     tensorboard : bool, optional -- Add default tensorboard adapter settings under adapters.tensorboard.
     """
+    add_adapters = dask or mlflow or tensorboard
+
     settings_path_env = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
     if settings_path_env is not None:
         print(f"FLOWCEPT_SETTINGS_PATH environment variable is set to {settings_path_env}.")
@@ -118,7 +120,9 @@ def init_settings(
         dest_path = Path(os.path.join(configs._SETTINGS_DIR, "settings.yaml"))
 
     if dest_path.exists():
-        if yes:
+        if add_adapters:
+            print(f"{dest_path} already exists. Reusing it to add adapter settings.")
+        elif yes:
             print(f"{dest_path} already exists. Overwriting (--yes flag set).")
         else:
             overwrite = input(f"{dest_path} already exists. Overwrite? (y/N): ").strip().lower()
@@ -128,7 +132,9 @@ def init_settings(
 
     os.makedirs(configs._SETTINGS_DIR, exist_ok=True)
 
-    if full:
+    if dest_path.exists() and add_adapters:
+        pass
+    elif full:
         print("Going to generate full settings.yaml.")
         sample_settings_path = str(resources.files("resources").joinpath("sample_settings.yaml"))
         with open(sample_settings_path, "rb") as src_file, open(dest_path, "wb") as dst_file:

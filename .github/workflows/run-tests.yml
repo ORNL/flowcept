@@ -109,7 +109,9 @@ jobs:
           make tests
 
       - name: Test notebooks with pytest and redis
-        run: make tests-notebooks
+        run: |
+          flowcept --init-settings --dask --mlflow -y
+          make tests-notebooks
 
       - name: Shut down docker compose
         run: make services-stop-mongo
