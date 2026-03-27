@@ -43,7 +43,7 @@ run_test() {
     pip install .[mongo] > /dev/null 2>&1
   fi
 
-  flowcept --init-settings --full -y
+  flowcept --init-settings -y
   flowcept --config-profile full-online -y
   cat ~/.flowcept/settings.yaml
 
@@ -62,6 +62,9 @@ run_test() {
   elif [[ "$test_type" =~ "single_layer_perceptron" ]]; then
     echo "Installing ml_dev dependencies"
     pip install .[ml_dev] > /dev/null 2>&1
+    export FLOWCEPT_SETTINGS_PATH="${RUNNER_TEMP:-/tmp}/flowcept_single_layer_perceptron_settings.yaml"
+    flowcept --init-settings --full -y
+    flowcept --config-profile full-online -y
   elif [[ "$test_type" =~ "llm_complex" ]]; then
     echo "Installing ml_dev dependencies"
     pip install .[dask] > /dev/null 2>&1
@@ -75,6 +78,7 @@ run_test() {
   echo "Running $test_path ..."
   python "$test_path" | tee output.log
   unset FLOWCEPT_USE_DEFAULT
+  unset FLOWCEPT_SETTINGS_PATH
   echo "Ok, ran $test_path."
 
   if grep -iq "error" output.log; then
