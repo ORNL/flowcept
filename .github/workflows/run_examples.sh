@@ -28,6 +28,8 @@ run_test() {
   test_path="${EXAMPLES_DIR}/${1}"
   test_type="$1"
   with_mongo="$2"
+  settings_slug="$(echo "$test_type" | tr '/.' '__')"
+  export FLOWCEPT_SETTINGS_PATH="${RUNNER_TEMP:-/tmp}/flowcept_${settings_slug}_settings.yaml"
   echo "Test type=${test_type}"
   echo "Starting $test_path"
   echo "With Mongo? $with_mongo"
@@ -45,7 +47,7 @@ run_test() {
 
   flowcept --init-settings -y
   flowcept --config-profile full-online -y
-  cat ~/.flowcept/settings.yaml
+  cat "$FLOWCEPT_SETTINGS_PATH"
 
   if [[ "$test_type" =~ "mlflow" ]]; then
     echo "Installing mlflow"
@@ -62,7 +64,6 @@ run_test() {
   elif [[ "$test_type" =~ "single_layer_perceptron" ]]; then
     echo "Installing ml_dev dependencies"
     pip install .[ml_dev] > /dev/null 2>&1
-    export FLOWCEPT_SETTINGS_PATH="${RUNNER_TEMP:-/tmp}/flowcept_single_layer_perceptron_settings.yaml"
     flowcept --init-settings --full -y
     flowcept --config-profile full-online -y
   elif [[ "$test_type" =~ "llm_complex" ]]; then
