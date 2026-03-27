@@ -43,7 +43,7 @@ run_test() {
     pip install .[mongo] > /dev/null 2>&1
   fi
 
-  flowcept --init-settings -y
+  flowcept --init-settings --full -y
   flowcept --config-profile full-online -y
   cat ~/.flowcept/settings.yaml
 
