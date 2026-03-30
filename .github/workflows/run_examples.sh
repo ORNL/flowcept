@@ -70,7 +70,8 @@ run_test() {
     echo "Installing ml_dev dependencies"
     pip install .[dask] > /dev/null 2>&1
     pip install .[ml_dev]
-    flowcept --init-settings --dask -y
+    flowcept --init-settings --full -y
+    flowcept --config-profile full-online -y
     echo "Defining python path for llm_complex..."
   elif [[ "$test_type" == "unmanaged/simple_task2.py" ]]; then
     export FLOWCEPT_USE_DEFAULT=true
