@@ -54,7 +54,7 @@ jobs:
         run: |
           pip install .
           pip list
-          flowcept --init-settings -y
+          flowcept --init-settings --full -y
           python examples/start_here.py
           pip uninstall flowcept -y 
           rm ~/.flowcept/settings.yaml
@@ -72,6 +72,9 @@ jobs:
           # Reinstall local checkout last to avoid any resolver path picking an older published wheel.
           python -m pip install --force-reinstall --no-deps .
 
+      - name: Init flowcept settings
+        run: flowcept --init-settings --full -y
+
       - name: Verify Flowcept import path
         run: |
           python - <<'PY'
@@ -81,6 +84,8 @@ jobs:
 
       - name: List installed packages
         run: pip list
+
+
 
       - name: Test with pytest and redis
         run: |
@@ -110,7 +115,7 @@ jobs:
 
       - name: Test notebooks with pytest and redis
         run: |
-          flowcept --init-settings --dask --mlflow -y
+          flowcept --init-settings --full -y
           make tests-notebooks
 
       - name: Shut down docker compose
