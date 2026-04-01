@@ -419,7 +419,7 @@ def _build_activity_io_summary(
     for task in tasks_sorted:
         by_activity[_to_str(task.get("activity_id"))].append(task)
 
-    lines: List[str] = ([f"{heading} Per Activity Details"] if include_header else [])
+    lines: List[str] = [f"{heading} Per Activity Details"] if include_header else []
     activity_used_field_counts: List[Tuple[str, int]] = []
     activity_generated_field_counts: List[Tuple[str, int]] = []
     variability_candidates: List[Tuple[str, str, float]] = []
@@ -1127,7 +1127,7 @@ def render_provenance_card_markdown(
     workflow_name = str(workflow_name_raw).strip()
     if not workflow_name:
         workflow_name = "unknown"
-    workflow_id = str(workflow.get("workflow_id", "unknown"))
+    str(workflow.get("workflow_id", "unknown"))
     campaign_id = str(workflow.get("campaign_id", "unknown"))
     workflow_title = workflow_name
     if workflow_title == "unknown":
@@ -1360,7 +1360,11 @@ def render_provenance_card_markdown(
     ):
         lines.append(f"- **Code Repository:** `{code_repo_text}`")
     _append_summary_line(lines, "Git Remote", _to_str(code_repo.get("remote")))
-    for section_label, section_key in [("Workflow Used", "used"), ("Workflow Generated", "generated"), ("Workflow Custom Metadata", "custom_metadata")]:
+    for section_label, section_key in [
+        ("Workflow Used", "used"),
+        ("Workflow Generated", "generated"),
+        ("Workflow Custom Metadata", "custom_metadata"),
+    ]:
         section_data = workflow.get(section_key)
         if not isinstance(section_data, dict) or not section_data:
             continue

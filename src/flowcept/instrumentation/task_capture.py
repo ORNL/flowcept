@@ -148,12 +148,33 @@ class FlowceptTask(object):
             )
 
     def get_id(self):
+        """Return the task identifier.
+
+        Returns
+        -------
+        Any
+            Identifier associated with the current task.
+        """
         return self._task.task_id
 
     def get_workflow_id(self):
+        """Return the workflow identifier.
+
+        Returns
+        -------
+        Any
+            Identifier of the workflow associated with the current task.
+        """
         return self._task.workflow_id
 
     def get_campaign_id(self):
+        """Return the campaign identifier.
+
+        Returns
+        -------
+        Any
+            Identifier of the campaign associated with the current task.
+        """
         return self._task.campaign_id
 
     def __enter__(self):

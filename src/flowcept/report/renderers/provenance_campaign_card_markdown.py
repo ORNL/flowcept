@@ -480,10 +480,14 @@ def _render_pipeline(
         lines.append(f"### {wf_heading}")
         lines.append("")
         stage_tasks_sorted = sorted(wf_tasks, key=lambda t: as_float(t.get("started_at")) or float("inf"))
-        lines.extend(_build_activity_io_summary(
-            stage_tasks_sorted, heading="####", include_header=False,
-            hostname_data=host_by_activity if host_by_activity else None,
-        ))
+        lines.extend(
+            _build_activity_io_summary(
+                stage_tasks_sorted,
+                heading="####",
+                include_header=False,
+                hostname_data=host_by_activity if host_by_activity else None,
+            )
+        )
         lines.extend(_build_per_activity_resource_section(stage_tasks_sorted, heading="####"))
         lines.append("")
 

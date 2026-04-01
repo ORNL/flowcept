@@ -1286,7 +1286,11 @@ def _build_pdf_document(
         _add_bullet(story, f"**Code Repository:** `{code_repo_text}`", styles["b1"])
     _add_summary_bullet(story, "Git Remote", _to_str(code_repo.get("remote")), styles["b1"])
 
-    for section_label, section_key in [("Workflow Used", "used"), ("Workflow Generated", "generated"), ("Workflow Custom Metadata", "custom_metadata")]:
+    for section_label, section_key in [
+        ("Workflow Used", "used"),
+        ("Workflow Generated", "generated"),
+        ("Workflow Custom Metadata", "custom_metadata"),
+    ]:
         section_data = workflow.get(section_key)
         if not isinstance(section_data, dict) or not section_data:
             continue

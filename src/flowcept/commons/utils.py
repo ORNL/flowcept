@@ -318,7 +318,21 @@ class GenericJSONDecoder(json.JSONDecoder):
         return inst
 
 
-def get_array_summary(array: np.ndarray)->dict:
+def get_array_summary(array: np.ndarray) -> dict:
+    """Return a compact summary of a NumPy array.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Input array to summarize.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the minimum value, maximum value, median value,
+        and shape of the input array. The returned keys are:
+        ``"min"``, ``"max"``, ``"med"``, and ``"shape"``.
+    """
     summary = {
         "min": array.min().item(),
         "max": array.max().item(),
@@ -326,6 +340,7 @@ def get_array_summary(array: np.ndarray)->dict:
         "shape": array.shape,
     }
     return summary
+
 
 def get_git_info(path: str = "."):
     """Get Git Repo metadata."""

@@ -144,6 +144,7 @@ def generate_report(
         else:
             from rich.console import Console
             from rich.markdown import Markdown
+
             Console().print(Markdown(render_stats["markdown"]))
 
     return {

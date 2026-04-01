@@ -169,7 +169,7 @@ class Flowcept(object):
         if should_delete_buffer_file:
             Flowcept.delete_buffer_file()
 
-    def start(self)->"Flowcept":
+    def start(self) -> "Flowcept":
         """Start Flowcept Controller."""
         if self.is_started or not self.enabled:
             self.logger.warning("DB inserter may be already started or instrumentation is not set")
