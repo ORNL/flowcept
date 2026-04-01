@@ -1,6 +1,6 @@
 name: Code and doc checks
 
-on: pull_request
+on: push
 
 jobs:
 

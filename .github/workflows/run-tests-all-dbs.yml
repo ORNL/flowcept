@@ -1,5 +1,5 @@
 name: With and Without Mongo at the same time
-on: [pull_request]
+on: [push]
 
 jobs:
 

@@ -1,5 +1,5 @@
 name: LLM Tests
-on: [pull_request]
+on: [push]
 
 jobs:
 

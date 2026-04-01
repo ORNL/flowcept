@@ -1,5 +1,5 @@
 name: Tests on Py_gt_312
-on: [pull_request]
+on: [push]
 
 jobs:
 
