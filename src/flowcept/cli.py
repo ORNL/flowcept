@@ -140,7 +140,6 @@ def init_settings(
         with open(sample_settings_path, "rb") as src_file, open(dest_path, "wb") as dst_file:
             dst_file.write(src_file.read())
             print(f"Copied {sample_settings_path} to {dest_path}")
-        apply_config_profile("full-online", yes=True)
     else:
         from omegaconf import OmegaConf
 
