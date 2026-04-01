@@ -49,11 +49,16 @@ jobs:
         run: pip list
 
       - name: Test with pytest and redis
-        run: make tests
+        run: |
+          python -m flowcept.cli --init-settings --full -y
+          python -m flowcept.cli --config-profile full-online -y
+          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"
 
       - name: Test notebooks with pytest and redis
         run: |
-          flowcept --init-settings --dask --mlflow -y
+          python -m flowcept.cli --init-settings --full -y
+          python -m flowcept.cli --config-profile full-online -y
+          python -m flowcept.cli --init-settings --dask --mlflow -y
           pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb" --ignore="notebooks/analytics.ipynb" --ignore=notebooks/tensorboard.ipynb
 
       - name: Shut down docker compose

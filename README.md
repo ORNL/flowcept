@@ -50,7 +50,7 @@ The easiest way to capture provenance from plain Python functions, with no exter
 pip install flowcept
 flowcept --init-settings
 ```
-This generates a minimal settings file in `~/.flowcept/settings.yaml.`
+This generates a minimal settings file in `~/.flowcept/settings.yaml`.
 
 2) Run the minimal example
 
@@ -132,8 +132,12 @@ This prints out:
 
 → See [Provenance Card](#provenance-card) for details.
 
-For diskless runs (no JSON files), online querying using databases, MCP agents and Grafana, telemetry, adapters (MLflow, Dask, TensorBoard), PyTorch and MCP instrumentation, HPC optimization or federated runs,
+That is the simplest, vanilla run of Flowcept, good for quick sanity checks on a laptop, small-scale run. 
+For diskless runs (no JSON files), OpenAPI RESTful services, online querying using databases,
+LLM-based database interactions via an MCP agent, Grafana, telemetry,
+adapters (MLflow, Dask, TensorBoard), PyTorch and MCP instrumentation, HPC optimization or federated runs,
 and more, see the [Jupyter Notebooks](notebooks), the [Examples directory](examples) and the [complete documentation](https://flowcept.readthedocs.io/).
+
 To use the provenance agent with your favorite code assistant (for example, Codex or Claude), see the [Agents README](src/flowcept/agents/README.md).
 
 ## ❗ Developer Docs
@@ -342,9 +346,22 @@ See the [deployment/](deployment/) compose files for expected images and configu
 
 Flowcept uses a settings file for configuration.
 
-- To create a minimal settings file (**recommended**), run: `flowcept --init-settings` → creates `~/.flowcept/settings.yaml`
+- To create a minimal settings file, run: `flowcept --init-settings` → creates `~/.flowcept/settings.yaml`
 
-- To create a full settings file with all options, run: `flowcept --init-settings --full` → creates `~/.flowcept/settings.yaml`
+- To copy the full sample settings file, run: `flowcept --init-settings --full` → creates `~/.flowcept/settings.yaml`
+
+- To switch runtime mode, apply a profile after creating the file:
+
+```bash
+flowcept --init-settings --full -y
+flowcept --config-profile full-online -y
+```
+
+Meaning:
+
+- `--init-settings` = minimal file with default settings.
+- `--init-settings --full` = copy `resources/sample_settings.yaml`
+- `--config-profile ...` = overlay a runtime mode on top of the existing file
 
 ---
 
@@ -368,6 +385,20 @@ Flowcept looks for its settings in the following order:
 1. `~/.flowcept/settings.yaml` — created by running `flowcept --init-settings`  
 2. Environment variable `FLOWCEPT_SETTINGS_PATH` — if set, Flowcept will use this environment variable  
 3. [Default sample file](resources/sample_settings.yaml) — used if neither of the above is found
+
+Important:
+
+- environment variables can override settings values
+- use profiles for mode switches such as `full-online`, `full-offline`, `mq-only`, `full-telemetry`
+- adapter flags are additive:
+
+```bash
+flowcept --init-settings --dask -y
+flowcept --init-settings --mlflow -y
+flowcept --init-settings --tensorboard -y
+```
+
+They add `adapters.<name>` to the current settings file instead of replacing the whole file.
 
 # Examples
 

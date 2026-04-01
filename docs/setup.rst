@@ -191,6 +191,7 @@ Flowcept Settings File
 Flowcept uses a settings file for configuration.
 
 - To create a minimal settings file (**recommended**):
+  use:
 
 .. code-block:: bash
 
@@ -199,12 +200,26 @@ Flowcept uses a settings file for configuration.
 Creates ``~/.flowcept/settings.yaml``.
 
 - To create a full settings file with all options:
+  use:
 
 .. code-block:: bash
 
    flowcept --init-settings --full
 
 Also creates ``~/.flowcept/settings.yaml``.
+
+Recommended pattern:
+
+.. code-block:: bash
+
+   flowcept --init-settings --full -y
+   flowcept --config-profile full-online -y
+
+Meaning:
+
+- ``flowcept --init-settings``: minimal file from ``DEFAULT_SETTINGS``
+- ``flowcept --init-settings --full``: copy ``resources/sample_settings.yaml``
+- ``flowcept --config-profile ...``: apply a runtime overlay to the existing file
 
 What You Can Configure
 -----------------------
@@ -217,6 +232,21 @@ What You Can Configure
 - Log levels  
 - Data observability adapters  
 - And more (see `example file <https://github.com/ORNL/flowcept/blob/main/resources/sample_settings.yaml>`_)  
+
+Common profiles:
+
+- ``full-online``: Redis MQ + Redis KV + Mongo + online flush
+- ``full-offline``: offline flush + dump buffer + MQ/KV/DB disabled
+- ``mq-only``: MQ only, no KV/Mongo/LMDB
+- ``full-telemetry``: telemetry on except GPU
+
+Adapter flags are additive:
+
+.. code-block:: bash
+
+   flowcept --init-settings --dask -y
+   flowcept --init-settings --mlflow -y
+   flowcept --init-settings --tensorboard -y
 
 Custom Settings File
 ---------------------
@@ -236,6 +266,12 @@ Environment Variables
    If ``FLOWCEPT_USE_DEFAULT=true``, Flowcept runs in strict default mode:
    external settings files and runtime env overrides (MQ/DB host/ports/toggles, etc.)
    are ignored.
+
+Short version:
+
+- settings file controls the normal behavior
+- profiles modify the settings file
+- environment variables can still override those values at runtime
 
 General
 ~~~~~~~
