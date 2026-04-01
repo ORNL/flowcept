@@ -50,6 +50,16 @@ CONFIG_PROFILES = {
         "databases.lmdb.enabled": False,
         "db_buffer.insertion_buffer_time_secs": 5,
     },
+    "full-telemetry": {
+        "telemetry_capture.cpu": True,
+        "telemetry_capture.per_cpu": True,
+        "telemetry_capture.process_info": True,
+        "telemetry_capture.mem": True,
+        "telemetry_capture.disk": True,
+        "telemetry_capture.network": True,
+        "telemetry_capture.machine_info": True,
+        "telemetry_capture.gpu": None,
+    },
     "mq-only": {
         "project.db_flush_mode": "online",
         "mq.enabled": True,

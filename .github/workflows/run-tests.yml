@@ -113,7 +113,7 @@ jobs:
           echo "=== inotify limits ==="
           cat /proc/sys/fs/inotify/max_user_watches || true
           cat /proc/sys/fs/inotify/max_user_instances || true
-          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py -k "not test_decorated_function_timed"
+          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"
 
       - name: Test decorator timing in isolated offline mode
         run: |
@@ -126,6 +126,12 @@ jobs:
           flowcept --init-settings --full -y
           flowcept --config-profile full-online -y
           pytest tests/instrumentation_tests/flowcept_task_decorator_test.py::DecoratorTests::test_decorated_function_timed -q
+
+      - name: Test telemetry in isolated telemetry mode
+        run: |
+          flowcept --init-settings --full -y
+          flowcept --config-profile full-telemetry -y
+          pytest tests/misc_tests/telemetry_test.py -q
 
       - name: Test notebooks with pytest and redis
         run: |
