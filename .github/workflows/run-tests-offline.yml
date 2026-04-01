@@ -29,8 +29,8 @@ jobs:
 
       - name: Create offline settings
         run: |
-          python -m flowcept.cli --init-settings --full -y
-          python -m flowcept.cli --config-profile full-offline -y
+          flowcept --init-settings --full -y
+          flowcept --config-profile full-offline -y
 
       - name: Verify offline settings
         run: |

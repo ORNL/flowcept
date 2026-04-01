@@ -188,8 +188,8 @@ jobs:
         run: |
           export MQ_TYPE=kafka
           export MQ_PORT=9092
-          python -m flowcept.cli --init-settings --full -y
-          python -m flowcept.cli --config-profile full-telemetry -y
+          flowcept --init-settings --full -y
+          flowcept --config-profile full-telemetry -y
           pytest tests/misc_tests/telemetry_test.py -q
 
       - name: Stop docker compose with kafka
