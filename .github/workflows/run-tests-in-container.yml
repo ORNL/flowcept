@@ -1,5 +1,5 @@
 name: Inside a Container
-on: [push]
+on: [pull_request]
 
 jobs:
 
