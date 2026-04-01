@@ -355,23 +355,6 @@ class DecoratorTests(unittest.TestCase):
         assert isinstance(fn_value, str)
         assert fn_value.startswith("function_instance_id_")
 
-    def test_online_offline(self):
-        flowcept.configs.DB_FLUSH_MODE = "offline"
-        flowcept.configs.DUMP_BUFFER_ENABLED = True
-        # flowcept.instrumentation.decorators.instrumentation_interceptor = (
-        #     BaseInterceptor(plugin_key=None)
-        # )
-        print("Testing times with offline mode")
-        self.test_decorated_function_timed()
-
-        flowcept.configs.DB_FLUSH_MODE = "online"
-        flowcept.configs.DUMP_BUFFER_ENABLED = False
-        # flowcept.instrumentation.decorators.instrumentation_interceptor = (
-        #     BaseInterceptor(plugin_key=None)
-        # )
-        print("Testing times with online mode")
-        self.test_decorated_function_timed()
-
     @pytest.mark.safeoffline
     def test_decorated_function_timed(self):
         print()

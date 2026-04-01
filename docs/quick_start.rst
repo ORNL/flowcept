@@ -21,6 +21,14 @@ First, install Flowcept and initialize a settings file:
 
 This creates a minimal settings file at ``~/.flowcept/settings.yaml``.
 
+Use this for the simplest offline path.
+
+If you need the full config structure instead, use:
+
+.. code-block:: bash
+
+   flowcept --init-settings --full
+
 Run a Minimal Example
 ---------------------
 
@@ -104,4 +112,3 @@ Examples:
 
 - `Examples directory <https://github.com/ORNL/flowcept/tree/main/examples>`_
 - `Jupyter Notebooks <https://github.com/ORNL/flowcept/tree/main/notebooks>`_
-

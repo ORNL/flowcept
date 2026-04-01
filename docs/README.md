@@ -63,6 +63,13 @@ Generate settings:
 flowcept --init-settings
 ```
 
+Full file vs runtime mode:
+
+```bash
+flowcept --init-settings --full -y
+flowcept --config-profile full-online -y
+```
+
 Important: `settings.yaml` is the single source of truth for Flowcept runtime behavior.
 
 - default path: `~/.flowcept/settings.yaml`
@@ -77,6 +84,7 @@ Quick config profiles (recommended):
 
 ```bash
 flowcept --config-profile full-online
+flowcept --config-profile full-telemetry
 flowcept --config-profile mq-only
 flowcept --config-profile full-offline
 ```
@@ -115,6 +123,19 @@ Current profile behavior:
   - `kv_db.enabled: false`
   - `databases.mongodb.enabled: false`
   - `databases.lmdb.enabled: false`
+- `full-telemetry`:
+  - enables CPU, per-CPU, process, memory, disk, network, machine telemetry
+  - keeps `telemetry_capture.gpu: null`
+
+Adapter setup is additive:
+
+```bash
+flowcept --init-settings --dask -y
+flowcept --init-settings --mlflow -y
+flowcept --init-settings --tensorboard -y
+```
+
+These commands add `adapters.<name>` to the current settings file.
 
 ## 2) Capture provenance
 

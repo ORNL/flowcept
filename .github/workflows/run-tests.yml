@@ -11,9 +11,6 @@ jobs:
     strategy:
       matrix:
         python-version: [ "3.11", "3.12" ]
-    env:
-      MONGO_ENABLED: true
-      LMDB_ENABLED: false
     timeout-minutes: 70
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
 
@@ -73,7 +70,9 @@ jobs:
           python -m pip install --force-reinstall --no-deps .
 
       - name: Init flowcept settings
-        run: flowcept --init-settings --full -y
+        run: |
+          flowcept --init-settings --full -y
+          flowcept --config-profile full-online -y
 
       - name: Verify Flowcept import path
         run: |
@@ -111,11 +110,30 @@ jobs:
           echo "=== inotify limits ==="
           cat /proc/sys/fs/inotify/max_user_watches || true
           cat /proc/sys/fs/inotify/max_user_instances || true
-          make tests
+          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"
+
+      - name: Test decorator timing in isolated offline mode
+        run: |
+          flowcept --init-settings --full -y
+          flowcept --config-profile full-offline -y
+          pytest tests/instrumentation_tests/flowcept_task_decorator_test.py::DecoratorTests::test_decorated_function_timed -q
+
+      - name: Test decorator timing in isolated online mode
+        run: |
+          flowcept --init-settings --full -y
+          flowcept --config-profile full-online -y
+          pytest tests/instrumentation_tests/flowcept_task_decorator_test.py::DecoratorTests::test_decorated_function_timed -q
+
+      - name: Test telemetry in isolated telemetry mode
+        run: |
+          flowcept --init-settings --full -y
+          flowcept --config-profile full-telemetry -y
+          pytest tests/misc_tests/telemetry_test.py -q
 
       - name: Test notebooks with pytest and redis
         run: |
           flowcept --init-settings --full -y
+          flowcept --config-profile full-online -y
           make tests-notebooks
 
       - name: Shut down docker compose
@@ -164,7 +182,15 @@ jobs:
           echo "=== inotify limits ==="
           cat /proc/sys/fs/inotify/max_user_watches || true
           cat /proc/sys/fs/inotify/max_user_instances || true
-          make tests
+          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"
+
+      - name: Test telemetry in isolated telemetry mode with kafka
+        run: |
+          export MQ_TYPE=kafka
+          export MQ_PORT=9092
+          flowcept --init-settings --full -y
+          flowcept --config-profile full-telemetry -y
+          pytest tests/misc_tests/telemetry_test.py -q
 
       - name: Stop docker compose with kafka
         run: docker compose -f deployment/compose-kafka.yml down

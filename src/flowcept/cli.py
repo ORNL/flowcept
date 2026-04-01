@@ -12,6 +12,12 @@ Supports:
 - `flowcept --command --arg=value`
 - `flowcept -h` or `flowcept` for full help
 - `flowcept --help --command` for command-specific help
+
+Configuration model:
+- `flowcept --init-settings` creates a minimal settings file from `DEFAULT_SETTINGS`.
+- `flowcept --init-settings --full` copies `resources/sample_settings.yaml`.
+- `flowcept --config-profile <name>` applies an overlay to the existing settings file.
+- Adapter flags such as `--dask` and `--mlflow` are additive and reuse the current file.
 """
 
 import subprocess
@@ -49,6 +55,16 @@ CONFIG_PROFILES = {
         "databases.mongodb.enabled": True,
         "databases.lmdb.enabled": False,
         "db_buffer.insertion_buffer_time_secs": 5,
+    },
+    "full-telemetry": {
+        "telemetry_capture.cpu": True,
+        "telemetry_capture.per_cpu": True,
+        "telemetry_capture.process_info": True,
+        "telemetry_capture.mem": True,
+        "telemetry_capture.disk": True,
+        "telemetry_capture.network": True,
+        "telemetry_capture.machine_info": True,
+        "telemetry_capture.gpu": None,
     },
     "mq-only": {
         "project.db_flush_mode": "online",
@@ -100,15 +116,29 @@ def init_settings(
     tensorboard: bool = False,
 ):
     """
-    Create a new settings.yaml file in your home directory under ~/.flowcept.
+    Create or extend the user settings file.
 
     Parameters
     ----------
-    full : bool, optional -- Run with full to generate a complete version of the settings file.
-    yes : bool, optional -- Auto-confirm overwrite if the settings file already exists.
-    dask : bool, optional -- Add default dask adapter settings under adapters.dask.
-    mlflow : bool, optional -- Add default mlflow adapter settings under adapters.mlflow.
-    tensorboard : bool, optional -- Add default tensorboard adapter settings under adapters.tensorboard.
+    full : bool, optional
+        If true, copy `resources/sample_settings.yaml`. Otherwise create the minimal
+        settings file from `flowcept.configs.DEFAULT_SETTINGS`.
+    yes : bool, optional
+        Auto-confirm overwrite if the settings file already exists.
+    dask : bool, optional
+        Add default dask adapter settings under `adapters.dask`.
+    mlflow : bool, optional
+        Add default mlflow adapter settings under `adapters.mlflow`.
+    tensorboard : bool, optional
+        Add default tensorboard adapter settings under `adapters.tensorboard`.
+
+    Notes
+    -----
+    - If `FLOWCEPT_SETTINGS_PATH` is set, that path is used instead of
+      `~/.flowcept/settings.yaml`.
+    - Adapter flags are additive: if the target file already exists, Flowcept reuses it
+      and only writes adapter sections.
+    - `--full` only copies the full sample file. It does not apply a runtime profile.
     """
     add_adapters = dask or mlflow or tensorboard
 
@@ -140,7 +170,6 @@ def init_settings(
         with open(sample_settings_path, "rb") as src_file, open(dest_path, "wb") as dst_file:
             dst_file.write(src_file.read())
             print(f"Copied {sample_settings_path} to {dest_path}")
-        apply_config_profile("full-online", yes=True)
     else:
         from omegaconf import OmegaConf
 
@@ -197,14 +226,20 @@ def _compute_profile_changes(cfg, profile_name: str):
 
 def apply_config_profile(config_profile: str, yes: bool = False):
     """
-    Apply a settings profile to the user settings file with confirmation.
+    Apply a settings profile overlay to the user settings file.
 
     Parameters
     ----------
     config_profile : str
-        Profile name. Supported values: full-online, mq-only, full-offline.
+        Profile name. Supported values: full-online, full-telemetry, mq-only,
+        full-offline.
     yes : bool, optional
         If true, skip confirmation prompt and apply changes immediately.
+
+    Notes
+    -----
+    Profiles modify the existing file in place. They do not create a separate profile
+    file and they do not bypass runtime environment-variable overrides.
     """
     from omegaconf import OmegaConf
 
