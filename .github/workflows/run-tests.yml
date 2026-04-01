@@ -11,9 +11,6 @@ jobs:
     strategy:
       matrix:
         python-version: [ "3.11", "3.12" ]
-    env:
-      MONGO_ENABLED: true
-      LMDB_ENABLED: false
     timeout-minutes: 70
     if: "!contains(github.event.head_commit.message, 'CI Bot')"
 
