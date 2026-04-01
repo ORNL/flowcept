@@ -286,13 +286,18 @@ QUERY_GUIDELINES = """
     If the query asks you to report which values appear in one or more columns
         (for example “which X were used”, “list all Y”, “what X and Y were generated”), then:
 
-            For each relevant column, select that column from df.            
-            Call .dropna() on that column to remove missing values.            
-            After dropping NaNs, apply .unique(), .value_counts(), or any other aggregation as needed.            
-            Select that column.            
-            Call .dropna() on it.            
+            For each relevant column, select that column from df.
+            Call .dropna() on that column to remove missing values.
+            After dropping NaNs, apply .unique(), .value_counts(), or any other aggregation as needed.
+            Select that column.
+            Call .dropna() on it.
             Then call .unique(), .value_counts(), or any other aggregation.
-            
+
+    - **CRITICAL — list-valued columns**: Some columns store Python lists as cell values
+      (identifiable in the schema by element type `et` or shape `s`, e.g. `used.plant_ids`).
+      NEVER call `.unique()` or `.value_counts()` directly on these — it raises “unhashable type: list”.
+      Always call `.explode()` first to flatten the lists into individual rows, then aggregate:
+        result = df['used.plant_ids'].dropna().explode().unique()
 
     - **Do not include metadata columns unless explicitly required by the user query.**
 """

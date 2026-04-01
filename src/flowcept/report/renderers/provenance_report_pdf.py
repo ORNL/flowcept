@@ -1181,7 +1181,7 @@ def _build_pdf_document(
 
     workflow = dataset.get("workflow", {}) if isinstance(dataset.get("workflow"), dict) else {}
     tasks = dataset.get("tasks", []) if isinstance(dataset.get("tasks"), list) else []
-    objects = dataset.get("objects", []) if isinstance(dataset.get("objects"), list) else []
+    objects = dataset.get("objects") or []
     workflow_name_raw = _to_str(workflow.get("name")).strip()
     workflow_id_label = _to_str(workflow.get("workflow_id"))
     workflow_title = workflow_name_raw
@@ -1286,14 +1286,18 @@ def _build_pdf_document(
         _add_bullet(story, f"**Code Repository:** `{code_repo_text}`", styles["b1"])
     _add_summary_bullet(story, "Git Remote", _to_str(code_repo.get("remote")), styles["b1"])
 
-    workflow_args = workflow.get("used", {}) if isinstance(workflow.get("used"), dict) else {}
-    simple_args = [
-        (key, value) for key, value in sorted(workflow_args.items()) if isinstance(value, (str, int, float, bool))
-    ]
-    if simple_args:
-        _add_bullet(story, "**Workflow args:**", styles["b1"])
-        for key, value in simple_args:
-            _add_bullet(story, f"`{key}`: `{value}`", styles["b2"])
+    for section_label, section_key in [("Workflow Used", "used"), ("Workflow Generated", "generated"), ("Workflow Custom Metadata", "custom_metadata")]:
+        section_data = workflow.get(section_key)
+        if not isinstance(section_data, dict) or not section_data:
+            continue
+        _add_bullet(story, f"**{section_label}:**", styles["b1"])
+        for key in sorted(section_data.keys()):
+            value = section_data[key]
+            if isinstance(value, (dict, list)) and value:
+                _add_bullet(story, f"`{key}`:", styles["b2"])
+                story.append(Preformatted("\n".join(_format_yaml_like_lines(value)), styles["mono_indent"]))
+            else:
+                _add_bullet(story, f"`{key}`: `{_safe_repr(value)}`", styles["b2"])
 
     # Workflow-level summary
     story.append(Paragraph("Workflow-level Summary", styles["h2"]))
