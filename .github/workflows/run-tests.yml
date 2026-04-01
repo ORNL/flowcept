@@ -182,7 +182,15 @@ jobs:
           echo "=== inotify limits ==="
           cat /proc/sys/fs/inotify/max_user_watches || true
           cat /proc/sys/fs/inotify/max_user_instances || true
-          make tests
+          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"
+
+      - name: Test telemetry in isolated telemetry mode with kafka
+        run: |
+          export MQ_TYPE=kafka
+          export MQ_PORT=9092
+          python -m flowcept.cli --init-settings --full -y
+          python -m flowcept.cli --config-profile full-telemetry -y
+          pytest tests/misc_tests/telemetry_test.py -q
 
       - name: Stop docker compose with kafka
         run: docker compose -f deployment/compose-kafka.yml down
