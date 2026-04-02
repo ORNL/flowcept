@@ -266,8 +266,8 @@ class LMDBDAO(DocumentDBDAO):
         elif collection == "workflows":
             _db = self._workflows_db
         else:
-            msg = "Only tasks and workflows "
-            raise Exception(msg + "collections are currently available for this.")
+            self.logger.warning(f"LMDB does not support collection '{collection}'. Returning None.")
+            return None
 
         try:
             data = []

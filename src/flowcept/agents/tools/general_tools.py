@@ -1,6 +1,4 @@
 import json
-import tempfile
-from pathlib import Path
 from typing import List
 
 from flowcept import Flowcept
@@ -129,58 +127,50 @@ def reset_context() -> ToolResult:
 
 
 @mcp_flowcept.tool()
-def generate_workflow_provenance_card(workflow_id: str, output_path: str | None = None) -> ToolResult:
+def generate_provenance_card(
+    workflow_id: str | None = None,
+    campaign_id: str | None = None,
+    input_jsonl_path: str | None = None,
+) -> ToolResult:
     """
-    Generate and return markdown workflow provenance content for a specific workflow identifier.
+    Generate and return a markdown provenance card as text.
+
+    Exactly one of ``workflow_id``, ``campaign_id``, or ``input_jsonl_path`` must be provided.
 
     Parameters
     ----------
-    workflow_id : str
-        Workflow identifier used to query workflow/task/object records from the database.
-    output_path : str | None, optional
-        Optional output path. If omitted, a temporary file is used and removed.
+    workflow_id : str | None
+        Query by workflow identifier.
+    campaign_id : str | None
+        Query by campaign identifier (produces a campaign-level card).
+    input_jsonl_path : str | None
+        Path to a Flowcept JSONL buffer file used as input instead of the DB.
 
     Returns
     -------
     ToolResult
-        ``code=201`` with markdown text payload on success, or an error payload on failure.
+        ``code=301`` with markdown text in ``result["markdown"]`` on success,
+        or an error payload on failure.
     """
     try:
-        if not workflow_id:
-            return ToolResult(code=400, result="workflow_id is required.")
-        if output_path:
-            output = output_path
-            should_cleanup = False
-        else:
-            tmp = tempfile.NamedTemporaryFile(prefix="flowcept_card_", suffix=".md", delete=False)
-            tmp.close()
-            output = tmp.name
-            should_cleanup = True
+        if not any([workflow_id, campaign_id, input_jsonl_path]):
+            return ToolResult(code=400, result="One of workflow_id, campaign_id, or input_jsonl_path is required.")
 
-        try:
-            stats = Flowcept.generate_report(
-                report_type="provenance_card",
-                format="markdown",
-                workflow_id=workflow_id,
-                output_path=output,
-            )
-            markdown_text = Path(output).read_text(encoding="utf-8")
-            return ToolResult(
-                code=201,
-                result={
-                    "workflow_id": workflow_id,
-                    "report_type": "provenance_card",
-                    "format": "markdown",
-                    "markdown": markdown_text,
-                    "output": stats.get("output"),
-                },
-            )
-        finally:
-            if should_cleanup:
-                try:
-                    Path(output).unlink(missing_ok=True)
-                except Exception:
-                    pass
+        stats = Flowcept.generate_report(
+            report_type="provenance_card",
+            format="markdown",
+            workflow_id=workflow_id,
+            campaign_id=campaign_id,
+            input_jsonl_path=input_jsonl_path,
+        )
+        return ToolResult(
+            code=301,
+            result={
+                "workflow_id": workflow_id,
+                "campaign_id": campaign_id,
+                "markdown": stats["markdown"],
+            },
+        )
     except Exception as e:
         return ToolResult(code=499, result=str(e))
 
@@ -203,7 +193,7 @@ def prompt_handler(message: str) -> ToolResult:
     df_key_words = ["df", "save", "result = df"]
     for key in df_key_words:
         if key in message:
-            return run_df_query(llm=None, query=message, plot=False)
+            return run_df_query(query=message, llm=None, plot=False)
 
     if "reset context" in message:
         return reset_context()
@@ -236,9 +226,9 @@ def prompt_handler(message: str) -> ToolResult:
         response = llm.invoke(prompt)
         return ToolResult(code=201, result=response)
     elif route == "in_context_query":
-        return run_df_query(llm, message, plot=False)
+        return run_df_query(message, llm=llm, plot=False)
     elif route == "plot":
-        return run_df_query(llm, message, plot=True)
+        return run_df_query(message, llm=llm, plot=True)
     elif route == "historical_prov_query":
         return ToolResult(code=201, result="We need to query the Provenance Database. Feature coming soon.")
     elif route == "in_chat_query":

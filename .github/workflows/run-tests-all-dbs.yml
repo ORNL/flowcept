@@ -55,11 +55,15 @@ jobs:
           export MONGO_ENABLED=true
           export LMDB_ENABLED=true
           python -c "from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED; print('MONGO?', MONGO_ENABLED); print('LMDB?', LMDB_ENABLED)"
-          make tests
+          flowcept --init-settings --full -y
+          flowcept --config-profile full-online -y
+          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"
 
       - name: Test notebooks with pytest and redis
         run: |
-          flowcept --init-settings --dask --mlflow -y
+          rm -f "${FLOWCEPT_SETTINGS_PATH:-$HOME/.flowcept/settings.yaml}"
+          flowcept --init-settings --full --dask --mlflow -y
+          flowcept --config-profile full-online -y
           pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb" --ignore=notebooks/tensorboard.ipynb
 
       - name: Stop services

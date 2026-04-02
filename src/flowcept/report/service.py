@@ -106,12 +106,9 @@ def generate_report(
 
     is_campaign = "workflows" in dataset
 
-    if output_path is None:
-        if is_campaign:
-            output_path = "CAMPAIGN_PROVENANCE_CARD.md"
-        else:
-            output_path = "PROVENANCE_CARD.md" if report_type == "provenance_card" else "PROVENANCE_REPORT.pdf"
-    output = Path(output_path)
+    if output_path is None and format == "pdf":
+        output_path = "PROVENANCE_REPORT.pdf"
+    output = Path(output_path) if output_path is not None else None
 
     if is_campaign:
         # Campaign dataset: multiple workflow runs detected
@@ -142,12 +139,18 @@ def generate_report(
             raise ModuleNotFoundError(
                 'Markdown terminal rendering requires Rich. Install with: pip install flowcept["extras"]'
             )
-        render_markdown_file_into_rich_terminal(output)
+        if output is not None:
+            render_markdown_file_into_rich_terminal(output)
+        else:
+            from rich.console import Console
+            from rich.markdown import Markdown
+
+            Console().print(Markdown(render_stats["markdown"]))
 
     return {
         "report_type": report_type,
         "format": format,
-        "output": str(output),
+        "output": str(output) if output is not None else None,
         "input_mode": mode,
         "skipped_lines": skipped_lines,
         **render_stats,

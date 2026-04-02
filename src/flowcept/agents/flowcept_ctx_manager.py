@@ -223,6 +223,9 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         self.context.value_examples = self.schema_tracker.get_example_values()
 
         _df = pd.json_normalize(tasks)
+        for col in _df.columns:
+            if _df[col].apply(lambda v: isinstance(v, list)).any():
+                _df[col] = _df[col].apply(lambda v: tuple(v) if isinstance(v, list) else v)
         self.context.df = pd.concat([self.context.df, pd.DataFrame(_df)], ignore_index=True)
 
     def monitor_chunk(self):

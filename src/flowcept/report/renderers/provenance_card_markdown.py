@@ -164,9 +164,9 @@ def _flatten_dict(prefix: str, value: Any, out: Dict[str, Any]) -> None:
 
 
 def _safe_sample(value: Any, max_len: int = 80) -> str:
-    """Render a compact sanitized example value."""
+    """Render a compact sanitized example value (single line, no newlines)."""
     safe = sanitize_json_like(value)
-    text = str(safe)
+    text = " ".join(str(safe).split())  # collapse all whitespace/newlines to single spaces
     if len(text) > max_len:
         return text[: max_len - 3] + "..."
     return text
@@ -374,10 +374,10 @@ def _summarize_field_values(values: List[Any], total_runs: int) -> str:
             scalar_counter[_safe_sample(v, max_len=40)] += 1
 
     if shape_counter:
-        top = ", ".join(f"{k} ({c})" for k, c in shape_counter.most_common(2))
+        top = ", ".join(f"{k} (×{c})" if c > 1 else k for k, c in shape_counter.most_common(2))
         return f"presence={presence}; type=shape-like; top_shapes={top}"
     if scalar_counter:
-        top = ", ".join(f"{k} ({c})" for k, c in scalar_counter.most_common(3))
+        top = ", ".join(f"{k} (×{c})" if c > 1 else k for k, c in scalar_counter.most_common(3))
         return f"presence={presence}; type=scalar/categorical; top_values={top}"
 
     return f"presence={presence}; type=mixed; sample={_safe_sample(values[0])}"
@@ -390,9 +390,14 @@ def _format_single_field_value(value: Any) -> str:
     return _safe_sample(value, max_len=140)
 
 
+_HOST_DISPLAY_MAX = 10
+
+
 def _build_activity_io_summary(
     tasks_sorted: List[Dict[str, Any]],
     heading: str = "##",
+    include_header: bool = True,
+    hostname_data: Optional[Dict[str, Any]] = None,
 ) -> List[str]:
     """Build markdown lines for aggregated used/generated summaries by activity.
 
@@ -403,12 +408,18 @@ def _build_activity_io_summary(
     heading:
         Markdown heading prefix for the section (default ``"##"``).
         Pass ``"####"`` to nest this section inside a deeper heading.
+    include_header:
+        If True, prepend the ``Per Activity Details`` heading line.
+    hostname_data:
+        Optional mapping of activity_id → Counter[hostname, task_count].
+        When provided, a host distribution block is appended after each
+        activity's used/generated summary.
     """
     by_activity: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
     for task in tasks_sorted:
         by_activity[_to_str(task.get("activity_id"))].append(task)
 
-    lines: List[str] = [f"{heading} Per Activity Details"]
+    lines: List[str] = [f"{heading} Per Activity Details"] if include_header else []
     activity_used_field_counts: List[Tuple[str, int]] = []
     activity_generated_field_counts: List[Tuple[str, int]] = []
     variability_candidates: List[Tuple[str, str, float]] = []
@@ -481,6 +492,17 @@ def _build_activity_io_summary(
                 numeric_vals = [v for v in numeric_vals if v is not None]
                 if numeric_vals and len(numeric_vals) == len(gen_fields[key]):
                     variability_candidates.append((activity, f"generated.{key}", max(numeric_vals) - min(numeric_vals)))
+
+        if hostname_data is not None:
+            host_counts = hostname_data.get(activity)
+            if host_counts:
+                sorted_hosts = host_counts.most_common()
+                lines.append("  - Hosts (tasks per host):")
+                for host, count in sorted_hosts[:_HOST_DISPLAY_MAX]:
+                    lines.append(f"    - `{host}`: {count} task(s)")
+                if len(sorted_hosts) > _HOST_DISPLAY_MAX:
+                    remaining = len(sorted_hosts) - _HOST_DISPLAY_MAX
+                    lines.append(f"    - _...and {remaining} other host(s) also executed tasks in this activity_")
     lines.append("")
     insight_lines: List[str] = []
     if activity_used_field_counts:
@@ -1092,7 +1114,7 @@ def render_provenance_card_markdown(
     """Render a summarized provenance-card markdown file."""
     workflow = dataset.get("workflow", {}) if isinstance(dataset.get("workflow"), dict) else {}
     tasks = dataset.get("tasks", []) if isinstance(dataset.get("tasks"), list) else []
-    objects = dataset.get("objects", []) if isinstance(dataset.get("objects"), list) else []
+    objects = dataset.get("objects") or []
     tasks_sorted = sorted(tasks, key=lambda t: as_float(t.get("started_at")) or float("inf"))
 
     starts = [as_float(t.get("started_at")) for t in tasks if as_float(t.get("started_at")) is not None]
@@ -1105,7 +1127,7 @@ def render_provenance_card_markdown(
     workflow_name = str(workflow_name_raw).strip()
     if not workflow_name:
         workflow_name = "unknown"
-    workflow_id = str(workflow.get("workflow_id", "unknown"))
+    str(workflow.get("workflow_id", "unknown"))
     campaign_id = str(workflow.get("campaign_id", "unknown"))
     workflow_title = workflow_name
     if workflow_title == "unknown":
@@ -1322,7 +1344,6 @@ def render_provenance_card_markdown(
     lines.append("")
     lines.append("## Summary")
     _append_summary_line(lines, "Workflow Name", workflow_name)
-    _append_summary_line(lines, "Workflow ID", workflow_id)
     _append_summary_line(lines, "Campaign ID", campaign_id)
     _append_summary_line(lines, "Execution Start (UTC)", fmt_timestamp_utc(min_start))
     _append_summary_line(lines, "Execution End (UTC)", fmt_timestamp_utc(max_end))
@@ -1339,16 +1360,26 @@ def render_provenance_card_markdown(
     ):
         lines.append(f"- **Code Repository:** `{code_repo_text}`")
     _append_summary_line(lines, "Git Remote", _to_str(code_repo.get("remote")))
-    workflow_args = workflow.get("used", {}) if isinstance(workflow.get("used"), dict) else {}
-    simple_workflow_args = []
-    for key in sorted(workflow_args.keys()):
-        value = workflow_args.get(key)
-        if _is_simple_value(value):
-            simple_workflow_args.append((key, value))
-    if simple_workflow_args:
-        lines.append("- **Workflow args:**")
-        for key, value in simple_workflow_args:
-            lines.append(f"  <br> `{key}`: `{value}`")
+    for section_label, section_key in [
+        ("Workflow Used", "used"),
+        ("Workflow Generated", "generated"),
+        ("Workflow Custom Metadata", "custom_metadata"),
+    ]:
+        section_data = workflow.get(section_key)
+        if not isinstance(section_data, dict) or not section_data:
+            continue
+        lines.append(f"- **{section_label}:**")
+        for key in sorted(section_data.keys()):
+            value = section_data[key]
+            if isinstance(value, (dict, list)) and value:
+                lines.append(f"  - `{key}`:")
+                lines.append("    ```yaml")
+                for row in _format_nested_metadata_lines(value):
+                    lines.append(f"    {row}")
+                lines.append("    ```")
+            else:
+                rendered = _format_single_field_value(value)
+                lines.append(f"  - `{key}`: `{rendered}`")
     lines.append("")
 
     lines.append("## Workflow-level Summary")
@@ -1645,9 +1676,12 @@ def render_provenance_card_markdown(
     )
     lines.append("")
 
-    output_path.write_text("\n".join(lines), encoding="utf-8")
+    content = "\n".join(lines)
+    if output_path is not None:
+        output_path.write_text(content, encoding="utf-8")
     return {
-        "output": str(output_path),
+        "output": str(output_path) if output_path is not None else None,
+        "markdown": content,
         "tasks": len(tasks),
         "activities": len(activities),
         "objects": int(object_summary.get("total_objects", 0)),

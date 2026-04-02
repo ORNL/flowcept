@@ -35,6 +35,8 @@ from flowcept.report.aggregations import (
 from flowcept.report.renderers.provenance_card_markdown import (
     _build_activity_io_summary,
     _build_per_activity_resource_section,
+    _format_nested_metadata_lines,
+    _format_single_field_value,
     _render_pipeline_structure,
     _timing_insights,
 )
@@ -109,6 +111,24 @@ def _render_host_list(hostnames: List[str]) -> str:
     return ", ".join(f"`{h}`" for h in hostnames)
 
 
+def _render_workflow_io_block(label: str, data: Dict[str, Any], lines: List[str]) -> None:
+    """Append a nicely formatted used/generated/custom_metadata block for a workflow stage."""
+    if not data:
+        return
+    lines.append(f"- **{label}:**")
+    for key in sorted(data.keys()):
+        value = data[key]
+        if isinstance(value, (dict, list)) and value:
+            lines.append(f"  - `{key}`:")
+            lines.append("    ```yaml")
+            for row in _format_nested_metadata_lines(value):
+                lines.append(f"    {row}")
+            lines.append("    ```")
+        else:
+            rendered = _format_single_field_value(value)
+            lines.append(f"  - `{key}`: `{rendered}`")
+
+
 # ---------------------------------------------------------------------------
 # Section builders shared by both campaign types
 # ---------------------------------------------------------------------------
@@ -155,7 +175,11 @@ def _render_campaign_level_summary(
         for status, count in row["status_counts"].items():
             status_counts[status] = status_counts.get(status, 0) + int(count)
 
+    unique_workflow_names = {_to_str(w.get("name")) for w in workflows if w.get("name")}
+    n_distinct = len(unique_workflow_names) if unique_workflow_names else len(workflows)
+
     lines.append("## Campaign-level Summary")
+    lines.append(f"- **Total Workflows:** `{n_distinct}`")
     lines.append(f"- **Total Activities:** `{len(activities)}`")
     lines.append(f"- **Total Tasks:** `{total_task_count}`")
     lines.append(f"- **Status Counts:** `{status_counts}`")
@@ -337,21 +361,6 @@ def _render_replicated(
 # ---------------------------------------------------------------------------
 
 
-def _render_pipeline_stage_flow(workflows: List[Dict[str, Any]]) -> str:
-    """Render a linear stage-flow diagram for pipeline campaigns."""
-    rail = "     │"
-    down = "     ▼"
-    stage_names = [_to_str(wf.get("name")) for wf in workflows]
-    lines = ["   input", rail, down]
-    for i, name in enumerate(stage_names):
-        lines.append(f" {name}")
-        if i < len(stage_names) - 1:
-            lines.append(rail)
-    lines.append(down)
-    lines.append("   output")
-    return "## Campaign Structure\n\n```text\n" + "\n".join(lines) + "\n```"
-
-
 def _render_pipeline(
     workflows: List[Dict[str, Any]],
     tasks: List[Dict[str, Any]],
@@ -388,16 +397,10 @@ def _render_pipeline(
     _render_campaign_level_summary(workflows, tasks, total_elapsed, lines)
 
     # ------------------------------------------------------------------
-    # Section 3: Campaign Structure (linear stage flow)
+    # Section 3: Campaign Structure (activity-based DAG, same as single-workflow)
     # ------------------------------------------------------------------
-    lines.append(_render_pipeline_stage_flow(workflows))
-    lines.append("")
-
-    # ------------------------------------------------------------------
-    # Section 4: Stage Overview (mirrors ## Timing Report)
-    # ------------------------------------------------------------------
-    lines.append("## Stage Overview")
-    lines.append("Rows are sorted by **First Started At** (ascending).")
+    activities = group_activities(tasks)
+    lines.append(_render_pipeline_structure(activities))
     lines.append("")
 
     tasks_by_wid: Dict[str, List[Dict[str, Any]]] = {}
@@ -405,51 +408,19 @@ def _render_pipeline(
         wid = str(t.get("workflow_id", "unknown"))
         tasks_by_wid.setdefault(wid, []).append(t)
 
-    overview_rows = []
-    for i, wf in enumerate(workflows, 1):
-        wid = str(wf.get("workflow_id", ""))
-        name = _to_str(wf.get("name"))
-        wf_tasks = tasks_by_wid.get(wid, [])
-        wf_min, wf_max, wf_elapsed = workflow_bounds(wf_tasks)
-        status_counts = Counter(str(t.get("status", "unknown")) for t in wf_tasks)
-        status_str = ", ".join(f"{s}:{c}" for s, c in sorted(status_counts.items())) or "-"
-        hostnames = extract_hostnames_from_workflow(wf)
-        overview_rows.append(
-            [
-                i,
-                name,
-                f"`{_short_id(wid)}`",
-                fmt_timestamp_utc(wf_min) if wf_min else "-",
-                _fmt_seconds(wf_elapsed),
-                status_str,
-                _render_host_list(hostnames),
-            ]
-        )
-
-    lines.append(
-        _render_table(
-            ["Stage #", "Workflow name", "Workflow ID", "Started (UTC)", "Elapsed", "Status counts", "Host(s)"],
-            overview_rows,
-        )
-    )
-    lines.append("")
-
     # ------------------------------------------------------------------
-    # Section 5: Per-stage details
-    #   Each stage follows the same sub-template as the single-workflow card:
-    #   Summary → Per Activity Details → Per-activity Resource Usage
+    # Section 4: Per-workflow Details (timing + IO per workflow)
     # ------------------------------------------------------------------
-    lines.append("## Stage Details")
+    lines.append("## Per-workflow Details")
     lines.append("")
 
     for i, wf in enumerate(workflows, 1):
         wid = str(wf.get("workflow_id", ""))
         name = _to_str(wf.get("name"))
-        hostnames = extract_hostnames_from_workflow(wf)
         wf_tasks = tasks_by_wid.get(wid, [])
         wf_min, wf_max, wf_elapsed = workflow_bounds(wf_tasks)
 
-        lines.append(f"### Stage {i}: `{name}`")
+        lines.append(f"### {name}")
         lines.append("")
         lines.append(f"- **Workflow ID:** `{wid}`")
         lines.append(f"- **Elapsed:** {_fmt_seconds(wf_elapsed)}")
@@ -457,22 +428,67 @@ def _render_pipeline(
             lines.append(f"- **Started:** {fmt_timestamp_utc(wf_min)} UTC")
         if wf_max:
             lines.append(f"- **Ended:** {fmt_timestamp_utc(wf_max)} UTC")
-        lines.append(f"- **Host(s):** {_render_host_list(hostnames)}")
+
+        code_repo = wf.get("code_repository")
+        if isinstance(code_repo, dict) and code_repo:
+            parts = []
+            if code_repo.get("branch"):
+                parts.append(f"branch=`{code_repo['branch']}`")
+            if code_repo.get("short_sha"):
+                parts.append(f"sha=`{code_repo['short_sha']}`")
+            if code_repo.get("remote"):
+                parts.append(f"remote=`{code_repo['remote']}`")
+            if parts:
+                lines.append(f"- **Code:** {', '.join(parts)}")
 
         used = wf.get("used")
         generated = wf.get("generated")
-        if used and isinstance(used, dict):
-            used_str = ", ".join(f"`{k}`" for k in used.keys())
-            lines.append(f"- **Used:** {used_str}")
-        if generated and isinstance(generated, dict):
-            gen_str = ", ".join(f"`{k}`" for k in generated.keys())
-            lines.append(f"- **Generated:** {gen_str}")
+        custom_metadata = wf.get("custom_metadata")
+        if isinstance(used, dict) and used:
+            _render_workflow_io_block("Used", used, lines)
+        if isinstance(generated, dict) and generated:
+            _render_workflow_io_block("Generated", generated, lines)
+        if isinstance(custom_metadata, dict) and custom_metadata:
+            _render_workflow_io_block("Custom Metadata", custom_metadata, lines)
 
-        if wf_tasks:
-            stage_tasks_sorted = sorted(wf_tasks, key=lambda t: as_float(t.get("started_at")) or float("inf"))
-            lines.extend(_build_activity_io_summary(stage_tasks_sorted, heading="####"))
-            lines.extend(_build_per_activity_resource_section(stage_tasks_sorted, heading="####"))
+        lines.append("")
 
+    # ------------------------------------------------------------------
+    # Section 5: Per-activity Details (grouped by workflow, with host distribution)
+    # ------------------------------------------------------------------
+    lines.append("## Per-activity Details")
+    lines.append("")
+
+    for wf in workflows:
+        wid = str(wf.get("workflow_id", ""))
+        name = _to_str(wf.get("name"))
+        wf_heading = name if name != "unknown" else f"Workflow `{_short_id(wid)}`"
+        wf_tasks = tasks_by_wid.get(wid, [])
+        if not wf_tasks:
+            continue
+
+        # Build hostname distribution keyed by activity_id
+        host_by_activity: Dict[str, Counter] = {}
+        for t in wf_tasks:
+            activity = _to_str(t.get("activity_id"))
+            hostname = t.get("hostname")
+            if hostname:
+                if activity not in host_by_activity:
+                    host_by_activity[activity] = Counter()
+                host_by_activity[activity][hostname] += 1
+
+        lines.append(f"### {wf_heading}")
+        lines.append("")
+        stage_tasks_sorted = sorted(wf_tasks, key=lambda t: as_float(t.get("started_at")) or float("inf"))
+        lines.extend(
+            _build_activity_io_summary(
+                stage_tasks_sorted,
+                heading="####",
+                include_header=False,
+                hostname_data=host_by_activity if host_by_activity else None,
+            )
+        )
+        lines.extend(_build_per_activity_resource_section(stage_tasks_sorted, heading="####"))
         lines.append("")
 
     # ------------------------------------------------------------------
@@ -533,7 +549,7 @@ def render_provenance_campaign_card_markdown(
     """
     workflows: List[Dict[str, Any]] = dataset.get("workflows", [])
     tasks: List[Dict[str, Any]] = dataset.get("tasks", [])
-    objects: List[Dict[str, Any]] = dataset.get("objects", [])
+    objects: List[Dict[str, Any]] = dataset.get("objects") or []
     campaign_id: Optional[str] = dataset.get("campaign_id")
 
     unique_names = {w.get("name") for w in workflows if w.get("name")}
@@ -548,12 +564,14 @@ def render_provenance_campaign_card_markdown(
 
     _render_footer(lines)
 
-    output_path = Path(output_path)
-    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    content = "\n".join(lines) + "\n"
+    if output_path is not None:
+        Path(output_path).write_text(content, encoding="utf-8")
 
     return {
         "campaign_type": campaign_type,
         "n_workflows": len(workflows),
         "n_tasks": len(tasks),
         "n_objects": len(objects),
+        "markdown": content,
     }

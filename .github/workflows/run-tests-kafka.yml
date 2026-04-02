@@ -3,8 +3,6 @@ on:
   pull_request:
     branches: [ "dev", "main" ]
     types: [opened, synchronize, reopened]
-#on:
-#  push:
 
 jobs:
 
@@ -58,11 +56,25 @@ jobs:
         run: |
           export MQ_TYPE=kafka
           export MQ_PORT=9092
-          make tests
+          flowcept --init-settings --full -y
+          flowcept --config-profile full-online -y
+          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"
+
+      - name: Test telemetry with kafka
+        run: |
+          export MQ_TYPE=kafka
+          export MQ_PORT=9092
+          flowcept --init-settings --full -y
+          flowcept --config-profile full-telemetry -y
+          pytest tests/misc_tests/telemetry_test.py -q
 
       - name: Test notebooks
         run: |
-          flowcept --init-settings --dask --mlflow -y
+          export MQ_TYPE=kafka
+          export MQ_PORT=9092
+          rm -f "${FLOWCEPT_SETTINGS_PATH:-$HOME/.flowcept/settings.yaml}"
+          flowcept --init-settings --full --dask --mlflow -y
+          flowcept --config-profile full-online -y
           pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore=notebooks/dask_from_CLI.ipynb --ignore=notebooks/tensorboard.ipynb
 
       - name: Stop services

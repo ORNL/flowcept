@@ -1,6 +1,6 @@
 name: (Without Mongo) Simple Tests
 on:
-  pull_request:
+  push:
   schedule:
     - cron: '0 12 * * *'  # Runs every day at 12 PM UTC (7 AM EST)
 
@@ -49,11 +49,16 @@ jobs:
         run: pip list
 
       - name: Test with pytest and redis
-        run: make tests
+        run: |
+          flowcept --init-settings --full -y
+          flowcept --config-profile full-online -y
+          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"
 
       - name: Test notebooks with pytest and redis
         run: |
-          flowcept --init-settings --dask --mlflow -y
+          rm -f "${FLOWCEPT_SETTINGS_PATH:-$HOME/.flowcept/settings.yaml}"
+          flowcept --init-settings --full --dask --mlflow -y
+          flowcept --config-profile full-online -y
           pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb" --ignore="notebooks/analytics.ipynb" --ignore=notebooks/tensorboard.ipynb
 
       - name: Shut down docker compose
