@@ -164,9 +164,9 @@ def _flatten_dict(prefix: str, value: Any, out: Dict[str, Any]) -> None:
 
 
 def _safe_sample(value: Any, max_len: int = 80) -> str:
-    """Render a compact sanitized example value."""
+    """Render a compact sanitized example value (single line, no newlines)."""
     safe = sanitize_json_like(value)
-    text = str(safe)
+    text = " ".join(str(safe).split())  # collapse all whitespace/newlines to single spaces
     if len(text) > max_len:
         return text[: max_len - 3] + "..."
     return text
@@ -374,10 +374,10 @@ def _summarize_field_values(values: List[Any], total_runs: int) -> str:
             scalar_counter[_safe_sample(v, max_len=40)] += 1
 
     if shape_counter:
-        top = ", ".join(f"{k} ({c})" for k, c in shape_counter.most_common(2))
+        top = ", ".join(f"{k} (×{c})" if c > 1 else k for k, c in shape_counter.most_common(2))
         return f"presence={presence}; type=shape-like; top_shapes={top}"
     if scalar_counter:
-        top = ", ".join(f"{k} ({c})" for k, c in scalar_counter.most_common(3))
+        top = ", ".join(f"{k} (×{c})" if c > 1 else k for k, c in scalar_counter.most_common(3))
         return f"presence={presence}; type=scalar/categorical; top_values={top}"
 
     return f"presence={presence}; type=mixed; sample={_safe_sample(values[0])}"
@@ -390,13 +390,36 @@ def _format_single_field_value(value: Any) -> str:
     return _safe_sample(value, max_len=140)
 
 
-def _build_activity_io_summary(tasks_sorted: List[Dict[str, Any]]) -> List[str]:
-    """Build markdown lines for aggregated used/generated summaries by activity."""
+_HOST_DISPLAY_MAX = 10
+
+
+def _build_activity_io_summary(
+    tasks_sorted: List[Dict[str, Any]],
+    heading: str = "##",
+    include_header: bool = True,
+    hostname_data: Optional[Dict[str, Any]] = None,
+) -> List[str]:
+    """Build markdown lines for aggregated used/generated summaries by activity.
+
+    Parameters
+    ----------
+    tasks_sorted:
+        Flat list of task records sorted by start time.
+    heading:
+        Markdown heading prefix for the section (default ``"##"``).
+        Pass ``"####"`` to nest this section inside a deeper heading.
+    include_header:
+        If True, prepend the ``Per Activity Details`` heading line.
+    hostname_data:
+        Optional mapping of activity_id → Counter[hostname, task_count].
+        When provided, a host distribution block is appended after each
+        activity's used/generated summary.
+    """
     by_activity: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
     for task in tasks_sorted:
         by_activity[_to_str(task.get("activity_id"))].append(task)
 
-    lines: List[str] = ["## Per Activity Details"]
+    lines: List[str] = [f"{heading} Per Activity Details"] if include_header else []
     activity_used_field_counts: List[Tuple[str, int]] = []
     activity_generated_field_counts: List[Tuple[str, int]] = []
     variability_candidates: List[Tuple[str, str, float]] = []
@@ -469,6 +492,17 @@ def _build_activity_io_summary(tasks_sorted: List[Dict[str, Any]]) -> List[str]:
                 numeric_vals = [v for v in numeric_vals if v is not None]
                 if numeric_vals and len(numeric_vals) == len(gen_fields[key]):
                     variability_candidates.append((activity, f"generated.{key}", max(numeric_vals) - min(numeric_vals)))
+
+        if hostname_data is not None:
+            host_counts = hostname_data.get(activity)
+            if host_counts:
+                sorted_hosts = host_counts.most_common()
+                lines.append("  - Hosts (tasks per host):")
+                for host, count in sorted_hosts[:_HOST_DISPLAY_MAX]:
+                    lines.append(f"    - `{host}`: {count} task(s)")
+                if len(sorted_hosts) > _HOST_DISPLAY_MAX:
+                    remaining = len(sorted_hosts) - _HOST_DISPLAY_MAX
+                    lines.append(f"    - _...and {remaining} other host(s) also executed tasks in this activity_")
     lines.append("")
     insight_lines: List[str] = []
     if activity_used_field_counts:
@@ -487,9 +521,242 @@ def _build_activity_io_summary(tasks_sorted: List[Dict[str, Any]]) -> List[str]:
             "- Highest numeric variability fields: " + ", ".join(f"`{a}:{f}` (range={v:.3f})" for a, f, v in top_var)
         )
     if insight_lines:
-        lines.append("### Interpretation & Insights")
+        lines.append(f"{heading}# Interpretation & Insights")
         lines.extend(insight_lines)
     lines.append("")
+    return lines
+
+
+def _build_per_activity_resource_section(
+    tasks_sorted: List[Dict[str, Any]],
+    heading: str = "##",
+) -> List[str]:
+    """Build markdown lines for the per-activity resource usage section.
+
+    Returns an empty list when no telemetry data is present.
+
+    Parameters
+    ----------
+    tasks_sorted:
+        Flat list of task records (sorted by start time is preferred but not required).
+    heading:
+        Markdown heading prefix for the section (default ``"##"``).
+        Pass ``"####"`` to nest this section inside a deeper heading.
+    """
+    telemetry_available = any(
+        isinstance(t.get("telemetry_at_start"), dict) and isinstance(t.get("telemetry_at_end"), dict)
+        for t in tasks_sorted
+    )
+    if not telemetry_available:
+        return []
+
+    activity_order: List[str] = []
+    activity_elapsed: Dict[str, List[float]] = defaultdict(list)
+    activity_cpu_user: Dict[str, float] = defaultdict(float)
+    activity_cpu_system: Dict[str, float] = defaultdict(float)
+    activity_cpu_percent: Dict[str, List[float]] = defaultdict(list)
+    activity_memory: Dict[str, float] = defaultdict(float)
+    activity_read: Dict[str, float] = defaultdict(float)
+    activity_write: Dict[str, float] = defaultdict(float)
+    activity_read_ops: Dict[str, float] = defaultdict(float)
+    activity_write_ops: Dict[str, float] = defaultdict(float)
+    activity_process_cpu: Dict[str, float] = defaultdict(float)
+    activity_net_sent: Dict[str, float] = defaultdict(float)
+    activity_net_recv: Dict[str, float] = defaultdict(float)
+    activity_gpu: Dict[str, float] = defaultdict(float)
+
+    for task in tasks_sorted:
+        activity = _to_str(task.get("activity_id"))
+        if activity not in activity_order:
+            activity_order.append(activity)
+        start = task.get("telemetry_at_start", {}) if isinstance(task.get("telemetry_at_start"), dict) else {}
+        end = task.get("telemetry_at_end", {}) if isinstance(task.get("telemetry_at_end"), dict) else {}
+        delta = _compute_telemetry_delta(start, end)
+        elapsed_value = elapsed_seconds(task.get("started_at"), task.get("ended_at"))
+        if elapsed_value is not None:
+            activity_elapsed[activity].append(elapsed_value)
+        activity_cpu_user[activity] += delta["cpu_user"] or 0.0
+        activity_cpu_system[activity] += delta["cpu_system"] or 0.0
+        activity_memory[activity] += delta["memory_used"] or 0.0
+        activity_read[activity] += delta["read_bytes"] or 0.0
+        activity_write[activity] += delta["write_bytes"] or 0.0
+        activity_read_ops[activity] += delta["read_count"] or 0.0
+        activity_write_ops[activity] += delta["write_count"] or 0.0
+        if delta["cpu_percent"] is not None:
+            activity_cpu_percent[activity].append(delta["cpu_percent"])
+        process_cpu = (
+            _delta(
+                _deep_get(start, ["process", "cpu_percent"]),
+                _deep_get(end, ["process", "cpu_percent"]),
+            )
+            or 0.0
+        )
+        activity_process_cpu[activity] += process_cpu
+        net_sent = (
+            _delta(
+                _deep_get(start, ["network", "netio_sum", "bytes_sent"]),
+                _deep_get(end, ["network", "netio_sum", "bytes_sent"]),
+            )
+            or 0.0
+        )
+        net_recv = (
+            _delta(
+                _deep_get(start, ["network", "netio_sum", "bytes_recv"]),
+                _deep_get(end, ["network", "netio_sum", "bytes_recv"]),
+            )
+            or 0.0
+        )
+        activity_net_sent[activity] += net_sent
+        activity_net_recv[activity] += net_recv
+        task_gpu_delta = 0.0
+        start_gpu = start.get("gpu", {}) if isinstance(start.get("gpu"), dict) else {}
+        end_gpu = end.get("gpu", {}) if isinstance(end.get("gpu"), dict) else {}
+        for gpu_key, gpu_end_val in end_gpu.items():
+            if not isinstance(gpu_end_val, dict):
+                continue
+            flat_end: Dict[str, float] = {}
+            _flatten_numeric("", gpu_end_val, flat_end)
+            flat_start: Dict[str, float] = {}
+            gpu_start = start_gpu.get(gpu_key, {}) if isinstance(start_gpu.get(gpu_key), dict) else {}
+            _flatten_numeric("", gpu_start, flat_start)
+            for metric, v_end in flat_end.items():
+                if "used" not in metric.lower() or "gpu" in metric.lower():
+                    continue
+                v_start = flat_start.get(metric)
+                if v_start is not None and v_end >= v_start:
+                    task_gpu_delta += v_end - v_start
+                else:
+                    task_gpu_delta += v_end
+        activity_gpu[activity] += task_gpu_delta
+
+    resource_rows: List[List[Any]] = []
+    for activity in activity_order:
+        elapsed_values = sorted(activity_elapsed.get(activity, []))
+        elapsed_median = _percentile(elapsed_values, 0.50) if elapsed_values else None
+        cpu_percent_values = activity_cpu_percent.get(activity, [])
+        cpu_percent_avg = (sum(cpu_percent_values) / len(cpu_percent_values)) if cpu_percent_values else None
+        resource_rows.append(
+            [
+                activity,
+                _fmt_seconds(elapsed_median),
+                _fmt_seconds(activity_cpu_user.get(activity)),
+                _fmt_seconds(activity_cpu_system.get(activity)),
+                _fmt_percent(cpu_percent_avg),
+                _fmt_bytes(activity_memory.get(activity)),
+                _fmt_bytes(activity_read.get(activity)),
+                _fmt_bytes(activity_write.get(activity)),
+                _fmt_count(activity_read_ops.get(activity)),
+                _fmt_count(activity_write_ops.get(activity)),
+            ]
+        )
+
+    io_heavy = sorted(
+        [(a, activity_read.get(a, 0.0), activity_write.get(a, 0.0)) for a in activity_order],
+        key=lambda x: x[1] + x[2],
+        reverse=True,
+    )
+    cpu_heavy = sorted(
+        [
+            (
+                a,
+                (sum(activity_cpu_percent.get(a, [])) / len(activity_cpu_percent.get(a, [])))
+                if activity_cpu_percent.get(a)
+                else 0.0,
+            )
+            for a in activity_order
+        ],
+        key=lambda x: x[1],
+        reverse=True,
+    )
+    mem_heavy = sorted(
+        [(a, activity_memory.get(a, 0.0)) for a in activity_order],
+        key=lambda x: x[1],
+        reverse=True,
+    )
+    process_cpu_heavy = sorted(
+        [(a, activity_process_cpu.get(a, 0.0)) for a in activity_order],
+        key=lambda x: x[1],
+        reverse=True,
+    )
+    network_heavy = sorted(
+        [(a, activity_net_sent.get(a, 0.0), activity_net_recv.get(a, 0.0)) for a in activity_order],
+        key=lambda x: x[1] + x[2],
+        reverse=True,
+    )
+    gpu_heavy = sorted(
+        [(a, activity_gpu.get(a, 0.0)) for a in activity_order],
+        key=lambda x: x[1],
+        reverse=True,
+    )
+
+    per_activity_headers = [
+        "Activity",
+        "Elapsed (s)",
+        "CPU User (s)",
+        "CPU System (s)",
+        "CPU (%)",
+        "Memory Delta",
+        "Read",
+        "Write",
+        "Read Ops",
+        "Write Ops",
+    ]
+    per_activity_headers, resource_rows = _filter_all_empty_columns(
+        per_activity_headers,
+        resource_rows,
+        keep_indices=[0, 1],
+    )
+    per_activity_insight_lines: List[str] = []
+    if any((read_b + write_b) > 0 for _, read_b, write_b in io_heavy):
+        per_activity_insight_lines.append("- Most IO-heavy Activities (Read + Write):")
+        for name, read_b, write_b in io_heavy[:5]:
+            if read_b + write_b <= 0:
+                continue
+            per_activity_insight_lines.append(f"  - `{name}`: Read={_fmt_bytes(read_b)}, Write={_fmt_bytes(write_b)}")
+    if any(cpu_pct > 0 for _, cpu_pct in cpu_heavy):
+        per_activity_insight_lines.append("- Most CPU-active Activities:")
+        for name, cpu_pct in cpu_heavy[:5]:
+            if cpu_pct <= 0:
+                continue
+            per_activity_insight_lines.append(f"  - `{name}`: CPU={_fmt_percent(cpu_pct)}")
+    if any(mem > 0 for _, mem in mem_heavy):
+        per_activity_insight_lines.append("- Largest memory growth Activities:")
+        for name, mem in mem_heavy[:5]:
+            if mem <= 0:
+                continue
+            per_activity_insight_lines.append(f"  - `{name}`: Memory Delta={_fmt_bytes(mem)}")
+    if any((sent + recv) > 0 for _, sent, recv in network_heavy):
+        per_activity_insight_lines.append("- Most network-active Activities:")
+        for name, sent, recv in network_heavy[:5]:
+            if sent + recv <= 0:
+                continue
+            per_activity_insight_lines.append(f"  - `{name}`: Sent={_fmt_bytes(sent)}, Received={_fmt_bytes(recv)}")
+    if any(proc_cpu > 0 for _, proc_cpu in process_cpu_heavy):
+        per_activity_insight_lines.append("- Highest process CPU delta Activities:")
+        for name, proc_cpu in process_cpu_heavy[:5]:
+            if proc_cpu <= 0:
+                continue
+            per_activity_insight_lines.append(f"  - `{name}`: Process CPU Delta={_fmt_percent(proc_cpu)}")
+    if any(gpu_delta > 0 for _, gpu_delta in gpu_heavy):
+        per_activity_insight_lines.append("- Highest GPU memory delta Activities:")
+        for name, gpu_delta in gpu_heavy[:5]:
+            if gpu_delta <= 0:
+                continue
+            per_activity_insight_lines.append(f"  - `{name}`: GPU Used Delta={_fmt_bytes(gpu_delta)}")
+
+    per_activity_has_resource_values = any(any(not _is_empty_metric(cell) for cell in row[2:]) for row in resource_rows)
+    if not bool(per_activity_has_resource_values or per_activity_insight_lines):
+        return []
+
+    lines: List[str] = []
+    lines.append(f"{heading} Per-activity Resource Usage")
+    if per_activity_has_resource_values:
+        lines.append(_render_table(per_activity_headers, resource_rows))
+        lines.append("")
+    if per_activity_insight_lines:
+        lines.append(f"{heading}# Interpretation & Insights")
+        lines.extend(per_activity_insight_lines)
+        lines.append("")
     return lines
 
 
@@ -847,7 +1114,7 @@ def render_provenance_card_markdown(
     """Render a summarized provenance-card markdown file."""
     workflow = dataset.get("workflow", {}) if isinstance(dataset.get("workflow"), dict) else {}
     tasks = dataset.get("tasks", []) if isinstance(dataset.get("tasks"), list) else []
-    objects = dataset.get("objects", []) if isinstance(dataset.get("objects"), list) else []
+    objects = dataset.get("objects") or []
     tasks_sorted = sorted(tasks, key=lambda t: as_float(t.get("started_at")) or float("inf"))
 
     starts = [as_float(t.get("started_at")) for t in tasks if as_float(t.get("started_at")) is not None]
@@ -860,7 +1127,7 @@ def render_provenance_card_markdown(
     workflow_name = str(workflow_name_raw).strip()
     if not workflow_name:
         workflow_name = "unknown"
-    workflow_id = str(workflow.get("workflow_id", "unknown"))
+    str(workflow.get("workflow_id", "unknown"))
     campaign_id = str(workflow.get("campaign_id", "unknown"))
     workflow_title = workflow_name
     if workflow_title == "unknown":
@@ -1077,7 +1344,6 @@ def render_provenance_card_markdown(
     lines.append("")
     lines.append("## Summary")
     _append_summary_line(lines, "Workflow Name", workflow_name)
-    _append_summary_line(lines, "Workflow ID", workflow_id)
     _append_summary_line(lines, "Campaign ID", campaign_id)
     _append_summary_line(lines, "Execution Start (UTC)", fmt_timestamp_utc(min_start))
     _append_summary_line(lines, "Execution End (UTC)", fmt_timestamp_utc(max_end))
@@ -1094,16 +1360,26 @@ def render_provenance_card_markdown(
     ):
         lines.append(f"- **Code Repository:** `{code_repo_text}`")
     _append_summary_line(lines, "Git Remote", _to_str(code_repo.get("remote")))
-    workflow_args = workflow.get("used", {}) if isinstance(workflow.get("used"), dict) else {}
-    simple_workflow_args = []
-    for key in sorted(workflow_args.keys()):
-        value = workflow_args.get(key)
-        if _is_simple_value(value):
-            simple_workflow_args.append((key, value))
-    if simple_workflow_args:
-        lines.append("- **Workflow args:**")
-        for key, value in simple_workflow_args:
-            lines.append(f"  <br> `{key}`: `{value}`")
+    for section_label, section_key in [
+        ("Workflow Used", "used"),
+        ("Workflow Generated", "generated"),
+        ("Workflow Custom Metadata", "custom_metadata"),
+    ]:
+        section_data = workflow.get(section_key)
+        if not isinstance(section_data, dict) or not section_data:
+            continue
+        lines.append(f"- **{section_label}:**")
+        for key in sorted(section_data.keys()):
+            value = section_data[key]
+            if isinstance(value, (dict, list)) and value:
+                lines.append(f"  - `{key}`:")
+                lines.append("    ```yaml")
+                for row in _format_nested_metadata_lines(value):
+                    lines.append(f"    {row}")
+                lines.append("    ```")
+            else:
+                rendered = _format_single_field_value(value)
+                lines.append(f"  - `{key}`: `{rendered}`")
     lines.append("")
 
     lines.append("## Workflow-level Summary")
@@ -1400,9 +1676,12 @@ def render_provenance_card_markdown(
     )
     lines.append("")
 
-    output_path.write_text("\n".join(lines), encoding="utf-8")
+    content = "\n".join(lines)
+    if output_path is not None:
+        output_path.write_text(content, encoding="utf-8")
     return {
-        "output": str(output_path),
+        "output": str(output_path) if output_path is not None else None,
+        "markdown": content,
         "tasks": len(tasks),
         "activities": len(activities),
         "objects": int(object_summary.get("total_objects", 0)),

@@ -168,20 +168,12 @@ DB_INSERTER_SLEEP_TRIALS_STOP = db_buffer_settings.get("stop_trials_sleep", 0.01
 # PROJECT SYSTEM SETTINGS #
 ###########################
 
-DB_FLUSH_MODE = settings["project"].get("db_flush_mode", "offline")
+DB_FLUSH_MODE = _get_env("DB_FLUSH_MODE", settings["project"].get("db_flush_mode", "offline"))
 PERF_LOG = settings["project"].get("performance_logging", False)
 JSON_SERIALIZER = settings["project"].get("json_serializer", "default")
 REPLACE_NON_JSON_SERIALIZABLE = settings["project"].get("replace_non_json_serializable", True)
 ENRICH_MESSAGES = settings["project"].get("enrich_messages", True)
 
-if DB_FLUSH_MODE == "online" and not MQ_ENABLED:
-    raise ValueError(
-        "Invalid configuration: project.db_flush_mode is 'online' but MQ is disabled. "
-        "Enable mq.enabled (or MQ_ENABLED=true) or set project.db_flush_mode to 'offline'.\n"
-        "Quick fix with profiles:\n"
-        "  flowcept --config-profile full-online -y\n"
-        "  flowcept --config-profile full-offline -y"
-    )
 
 # Default: enable dump buffer only when running in offline flush mode.
 _DEFAULT_DUMP_BUFFER_ENABLED = DB_FLUSH_MODE == "offline"
@@ -292,12 +284,23 @@ for adapter in settings.get("adapters", set()):
 # Config guardrails
 #####
 
-if DB_FLUSH_MODE == "offline" and (MQ_ENABLED or MONGO_ENABLED or LMDB_ENABLED or KVDB_ENABLED):
-    raise ValueError(
-        "Invalid configuration: project.db_flush_mode is 'offline' but MQ/DBs are enabled.\n"
-        f"mq.enabled={MQ_ENABLED}, kv_db.enabled={KVDB_ENABLED}, "
-        f"databases.mongodb.enabled={MONGO_ENABLED}, databases.lmdb.enabled={LMDB_ENABLED}.\n"
-        "Disable mq.enabled, kv_db.enabled, and databases when running offline.\n"
-        "Quick fix with profile:\n"
-        "  flowcept --config-profile full-offline -y"
-    )
+
+def validate_config():
+    """Validate runtime configuration. Call this before starting Flowcept, not at import time."""
+    if DB_FLUSH_MODE == "online" and not MQ_ENABLED:
+        raise ValueError(
+            "Invalid configuration: project.db_flush_mode is 'online' but MQ is disabled. "
+            "Enable mq.enabled (or MQ_ENABLED=true) or set project.db_flush_mode to 'offline'.\n"
+            "Quick fix with profiles:\n"
+            "  flowcept --config-profile full-online -y\n"
+            "  flowcept --config-profile full-offline -y"
+        )
+    if DB_FLUSH_MODE == "offline" and (MQ_ENABLED or MONGO_ENABLED or LMDB_ENABLED or KVDB_ENABLED):
+        raise ValueError(
+            "Invalid configuration: project.db_flush_mode is 'offline' but MQ/DBs are enabled.\n"
+            f"mq.enabled={MQ_ENABLED}, kv_db.enabled={KVDB_ENABLED}, "
+            f"databases.mongodb.enabled={MONGO_ENABLED}, databases.lmdb.enabled={LMDB_ENABLED}.\n"
+            "Disable mq.enabled, kv_db.enabled, and databases when running offline.\n"
+            "Quick fix with profile:\n"
+            "  flowcept --config-profile full-offline -y"
+        )

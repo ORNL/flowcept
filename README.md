@@ -50,7 +50,7 @@ The easiest way to capture provenance from plain Python functions, with no exter
 pip install flowcept
 flowcept --init-settings
 ```
-This generates a minimal settings file in `~/.flowcept/settings.yaml.`
+This generates a minimal settings file in `~/.flowcept/settings.yaml`.
 
 2) Run the minimal example
 
@@ -61,8 +61,6 @@ Save the following script as `quickstart.py` and run `python quickstart.py.`
 A minimal example of Flowcept's instrumentation using @decorators.
 This example needs no DB, broker, or external service.
 """
-import json
-
 from flowcept import Flowcept, flowcept_task
 from flowcept.instrumentation.flowcept_decorator import flowcept
 
@@ -90,54 +88,60 @@ if __name__ == "__main__":
 
     prov_messages = Flowcept.read_buffer_file()
     assert len(prov_messages) == 2
-    print(json.dumps(prov_messages, indent=2))
+    print(f"Raw provenance captured: {len(prov_messages)} records in flowcept_messages.jsonl")
+    Flowcept.generate_report(records=prov_messages, print_markdown=True)
 ```
 
-This creates a provenance file in `flowcept_messages.jsonl`.  In it, you will see two provenance messages, each related to an executed function.
+This prints out:
 
-```json
-[
-  {
-    "activity_id": "sum_one",
-    "workflow_id": "fe546706-ef46-4482-8f70-3af664a7131b",
-    "campaign_id": "76088532-3bef-4343-831e-d8a5d9156174",
-    "used": {
-      "i1": 3
-    },
-    "started_at": 1757171258.637908,
-    "hostname": "my_laptop",
-    "task_id": "1757171258.637908",
-    "status": "FINISHED",
-    "ended_at": 1757171258.6379142,
-    "generated": {
-      "o1": 4
-    },
-    "type": "task"
-  },
-  {
-    "activity_id": "mult_two",
-    "workflow_id": "fe546706-ef46-4482-8f70-3af664a7131b",
-    "campaign_id": "76088532-3bef-4343-831e-d8a5d9156174",
-    "used": {
-      "o1": 4
-    },
-    "started_at": 1757171258.637933,
-    "hostname": "my_laptop",
-    "task_id": "1757171258.637933",
-    "status": "FINISHED",
-    "ended_at": 1757171258.6379352,
-    "generated": {
-      "o2": 8
-    },
-    "type": "task"
-  }
-]
-```
+---
 
+##### Workflow Provenance Card
 
-For online querying using databases, MCP agents and Grafana, telemetry, adapters (MLflow, Dask, TensorBoard), PyTorch and MCP instrumentation, HPC optimization or federated runs,
+###### Summary
+- Workflow ID: fe546706-ef46-4482-8f70-3af664a7131b
+- Execution Start (UTC): 2026-02-20 19:14:03
+- Total Elapsed (s): 0.000
+
+###### Workflow Structure
+
+   input
+     │
+     ▼
+ sum_one
+     │
+ mult_two
+     ▼
+   output
+
+###### Timing Report
+| Activity | Status Counts     | Median Elapsed (s) |
+| -------- | ----------------- | ------------------ |
+| sum_one  | {'FINISHED': 1}   | 0.000              |
+| mult_two | {'FINISHED': 1}   | 0.000              |
+
+###### Per Activity Details
+- **sum_one**
+  - Used:   i1 = 3
+  - Generated: o1 = 4
+- **mult_two**
+  - Used:   o1 = 4
+  - Generated: o2 = 8
+
+---
+
+→ See [Provenance Card](#provenance-card) for details.
+
+That is the simplest, vanilla run of Flowcept, good for quick sanity checks on a laptop, small-scale run. 
+For diskless runs (no JSON files), OpenAPI RESTful services, online querying using databases,
+LLM-based database interactions via an MCP agent, Grafana, telemetry,
+adapters (MLflow, Dask, TensorBoard), PyTorch and MCP instrumentation, HPC optimization or federated runs,
 and more, see the [Jupyter Notebooks](notebooks), the [Examples directory](examples) and the [complete documentation](https://flowcept.readthedocs.io/).
+
 To use the provenance agent with your favorite code assistant (for example, Codex or Claude), see the [Agents README](src/flowcept/agents/README.md).
+
+## ❗ Developer Docs
+
 For an end-to-end workflow developer tutorial (default user guide), start with [docs/README.md](docs/README.md).
 
 ## Table of Contents
@@ -148,6 +152,7 @@ For an end-to-end workflow developer tutorial (default user guide), start with [
 - [Setup and the Settings File](#setup)
 - [Running with Containers](#running-with-containers)
 - [Examples](#examples)
+- [Provenance Card](#provenance-card)
 - [Data Persistence](#data-persistence)
 - [Performance Tuning](#performance-tuning-for-performance-evaluation)
 - [AMD GPU Setup](#install-amd-gpu-lib)
@@ -341,9 +346,22 @@ See the [deployment/](deployment/) compose files for expected images and configu
 
 Flowcept uses a settings file for configuration.
 
-- To create a minimal settings file (**recommended**), run: `flowcept --init-settings` → creates `~/.flowcept/settings.yaml`
+- To create a minimal settings file, run: `flowcept --init-settings` → creates `~/.flowcept/settings.yaml`
 
-- To create a full settings file with all options, run: `flowcept --init-settings --full` → creates `~/.flowcept/settings.yaml`
+- To copy the full sample settings file, run: `flowcept --init-settings --full` → creates `~/.flowcept/settings.yaml`
+
+- To switch runtime mode, apply a profile after creating the file:
+
+```bash
+flowcept --init-settings --full -y
+flowcept --config-profile full-online -y
+```
+
+Meaning:
+
+- `--init-settings` = minimal file with default settings.
+- `--init-settings --full` = copy `resources/sample_settings.yaml`
+- `--config-profile ...` = overlay a runtime mode on top of the existing file
 
 ---
 
@@ -368,11 +386,55 @@ Flowcept looks for its settings in the following order:
 2. Environment variable `FLOWCEPT_SETTINGS_PATH` — if set, Flowcept will use this environment variable  
 3. [Default sample file](resources/sample_settings.yaml) — used if neither of the above is found
 
+Important:
+
+- environment variables can override settings values
+- use profiles for mode switches such as `full-online`, `full-offline`, `mq-only`, `full-telemetry`
+- adapter flags are additive:
+
+```bash
+flowcept --init-settings --dask -y
+flowcept --init-settings --mlflow -y
+flowcept --init-settings --tensorboard -y
+```
+
+They add `adapters.<name>` to the current settings file instead of replacing the whole file.
+
 # Examples
 
 ### Adapters and Notebooks
 
  See the [Jupyter Notebooks](notebooks) and [Examples directory](examples) for utilization examples.
+
+## Provenance Cards
+
+The [Quickstart](#quickstart) example (`python quickstart.py`) shows a provenance card.
+
+Flowcept introduces the Workflow Provenance Card concept: a structured markdown summary of a workflow execution covering:
+
+- **Summary** — workflow name, IDs, execution window, elapsed time, host, git info
+- **Workflow-level Summary** — activity count, status counts, top slowest activities
+- **Workflow Structure** — ASCII diagram of the activity DAG
+- **Timing Report** — per-activity start, end, and median elapsed times with insights
+- **Per Activity Details** — aggregated inputs (`used`) and outputs (`generated`) per activity
+- **Per-activity Resource Usage** — CPU, memory, disk I/O, network, and GPU deltas (when telemetry is captured)
+- **Object Artifacts Summary** — versioned artifacts produced or consumed by the workflow
+
+Cards also support **campaign-level reporting** for multi-workflow runs (replicated experiments or multi-stage pipelines):
+
+```python
+# From a JSONL buffer file (no DB needed)
+Flowcept.generate_report(input_jsonl_path="flowcept_messages.jsonl")
+
+# From a live DB query
+Flowcept.generate_report(workflow_id="<id>")
+Flowcept.generate_report(campaign_id="<id>")
+
+# As PDF
+Flowcept.generate_report(workflow_id="<id>", report_type="provenance_report", format="pdf")
+```
+
+See [`docs/reporting.rst`](docs/reporting.rst) and [`src/flowcept/report/README.md`](src/flowcept/report/README.md) for the full reporting reference.
 
 # Summary: Observability, Instrumentation, MQs, DBs, and Querying
 

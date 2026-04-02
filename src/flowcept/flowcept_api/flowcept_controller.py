@@ -41,6 +41,7 @@ class Flowcept(object):
     current_workflow_id = None
     campaign_id = None
     buffer = None
+    is_started = False
 
     @ClassProperty
     def db(cls):
@@ -116,6 +117,9 @@ class Flowcept(object):
         """
         self.logger = FlowceptLogger()
         self.logger.debug(f"Using settings file: {SETTINGS_PATH}")
+        from flowcept.configs import validate_config
+
+        validate_config()
         if MQ_ENABLED and check_safe_stops and not KVDB_ENABLED:
             raise ValueError(
                 "Invalid runtime configuration: check_safe_stops=True requires kv_db.enabled=True when mq.enabled=True."
@@ -165,7 +169,7 @@ class Flowcept(object):
         if should_delete_buffer_file:
             Flowcept.delete_buffer_file()
 
-    def start(self):
+    def start(self) -> "Flowcept":
         """Start Flowcept Controller."""
         if self.is_started or not self.enabled:
             self.logger.warning("DB inserter may be already started or instrumentation is not set")
@@ -202,7 +206,7 @@ class Flowcept(object):
 
         else:
             Flowcept.current_workflow_id = None
-        self.is_started = True
+        Flowcept.is_started = self.is_started = True
         self.logger.debug("Flowcept started successfully.")
         return self
 
@@ -646,7 +650,7 @@ class Flowcept(object):
             pass
 
         Flowcept.buffer = self.buffer = None
-        self.is_started = False
+        Flowcept.is_started = self.is_started = False
         self.logger.debug("All stopped!")
 
     def __enter__(self):

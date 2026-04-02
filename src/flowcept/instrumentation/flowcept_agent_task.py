@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional, Union
 
 from langchain_core.language_models import LLM
 from langchain_core.language_models.base import BaseLanguageModel
-from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
@@ -137,6 +136,30 @@ def _extract_llm_metadata(llm: LLM) -> Dict:
     return llm_metadata
 
 
+def extract_llm_usage(response: Any, fallback_model: str | None = None) -> Dict[str, Any]:
+    """Normalize provider-specific token metadata from an LLM response."""
+    usage = {}
+    usage.update(getattr(response, "usage_metadata", {}) or {})
+
+    response_metadata = getattr(response, "response_metadata", {}) or {}
+    token_usage = response_metadata.get("token_usage") or response_metadata.get("usage") or {}
+
+    input_tokens = usage.get("input_tokens") or token_usage.get("prompt_tokens") or token_usage.get("input_tokens")
+    output_tokens = (
+        usage.get("output_tokens") or token_usage.get("completion_tokens") or token_usage.get("output_tokens")
+    )
+    total_tokens = usage.get("total_tokens") or token_usage.get("total_tokens")
+    if total_tokens is None and input_tokens is not None and output_tokens is not None:
+        total_tokens = input_tokens + output_tokens
+
+    return {
+        "llm_model": response_metadata.get("model_name") or response_metadata.get("model") or fallback_model,
+        "llm_input_tokens": input_tokens,
+        "llm_output_tokens": output_tokens,
+        "llm_total_tokens": total_tokens,
+    }
+
+
 class FlowceptLLM(Runnable):
     """
     Flowcept wrapper for language models to capture provenance of LLM interactions.
@@ -235,6 +258,7 @@ class FlowceptLLM(Runnable):
         parent_task_id: str = None,
         workflow_id=None,
         campaign_id=None,
+        return_response_object: bool = False,
     ):
         self.llm = llm
         self.agent_id = agent_id
@@ -242,6 +266,7 @@ class FlowceptLLM(Runnable):
         self.campaign_id = campaign_id
         self.metadata = _extract_llm_metadata(llm)
         self.parent_task_id = parent_task_id
+        self.return_response_object = return_response_object
 
     def _our_call(self, messages, **kwargs):
         messages_str = FlowceptLLM._format_messages(messages)
@@ -257,13 +282,19 @@ class FlowceptLLM(Runnable):
             parent_task_id=self.parent_task_id,
         ) as task:
             response = self.llm.invoke(messages, **kwargs)
-            response_str = response.content if isinstance(response, BaseMessage) else str(response)
+            response_str = response.content if hasattr(response, "content") else str(response)
+            usage = extract_llm_usage(response, fallback_model=self.metadata.get("config", {}).get("model"))
             generated = {"response": response_str}
 
+            if hasattr(response, "usage_metadata"):
+                task._task.custom_metadata["usage_metadata"] = response.usage_metadata
             if hasattr(response, "response_metadata"):
                 task._task.custom_metadata["response_metadata"] = response.response_metadata
+            task._task.custom_metadata["llm_usage"] = usage
 
             task.end(generated=generated)
+            if self.return_response_object:
+                return response
             return response_str
 
     def call(

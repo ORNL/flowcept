@@ -41,7 +41,7 @@ def execute_generated_df_code(user_code: str) -> ToolResult:
 
 
 @mcp_flowcept.tool()
-def run_df_query(llm, query: str, plot=False) -> ToolResult:
+def run_df_query(query: str, llm=None, plot=False) -> ToolResult:
     r"""
     Run a natural language query against the current context DataFrame.
 
@@ -85,17 +85,17 @@ def run_df_query(llm, query: str, plot=False) -> ToolResult:
     --------
     Save the current DataFrame:
 
-    >>> run_df_query(llm, "save")
+    >>> run_df_query("save")
     ToolResult(code=201, result="Saved df and schema to /tmp directory")
 
     Generate a result DataFrame:
 
-    >>> run_df_query(llm, "Show average sales by region")
+    >>> run_df_query("Show average sales by region")
     ToolResult(code=301, result={'result_df': 'region,avg_sales\\nNorth,100\\nSouth,95'})
 
     Generate a plot along with the DataFrame:
 
-    >>> run_df_query(llm, "Show sales trend as a line chart", plot=True)
+    >>> run_df_query("Show sales trend as a line chart", plot=True)
     ToolResult(code=301, result={'result_df': '...', 'plot_code': 'plt.plot(...)'})
     """
     df, schema, value_examples, custom_user_guidance = get_df_context()

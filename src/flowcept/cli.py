@@ -12,6 +12,12 @@ Supports:
 - `flowcept --command --arg=value`
 - `flowcept -h` or `flowcept` for full help
 - `flowcept --help --command` for command-specific help
+
+Configuration model:
+- `flowcept --init-settings` creates a minimal settings file from `DEFAULT_SETTINGS`.
+- `flowcept --init-settings --full` copies `resources/sample_settings.yaml`.
+- `flowcept --config-profile <name>` applies an overlay to the existing settings file.
+- Adapter flags such as `--dask` and `--mlflow` are additive and reuse the current file.
 """
 
 import subprocess
@@ -48,6 +54,17 @@ CONFIG_PROFILES = {
         "kv_db.enabled": True,
         "databases.mongodb.enabled": True,
         "databases.lmdb.enabled": False,
+        "db_buffer.insertion_buffer_time_secs": 5,
+    },
+    "full-telemetry": {
+        "telemetry_capture.cpu": True,
+        "telemetry_capture.per_cpu": True,
+        "telemetry_capture.process_info": True,
+        "telemetry_capture.mem": True,
+        "telemetry_capture.disk": True,
+        "telemetry_capture.network": True,
+        "telemetry_capture.machine_info": True,
+        "telemetry_capture.gpu": None,
     },
     "mq-only": {
         "project.db_flush_mode": "online",
@@ -91,14 +108,40 @@ def show_settings():
     )
 
 
-def init_settings(full: bool = False):
+def init_settings(
+    full: bool = False,
+    yes: bool = False,
+    dask: bool = False,
+    mlflow: bool = False,
+    tensorboard: bool = False,
+):
     """
-    Create a new settings.yaml file in your home directory under ~/.flowcept.
+    Create or extend the user settings file.
 
     Parameters
     ----------
-    full : bool, optional -- Run with full to generate a complete version of the settings file.
+    full : bool, optional
+        If true, copy `resources/sample_settings.yaml`. Otherwise create the minimal
+        settings file from `flowcept.configs.DEFAULT_SETTINGS`.
+    yes : bool, optional
+        Auto-confirm overwrite if the settings file already exists.
+    dask : bool, optional
+        Add default dask adapter settings under `adapters.dask`.
+    mlflow : bool, optional
+        Add default mlflow adapter settings under `adapters.mlflow`.
+    tensorboard : bool, optional
+        Add default tensorboard adapter settings under `adapters.tensorboard`.
+
+    Notes
+    -----
+    - If `FLOWCEPT_SETTINGS_PATH` is set, that path is used instead of
+      `~/.flowcept/settings.yaml`.
+    - Adapter flags are additive: if the target file already exists, Flowcept reuses it
+      and only writes adapter sections.
+    - `--full` only copies the full sample file. It does not apply a runtime profile.
     """
+    add_adapters = dask or mlflow or tensorboard
+
     settings_path_env = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
     if settings_path_env is not None:
         print(f"FLOWCEPT_SETTINGS_PATH environment variable is set to {settings_path_env}.")
@@ -107,14 +150,21 @@ def init_settings(full: bool = False):
         dest_path = Path(os.path.join(configs._SETTINGS_DIR, "settings.yaml"))
 
     if dest_path.exists():
-        overwrite = input(f"{dest_path} already exists. Overwrite? (y/N): ").strip().lower()
-        if overwrite != "y":
-            print("Operation aborted.")
-            return
+        if add_adapters:
+            print(f"{dest_path} already exists. Reusing it to add adapter settings.")
+        elif yes:
+            print(f"{dest_path} already exists. Overwriting (--yes flag set).")
+        else:
+            overwrite = input(f"{dest_path} already exists. Overwrite? (y/N): ").strip().lower()
+            if overwrite != "y":
+                print("Operation aborted.")
+                return
 
     os.makedirs(configs._SETTINGS_DIR, exist_ok=True)
 
-    if full:
+    if dest_path.exists() and add_adapters:
+        pass
+    elif full:
         print("Going to generate full settings.yaml.")
         sample_settings_path = str(resources.files("resources").joinpath("sample_settings.yaml"))
         with open(sample_settings_path, "rb") as src_file, open(dest_path, "wb") as dst_file:
@@ -126,6 +176,24 @@ def init_settings(full: bool = False):
         cfg = OmegaConf.create(configs.DEFAULT_SETTINGS)
         OmegaConf.save(cfg, dest_path)
         print(f"Generated default settings under {dest_path}.")
+
+    if dask:
+        from flowcept.flowceptor.adapters.dask.dask_dataclasses import DaskSettings
+
+        DaskSettings().save_settings()
+        print("Added adapters.dask settings.")
+
+    if mlflow:
+        from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import MLFlowSettings
+
+        MLFlowSettings().save_settings()
+        print("Added adapters.mlflow settings.")
+
+    if tensorboard:
+        from flowcept.flowceptor.adapters.tensorboard.tensorboard_dataclasses import TensorboardSettings
+
+        TensorboardSettings().save_settings()
+        print("Added adapters.tensorboard settings.")
 
 
 def _resolve_user_settings_path() -> Path:
@@ -158,14 +226,20 @@ def _compute_profile_changes(cfg, profile_name: str):
 
 def apply_config_profile(config_profile: str, yes: bool = False):
     """
-    Apply a settings profile to the user settings file with confirmation.
+    Apply a settings profile overlay to the user settings file.
 
     Parameters
     ----------
     config_profile : str
-        Profile name. Supported values: full-online, mq-only, full-offline.
+        Profile name. Supported values: full-online, full-telemetry, mq-only,
+        full-offline.
     yes : bool, optional
         If true, skip confirmation prompt and apply changes immediately.
+
+    Notes
+    -----
+    Profiles modify the existing file in place. They do not create a separate profile
+    file and they do not bypass runtime environment-variable overrides.
     """
     from omegaconf import OmegaConf
 
@@ -892,6 +966,8 @@ def main():  # noqa: D103
         parser.add_argument(flag, action="store_true", help=short_help)
 
         for pname, param in inspect.signature(func).parameters.items():
+            if pname == "yes":  # already registered as a global -y/--yes flag
+                continue
             arg_name = f"--{pname.replace('_', '-')}"
             params_doc = _parse_numpy_doc(doc).get(pname, {})
 

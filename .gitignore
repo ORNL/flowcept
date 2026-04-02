@@ -1,4 +1,5 @@
 .idea
+.claude/settings.local.json
 **/*mlruns*
 **/*.env*
 **/*build*
@@ -31,7 +32,7 @@ launch.json
 **/*.out
 core.*
 *.csv
-
+flowcept_code_assistants_memory.md
 uv.lock
 examples/flowcept_messages.jsonl
 agents.md

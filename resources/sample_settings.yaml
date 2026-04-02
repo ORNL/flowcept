@@ -1,12 +1,12 @@
-flowcept_version: 0.10.2 # Version of the Flowcept package. Do not update this manually. The CI updates it. This setting file is compatible with this version.
+flowcept_version: 0.9.23 # Version of the Flowcept package. Do not update this manually. The CI updates it. This setting file is compatible with this version.
 
 project:
   debug: true # Toggle debug mode. This will add a property `debug: true` to all saved data, making it easier to retrieve/delete them later.
   json_serializer: default # JSON serialization mode: default or complex. If "complex", Flowcept will deal with complex python dicts that may contain JSON unserializable values
   replace_non_json_serializable: true # Replace values that can't be JSON serialized
   performance_logging: false # Enable performance logging if true. Particularly useful for MQ flushes.
-  enrich_messages: true # Add extra metadata to task messages, such as IP addresses of the node that executed the task, UTC timestamps, GitHub repo metadata.
-  db_flush_mode: online # Mode for flushing DB entries: "online" or "offline". If online, flushes to the DB will happen before the workflow ends.
+  enrich_messages: false # Add extra metadata to task messages, such as IP addresses of the node that executed the task, UTC timestamps, GitHub repo metadata.
+  db_flush_mode: offline # Mode for flushing DB entries: "online" or "offline". If online, flushes to the DB will happen before the workflow ends.
   dump_buffer: # This is particularly useful if you need to run completely offline. If you omit this, even offline, buffer data will not be persisted.
     enabled: false # If true, persist the in-memory buffer to JSONL on disk during/at the end of a run.
     path: flowcept_buffer.jsonl # Base JSONL path used by dump_buffer() and read_buffer_file() when no explicit path is passed.
@@ -21,13 +21,13 @@ log:
 
 telemetry_capture: # This toggles each individual type of telemetry capture. GPU capture is treated different depending on the vendor (AMD or NVIDIA).
   gpu: ~ # ~ means None. This is a list with GPU metrics. AMD=[activity,used,power,temperature,others,id]; NVIDIA=[used,temperature,power,name,id]
-  cpu: true
-  per_cpu: true
-  process_info: true
-  mem: true
-  disk: true
-  network: true
-  machine_info: true
+  cpu: false
+  per_cpu: false
+  process_info: false
+  mem: false
+  disk: false
+  network: false
+  machine_info: false
 
 instrumentation:
   enabled: true # This toggles data capture for instrumentation.
@@ -43,6 +43,7 @@ experiment:
   user: root  # Optionally identify the user running the experiment. The logged username will be captured anyways.
 
 mq:
+  enabled: false
   type: redis  # or kafka or mofka; Please adjust the port (kafka's default is 9092; redis is 6379). If mofka, adjust the group_file.
   host: localhost
   # uri: ?
@@ -61,9 +62,9 @@ mq:
 #  conf_file: /etc/redis/redis.conf
 
 kv_db:
+  enabled: false
   host: localhost
   port: 6379
-  enabled: true
   # uri: use Redis connection uri here
 
 web_server:
@@ -92,6 +93,8 @@ agent:
   enabled: false
   mcp_host: localhost
   mcp_port: 8000
+  allowed_hosts:
+    - "0.1.2.3:*"
   llm_server_url: '?'
   api_key: '?'
   model: '?'
@@ -103,11 +106,11 @@ agent:
 databases:
 
   lmdb:
-    enabled: true
+    enabled: false
     path: flowcept_lmdb
 
   mongodb:
-    enabled: true
+    enabled: false
     host: localhost
     port: 27017
     db: flowcept

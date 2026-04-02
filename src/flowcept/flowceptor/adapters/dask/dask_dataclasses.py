@@ -11,12 +11,13 @@ from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
 class DaskSettings(BaseSettings):
     """Dask settings."""
 
-    worker_should_get_input: bool
-    worker_should_get_output: bool
-    scheduler_should_get_input: bool
-    scheduler_create_timestamps: bool
-    worker_create_timestamps: bool
-    kind = "dask"
+    key: str = "dask"
+    kind: str = "dask"
+    worker_should_get_input: bool = True
+    worker_should_get_output: bool = True
+    scheduler_should_get_input: bool = True
+    scheduler_create_timestamps: bool = True
+    worker_create_timestamps: bool = False
 
     def __post_init__(self):
         """Set attributes after init."""
