@@ -471,7 +471,7 @@ def _build_activity_io_summary(
         if used_fields:
             lines.append("  - Used:" if n_runs == 1 else "  - Used (aggregated):")
             activity_used_field_counts.append((activity, len(used_fields)))
-            for key in sorted(used_fields.keys())[:8]:
+            for key in sorted(used_fields.keys())[:15]:
                 if n_runs == 1:
                     lines.append(f"    - `{key}`: `{_format_single_field_value(used_fields[key][0])}`")
                 else:
@@ -483,7 +483,7 @@ def _build_activity_io_summary(
         if gen_fields:
             lines.append("  - Generated:" if n_runs == 1 else "  - Generated (aggregated):")
             activity_generated_field_counts.append((activity, len(gen_fields)))
-            for key in sorted(gen_fields.keys())[:8]:
+            for key in sorted(gen_fields.keys())[:15]:
                 if n_runs == 1:
                     lines.append(f"    - `{key}`: `{_format_single_field_value(gen_fields[key][0])}`")
                 else:
@@ -1451,7 +1451,20 @@ def render_provenance_card_markdown(
     lines.append("")
     lines.extend(_timing_insights(activities))
     lines.append("")
-    lines.extend(_build_activity_io_summary(tasks_sorted))
+    host_by_activity: Dict[str, Counter] = {}
+    for task in tasks_sorted:
+        activity = _to_str(task.get("activity_id"))
+        hostname = task.get("hostname")
+        if hostname:
+            if activity not in host_by_activity:
+                host_by_activity[activity] = Counter()
+            host_by_activity[activity][hostname] += 1
+    lines.extend(
+        _build_activity_io_summary(
+            tasks_sorted,
+            hostname_data=host_by_activity if host_by_activity else None,
+        )
+    )
 
     if has_real_telemetry:
         gpu_device_count = len(telemetry_overview.get("gpu_names", [])) or len(telemetry_overview.get("gpu_ids", []))

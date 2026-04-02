@@ -1,5 +1,5 @@
 from time import time
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 import os
 import threading
 import random
@@ -177,6 +177,17 @@ class FlowceptTask(object):
         """
         return self._task.campaign_id
 
+    def get_agent_id(self):
+        """Return the agent_id identifier.
+
+        Returns
+        -------
+        Any
+            Identifier of the campaign associated with the current task.
+        """
+        return self._task.agent_id
+
+
     def __enter__(self):
         return self
 
@@ -198,7 +209,7 @@ class FlowceptTask(object):
         stderr: str = None,
         data: Any = None,
         custom_metadata: Dict = None,
-        status: Status = Status.FINISHED,
+        status: Status | None = None
     ):
         """
         Finalizes the task by capturing its end state, telemetry, and status.
@@ -248,7 +259,7 @@ class FlowceptTask(object):
                 self._task.custom_metadata = sanitized_custom_metadata
 
         self._task.ended_at = ended_at or time()
-        self._task.status = status
+        self._task.status = status or (Status.ERROR if stderr else Status.FINISHED)
         self._task.stderr = stderr
         self._task.stdout = stdout
         if REPLACE_NON_JSON_SERIALIZABLE:
@@ -270,6 +281,7 @@ class FlowceptTask(object):
         if not self._ended:
             if self._interceptor._mq_dao.buffer is None:
                 raise Exception("Did you start Flowcept?")
+            self._task.status = Status.FINISHED
             self._task.ended_at = self._task.started_at  # message sents are not going to be analyzed for task duration
             self._interceptor.intercept(self._task.to_dict())
             self._ended = True

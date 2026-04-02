@@ -88,9 +88,9 @@ def safe_execute(df: pd.DataFrame, code: str):
     Returns result or None.
     """
     code = clean_code(code)
-    local_env = {"df": df, "pd": pd, "np": np}
-    exec(code, {}, local_env)
-    return local_env.get("result", None)
+    exec_env = {"df": df, "pd": pd, "np": np}
+    exec(code, exec_env, exec_env)
+    return exec_env.get("result", None)
 
 
 def format_result_df(result_df) -> str:
