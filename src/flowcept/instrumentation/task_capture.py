@@ -1,5 +1,5 @@
 from time import time
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List
 import os
 import threading
 import random
@@ -187,7 +187,6 @@ class FlowceptTask(object):
         """
         return self._task.agent_id
 
-
     def __enter__(self):
         return self
 
@@ -209,7 +208,7 @@ class FlowceptTask(object):
         stderr: str = None,
         data: Any = None,
         custom_metadata: Dict = None,
-        status: Status | None = None
+        status: Status | None = None,
     ):
         """
         Finalizes the task by capturing its end state, telemetry, and status.
