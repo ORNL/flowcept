@@ -102,6 +102,7 @@ agent:
   model_kwargs: {}
   audio_enabled: false
   debug: true
+  start_persistence: false
 
 databases:
 

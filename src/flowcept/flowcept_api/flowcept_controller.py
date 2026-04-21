@@ -61,6 +61,8 @@ class Flowcept(object):
         workflow_name: str = None,
         workflow_subtype: str = None,
         workflow_args: Dict = None,
+        agent_id: str = None,
+        parent_workflow_id: str = None,
         start_persistence=True,
         check_safe_stops=True,  # TODO add to docstring
         save_workflow=True,
@@ -93,6 +95,12 @@ class Flowcept(object):
 
         workflow_name : str, optional
             A descriptive name for the workflow.
+
+        agent_id: str, optional
+            Use it if there is an agent responsible for executing this workflow.
+
+        parent_workflow_id: str, optional
+            Use it if this is a subworkflow.
 
         workflow_subtype : str, optional
             Optional subtype for workflow categorization
@@ -163,6 +171,8 @@ class Flowcept(object):
         self.workflow_name = workflow_name
         self.workflow_subtype = workflow_subtype
         self.workflow_args = workflow_args
+        self.parent_workflow_id = parent_workflow_id
+        self.agent_id = agent_id
         should_delete_buffer_file = (
             flowcept.configs.DELETE_BUFFER_FILE if delete_buffer_file is None else delete_buffer_file
         )
@@ -587,7 +597,8 @@ class Flowcept(object):
         wf_obj = WorkflowObject()
         wf_obj.workflow_id = Flowcept.current_workflow_id
         wf_obj.campaign_id = Flowcept.campaign_id
-
+        wf_obj.parent_workflow_id = self.parent_workflow_id
+        wf_obj.agent_id = self.agent_id
         if self.workflow_name:
             wf_obj.name = self.workflow_name
         if self.workflow_subtype:

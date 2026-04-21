@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Dict, List
 from uuid import uuid4
 
+from flowcept.configs import AGENT
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.consumers.base_consumer import BaseConsumer
 
@@ -104,12 +105,14 @@ class BaseAgentContextManager(BaseConsumer):
             self.logger.info(f"Starting lifespan for agent {BaseAgentContextManager.agent_id}.")
             self._started = True
 
+            start_persistence = AGENT.get("start_persistence", False)
+
             f = Flowcept(
-                start_persistence=False,
+                start_persistence=start_persistence,
                 save_workflow=True,
                 check_safe_stops=False,
-                workflow_name="agent_workflow",
-                workflow_args={"agent_id": self.agent_id},
+                workflow_name="flowcept_agent_workflow",
+                agent_id=self.agent_id,
             )
             self.agent_workflow_id = f.current_workflow_id
             f.start()

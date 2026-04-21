@@ -74,6 +74,8 @@ class WorkflowObject:
     extra_metadata: str = None
     """Optional free-form metadata for extensions not covered by other fields."""
 
+    agent_id: AnyStr = None
+
     used: Dict = None
     """Inputs consumed by the workflow (datasets, arguments, or configuration values)."""
 
