@@ -7,4 +7,4 @@
 # See .github/workflows/version_bumper.py
 
 # ✋⚠️⛔❗❗❗ STOP! DANGER!!ONEONEELEVEN! Did you carefully read the warning above?! :)
-__version__ = "0.9.23"
+__version__ = "0.10.3"
