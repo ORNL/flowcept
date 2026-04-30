@@ -81,6 +81,14 @@ CONFIG_PROFILES = {
         "databases.mongodb.enabled": False,
         "databases.lmdb.enabled": False,
     },
+    "mq-only-no-flush": {
+        "project.db_flush_mode": "offline",
+        "project.dump_buffer.enabled": True,
+        "mq.enabled": True,
+        "kv_db.enabled": False,
+        "databases.mongodb.enabled": False,
+        "databases.lmdb.enabled": False,
+    },
 }
 
 
@@ -232,7 +240,7 @@ def apply_config_profile(config_profile: str, yes: bool = False):
     ----------
     config_profile : str
         Profile name. Supported values: full-online, full-telemetry, mq-only,
-        full-offline.
+        full-offline, mq-only-no-flush.
     yes : bool, optional
         If true, skip confirmation prompt and apply changes immediately.
 
@@ -1012,6 +1020,10 @@ def main():  # noqa: D103
         print("      Configure settings for MQ-only mode (MQ enabled; KV and DocDBs disabled).")
         print("  flowcept --config-profile full-offline [-y]")
         print("      Configure settings for fully offline mode (MQ + KV + Mongo disabled).")
+        print("  flowcept --config-profile mq-only-no-flush [-y]")
+        print("      MQ enabled, no persistent DBs. Tasks accumulate locally and are bulk-published")
+        print("      to MQ in a single end-of-run flush. Also dumps to local JSONL.")
+        print("      Use with Flowcept(check_safe_stops=False).")
         print("")
         for group, funcs in COMMAND_GROUPS:
             print(f"{group}:\n")

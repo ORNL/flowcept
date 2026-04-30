@@ -87,6 +87,7 @@ flowcept --config-profile full-online
 flowcept --config-profile full-telemetry
 flowcept --config-profile mq-only
 flowcept --config-profile full-offline
+flowcept --config-profile mq-only-no-flush
 ```
 
 What this does:
@@ -123,6 +124,14 @@ Current profile behavior:
   - `kv_db.enabled: false`
   - `databases.mongodb.enabled: false`
   - `databases.lmdb.enabled: false`
+- `mq-only-no-flush`:
+  - `project.db_flush_mode: offline`
+  - `project.dump_buffer.enabled: true`
+  - `mq.enabled: true`
+  - `kv_db.enabled: false`
+  - `databases.mongodb.enabled: false`
+  - `databases.lmdb.enabled: false`
+  - Tasks accumulate locally and are bulk-published to MQ in a single end-of-run flush. Also dumps to local JSONL. Use `Flowcept(check_safe_stops=False)`.
 - `full-telemetry`:
   - enables CPU, per-CPU, process, memory, disk, network, machine telemetry
   - keeps `telemetry_capture.gpu: null`
@@ -554,10 +563,11 @@ Read more:
   - Fix: ensure `project.db_flush_mode: offline` and `project.dump_buffer.enabled: true` in settings
 - Symptom: `ValueError` about `db_flush_mode` vs MQ/DB settings
   - Fix: keep config consistent:
-    - Offline mode: disable MQ/KV/DBs
-    - Online mode: use `flowcept --config-profile full-online -y` or `flowcept --config-profile mq-only -y`
+    - Offline mode (no MQ/KV/DBs): `flowcept --config-profile full-offline -y`
+    - Offline mode with end-of-run MQ flush: `flowcept --config-profile mq-only-no-flush -y`
+    - Online mode: `flowcept --config-profile full-online -y` or `flowcept --config-profile mq-only -y`
 - Symptom: `ValueError` about `check_safe_stops=True` requiring KV while MQ is enabled
-  - Fix: either use `flowcept --config-profile full-online -y`, or keep `mq-only` and instantiate `Flowcept(check_safe_stops=False)`
+  - Fix: either use `flowcept --config-profile full-online -y`, or use `mq-only` / `mq-only-no-flush` and instantiate `Flowcept(check_safe_stops=False)`
 - Symptom: REST API import/start failures (`fastapi`/`uvicorn` missing)
   - Fix: `pip install flowcept[webservice,mongo]`
 - Symptom: `Flowcept.db` queries fail due to missing Mongo deps

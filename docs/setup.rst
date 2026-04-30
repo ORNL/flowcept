@@ -238,6 +238,7 @@ Common profiles:
 - ``full-online``: Redis MQ + Redis KV + Mongo + online flush
 - ``full-offline``: offline flush + dump buffer + MQ/KV/DB disabled
 - ``mq-only``: MQ only, no KV/Mongo/LMDB
+- ``mq-only-no-flush``: MQ enabled, tasks accumulate locally and are bulk-published to MQ in a single end-of-run flush; also dumps to local JSONL; use with ``Flowcept(check_safe_stops=False)``
 - ``full-telemetry``: telemetry on except GPU
 
 Adapter flags are additive:

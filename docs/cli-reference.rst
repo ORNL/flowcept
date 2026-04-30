@@ -37,6 +37,7 @@ Flowcept provides quick settings profiles to switch between common runtime modes
    flowcept --config-profile full-telemetry
    flowcept --config-profile mq-only
    flowcept --config-profile full-offline
+   flowcept --config-profile mq-only-no-flush
 
 Settings bootstrap
 ------------------
@@ -102,6 +103,16 @@ Current profile values:
   - ``kv_db.enabled: false``
   - ``databases.mongodb.enabled: false``
   - ``databases.lmdb.enabled: false``
+- ``mq-only-no-flush``:
+  - ``project.db_flush_mode: offline``
+  - ``project.dump_buffer.enabled: true``
+  - ``mq.enabled: true``
+  - ``kv_db.enabled: false``
+  - ``databases.mongodb.enabled: false``
+  - ``databases.lmdb.enabled: false``
+  - Tasks accumulate locally during the run and are bulk-published to MQ in a single
+    end-of-run flush. A local JSONL copy is also written. No persistent DB is required.
+  - Use ``Flowcept(check_safe_stops=False)`` with this profile.
 
 Environment variables can override settings values at runtime. This matters for keys such as
 ``MONGO_ENABLED``, ``LMDB_ENABLED``, ``MQ_ENABLED``, ``MQ_TYPE``, ``MQ_PORT``, and ``DB_FLUSH_MODE``.

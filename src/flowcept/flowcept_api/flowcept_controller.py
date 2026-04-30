@@ -134,7 +134,8 @@ class Flowcept(object):
                 "\n"
                 "Quick fix with profiles:\n"
                 "  flowcept --config-profile full-online -y\n"
-                "  flowcept --config-profile mq-only -y  # and instantiate Flowcept(check_safe_stops=False)"
+                "  flowcept --config-profile mq-only -y  # and instantiate Flowcept(check_safe_stops=False)\n"
+                "  flowcept --config-profile mq-only-no-flush -y  # end-of-run bulk flush, check_safe_stops=False"
             )
         self._enable_persistence = start_persistence
         self._db_inserters: List = []

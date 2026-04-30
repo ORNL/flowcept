@@ -295,12 +295,15 @@ def validate_config():
             "  flowcept --config-profile full-online -y\n"
             "  flowcept --config-profile full-offline -y"
         )
-    if DB_FLUSH_MODE == "offline" and (MQ_ENABLED or MONGO_ENABLED or LMDB_ENABLED or KVDB_ENABLED):
+    if DB_FLUSH_MODE == "offline" and (MONGO_ENABLED or LMDB_ENABLED or KVDB_ENABLED):
         raise ValueError(
-            "Invalid configuration: project.db_flush_mode is 'offline' but MQ/DBs are enabled.\n"
-            f"mq.enabled={MQ_ENABLED}, kv_db.enabled={KVDB_ENABLED}, "
+            "Invalid configuration: project.db_flush_mode is 'offline' but persistent DBs are enabled.\n"
+            f"kv_db.enabled={KVDB_ENABLED}, "
             f"databases.mongodb.enabled={MONGO_ENABLED}, databases.lmdb.enabled={LMDB_ENABLED}.\n"
-            "Disable mq.enabled, kv_db.enabled, and databases when running offline.\n"
-            "Quick fix with profile:\n"
-            "  flowcept --config-profile full-offline -y"
+            "Disable kv_db and databases when running offline.\n"
+            "Note: mq.enabled=true is allowed with db_flush_mode=offline — tasks accumulate locally\n"
+            "and are bulk-published to MQ in a single flush at the end of the run.\n"
+            "Quick fix with profiles:\n"
+            "  flowcept --config-profile full-offline -y\n"
+            "  flowcept --config-profile mq-only-no-flush -y"
         )
