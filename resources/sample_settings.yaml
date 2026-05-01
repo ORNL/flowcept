@@ -1,4 +1,4 @@
-flowcept_version: 0.10.4 # Version of the Flowcept package. Do not update this manually. The CI updates it. This setting file is compatible with this version.
+flowcept_version: 0.10.5 # Version of the Flowcept package. Do not update this manually. The CI updates it. This setting file is compatible with this version.
 
 project:
   debug: true # Toggle debug mode. This will add a property `debug: true` to all saved data, making it easier to retrieve/delete them later.
