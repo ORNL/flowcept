@@ -40,6 +40,7 @@ Use CLI profiles to switch between common runtime settings quickly:
    flowcept --config-profile full-telemetry
    flowcept --config-profile mq-only
    flowcept --config-profile full-offline
+   flowcept --config-profile mq-only-no-flush
 
 The CLI prints exactly which keys will change, asks for confirmation, and writes to
 ``FLOWCEPT_SETTINGS_PATH`` (if set) or ``~/.flowcept/settings.yaml``.

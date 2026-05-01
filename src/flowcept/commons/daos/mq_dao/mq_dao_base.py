@@ -186,6 +186,8 @@ class MQDao(object):
             else:
                 self.logger.error("MQ time-based flushing is not started")
         else:
+            if MQ_ENABLED and self.buffer:
+                self.bulk_publish(self.buffer)  # end-of-run single flush to Redis
             self.buffer = list()
 
         self.logger.debug("Buffer closed.")

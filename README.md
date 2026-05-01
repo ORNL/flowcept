@@ -389,7 +389,7 @@ Flowcept looks for its settings in the following order:
 Important:
 
 - environment variables can override settings values
-- use profiles for mode switches such as `full-online`, `full-offline`, `mq-only`, `full-telemetry`
+- use profiles for mode switches such as `full-online`, `full-offline`, `mq-only`, `mq-only-no-flush`, `full-telemetry`
 - adapter flags are additive:
 
 ```bash
