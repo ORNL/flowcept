@@ -39,3 +39,5 @@ agents.md
 agent_sandbox/
 *PROVENANCE_*md
 *PROVENANCE_*pdf
+CLAUDE.md
+.claude/

@@ -1,0 +1,55 @@
+project:
+  enrich_messages: true         # captures node hostname, IP, UTC timestamps per task
+  db_flush_mode: online         # tasks stream to Redis MQ in real time; consumer writes to LMDB
+  debug: false
+
+log:
+  log_file_level: disable
+  log_stream_level: disable
+
+telemetry_capture:
+  cpu: true
+  mem: true
+  disk: true
+  network: true
+
+instrumentation:
+  enabled: true
+
+sys_metadata:
+  environment_id: "olcf_frontier"
+
+# ── Message Queue (Redis on compute node) ────────────────────────────────────
+mq:
+  enabled: true
+  host: localhost               # overridden at runtime via MQ_HOST env var
+  port: 6379
+  
+  # HPC buffer tuning: batch many task records per MQ publish to reduce
+  # round-trips. Each MPI rank flushes when it hits buffer_size records
+  # or insertion_buffer_time_secs elapses, whichever comes first.
+  buffer_size: 500              # records per MQ publish (default: 1 → too many round-trips for HPC)
+  insertion_buffer_time_secs: 5 # max seconds between forced flushes (default: 1)
+
+  bin: /path/to/redis-stable/src/redis-server     # On Frontier, we compiled it from source. Read README.md.
+  conf_file: /path/to/flowcept/deployment/redis_conf/redis.conf
+
+kv_db:
+  enabled: false                # KV not needed for this workflow
+
+# ── Persistence (LMDB on compute node local storage) ─────────────────────────
+databases:
+  mongodb:
+    enabled: false
+
+  lmdb:
+    enabled: true
+    path: flowcept_output/lmdb  # written to the job's working directory
+
+# ── Consumer (DocumentInserter) buffer tuning ─────────────────────────────────
+# The consumer reads from Redis MQ and batch-inserts into LMDB.
+# Larger buffer_size means fewer LMDB write transactions → higher throughput.
+db_buffer:
+  buffer_size: 500              # records per LMDB write transaction (default: 50)
+  insertion_buffer_time_secs: 5 # max seconds the consumer waits before flushing
+  remove_empty_fields: true     # saves LMDB space by dropping null fields

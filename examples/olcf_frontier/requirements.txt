@@ -1,0 +1,1 @@
+flowcept[redis,lmdb,telemetry,extras,report_pdf]

@@ -355,6 +355,8 @@ LMDB
      - Purpose / Default
    * - ``LMDB_ENABLED``
      - Enable LMDB persistence. Parsed as boolean: ``"true"`` to enable. Default from settings.
+   * - ``LMDB_PATH``
+     - Override the LMDB database directory. Default from ``databases.lmdb.path`` in settings (``flowcept_lmdb`` if unset).
 
 Agent / MCP
 ~~~~~~~~~~~

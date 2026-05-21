@@ -1,0 +1,7 @@
+*.out
+*.err
+flowcept_settings.yaml
+flowcept_output/
+.ipynb_checkpoints/
+tmp/
+*.log
