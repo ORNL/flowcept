@@ -425,9 +425,49 @@ def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: boo
 
 def stop_consumption_services():
     """
-    Stop the document inserter.
+    Stop the running consumption services process gracefully via MQ stop message.
     """
-    print("Not implemented yet.")
+    import signal as _signal
+    import time
+
+    import psutil
+
+    consumer_proc = None
+    for proc in psutil.process_iter(["pid", "cmdline", "status"]):
+        if proc.info["status"] in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
+            continue
+        cmdline = " ".join(proc.info["cmdline"] or [])
+        if "start-consumption-services" in cmdline and proc.pid != os.getpid():
+            consumer_proc = proc
+            break
+
+    if consumer_proc is None:
+        print("No running consumer found.")
+        return
+
+    # Graceful stop: send MQ stop message so the consumer flushes and closes LMDB cleanly.
+    try:
+        from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
+
+        mq = MQDao.build()
+        mq.send_document_inserter_stop()
+        print(f"Sent MQ stop to consumer (pid={consumer_proc.pid}). Waiting for exit...")
+    except Exception as e:
+        print(f"Could not send MQ stop ({e}). Falling back to SIGTERM.")
+        consumer_proc.send_signal(_signal.SIGTERM)
+        return
+
+    deadline = time.time() + 15
+    while time.time() < deadline:
+        try:
+            consumer_proc.status()
+        except psutil.NoSuchProcess:
+            print(f"Consumer (pid={consumer_proc.pid}) exited cleanly.")
+            return
+        time.sleep(0.5)
+
+    print("Consumer did not exit in time. Sending SIGTERM.")
+    consumer_proc.send_signal(_signal.SIGTERM)
 
 
 def start_services(with_mongo: bool = False):
@@ -786,7 +826,7 @@ def start_redis() -> None:
     settings = getattr(configs, "settings", {}) or {}
     mq = settings.get("mq") or {}
 
-    if mq.get("type", None) != "redis":
+    if mq.get("type", "redis") != "redis":
         print("Your settings file needs to specify redis as the MQ type. Please fix it.")
         return
 
@@ -808,6 +848,24 @@ def start_redis() -> None:
             print(out)
     except subprocess.CalledProcessError as e:
         print(f"Failed to start Redis: {e}")
+
+
+def stop_redis() -> None:
+    """
+    Stop the running Redis server via redis-cli shutdown.
+    """
+    from flowcept.configs import MQ_HOST, MQ_PORT
+
+    settings = getattr(configs, "settings", {}) or {}
+    bin_path = (settings.get("mq") or {}).get("bin", "")
+    redis_cli = str(bin_path).replace("redis-server", "redis-cli")
+
+    cmd = f"{shlex.quote(redis_cli)} -h {MQ_HOST} -p {MQ_PORT} shutdown nosave"
+    try:
+        subprocess.run(cmd, shell=True)
+        print("Redis stopped.")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to stop Redis: {e}")
 
 
 def start_webservice(webservice_host: str = "127.0.0.1", webservice_port: str = "8008"):
@@ -840,24 +898,34 @@ def start_webservice(webservice_host: str = "127.0.0.1", webservice_port: str = 
 
 
 def generate_report(
-    input_path: str,
     format: str = "markdown",
     output_path: str = None,
+    input_path: str = None,
+    workflow_id: str = None,
 ):
     """
-    Generate a provenance report from a JSONL buffer file.
+    Generate a provenance report from a JSONL buffer file or a workflow ID.
 
     Parameters
     ----------
-    input_path : str
-        Path to the Flowcept JSONL buffer file.
     format : str, optional
         Output format: markdown (default) or pdf.
     output_path : str, optional
         Output report path. If omitted, defaults to PROVENANCE_CARD.md for markdown
         and PROVENANCE_REPORT.pdf for pdf.
+    input_path : str, optional
+        Path to the Flowcept JSONL buffer file.
+    workflow_id : str, optional
+        Workflow ID to query from the configured database (MongoDB first, then LMDB).
     """
     from flowcept import Flowcept
+
+    if not input_path and not workflow_id:
+        print("Provide either --input-path or --workflow-id.")
+        return
+    if input_path and workflow_id:
+        print("Provide either --input-path or --workflow-id, not both.")
+        return
 
     report_format = (format or "markdown").strip().lower()
     if report_format not in {"markdown", "pdf"}:
@@ -872,6 +940,7 @@ def generate_report(
     stats = Flowcept.generate_report(
         report_type=report_type,
         input_jsonl_path=input_path,
+        workflow_id=workflow_id,
         format=report_format,
         output_path=resolved_output_path,
     )
@@ -885,7 +954,7 @@ COMMAND_GROUPS = [
     ("Database Commands", [workflow_count, query, get_task]),
     ("Report Commands", [generate_report]),
     ("Agent Commands", [start_agent, agent_client, start_agent_gui]),
-    ("External Services", [start_mongo, start_redis, start_webservice]),
+    ("External Services", [start_mongo, start_redis, stop_redis, start_webservice]),
 ]
 
 COMMANDS = set(f for _, fs in COMMAND_GROUPS for f in fs)

@@ -147,6 +147,8 @@ LMDB_SETTINGS = DATABASES.get("lmdb", {})
 LMDB_ENABLED = False
 if LMDB_SETTINGS:
     LMDB_ENABLED = _get_env_bool("LMDB_ENABLED", LMDB_SETTINGS.get("enabled", False))
+    _lmdb_path_default = LMDB_SETTINGS.get("path", "flowcept_lmdb")
+    LMDB_SETTINGS["path"] = _get_env("LMDB_PATH", _lmdb_path_default)
 
 # if not LMDB_ENABLED and not MONGO_ENABLED:
 #     # At least one of these variables need to be enabled.

@@ -115,7 +115,7 @@ Current profile values:
   - Use ``Flowcept(check_safe_stops=False)`` with this profile.
 
 Environment variables can override settings values at runtime. This matters for keys such as
-``MONGO_ENABLED``, ``LMDB_ENABLED``, ``MQ_ENABLED``, ``MQ_TYPE``, ``MQ_PORT``, and ``DB_FLUSH_MODE``.
+``MONGO_ENABLED``, ``LMDB_ENABLED``, ``LMDB_PATH``, ``MQ_ENABLED``, ``MQ_TYPE``, ``MQ_PORT``, and ``DB_FLUSH_MODE``.
 
 Available commands
 ------------------

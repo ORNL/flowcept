@@ -254,8 +254,8 @@ Custom Settings File
 
 Flowcept looks for its settings in the following order:
 
-1. ``~/.flowcept/settings.yaml`` — created by ``flowcept --init-settings``  
-2. Environment variable ``FLOWCEPT_SETTINGS_PATH`` — if set, Flowcept will use this  
+1. Environment variable ``FLOWCEPT_SETTINGS_PATH`` — if set, Flowcept will use this path
+2. ``~/.flowcept/settings.yaml`` — created by ``flowcept --init-settings``  
 3. Default sample file — `sample_settings.yaml <https://github.com/ORNL/flowcept/blob/main/resources/sample_settings.yaml>`_  
 
 Environment Variables
@@ -355,6 +355,8 @@ LMDB
      - Purpose / Default
    * - ``LMDB_ENABLED``
      - Enable LMDB persistence. Parsed as boolean: ``"true"`` to enable. Default from settings.
+   * - ``LMDB_PATH``
+     - Override the LMDB database directory. Default from ``databases.lmdb.path`` in settings (``flowcept_lmdb`` if unset).
 
 Agent / MCP
 ~~~~~~~~~~~

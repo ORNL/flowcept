@@ -221,7 +221,7 @@ class LMDBDAO(DocumentDBDAO):
         -------
          pd.DataFrame: A DataFrame containing the filtered data.
         """
-        docs = self.query(collection, filter)
+        docs = self.query(collection=collection, filter=filter)
         return pd.DataFrame(docs)
 
     def query(
@@ -391,8 +391,29 @@ class LMDBDAO(DocumentDBDAO):
         raise NotImplementedError
 
     def dump_to_file(self, collection, filter, output_file, export_format, should_zip):
-        """Dump data to file."""
-        raise NotImplementedError
+        """Dump collection data to a CSV or Parquet file, optionally zipped."""
+        import os
+        import zipfile
+        from datetime import datetime
+
+        df = self.to_df(collection, filter)
+
+        if output_file is None:
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = f"{collection}_{ts}.{export_format}"
+
+        if export_format == "csv":
+            df.to_csv(output_file, index=False)
+        elif export_format == "parquet":
+            df.to_parquet(output_file, index=False)
+        else:
+            raise ValueError(f"Unsupported format '{export_format}'. Use 'csv' or 'parquet'.")
+
+        if should_zip:
+            zip_path = output_file + ".zip"
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                zf.write(output_file, arcname=os.path.basename(output_file))
+            os.remove(output_file)
 
     def save_or_update_object(
         self,
