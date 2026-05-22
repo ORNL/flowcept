@@ -1035,6 +1035,7 @@ def main():  # noqa: D103
         help="Auto-confirm profile application (used with --config-profile).",
     )
 
+    registered_param_args = set()
     for func in COMMANDS:
         doc = func.__doc__ or ""
         func_name = func.__name__
@@ -1046,6 +1047,9 @@ def main():  # noqa: D103
             if pname == "yes":  # already registered as a global -y/--yes flag
                 continue
             arg_name = f"--{pname.replace('_', '-')}"
+            if arg_name in registered_param_args:
+                continue
+            registered_param_args.add(arg_name)
             params_doc = _parse_numpy_doc(doc).get(pname, {})
 
             help_text = f"{params_doc.get('type', '')} - {params_doc.get('desc', '').strip()}"
