@@ -631,7 +631,6 @@ def main():
 
         if delete_after_run:
             delete_mongo_data(mongo_dao, campaign_id)
-            verify_number_docs_in_db(mongo_dao, n_tasks, n_wfs, n_objects)
 
     print("Alright! Congrats.")
     return 1

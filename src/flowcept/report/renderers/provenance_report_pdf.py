@@ -11,7 +11,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from flowcept import __version__
 from flowcept.commons.vocabulary import ML_Types
@@ -105,17 +105,105 @@ def _delta(a: Any, b: Any) -> float | None:
     return bv - av
 
 
-def _extract_io_bytes(task: Dict[str, Any]) -> float:
-    """Extract total read+write bytes for a task from telemetry snapshots."""
-    start = task.get("telemetry_at_start", {}) if isinstance(task.get("telemetry_at_start"), dict) else {}
-    end = task.get("telemetry_at_end", {}) if isinstance(task.get("telemetry_at_end"), dict) else {}
-    read_b = _delta(
-        _deep_get(start, ["disk", "io_sum", "read_bytes"]), _deep_get(end, ["disk", "io_sum", "read_bytes"])
-    )
-    write_b = _delta(
-        _deep_get(start, ["disk", "io_sum", "write_bytes"]), _deep_get(end, ["disk", "io_sum", "write_bytes"])
-    )
-    return max(0.0, read_b or 0.0) + max(0.0, write_b or 0.0)
+_PALETTE = ["#0ea5e9", "#22c55e", "#f97316", "#a855f7", "#ef4444", "#eab308", "#14b8a6", "#f43f5e"]
+_METRIC_COLORS = {"cpu": "#0ea5e9", "memory": "#22c55e", "io": "#f97316", "net": "#a855f7", "gpu": "#ef4444"}
+
+
+def _activity_palette(tasks: List[Dict[str, Any]]) -> Dict[str, str]:
+    """Assign a consistent palette color to each unique activity_id."""
+    seen: List[str] = []
+    for t in tasks:
+        a = _to_str(t.get("activity_id"))
+        if a not in seen:
+            seen.append(a)
+    return {a: _PALETTE[i % len(_PALETTE)] for i, a in enumerate(seen)}
+
+
+def _extract_task_metrics(tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Flatten per-task telemetry into a list of dicts with derived scalar metrics."""
+    rows = []
+    for task in tasks:
+        s = task.get("telemetry_at_start") if isinstance(task.get("telemetry_at_start"), dict) else {}
+        e = task.get("telemetry_at_end") if isinstance(task.get("telemetry_at_end"), dict) else {}
+
+        def dlt(path: List[str]) -> float | None:
+            a, b = as_float(_deep_get(s, path)), as_float(_deep_get(e, path))
+            return (b - a) if a is not None and b is not None else None
+
+        def endv(path: List[str]) -> float | None:
+            v = _deep_get(e, path)
+            if v is None:
+                return None
+            if hasattr(v, "__iter__") and not isinstance(v, (str, dict)):
+                nums = [as_float(x) for x in v if as_float(x) is not None]
+                return max(nums) if nums else None
+            return as_float(v)
+
+        gpu_e = e.get("gpu", {}) if isinstance(e.get("gpu"), dict) else {}
+        gpu_s = s.get("gpu", {}) if isinstance(s.get("gpu"), dict) else {}
+        gpu_key = next(iter(gpu_e), None)
+        gpu_used_end = as_float(_deep_get(gpu_e, [gpu_key, "used"])) if gpu_key else None
+        gpu_used_start = as_float(_deep_get(gpu_s, [gpu_key, "used"])) if gpu_key else None
+        gpu_delta = (gpu_used_end - gpu_used_start) if gpu_used_end is not None and gpu_used_start is not None else None
+
+        gpu_temp = None
+        if gpu_key:
+            td = _deep_get(gpu_e, [gpu_key, "temperature"]) or {}
+            if isinstance(td, dict):
+                temps: List[float] = []
+                for v in td.values():
+                    if hasattr(v, "__iter__") and not isinstance(v, str):
+                        temps.extend(x for x in (as_float(x) for x in v) if x is not None)
+                    else:
+                        fv = as_float(v)
+                        if fv is not None:
+                            temps.append(fv)
+                gpu_temp = max(temps) if temps else None
+
+        started = as_float(task.get("started_at"))
+        ended = as_float(task.get("ended_at"))
+        io_r = dlt(["process", "io_counters", "read_bytes"])
+        io_w = dlt(["process", "io_counters", "write_bytes"])
+        rss_vals = [
+            v
+            for v in [
+                as_float(_deep_get(s, ["process", "memory", "rss"])),
+                as_float(_deep_get(e, ["process", "memory", "rss"])),
+            ]
+            if v is not None
+        ]
+
+        rows.append(
+            {
+                "activity": _to_str(task.get("activity_id")),
+                "hostname": _to_str(task.get("hostname")),
+                "started_at": started,
+                "ended_at": ended,
+                "elapsed_s": (ended - started) if started and ended else None,
+                "cpu_user_s": dlt(["process", "cpu_times", "user"]),
+                "cpu_sys_s": dlt(["process", "cpu_times", "system"]),
+                "mem_rss_mb": (max(rss_vals) / 1e6) if rss_vals else None,
+                "mem_virt_pct": endv(["memory", "virtual", "percent"]),
+                "io_read_mb": (io_r / 1e6) if io_r is not None else None,
+                "io_write_mb": (io_w / 1e6) if io_w is not None else None,
+                "io_total_mb": ((io_r or 0) + (io_w or 0)) / 1e6 if (io_r is not None or io_w is not None) else None,
+                "net_recv_mb": (dlt(["network", "netio_sum", "bytes_recv"]) or 0) / 1e6,
+                "net_sent_mb": (dlt(["network", "netio_sum", "bytes_sent"]) or 0) / 1e6,
+                "gpu_used_mb": (gpu_used_end / 1e6) if gpu_used_end is not None else None,
+                "gpu_delta_mb": (gpu_delta / 1e6) if gpu_delta is not None else None,
+                "gpu_temp_c": gpu_temp,
+                "t_start": None,
+                "t_end": None,
+            }
+        )
+
+    if rows:
+        t0 = min((r["started_at"] for r in rows if r["started_at"] is not None), default=0.0)
+        for r in rows:
+            r["t_start"] = (r["started_at"] - t0) if r["started_at"] is not None else None
+            r["t_end"] = (r["ended_at"] - t0) if r["ended_at"] is not None else None
+
+    return rows
 
 
 def _render_inline(text: str) -> str:
@@ -178,8 +266,45 @@ def _flatten_numeric(prefix: str, value: Any, out: Dict[str, float]) -> None:
         out[prefix] = num
 
 
+def _compute_gpu_used_delta(start: Dict[str, Any], end: Dict[str, Any]) -> float:
+    """Sum VRAM-used delta across all GPUs between start and end snapshots."""
+    start_gpu = start.get("gpu", {}) if isinstance(start.get("gpu"), dict) else {}
+    end_gpu = end.get("gpu", {}) if isinstance(end.get("gpu"), dict) else {}
+    total = 0.0
+    for gpu_key, gpu_end in end_gpu.items():
+        if not isinstance(gpu_end, dict):
+            continue
+        end_flat: Dict[str, float] = {}
+        start_flat: Dict[str, float] = {}
+        _flatten_numeric("", gpu_end, end_flat)
+        _flatten_numeric("", start_gpu.get(gpu_key, {}) if isinstance(start_gpu.get(gpu_key), dict) else {}, start_flat)
+        for metric, v_end in end_flat.items():
+            if "used" not in metric.lower():
+                continue
+            v_start = start_flat.get(metric, 0.0)
+            total += v_end - v_start if v_end >= v_start else v_end
+    return total
+
+
+def _compute_gpu_temp_peak(end: Dict[str, Any]) -> float | None:
+    """Return peak temperature value across all GPUs in an end snapshot."""
+    end_gpu = end.get("gpu", {}) if isinstance(end.get("gpu"), dict) else {}
+    peak = None
+    for gpu_end in end_gpu.values():
+        if not isinstance(gpu_end, dict):
+            continue
+        flat: Dict[str, float] = {}
+        _flatten_numeric("", gpu_end, flat)
+        for metric, val in flat.items():
+            lower = metric.lower()
+            if "temperature" in lower or "hotspot" in lower or "edge" in lower:
+                peak = max(peak, val) if peak is not None else val
+    return peak
+
+
 def _compute_telemetry_delta(start: Dict[str, Any], end: Dict[str, Any]) -> Dict[str, float | None]:
     """Compute per-task telemetry deltas between start and end snapshots."""
+    gpu_used = _compute_gpu_used_delta(start, end)
     return {
         "cpu_user": _positive(
             _delta(_deep_get(start, ["cpu", "times_avg", "user"]), _deep_get(end, ["cpu", "times_avg", "user"]))
@@ -209,6 +334,7 @@ def _compute_telemetry_delta(start: Dict[str, Any], end: Dict[str, Any]) -> Dict
                 _deep_get(start, ["disk", "io_sum", "write_count"]), _deep_get(end, ["disk", "io_sum", "write_count"])
             )
         ),
+        "gpu_used": gpu_used if gpu_used > 0 else None,
     }
 
 
@@ -220,6 +346,7 @@ def _extract_telemetry_overview(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
     swap_percent_values: List[float] = []
     cpu_freq_values: List[float] = []
 
+    gpu_temp_peak: float | None = None
     for task in tasks:
         start = task.get("telemetry_at_start", {}) if isinstance(task.get("telemetry_at_start"), dict) else {}
         end = task.get("telemetry_at_end", {}) if isinstance(task.get("telemetry_at_end"), dict) else {}
@@ -227,8 +354,21 @@ def _extract_telemetry_overview(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
             continue
 
         delta = _compute_telemetry_delta(start, end)
-        for key in ["cpu_user", "cpu_system", "memory_used", "read_bytes", "write_bytes", "read_count", "write_count"]:
+        for key in [
+            "cpu_user",
+            "cpu_system",
+            "memory_used",
+            "read_bytes",
+            "write_bytes",
+            "read_count",
+            "write_count",
+            "gpu_used",
+        ]:
             totals[key] += delta.get(key) or 0.0
+
+        peak = _compute_gpu_temp_peak(end)
+        if peak is not None:
+            gpu_temp_peak = max(gpu_temp_peak, peak) if gpu_temp_peak is not None else peak
 
         if delta.get("cpu_percent") is not None:
             cpu_percent_values.append(float(delta["cpu_percent"]))
@@ -278,6 +418,8 @@ def _extract_telemetry_overview(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
         "disk_read_time": totals["disk_read_time"] or None,
         "disk_write_time": totals["disk_write_time"] or None,
         "disk_busy_time": totals["disk_busy_time"] or None,
+        "gpu_used": totals["gpu_used"] or None,
+        "gpu_temp_peak": gpu_temp_peak,
     }
 
 
@@ -326,6 +468,7 @@ def _resource_rows(tasks: List[Dict[str, Any]]) -> List[List[str]]:
             "CPU System (s)",
             "CPU (%)",
             "Memory Delta",
+            "GPU Used Delta",
             "Read",
             "Write",
             "Read Ops",
@@ -339,6 +482,7 @@ def _resource_rows(tasks: List[Dict[str, Any]]) -> List[List[str]]:
     activity_cpu_system: Dict[str, float] = defaultdict(float)
     activity_cpu_percent: Dict[str, List[float]] = defaultdict(list)
     activity_memory: Dict[str, float] = defaultdict(float)
+    activity_gpu: Dict[str, float] = defaultdict(float)
     activity_read: Dict[str, float] = defaultdict(float)
     activity_write: Dict[str, float] = defaultdict(float)
     activity_read_ops: Dict[str, float] = defaultdict(float)
@@ -357,6 +501,7 @@ def _resource_rows(tasks: List[Dict[str, Any]]) -> List[List[str]]:
         activity_cpu_user[activity] += delta.get("cpu_user") or 0.0
         activity_cpu_system[activity] += delta.get("cpu_system") or 0.0
         activity_memory[activity] += delta.get("memory_used") or 0.0
+        activity_gpu[activity] += delta.get("gpu_used") or 0.0
         activity_read[activity] += delta.get("read_bytes") or 0.0
         activity_write[activity] += delta.get("write_bytes") or 0.0
         activity_read_ops[activity] += delta.get("read_count") or 0.0
@@ -377,6 +522,7 @@ def _resource_rows(tasks: List[Dict[str, Any]]) -> List[List[str]]:
                 _fmt_seconds(activity_cpu_system.get(activity)),
                 _fmt_percent(cpu_percent_avg),
                 _fmt_bytes(activity_memory.get(activity)),
+                _fmt_bytes(activity_gpu.get(activity)),
                 _fmt_bytes(activity_read.get(activity)),
                 _fmt_bytes(activity_write.get(activity)),
                 _fmt_count(activity_read_ops.get(activity)),
@@ -393,6 +539,7 @@ def _resource_insights(tasks: List[Dict[str, Any]]) -> List[str]:
     activity_write: Dict[str, float] = defaultdict(float)
     activity_cpu_percent: Dict[str, List[float]] = defaultdict(list)
     activity_memory: Dict[str, float] = defaultdict(float)
+    activity_gpu: Dict[str, float] = defaultdict(float)
     for task in sorted(tasks, key=lambda task: as_float(task.get("started_at")) or float("inf")):
         activity = _to_str(task.get("activity_id"))
         if activity not in activity_order:
@@ -403,6 +550,7 @@ def _resource_insights(tasks: List[Dict[str, Any]]) -> List[str]:
         activity_read[activity] += delta.get("read_bytes") or 0.0
         activity_write[activity] += delta.get("write_bytes") or 0.0
         activity_memory[activity] += delta.get("memory_used") or 0.0
+        activity_gpu[activity] += delta.get("gpu_used") or 0.0
         if delta.get("cpu_percent") is not None:
             activity_cpu_percent[activity].append(delta.get("cpu_percent"))
 
@@ -438,6 +586,12 @@ def _resource_insights(tasks: List[Dict[str, Any]]) -> List[str]:
     if memory_top:
         insights.append("Largest memory growth Activities:")
         insights.extend([f"`{name}`: Memory Delta={_fmt_bytes(mem)}" for name, mem in memory_top])
+
+    gpu_rank = [(activity, activity_gpu.get(activity, 0.0)) for activity in activity_order]
+    gpu_top = [(name, gpu) for name, gpu in sorted(gpu_rank, key=lambda row: row[1], reverse=True)[:5] if gpu > 0]
+    if gpu_top:
+        insights.append("Highest GPU memory delta Activities:")
+        insights.extend([f"`{name}`: GPU Used Delta={_fmt_bytes(gpu)}" for name, gpu in gpu_top])
 
     return insights
 
@@ -810,175 +964,6 @@ def _format_yaml_like_lines(value: Any, indent: int = 0) -> List[str]:
     return [f"{pad}{line}" for line in scalar]
 
 
-def _build_plot_data(
-    activities: List[Dict[str, Any]], tasks: List[Dict[str, Any]]
-) -> List[Tuple[str, List[str], List[float], str]]:
-    """Build bar-plot definitions for report plots section."""
-    slowest = [a for a in activities if as_float(a.get("elapsed_median")) is not None]
-    slowest = sorted(slowest, key=lambda row: float(row.get("elapsed_median") or 0.0), reverse=True)[:5]
-
-    fastest = [
-        a
-        for a in activities
-        if as_float(a.get("elapsed_median")) is not None and float(a.get("elapsed_median") or 0.0) > 0
-    ]
-    fastest = sorted(fastest, key=lambda row: float(row.get("elapsed_median") or 0.0))[:5]
-
-    io_by_activity: Dict[str, float] = {}
-    for task in tasks:
-        activity = _to_str(task.get("activity_id"))
-        io_by_activity[activity] = io_by_activity.get(activity, 0.0) + _extract_io_bytes(task)
-    io_top = sorted(io_by_activity.items(), key=lambda item: item[1], reverse=True)[:5]
-
-    charts: List[Tuple[str, List[str], List[float], str]] = []
-    if slowest:
-        charts.append(
-            (
-                "Top Slowest Activities (Median Elapsed Seconds)",
-                [_to_str(row.get("activity_id")) for row in slowest],
-                [float(row.get("elapsed_median") or 0.0) for row in slowest],
-                "Seconds",
-            )
-        )
-    if fastest:
-        charts.append(
-            (
-                "Top Fastest Activities (Median Elapsed Seconds)",
-                [_to_str(row.get("activity_id")) for row in fastest],
-                [float(row.get("elapsed_median") or 0.0) for row in fastest],
-                "Seconds",
-            )
-        )
-    if io_top:
-        charts.append(
-            (
-                "Most Resource-Demanding Activities (Total IO Bytes)",
-                [name for name, _ in io_top],
-                [float(total) for _, total in io_top],
-                "IO Bytes",
-            )
-        )
-
-    charts.extend(_build_telemetry_plot_data(tasks))
-    return charts
-
-
-def _build_telemetry_plot_data(tasks: Iterable[Dict[str, Any]]) -> List[Tuple[str, List[str], List[float], str]]:
-    """Build telemetry-specific plot definitions when telemetry data exists."""
-    cpu_by_activity: Dict[str, List[float]] = {}
-    memory_by_activity: Dict[str, float] = {}
-    network_by_activity: Dict[str, float] = {}
-    gpu_by_activity: Dict[str, float] = {}
-
-    for task in tasks:
-        activity = _to_str(task.get("activity_id"))
-        start = task.get("telemetry_at_start", {}) if isinstance(task.get("telemetry_at_start"), dict) else {}
-        end = task.get("telemetry_at_end", {}) if isinstance(task.get("telemetry_at_end"), dict) else {}
-        if not start and not end:
-            continue
-
-        cpu_delta = _delta(_deep_get(start, ["cpu", "percent_all"]), _deep_get(end, ["cpu", "percent_all"])) or 0.0
-        if cpu_delta > 0:
-            cpu_by_activity.setdefault(activity, []).append(cpu_delta)
-
-        memory_delta = (
-            _delta(_deep_get(start, ["memory", "virtual", "used"]), _deep_get(end, ["memory", "virtual", "used"]))
-            or 0.0
-        )
-        if memory_delta > 0:
-            memory_by_activity[activity] = memory_by_activity.get(activity, 0.0) + memory_delta
-
-        sent_delta = (
-            _delta(
-                _deep_get(start, ["network", "netio_sum", "bytes_sent"]),
-                _deep_get(end, ["network", "netio_sum", "bytes_sent"]),
-            )
-            or 0.0
-        )
-        recv_delta = (
-            _delta(
-                _deep_get(start, ["network", "netio_sum", "bytes_recv"]),
-                _deep_get(end, ["network", "netio_sum", "bytes_recv"]),
-            )
-            or 0.0
-        )
-        network_delta = max(0.0, sent_delta) + max(0.0, recv_delta)
-        if network_delta > 0:
-            network_by_activity[activity] = network_by_activity.get(activity, 0.0) + network_delta
-
-        start_gpu = start.get("gpu", {}) if isinstance(start.get("gpu"), dict) else {}
-        end_gpu = end.get("gpu", {}) if isinstance(end.get("gpu"), dict) else {}
-        gpu_delta = 0.0
-        for gpu_key, gpu_end in end_gpu.items():
-            if not isinstance(gpu_end, dict):
-                continue
-            end_flat: Dict[str, float] = {}
-            start_flat: Dict[str, float] = {}
-            _flatten_numeric("", gpu_end, end_flat)
-            _flatten_numeric(
-                "", start_gpu.get(gpu_key, {}) if isinstance(start_gpu.get(gpu_key), dict) else {}, start_flat
-            )
-            for metric_name, metric_end in end_flat.items():
-                metric_name_lower = metric_name.lower()
-                if "used" not in metric_name_lower or "gpu" in metric_name_lower:
-                    continue
-                metric_start = start_flat.get(metric_name, 0.0)
-                gpu_delta += metric_end - metric_start if metric_end >= metric_start else metric_end
-        if gpu_delta > 0:
-            gpu_by_activity[activity] = gpu_by_activity.get(activity, 0.0) + gpu_delta
-
-    charts: List[Tuple[str, List[str], List[float], str]] = []
-    cpu_top = sorted(
-        ((name, sum(vals) / len(vals)) for name, vals in cpu_by_activity.items() if vals),
-        key=lambda row: row[1],
-        reverse=True,
-    )[:5]
-    if cpu_top:
-        charts.append(
-            (
-                "Most CPU-Active Activities (Average CPU % Delta)",
-                [name for name, _ in cpu_top],
-                [value for _, value in cpu_top],
-                "%",
-            )
-        )
-
-    memory_top = sorted(memory_by_activity.items(), key=lambda row: row[1], reverse=True)[:5]
-    if memory_top:
-        charts.append(
-            (
-                "Largest Memory Growth Activities",
-                [name for name, _ in memory_top],
-                [value for _, value in memory_top],
-                "Bytes",
-            )
-        )
-
-    network_top = sorted(network_by_activity.items(), key=lambda row: row[1], reverse=True)[:5]
-    if network_top:
-        charts.append(
-            (
-                "Most Network-Active Activities (Bytes Moved)",
-                [name for name, _ in network_top],
-                [value for _, value in network_top],
-                "Bytes",
-            )
-        )
-
-    gpu_top = sorted(gpu_by_activity.items(), key=lambda row: row[1], reverse=True)[:5]
-    if gpu_top:
-        charts.append(
-            (
-                "Highest GPU Memory Delta Activities",
-                [name for name, _ in gpu_top],
-                [value for _, value in gpu_top],
-                "Bytes",
-            )
-        )
-
-    return charts
-
-
 def _build_ml_learning_plot_spec(dataset: Dict[str, Any]) -> Dict[str, Any] | None:
     """Build a learning trend line-plot specification for ml_workflow reports."""
     workflow = dataset.get("workflow", {}) if isinstance(dataset.get("workflow"), dict) else {}
@@ -1023,47 +1008,440 @@ def _build_ml_learning_plot_spec(dataset: Dict[str, Any]) -> Dict[str, Any] | No
     }
 
 
-def _render_bar_plot(title: str, labels: List[str], values: List[float], y_label: str, output_path: Path) -> None:
-    """Render a bar plot image for the PDF plots section."""
+def _render_telemetry_timeline_plot(tasks: List[Dict[str, Any]], output_path: Path) -> bool:
+    """Render resource usage over time: one normalized (0-1) line per telemetry key."""
     import matplotlib.pyplot as plt
+
+    points: List[Tuple[float, Dict[str, Any]]] = []
+    t0: float | None = None
+    for task in tasks:
+        ts_start = as_float(task.get("started_at"))
+        ts_end = as_float(task.get("ended_at"))
+        tel_start = task.get("telemetry_at_start") if isinstance(task.get("telemetry_at_start"), dict) else None
+        tel_end = task.get("telemetry_at_end") if isinstance(task.get("telemetry_at_end"), dict) else None
+        if ts_start is not None and tel_start is not None:
+            points.append((ts_start, tel_start))
+        if ts_end is not None and tel_end is not None:
+            points.append((ts_end, tel_end))
+        for ts in (ts_start, ts_end):
+            if ts is not None and (t0 is None or ts < t0):
+                t0 = ts
+
+    if not points or t0 is None:
+        return False
+
+    points.sort(key=lambda item: item[0])
+    seen: Dict[float, Dict[str, Any]] = {}
+    for ts, tel in points:
+        seen[ts] = tel
+    times = sorted(seen.keys())
+
+    def _get_cpu(tel: Dict[str, Any]) -> float | None:
+        return as_float(_deep_get(tel, ["cpu", "percent_all"]))
+
+    def _get_mem(tel: Dict[str, Any]) -> float | None:
+        return as_float(_deep_get(tel, ["memory", "virtual", "percent"]))
+
+    def _get_proc_io(tel: Dict[str, Any]) -> float | None:
+        # process.io_counters reads /proc/<pid>/io — captures VFS-level IO including Lustre
+        read = as_float(_deep_get(tel, ["process", "io_counters", "read_bytes"]))
+        write = as_float(_deep_get(tel, ["process", "io_counters", "write_bytes"]))
+        if read is None and write is None:
+            return None
+        return (read or 0.0) + (write or 0.0)
+
+    def _get_net(tel: Dict[str, Any]) -> float | None:
+        recv = as_float(_deep_get(tel, ["network", "netio_sum", "bytes_recv"]))
+        sent = as_float(_deep_get(tel, ["network", "netio_sum", "bytes_sent"]))
+        if recv is None and sent is None:
+            return None
+        return (recv or 0.0) + (sent or 0.0)
+
+    def _get_gpu(tel: Dict[str, Any]) -> float | None:
+        gpu = tel.get("gpu") if isinstance(tel.get("gpu"), dict) else {}
+        for gpu_data in gpu.values():
+            if isinstance(gpu_data, dict):
+                v = as_float(gpu_data.get("used"))
+                if v is not None:
+                    return v
+        return None
+
+    extractors = [
+        ("CPU %", _get_cpu, "#0ea5e9"),
+        ("Memory %", _get_mem, "#22c55e"),
+        ("Process IO", _get_proc_io, "#f97316"),
+        ("Net IO", _get_net, "#a855f7"),
+        ("GPU Mem", _get_gpu, "#ef4444"),
+    ]
+
+    x_rel = [ts - t0 for ts in times]
 
     fig, axis = plt.subplots(figsize=(10, 4))
     fig.patch.set_facecolor("white")
     axis.set_facecolor("#f8fafc")
 
-    wrapped_labels = [
-        "\n".join(textwrap.wrap(label, width=14, break_long_words=True, break_on_hyphens=True)) for label in labels
-    ]
-    bars = axis.bar(wrapped_labels, values, color="#0ea5e9", edgecolor="#0369a1", linewidth=1.0)
+    has_data = False
+    for label, extractor, color in extractors:
+        raw = [extractor(seen[ts]) for ts in times]
+        valid = [(x, v) for x, v in zip(x_rel, raw) if v is not None]
+        if len(valid) < 2:
+            continue
+        xs, ys = zip(*valid)
+        vmin, vmax = min(ys), max(ys)
+        if vmax == vmin:
+            continue
+        normalized = [(v - vmin) / (vmax - vmin) for v in ys]
+        axis.plot(xs, normalized, label=label, color=color, marker="o", linewidth=1.8, markersize=4)
+        has_data = True
 
-    axis.set_title(title, fontsize=13, fontweight="bold", color="#0f172a")
-    axis.set_ylabel(y_label, fontsize=10, color="#334155")
-    axis.grid(axis="y", linestyle="--", alpha=0.35)
-    axis.tick_params(axis="x", labelsize=8)
-    axis.tick_params(axis="y", labelsize=9)
+    if not has_data:
+        plt.close(fig)
+        return False
 
-    is_bytes = y_label.lower() in {"bytes", "io bytes"}
-    is_percent = y_label == "%"
-    for bar, value in zip(bars, values):
-        if is_bytes:
-            label = _fmt_bytes(value)
-        elif is_percent:
-            label = _fmt_percent(value)
-        else:
-            label = f"{value:.2f}"
-        axis.text(
-            bar.get_x() + bar.get_width() / 2,
-            bar.get_height(),
-            label,
-            ha="center",
-            va="bottom",
-            fontsize=8,
-            color="#0f172a",
+    task_starts = sorted(
+        set(
+            as_float(t.get("started_at")) - t0  # type: ignore[operator]
+            for t in tasks
+            if as_float(t.get("started_at")) is not None
         )
+    )
+    for x in task_starts:
+        axis.axvline(x=x, color="#94a3b8", linewidth=0.7, linestyle="--", alpha=0.5)
+
+    axis.set_xlabel("Time (s from workflow start)", fontsize=9, color="#334155")
+    axis.set_ylabel("Normalized value (0–1)", fontsize=9, color="#334155")
+    axis.set_title("Resource Usage Over Time", fontsize=13, fontweight="bold", color="#0f172a")
+    axis.legend(loc="upper left", fontsize=8, framealpha=0.85)
+    axis.grid(axis="y", linestyle="--", alpha=0.3)
+    axis.tick_params(labelsize=8)
 
     fig.tight_layout()
     fig.savefig(output_path, dpi=170, bbox_inches="tight")
     plt.close(fig)
+    return True
+
+
+def _render_gantt_plot(metrics: List[Dict[str, Any]], act_colors: Dict[str, str], output_path: Path) -> bool:
+    """Render task Gantt chart colored by activity."""
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Patch
+
+    rows = [m for m in metrics if m["t_start"] is not None and m["t_end"] is not None]
+    if not rows:
+        return False
+
+    rows = sorted(rows, key=lambda r: r["t_start"])
+    fig_h = max(3.0, len(rows) * 0.22 + 1.2)
+    fig, ax = plt.subplots(figsize=(10, fig_h))
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("#f8fafc")
+
+    for i, row in enumerate(rows):
+        color = act_colors.get(row["activity"], "#94a3b8")
+        ax.barh(
+            i,
+            row["t_end"] - row["t_start"],
+            left=row["t_start"],
+            color=color,
+            edgecolor="white",
+            height=0.7,
+            alpha=0.85,
+        )
+
+    handles = [Patch(facecolor=c, label=a) for a, c in act_colors.items()]
+    ax.legend(handles=handles, loc="upper right", fontsize=7, framealpha=0.85)
+    ax.set_xlabel("Time (s from workflow start)", fontsize=9, color="#334155")
+    ax.set_yticks([])
+    ax.set_title("Task Gantt Chart", fontsize=13, fontweight="bold", color="#0f172a")
+    ax.grid(axis="x", linestyle="--", alpha=0.3)
+    ax.tick_params(labelsize=8)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+    return True
+
+
+def _render_elapsed_plot(metrics: List[Dict[str, Any]], act_colors: Dict[str, str], output_path: Path) -> bool:
+    """Render median elapsed time per activity with min/max error bars."""
+    import matplotlib.pyplot as plt
+
+    by_act: Dict[str, List[float]] = defaultdict(list)
+    for m in metrics:
+        if m["elapsed_s"] is not None:
+            by_act[m["activity"]].append(m["elapsed_s"])
+    if not by_act:
+        return False
+
+    activities = list(by_act.keys())
+    medians = [_percentile(sorted(by_act[a]), 0.5) for a in activities]
+    mins = [min(by_act[a]) for a in activities]
+    maxs = [max(by_act[a]) for a in activities]
+    colors = [act_colors.get(a, "#94a3b8") for a in activities]
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("#f8fafc")
+    x = list(range(len(activities)))
+    bars = ax.bar(x, medians, color=colors, edgecolor="white", linewidth=0.8, alpha=0.85)
+    ax.errorbar(
+        x,
+        medians,
+        yerr=[[m - mn for m, mn in zip(medians, mins)], [mx - m for m, mx in zip(medians, maxs)]],
+        fmt="none",
+        color="#64748b",
+        capsize=4,
+        linewidth=1.2,
+    )
+    wrapped = ["\n".join(textwrap.wrap(a, width=12)) for a in activities]
+    ax.set_xticks(x)
+    ax.set_xticklabels(wrapped, fontsize=8)
+    ax.set_ylabel("Elapsed (s)", fontsize=9, color="#334155")
+    ax.set_title("Elapsed Time per Activity (median ± range)", fontsize=13, fontweight="bold", color="#0f172a")
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.tick_params(labelsize=8)
+    for bar, val in zip(bars, medians):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height(),
+            f"{val:.2f}s",
+            ha="center",
+            va="bottom",
+            fontsize=7,
+            color="#0f172a",
+        )
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+    return True
+
+
+def _render_cpu_plot(metrics: List[Dict[str, Any]], act_colors: Dict[str, str], output_path: Path) -> bool:
+    """Render stacked CPU time (user + system) per activity."""
+    import matplotlib.pyplot as plt
+
+    by_user: Dict[str, float] = defaultdict(float)
+    by_sys: Dict[str, float] = defaultdict(float)
+    for m in metrics:
+        if m["cpu_user_s"] is not None:
+            by_user[m["activity"]] += m["cpu_user_s"]
+        if m["cpu_sys_s"] is not None:
+            by_sys[m["activity"]] += m["cpu_sys_s"]
+
+    activities = list(dict.fromkeys(list(by_user.keys()) + list(by_sys.keys())))
+    if not activities:
+        return False
+    users = [by_user.get(a, 0.0) for a in activities]
+    syss = [by_sys.get(a, 0.0) for a in activities]
+    if max(users + syss) == 0:
+        return False
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("#f8fafc")
+    x = list(range(len(activities)))
+    ax.bar(x, users, label="User", color=_METRIC_COLORS["cpu"], alpha=0.85, edgecolor="white")
+    ax.bar(x, syss, bottom=users, label="System", color="#7dd3fc", alpha=0.85, edgecolor="white")
+    wrapped = ["\n".join(textwrap.wrap(a, width=12)) for a in activities]
+    ax.set_xticks(x)
+    ax.set_xticklabels(wrapped, fontsize=8)
+    ax.set_ylabel("CPU Time (s)", fontsize=9, color="#334155")
+    ax.set_title("CPU Time per Activity (User + System)", fontsize=13, fontweight="bold", color="#0f172a")
+    ax.legend(fontsize=8)
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.tick_params(labelsize=8)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+    return True
+
+
+def _render_gpu_plot(metrics: List[Dict[str, Any]], act_colors: Dict[str, str], output_path: Path) -> bool:
+    """Render mean GPU memory used per activity."""
+    import matplotlib.pyplot as plt
+
+    by_act: Dict[str, List[float]] = defaultdict(list)
+    for m in metrics:
+        if m["gpu_used_mb"] is not None:
+            by_act[m["activity"]].append(m["gpu_used_mb"])
+    if not by_act:
+        return False
+
+    activities = list(by_act.keys())
+    means = [sum(by_act[a]) / len(by_act[a]) for a in activities]
+    colors = [act_colors.get(a, "#94a3b8") for a in activities]
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("#f8fafc")
+    x = list(range(len(activities)))
+    bars = ax.bar(x, means, color=colors, edgecolor="white", alpha=0.85)
+    wrapped = ["\n".join(textwrap.wrap(a, width=12)) for a in activities]
+    ax.set_xticks(x)
+    ax.set_xticklabels(wrapped, fontsize=8)
+    ax.set_ylabel("GPU Memory (MB)", fontsize=9, color="#334155")
+    ax.set_title("GPU Memory Used per Activity", fontsize=13, fontweight="bold", color="#0f172a")
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.tick_params(labelsize=8)
+    for bar, val in zip(bars, means):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height(),
+            f"{val:.0f}MB",
+            ha="center",
+            va="bottom",
+            fontsize=7,
+            color="#0f172a",
+        )
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+    return True
+
+
+def _render_io_plot(metrics: List[Dict[str, Any]], act_colors: Dict[str, str], output_path: Path) -> bool:
+    """Render process IO (read + write) per activity."""
+    import matplotlib.pyplot as plt
+
+    by_read: Dict[str, float] = defaultdict(float)
+    by_write: Dict[str, float] = defaultdict(float)
+    for m in metrics:
+        if m["io_read_mb"] is not None:
+            by_read[m["activity"]] += m["io_read_mb"]
+        if m["io_write_mb"] is not None:
+            by_write[m["activity"]] += m["io_write_mb"]
+
+    activities = list(dict.fromkeys(list(by_read.keys()) + list(by_write.keys())))
+    if not activities:
+        return False
+    reads = [by_read.get(a, 0.0) for a in activities]
+    writes = [by_write.get(a, 0.0) for a in activities]
+    if max(reads + writes) == 0:
+        return False
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("#f8fafc")
+    x = list(range(len(activities)))
+    ax.bar(x, reads, label="Read", color=_METRIC_COLORS["io"], alpha=0.85, edgecolor="white")
+    ax.bar(x, writes, bottom=reads, label="Write", color="#fdba74", alpha=0.85, edgecolor="white")
+    wrapped = ["\n".join(textwrap.wrap(a, width=12)) for a in activities]
+    ax.set_xticks(x)
+    ax.set_xticklabels(wrapped, fontsize=8)
+    ax.set_ylabel("IO (MB)", fontsize=9, color="#334155")
+    ax.set_title("Process IO per Activity (Read + Write)", fontsize=13, fontweight="bold", color="#0f172a")
+    ax.legend(fontsize=8)
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.tick_params(labelsize=8)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+    return True
+
+
+def _render_memory_plot(metrics: List[Dict[str, Any]], act_colors: Dict[str, str], output_path: Path) -> bool:
+    """Render peak RSS memory per activity."""
+    import matplotlib.pyplot as plt
+
+    by_act: Dict[str, List[float]] = defaultdict(list)
+    for m in metrics:
+        if m["mem_rss_mb"] is not None:
+            by_act[m["activity"]].append(m["mem_rss_mb"])
+    if not by_act:
+        return False
+
+    activities = list(by_act.keys())
+    peaks = [max(by_act[a]) for a in activities]
+    colors = [act_colors.get(a, "#94a3b8") for a in activities]
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("#f8fafc")
+    x = list(range(len(activities)))
+    bars = ax.bar(x, peaks, color=colors, edgecolor="white", alpha=0.85)
+    wrapped = ["\n".join(textwrap.wrap(a, width=12)) for a in activities]
+    ax.set_xticks(x)
+    ax.set_xticklabels(wrapped, fontsize=8)
+    ax.set_ylabel("RSS Memory (MB)", fontsize=9, color="#334155")
+    ax.set_title("Peak Memory (RSS) per Activity", fontsize=13, fontweight="bold", color="#0f172a")
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.tick_params(labelsize=8)
+    for bar, val in zip(bars, peaks):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height(),
+            f"{val:.0f}MB",
+            ha="center",
+            va="bottom",
+            fontsize=7,
+            color="#0f172a",
+        )
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+    return True
+
+
+def _render_resource_profile_plot(metrics: List[Dict[str, Any]], act_colors: Dict[str, str], output_path: Path) -> bool:
+    """Render normalized resource profile heatmap across activities."""
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    by_act: Dict[str, Dict[str, List[float]]] = defaultdict(lambda: defaultdict(list))
+    for m in metrics:
+        a = m["activity"]
+        for key in ("elapsed_s", "cpu_user_s", "mem_rss_mb", "io_total_mb", "gpu_used_mb"):
+            if m[key] is not None:
+                by_act[a][key].append(m[key])
+
+    activities = list(by_act.keys())
+    if not activities:
+        return False
+
+    col_keys = ["elapsed_s", "cpu_user_s", "mem_rss_mb", "io_total_mb", "gpu_used_mb"]
+    col_labels = ["Elapsed", "CPU", "Memory", "IO", "GPU"]
+    data = []
+    for a in activities:
+        row = [sum(by_act[a][k]) / len(by_act[a][k]) if by_act[a][k] else 0.0 for k in col_keys]
+        data.append(row)
+
+    arr = np.array(data, dtype=float)
+    col_max = arr.max(axis=0)
+    col_max[col_max == 0] = 1.0
+    arr_norm = arr / col_max
+
+    keep = [j for j in range(arr_norm.shape[1]) if arr_norm[:, j].max() > 0]
+    if not keep:
+        return False
+    arr_norm = arr_norm[:, keep]
+    labels_keep = [col_labels[j] for j in keep]
+
+    fig_h = max(3.0, len(activities) * 0.45 + 1.2)
+    fig_w = max(6.0, len(labels_keep) * 1.4)
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+    fig.patch.set_facecolor("white")
+    im = ax.imshow(arr_norm, aspect="auto", cmap="YlOrRd", vmin=0, vmax=1)
+    ax.set_xticks(range(len(labels_keep)))
+    ax.set_xticklabels(labels_keep, fontsize=9)
+    wrapped_acts = ["\n".join(textwrap.wrap(a, width=14)) for a in activities]
+    ax.set_yticks(range(len(activities)))
+    ax.set_yticklabels(wrapped_acts, fontsize=8)
+    for i in range(len(activities)):
+        for j in range(len(labels_keep)):
+            ax.text(
+                j,
+                i,
+                f"{arr_norm[i, j]:.2f}",
+                ha="center",
+                va="center",
+                fontsize=7.5,
+                color="black" if arr_norm[i, j] < 0.6 else "white",
+            )
+    plt.colorbar(im, ax=ax, label="Normalized (0=min, 1=max)", fraction=0.046, pad=0.04)
+    ax.set_title("Resource Profile per Activity (normalized)", fontsize=12, fontweight="bold", color="#0f172a")
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+    return True
 
 
 def _render_ml_line_plot(spec: Dict[str, Any], output_path: Path) -> None:
@@ -1351,8 +1729,21 @@ def _build_pdf_document(
     if slowest and slowest[0][1] is not None:
         observations.append(f"Slowest Activity: `{slowest[0][0]}` at `{_fmt_seconds(slowest[0][1])} s`")
 
+    def _task_proc_io(task: Dict[str, Any]) -> float:
+        s = task.get("telemetry_at_start") if isinstance(task.get("telemetry_at_start"), dict) else {}
+        e = task.get("telemetry_at_end") if isinstance(task.get("telemetry_at_end"), dict) else {}
+        r = _delta(
+            _deep_get(s, ["process", "io_counters", "read_bytes"]),
+            _deep_get(e, ["process", "io_counters", "read_bytes"]),
+        )
+        w = _delta(
+            _deep_get(s, ["process", "io_counters", "write_bytes"]),
+            _deep_get(e, ["process", "io_counters", "write_bytes"]),
+        )
+        return (max(0.0, r) if r else 0.0) + (max(0.0, w) if w else 0.0)
+
     io_rank = sorted(
-        [(_to_str(task.get("activity_id")), _extract_io_bytes(task)) for task in tasks],
+        [(_to_str(task.get("activity_id")), _task_proc_io(task)) for task in tasks],
         key=lambda row: row[1],
         reverse=True,
     )
@@ -1360,19 +1751,18 @@ def _build_pdf_document(
         top_name = io_rank[0][0]
         top_task = next((task for task in tasks if _to_str(task.get("activity_id")) == top_name), None)
         if top_task is not None:
-            start = (
-                top_task.get("telemetry_at_start", {}) if isinstance(top_task.get("telemetry_at_start"), dict) else {}
-            )
-            end = top_task.get("telemetry_at_end", {}) if isinstance(top_task.get("telemetry_at_end"), dict) else {}
+            s = top_task.get("telemetry_at_start", {}) if isinstance(top_task.get("telemetry_at_start"), dict) else {}
+            e = top_task.get("telemetry_at_end", {}) if isinstance(top_task.get("telemetry_at_end"), dict) else {}
             read_b = _positive(
                 _delta(
-                    _deep_get(start, ["disk", "io_sum", "read_bytes"]), _deep_get(end, ["disk", "io_sum", "read_bytes"])
+                    _deep_get(s, ["process", "io_counters", "read_bytes"]),
+                    _deep_get(e, ["process", "io_counters", "read_bytes"]),
                 )
             )
             write_b = _positive(
                 _delta(
-                    _deep_get(start, ["disk", "io_sum", "write_bytes"]),
-                    _deep_get(end, ["disk", "io_sum", "write_bytes"]),
+                    _deep_get(s, ["process", "io_counters", "write_bytes"]),
+                    _deep_get(e, ["process", "io_counters", "write_bytes"]),
                 )
             )
             read_label = _fmt_bytes(read_b)
@@ -1447,6 +1837,11 @@ def _build_pdf_document(
         ("Disk Read Time Delta (ms)", _fmt_seconds(telemetry.get("disk_read_time"))),
         ("Disk Write Time Delta (ms)", _fmt_seconds(telemetry.get("disk_write_time"))),
         ("Disk Busy Time Delta (ms)", _fmt_seconds(telemetry.get("disk_busy_time"))),
+        ("GPU Used Delta", _fmt_bytes(telemetry.get("gpu_used"))),
+        (
+            "Peak GPU Temperature",
+            f"{telemetry['gpu_temp_peak']:.3f}" if telemetry.get("gpu_temp_peak") is not None else "-",
+        ),
     ]
     for key, value in workflow_metrics:
         if not _is_empty(value):
@@ -1668,18 +2063,34 @@ def render_provenance_report_pdf(
         except Exception:
             workflow_structure_plot_paths = []
 
+        metrics = _extract_task_metrics(tasks)
+        act_colors = _activity_palette(tasks)
+
+        timeline_path = tmp / "plot_timeline.png"
+        if _render_telemetry_timeline_plot(tasks=tasks, output_path=timeline_path):
+            plot_paths.append(timeline_path)
+
         ml_plot_spec = _build_ml_learning_plot_spec(dataset)
         if ml_plot_spec is not None:
-            ml_plot_path = tmp / "plot_1_ml_line.png"
-            _render_ml_line_plot(ml_plot_spec, ml_plot_path)
-            plot_paths.append(ml_plot_path)
+            ml_path = tmp / "plot_ml.png"
+            _render_ml_line_plot(ml_plot_spec, ml_path)
+            plot_paths.append(ml_path)
 
-        plots = _build_plot_data(activities=activities, tasks=tasks)
-        for idx, (title, labels, values, y_label) in enumerate(plots):
-            plot_index = idx + 2 if ml_plot_spec is not None else idx + 1
-            plot_path = tmp / f"plot_{plot_index}.png"
-            _render_bar_plot(title=title, labels=labels, values=values, y_label=y_label, output_path=plot_path)
-            plot_paths.append(plot_path)
+        for name, fn in [
+            ("gantt", _render_gantt_plot),
+            ("elapsed", _render_elapsed_plot),
+            ("cpu", _render_cpu_plot),
+            ("gpu", _render_gpu_plot),
+            ("io", _render_io_plot),
+            ("memory", _render_memory_plot),
+            ("resource_profile", _render_resource_profile_plot),
+        ]:
+            path = tmp / f"plot_{name}.png"
+            try:
+                if fn(metrics, act_colors, path):
+                    plot_paths.append(path)
+            except Exception:
+                pass
 
         _build_pdf_document(
             dataset=dataset,

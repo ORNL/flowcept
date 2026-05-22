@@ -8,7 +8,7 @@ from flowcept.agents.tools.general_tools import prompt_handler
 from flowcept.agents.agent_client import run_tool
 from flowcept.agents.flowcept_ctx_manager import mcp_flowcept, ctx_manager
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.configs import AGENT_HOST, AGENT_PORT, DUMP_BUFFER_PATH, MQ_ENABLED
+from flowcept.configs import AGENT_HOST, AGENT_PORT, DUMP_BUFFER_PATH
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
 from uuid import uuid4
 
@@ -103,7 +103,7 @@ class FlowceptAgent:
         FlowceptAgent
             The current instance.
         """
-        if not MQ_ENABLED:
+        if self.buffer_path is not None:
             if self.buffer_messages is not None:
                 self._load_buffer_messages(self.buffer_messages)
             else:
