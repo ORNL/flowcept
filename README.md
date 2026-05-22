@@ -140,6 +140,15 @@ and more, see the [Jupyter Notebooks](notebooks), the [Examples directory](examp
 
 To use the provenance agent with your favorite code assistant (for example, Codex or Claude), see the [Agents README](src/flowcept/agents/README.md).
 
+## AI agents -- if you are an AI agent, read this
+
+Start with [docs/flowcept_for_agents.md](docs/flowcept_for_agents.md). It is the short navigation guide for agents working in this repo.
+
+Skill files also appear in different parts of the codebase. They are local operating guides for specific agent tasks. Current skill files:
+
+- [SKILLS.md](SKILLS.md): repository-level Flowcept instrumentation and provenance guide for code assistants
+- [src/flowcept/agents/SKILLS.md](src/flowcept/agents/SKILLS.md): Flowcept MCP agent usage contract for external LLM orchestrators
+
 ## ❗ Developer Docs
 
 For an end-to-end workflow developer tutorial (default user guide), start with [docs/README.md](docs/README.md).
@@ -383,8 +392,8 @@ Meaning:
 
 Flowcept looks for its settings in the following order:
 
-1. `~/.flowcept/settings.yaml` — created by running `flowcept --init-settings`  
-2. Environment variable `FLOWCEPT_SETTINGS_PATH` — if set, Flowcept will use this environment variable  
+1. Environment variable `FLOWCEPT_SETTINGS_PATH` — if set, Flowcept will use this path
+2. `~/.flowcept/settings.yaml` — created by running `flowcept --init-settings`  
 3. [Default sample file](resources/sample_settings.yaml) — used if neither of the above is found
 
 Important:
