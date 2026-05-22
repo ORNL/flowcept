@@ -217,7 +217,7 @@ def download_files(batch_size, data_dir, eval_batch_size, subset_size, test_data
         dataset = load_from_disk(dataset_path)
     else:
         print("Downloading dataset")
-        dataset = load_dataset("wikitext", "wikitext-2-v1")
+        dataset = load_dataset("Salesforce/wikitext", "wikitext-2-v1")
         print(f"Ok, now saving it into {dataset_path}")
         dataset.save_to_disk(dataset_path)
     test_dataset = dataset["test"]
@@ -262,4 +262,3 @@ def download_files(batch_size, data_dir, eval_batch_size, subset_size, test_data
     torch.save(val_data_mapping, val_data_mapping_path)
     print(f"Saved files in {data_dir}.")
     return dataset, dataset_info, ntokens, test_data, test_n_batches, train_data, train_n_batches, val_data, val_n_batches
-

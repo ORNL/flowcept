@@ -75,6 +75,19 @@ flowcept/
 
 ---
 
+## Skill Files
+
+Skill files are distributed operating guides for AI agents. Read the relevant one before acting.
+
+| File | Use when |
+|------|----------|
+| `SKILLS.md` | You need to instrument code, query provenance, or choose Flowcept capture APIs. |
+| `src/flowcept/agents/SKILLS.md` | You need to use the Flowcept MCP agent from an external LLM orchestrator. |
+
+If more `SKILL.md` or `SKILLS.md` files are added, treat the nearest relevant file as local guidance for that area.
+
+---
+
 ## Core Concepts
 
 ### Data Model Hierarchy
@@ -105,7 +118,9 @@ Campaign  (campaign_id)
 
 All runtime behavior is controlled by a YAML settings file. Never hardcode in Python.
 
-**Location order**: `FLOWCEPT_SETTINGS_PATH` env var → `~/.flowcept/settings.yaml` → defaults.
+**Settings file lookup**: `FLOWCEPT_SETTINGS_PATH` env var → `~/.flowcept/settings.yaml` → packaged `resources/sample_settings.yaml`.
+
+**Runtime env vars** can still override loaded settings. Common overrides include `MONGO_ENABLED`, `LMDB_ENABLED`, `MQ_ENABLED`, `MQ_TYPE`, `MQ_PORT`, and `DB_FLUSH_MODE`.
 
 **Canonical template**: `resources/sample_settings.yaml`
 
@@ -119,13 +134,13 @@ project:
     path: flowcept_buffer.jsonl
 
 mq:                             # Message queue (Redis)
-  enabled: true
+  enabled: false
   type: redis
   host: localhost
   port: 6379
 
 kv_db:                          # Key-value DB (Redis)
-  enabled: true
+  enabled: false
   host: localhost
   port: 6379
 
@@ -138,13 +153,15 @@ databases:
   lmdb:
     enabled: false
 
-telemetry_capture:              # Leave empty {} to disable all; set keys to true to enable
-  cpu: true
-  gpu: true                     # AMD ROCm SMI or NVIDIA NVML
-  memory: true
-  disk: true
-  network: true
-  process_info: true
+telemetry_capture:              # false/{} disables telemetry; set keys to true to enable
+  cpu: false
+  per_cpu: false
+  gpu: ~                        # AMD ROCm SMI or NVIDIA NVML metrics list
+  mem: false
+  disk: false
+  network: false
+  process_info: false
+  machine_info: false
 
 instrumentation:
   enabled: false
@@ -162,11 +179,21 @@ agent:
   mcp_port: 8000
 ```
 
-**CLI profiles** (bootstrap shortcuts):
+**CLI profiles**:
 ```bash
-flowcept --init-settings --config-profile full-online     # Redis + MongoDB
-flowcept --init-settings --config-profile full-offline    # JSONL only
-flowcept --init-settings --config-profile mq-only         # Redis, no DB persist
+flowcept --init-settings --full -y
+flowcept --config-profile full-online -y          # Redis + MongoDB
+flowcept --config-profile full-offline -y         # JSONL only
+flowcept --config-profile mq-only -y              # Redis MQ, no DB persist
+flowcept --config-profile mq-only-no-flush -y     # offline mode, end-of-run MQ flush
+flowcept --config-profile full-telemetry -y       # CPU/mem/disk/network telemetry, no GPU
+```
+
+**Adapter settings are additive**:
+```bash
+flowcept --init-settings --full --dask -y
+flowcept --init-settings --mlflow -y
+flowcept --init-settings --tensorboard -y
 ```
 
 ---

@@ -168,7 +168,7 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
 
     if scheduler_file is None:
         from distributed import LocalCluster
-        cluster = LocalCluster(n_workers=1)
+        cluster = LocalCluster(n_workers=1, threads_per_worker=1, processes=False)
         scheduler = cluster.scheduler
         client = Client(scheduler.address)
         client.forward_logging()
