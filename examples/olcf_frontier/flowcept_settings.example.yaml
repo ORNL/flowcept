@@ -1,5 +1,5 @@
 project:
-  enrich_messages: false         # captures node hostname, IP, UTC timestamps per task; adds extra overhead for this.s
+  enrich_messages: false         # captures node hostname, IP, UTC timestamps per task; adds extra overhead for this.
   db_flush_mode: online         # tasks stream to Redis MQ in real time; consumer writes to LMDB
   debug: false
 
@@ -8,14 +8,20 @@ log:
   log_stream_level: disable
 
 telemetry_capture:
+  # Toggle these on/off carefully because the more you capture the more overhead you add :)
   cpu: true
   mem: true
-  disk: false
+  disk: false                     # block-level only; does NOT capture Lustre — use process_info instead
   network: true
-  process_info: true              # enables process.io_counters (reads /proc/<pid>/io — captures Lustre IO)
-  gpu:
-    - used
-    - temperature
+  process_info: true              # /proc/<pid>/io — captures VFS IO including Lustre
+  gpu:                            # AMD MI250X (requires flowcept[amd] + LD_LIBRARY_PATH=/opt/rocm-X.Y.Z/lib)
+    - used                        # VRAM used (bytes)
+    - activity                    # GFX/UMC/MM engine utilization % — AMD only
+    - power                       # average_socket_power (W) + energy_accumulator — AMD only
+    - temperature                 # edge/hotspot/mem/vrgfx/vrmem/hbm (°C) + fan_speed — AMD only
+    # - others                    # current GFX/SOC/mem/video clocks (MHz) — AMD only
+    # - id                        # GPU UUID
+    # - name                      # GPU device name — NVIDIA only
 
 instrumentation:
   enabled: true
