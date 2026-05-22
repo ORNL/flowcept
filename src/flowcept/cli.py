@@ -898,24 +898,34 @@ def start_webservice(webservice_host: str = "127.0.0.1", webservice_port: str = 
 
 
 def generate_report(
-    input_path: str,
     format: str = "markdown",
     output_path: str = None,
+    input_path: str = None,
+    workflow_id: str = None,
 ):
     """
-    Generate a provenance report from a JSONL buffer file.
+    Generate a provenance report from a JSONL buffer file or a workflow ID.
 
     Parameters
     ----------
-    input_path : str
-        Path to the Flowcept JSONL buffer file.
     format : str, optional
         Output format: markdown (default) or pdf.
     output_path : str, optional
         Output report path. If omitted, defaults to PROVENANCE_CARD.md for markdown
         and PROVENANCE_REPORT.pdf for pdf.
+    input_path : str, optional
+        Path to the Flowcept JSONL buffer file.
+    workflow_id : str, optional
+        Workflow ID to query from the configured database (MongoDB first, then LMDB).
     """
     from flowcept import Flowcept
+
+    if not input_path and not workflow_id:
+        print("Provide either --input-path or --workflow-id.")
+        return
+    if input_path and workflow_id:
+        print("Provide either --input-path or --workflow-id, not both.")
+        return
 
     report_format = (format or "markdown").strip().lower()
     if report_format not in {"markdown", "pdf"}:
@@ -930,6 +940,7 @@ def generate_report(
     stats = Flowcept.generate_report(
         report_type=report_type,
         input_jsonl_path=input_path,
+        workflow_id=workflow_id,
         format=report_format,
         output_path=resolved_output_path,
     )
