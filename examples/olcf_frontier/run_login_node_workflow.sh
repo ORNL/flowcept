@@ -6,6 +6,7 @@ set -e
 EXAMPLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export FLOWCEPT_SETTINGS_PATH="$EXAMPLE_DIR/flowcept_settings.yaml"
 export LMDB_PATH="$EXAMPLE_DIR/flowcept_output/lmdb/$(date +%Y%m%d_%H%M%S)"
+export LD_LIBRARY_PATH=/opt/rocm-7.0.2/lib:$LD_LIBRARY_PATH
 
 echo "Settings: $FLOWCEPT_SETTINGS_PATH"
 echo "LMDB path: $LMDB_PATH"

@@ -12,29 +12,57 @@ Usage (inside Slurm after Redis and consumer are running):
 import json
 import os
 import time
+import numpy as np
 from mpi4py import MPI
+import torch
 from flowcept import Flowcept
 from flowcept.configs import INSERTION_BUFFER_TIME
 from flowcept.instrumentation.flowcept_task import flowcept_task
 
+
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
 
-@flowcept_task(output_names=["result"])
+@flowcept_task
 def compute(rank: int, step: int, value: float) -> dict:
     return {"result": value * (rank + 1) + step}
 
 
-@flowcept_task(output_names=["summary"])
+@flowcept_task
 def summarize(rank: int, partial_results: list) -> dict:
     return {"summary": sum(r["result"] for r in partial_results), "n_steps": len(partial_results)}
 
 
+@flowcept_task
+def cpu_compute(n: int = 2000) -> dict:
+    import tempfile
+    a = np.random.rand(n, n)
+    b = np.random.rand(n, n)
+    c = np.dot(a, b)
+    _, s, _ = np.linalg.svd(c, full_matrices=False)
+    with tempfile.NamedTemporaryFile(delete=True, suffix=".bin", dir=HERE) as f:
+        np.save(f, c)
+        f.flush()
+        os.fsync(f.fileno())
+    return {"top_singular_value": float(s[0]), "matrix_size": n}
+
+
+@flowcept_task
+def gpu_matmul(size: int = 1024) -> dict:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    a = torch.randn(size, size, device=device)
+    b = torch.randn(size, size, device=device)
+    c = torch.matmul(a, b)
+    torch.cuda.synchronize()
+    return {"frobenius_norm": c.norm().item()}
+
+
 def save_outputs(workflow_id: str) -> None:
-    base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "flowcept_output")
+    base_dir = os.path.join(HERE, "flowcept_output")
     reports_dir = os.path.join(base_dir, "reports")
     tasks_dir = os.path.join(base_dir, "tasks")
     os.makedirs(reports_dir, exist_ok=True)
@@ -80,6 +108,8 @@ def run_rank_work(workflow_id: str) -> None:
             out = compute(rank=rank, step=step, value=float(rank * 10 + step))
             results.append(out)
         summarize(rank=rank, partial_results=results)
+        cpu_compute(n=2000)
+        gpu_matmul(size=1024)
 
 
 if __name__ == "__main__":

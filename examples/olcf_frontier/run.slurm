@@ -17,6 +17,7 @@ conda activate flowcept
 EXAMPLE_DIR="$SLURM_SUBMIT_DIR"
 export FLOWCEPT_SETTINGS_PATH="$EXAMPLE_DIR/flowcept_settings.yaml"
 export LMDB_PATH="$EXAMPLE_DIR/flowcept_output/lmdb/$SLURM_JOB_ID"
+export LD_LIBRARY_PATH=/opt/rocm-7.0.2/lib:$LD_LIBRARY_PATH
 
 # Flowcept reads MQ_HOST env var to override mq.host in settings.
 export MQ_HOST=$(hostname)

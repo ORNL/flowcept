@@ -448,6 +448,7 @@ def stop_consumption_services():
     # Graceful stop: send MQ stop message so the consumer flushes and closes LMDB cleanly.
     try:
         from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
+
         mq = MQDao.build()
         mq.send_document_inserter_stop()
         print(f"Sent MQ stop to consumer (pid={consumer_proc.pid}). Waiting for exit...")
@@ -465,7 +466,7 @@ def stop_consumption_services():
             return
         time.sleep(0.5)
 
-    print(f"Consumer did not exit in time. Sending SIGTERM.")
+    print("Consumer did not exit in time. Sending SIGTERM.")
     consumer_proc.send_signal(_signal.SIGTERM)
 
 

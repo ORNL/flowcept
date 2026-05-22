@@ -204,6 +204,7 @@ pip install flowcept[dask]          # Dask adapter
 pip install flowcept[tensorboard]   # TensorBoard adapter
 pip install flowcept[kafka]         # Kafka message queue
 pip install flowcept[nvidia]        # NVIDIA GPU runtime capture
+pip install flowcept[amd]           # AMD GPU runtime capture (see "Install AMD GPU Lib" for version/LD_LIBRARY_PATH notes)
 pip install flowcept[telemetry]     # CPU/GPU/memory telemetry capture
 pip install flowcept[lmdb]          # LMDB lightweight database
 pip install flowcept[mqtt]          # MQTT support
@@ -481,22 +482,39 @@ Other variables depending on the adapter may impact too. For instance, in Dask, 
 
 ## Install AMD GPU Lib
 
-This section is only important if you want to enable GPU runtime data capture and the GPU is from AMD. NVIDIA GPUs don't need this step.
+Only needed for AMD GPU telemetry capture. NVIDIA users use `flowcept[nvidia]` instead.
 
-For AMD GPUs, we rely on the official AMD ROCM library to capture GPU data.
+**Quick install:**
+```bash
+pip install flowcept[amd]
+```
 
-Unfortunately, this library is not available as a pypi/conda package, so you must manually install it. See instructions in the link: https://rocm.docs.amd.com/projects/amdsmi/en/latest/
+This installs the latest `amdsmi` from PyPI. The `amdsmi` Python package is a thin wrapper around the system's `libamd_smi.so`, so the PyPI version must match your ROCm installation. If you get a runtime error like `undefined symbol` or `libamd_smi.so not found`, follow the steps below.
 
-Here is a summary:
+**Matching the version to your ROCm:**
 
-1. Install the AMD drivers on the machine (check if they are available already under `/opt/rocm-*`).
-2. Suppose it is /opt/rocm-6.2.0. Then, make sure it has a share/amd_smi subdirectory and pyproject.toml or setup.py in it.
-3. Copy the amd_smi to your home directory: `cp -r /opt/rocm-6.2.0/share/amd_smi ~`
-4. cd ~/amd_smi
-5. In your python environment, do a pip install .
+1. Find your ROCm version:
+   ```bash
+   ls /opt/rocm-*   # e.g. /opt/rocm-6.2.4
+   # or: rocm-smi --version
+   ```
 
-Current code is compatible with this version: amdsmi==24.7.1+0012a68
-Which was installed using Frontier's /opt/rocm-6.3.1/share/amd_smi
+2. Find the matching `amdsmi` PyPI version — the major/minor version tracks ROCm (e.g. ROCm 6.2.x → `amdsmi==6.2.*`, ROCm 7.0.x → `amdsmi==7.0.*`):
+   ```bash
+   pip index versions amdsmi   # lists all available versions
+   pip install amdsmi==<X.Y.Z>
+   ```
+
+3. Set `LD_LIBRARY_PATH` so Python finds the correct shared library:
+   ```bash
+   export LD_LIBRARY_PATH=/opt/rocm-<X.Y.Z>/lib:$LD_LIBRARY_PATH
+   ```
+   Add this to your job script or shell profile so it persists.
+
+**Verify:**
+```bash
+python -c "from amdsmi import amdsmi_init, amdsmi_get_processor_handles; amdsmi_init(); print(len(amdsmi_get_processor_handles()), 'GPU(s) found')"
+```
 
 ## Torch Dependencies
 

@@ -1,5 +1,5 @@
 project:
-  enrich_messages: true         # captures node hostname, IP, UTC timestamps per task
+  enrich_messages: false         # captures node hostname, IP, UTC timestamps per task; adds extra overhead for this.s
   db_flush_mode: online         # tasks stream to Redis MQ in real time; consumer writes to LMDB
   debug: false
 
@@ -10,8 +10,12 @@ log:
 telemetry_capture:
   cpu: true
   mem: true
-  disk: true
+  disk: false
   network: true
+  process_info: true              # enables process.io_counters (reads /proc/<pid>/io — captures Lustre IO)
+  gpu:
+    - used
+    - temperature
 
 instrumentation:
   enabled: true

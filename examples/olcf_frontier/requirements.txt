@@ -1,1 +1,3 @@
-flowcept[redis,lmdb,telemetry,extras,report_pdf]
+--extra-index-url https://download.pytorch.org/whl/rocm6.2
+torch
+flowcept[redis,lmdb,telemetry,extras,report_pdf,amd]
