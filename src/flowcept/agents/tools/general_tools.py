@@ -7,6 +7,7 @@ from flowcept.agents.flowcept_ctx_manager import mcp_flowcept
 from flowcept.agents.prompts.general_prompts import ROUTING_PROMPT, SMALL_TALK_PROMPT
 
 from flowcept.agents.tools.in_memory_queries.in_memory_queries_tools import run_df_query
+from flowcept.agents.tools.workflow_query_tools import run_workflow_query
 
 
 def _external_llm_enabled() -> bool:
@@ -190,6 +191,11 @@ def prompt_handler(message: str) -> ToolResult:
     TextContent
         The AI response or routing feedback.
     """
+    workflow_query_prefix = "w:"
+    if message.strip().lower().startswith(workflow_query_prefix):
+        query = message.split(":", 1)[1].strip()
+        return run_workflow_query(query=query)
+
     df_key_words = ["df", "save", "result = df"]
     for key in df_key_words:
         if key in message:

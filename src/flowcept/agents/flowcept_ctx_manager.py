@@ -52,6 +52,7 @@ class FlowceptAppContext(BaseAppContext):
         Reset the agent's context to a clean state, initializing a new QA setup.
         """
         self.tasks = []
+        self.workflow_msg_obj = {}
         self.task_summaries = []
         self.critical_tasks = []
         self.df = pd.DataFrame()
@@ -120,6 +121,10 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             True if the message was handled successfully.
         """
         msg_type = msg_obj.get("type", None)
+        if msg_type == "workflow":
+            self.context.workflow_msg_obj = msg_obj
+            return True
+
         if msg_type == "task":
             task_msg = TaskObject.from_dict(msg_obj)
             if task_msg.subtype == "llm_task" and task_msg.agent_id == self.agent_id:

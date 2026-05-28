@@ -26,6 +26,7 @@ class BaseAppContext:
         Method to reset the variables in the context.
         """
         self.tasks = []
+        self.workflow_msg_obj = {}
 
 
 class BaseAgentContextManager(BaseConsumer):
@@ -52,7 +53,8 @@ class BaseAgentContextManager(BaseConsumer):
         """
         self._started = False
         super().__init__(allow_mq_disabled=allow_mq_disabled)
-        # self.context = BaseAppContext(tasks=[])
+        if not hasattr(self, "context"):
+            self.context: BaseAppContext = None
         self.agent_id = BaseAgentContextManager.agent_id
 
     def message_handler(self, msg_obj: Dict) -> bool:
