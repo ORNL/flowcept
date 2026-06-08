@@ -51,7 +51,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-redis = ["redis"]
+redis = ["redis<8"]
 lmdb = ["lmdb"]
 telemetry = ["psutil>=6.1.1", "py-cpuinfo"]
 extras = ["flowcept[redis]", "flowcept[telemetry]", "flowcept[mongo]", "GitPython", "pandas", "pyarrow", "requests", "rich"]
