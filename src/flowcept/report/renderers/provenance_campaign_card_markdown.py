@@ -145,17 +145,26 @@ def _render_summary_section(
     lines: List[str],
 ) -> None:
     """Render the ``## Summary`` section (mirrors the single-workflow card)."""
-    lines.append("## Summary")
-    lines.append(f"- **Campaign ID:** `{_to_str(campaign_id)}`")
+    lines.append("## 1. Workflow")
+    lines.append(f"- **name:** `{_to_str(campaign_id)}`")
+    lines.append(f"- **description:** ML workflow run identified as '{campaign_id}', consisting of {n_workflows} sub-activit{'ies' if n_workflows != 1 else 'y'}")
+    lines.append("## 2. Summary")
+    lines.append(f"- **execution_id:** {n_workflows}")
+    lines.append(f"- **version:** {n_workflows}")
     if campaign_type == "pipeline":
         lines.append("- **Type:** Pipeline")
-    lines.append(f"- **Workflow runs:** {n_workflows}")
     if min_start:
-        lines.append(f"- **Execution Start (UTC):** `{fmt_timestamp_utc(min_start)}`")
+        lines.append(f"- **started_at:** `{fmt_timestamp_utc(min_start)} (UTC)`")
     if max_end:
-        lines.append(f"- **Execution End (UTC):** `{fmt_timestamp_utc(max_end)}`")
+        lines.append(f"- **ended_at:** `{fmt_timestamp_utc(max_end)} (UTC)`")
     if total_elapsed is not None:
-        lines.append(f"- **Total Elapsed (s):** `{float(total_elapsed):.3f}`")
+        lines.append(f"- **duration:** `{float(total_elapsed):.3f}` (s)")
+    lines.append(f"- **status:** ~")
+    lines.append(f"- **location:** ~")
+    lines.append(f"- **user:** ~")
+    lines.append(f"- **entrypoint.repository:** ~")
+    lines.append(f"- **entrypoint.branch:** ~")
+    lines.append(f"- **entrypoint.short_sha:** ~")
     for line in extra_lines:
         lines.append(line)
     lines.append("")
@@ -374,7 +383,7 @@ def _render_pipeline(
     # ------------------------------------------------------------------
     # Title
     # ------------------------------------------------------------------
-    lines.append("# Campaign Provenance Card — Pipeline")
+    lines.append("# Campaign Workflow Card — Pipeline")
     lines.append("")
 
     # ------------------------------------------------------------------

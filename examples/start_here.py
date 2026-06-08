@@ -18,7 +18,6 @@ Note:
 from flowcept import Flowcept, flowcept_task
 from flowcept.instrumentation.flowcept_decorator import flowcept
 
-
 @flowcept_task(output_names="o1")
 def sum_one(i1):
     return i1+1
