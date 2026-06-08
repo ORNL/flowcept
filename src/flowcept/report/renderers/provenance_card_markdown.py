@@ -280,7 +280,7 @@ def _build_object_details_lines(objects: List[Dict[str, Any]]) -> List[str]:
 
     grouped: Dict[str, List[Tuple[int, Dict[str, Any]]]] = defaultdict(list)
     for idx, obj in enumerate(objects):
-        obj_type = _to_str(obj.get("type"))
+        obj_type = _to_str(obj.get("object_type"))
         grouped[obj_type].append((idx, obj))
 
     for obj_type in sorted(grouped.keys()):

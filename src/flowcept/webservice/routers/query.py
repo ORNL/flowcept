@@ -80,8 +80,8 @@ def _get_scope_metadata(scope: QueryScope) -> tuple[str, Dict[str, Any], bool]:
     if scope == "objects":
         return "objects", {}, True
     if scope == "models":
-        return "objects", {"type": "ml_model"}, True
-    return "objects", {"type": "dataset"}, True
+        return "objects", {"object_type": "ml_model"}, True
+    return "objects", {"object_type": "dataset"}, True
 
 
 def _get_nested(item: Dict[str, Any], field: str) -> Any:

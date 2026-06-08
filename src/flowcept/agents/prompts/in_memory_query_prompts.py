@@ -94,7 +94,11 @@ def generate_common_task_fields(current_fields):
     return common_task_fields
 
 
-DF_FORM = "The user has a pandas DataFrame called `df`, created from flattened task objects using `pd.json_normalize`."
+def get_df_form(context_kind="tasks"):
+    if context_kind == "objects":
+        return "The user has a pandas DataFrame called `df`, created from flattened object metadata messages using `pd.json_normalize`."
+    return "The user has a pandas DataFrame called `df`, created from flattened task objects using `pd.json_normalize`."
+
 
 CURRENT_DF_COLUMNS_PROMPT = """
 ### ABSOLUTE FIELD CONSTRAINT -- THIS IS CRITICAL
@@ -111,6 +115,7 @@ You MUST treat this list as authoritative.
   - combining words
   - guessing.
 - If a field name is not in ALLOWED_FIELDS, you MUST NOT use it.
+- If the query cannot be answered using ALLOWED_FIELDS, return exactly: result = "info not available"
 """
 
 
@@ -125,7 +130,29 @@ def get_example_values_prompt(example_values):
     return values_prompt
 
 
-def get_df_schema_prompt(dynamic_schema, example_values, current_fields):
+def get_object_schema_prompt(example_values, current_fields):
+    schema_prompt = """
+     ## DATAFRAME STRUCTURE
+
+        Each row in `df` represents one workflow object metadata message.
+
+        Important object fields:
+        - `object_type`: semantic object category, such as input_file, dataset, artifact, or ml_model.
+        - `type`: Flowcept message type. For object rows this is usually "object"; do not use it as the object category.
+        - `object_size_bytes`: object payload size in bytes.
+        - `file_path`: object path when available.
+        - `workflow_id`: workflow associated with the object.
+
+        ALWAYS CHECK THE ALLOWED_FIELDS list before proceeding.
+        ---
+    """
+    return schema_prompt + get_example_values_prompt(example_values)
+
+
+def get_df_schema_prompt(dynamic_schema, example_values, current_fields, context_kind="tasks"):
+    if context_kind == "objects":
+        return get_object_schema_prompt(example_values, current_fields)
+
     schema_prompt = f"""
      ## DATAFRAME STRUCTURE
 
@@ -161,12 +188,12 @@ def get_df_schema_prompt(dynamic_schema, example_values, current_fields):
     return prompt
 
 
-def generate_plot_code_prompt(query, dynamic_schema, example_values, current_fields) -> str:
+def generate_plot_code_prompt(query, dynamic_schema, example_values, current_fields, context_kind="tasks") -> str:
     PLOT_PROMPT = f"""
         You are a Streamlit chart expert.
-        {DF_FORM}
+        {get_df_form(context_kind)}
 
-        {get_df_schema_prompt(dynamic_schema, example_values, current_fields)}
+        {get_df_schema_prompt(dynamic_schema, example_values, current_fields, context_kind=context_kind)}
         
         ### 3. Guidelines
 
@@ -228,6 +255,8 @@ def generate_plot_code_prompt(query, dynamic_schema, example_values, current_fie
 JOB = "You will generate a pandas dataframe code to solve the query."
 ROLE = """You are an expert in HPC workflow provenance data analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems. 
             You are analyzing provenance data from a complex workflow consisting of numerous tasks."""
+OBJECT_ROLE = """You are an expert in HPC workflow provenance data analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems.
+            You are analyzing object metadata records from a workflow provenance buffer."""
 QUERY_GUIDELINES = """
     
     ### 3. Query Guidelines
@@ -312,6 +341,27 @@ FEW_SHOTS = """
     result = df['activity_id'].value_counts()
 
 """
+OBJECT_QUERY_GUIDELINES = """
+    ### 3. Query Guidelines
+
+    - Use `df` as the base DataFrame.
+    - Use `object_type` for object category questions.
+    - Use `object_size_bytes` for object size questions.
+    - Use `file_path` for file path questions.
+    - Use `workflow_id` when the query asks for workflow-specific objects.
+    - The column `type` is the Flowcept message type, not the object category.
+    - Explicitly list selected columns unless the user asks for all columns.
+"""
+OBJECT_FEW_SHOTS = """
+  ### 5. Few-Shot Examples
+
+    # Q: How many objects are available?
+    result = len(df)
+
+    # Q: List all input files larger than 100 MB
+    result = df[(df['object_type'] == 'input_file') & (df['object_size_bytes'] > 100 * 1000 * 1000)][['workflow_id', 'file_path', 'object_size_bytes']]
+
+"""
 # # Q: What is the average loss across all tasks?
 # result = df['generated.loss'].mean()
 #
@@ -338,7 +388,9 @@ OUTPUT_FORMATTING = """
 """
 
 
-def generate_pandas_code_prompt(query: str, dynamic_schema, example_values, custom_user_guidances, current_fields):
+def generate_pandas_code_prompt(
+    query: str, dynamic_schema, example_values, custom_user_guidances, current_fields, context_kind="tasks"
+):
     if custom_user_guidances is not None and isinstance(custom_user_guidances, list) and len(custom_user_guidances):
         concatenated_guidance = "\n".join(f"- {msg}" for msg in custom_user_guidances)
         custom_user_guidance_prompt = (
@@ -350,14 +402,17 @@ def generate_pandas_code_prompt(query: str, dynamic_schema, example_values, cust
         custom_user_guidance_prompt = ""
 
     curr_cols = CURRENT_DF_COLUMNS_PROMPT.replace("[COLS]", str(current_fields))
+    role = OBJECT_ROLE if context_kind == "objects" else ROLE
+    query_guidelines = OBJECT_QUERY_GUIDELINES if context_kind == "objects" else QUERY_GUIDELINES
+    few_shots = OBJECT_FEW_SHOTS if context_kind == "objects" else FEW_SHOTS
     prompt = (
-        f"{ROLE}"
+        f"{role}"
         f"{JOB}"
-        f"{DF_FORM}"
+        f"{get_df_form(context_kind)}"
         f"{curr_cols}"
-        f"{get_df_schema_prompt(dynamic_schema, example_values, current_fields)}"  # main tester
-        f"{QUERY_GUIDELINES}"  # main tester
-        f"{FEW_SHOTS}"  # main tester
+        f"{get_df_schema_prompt(dynamic_schema, example_values, current_fields, context_kind=context_kind)}"
+        f"{query_guidelines}"
+        f"{few_shots}"
         f"{custom_user_guidance_prompt}"
         f"{OUTPUT_FORMATTING}"
         "User Query:"
@@ -371,7 +426,7 @@ def generate_pandas_code_prompt(query: str, dynamic_schema, example_values, cust
     title="Build DataFrame Query Prompt",
     description="Build prompt context for external LLM code generation over agent DataFrame context.",
 )
-def build_df_query_prompt(query: str) -> str:
+def build_df_query_prompt(query: str, context_kind: str = "tasks") -> str:
     """
     Build the internal pandas-code generation prompt for external LLM orchestration.
 
@@ -386,7 +441,7 @@ def build_df_query_prompt(query: str) -> str:
         Prompt text to guide external LLM code generation.
         Returns an explanatory message when there is no active DataFrame context.
     """
-    df, schema, value_examples, custom_user_guidance = get_df_context()
+    df, schema, value_examples, custom_user_guidance = get_df_context(context_kind=context_kind)
     if df is None or not len(df):
         return EMPTY_DF_MESSAGE
 
@@ -397,11 +452,14 @@ def build_df_query_prompt(query: str) -> str:
         value_examples,
         custom_user_guidance,
         current_fields,
+        context_kind=context_kind,
     )
     return prompt
 
 
-def dataframe_summarizer_context(code, reduced_df, dynamic_schema, example_values, query, current_fields) -> str:
+def dataframe_summarizer_context(
+    code, reduced_df, dynamic_schema, example_values, query, current_fields, context_kind="tasks"
+) -> str:
     job = "You are a Workflow Provenance Specialist analyzing a DataFrame that was obtained to answer a query."
 
     if "image" in reduced_df.columns:
@@ -422,7 +480,7 @@ def dataframe_summarizer_context(code, reduced_df, dynamic_schema, example_value
     {reduced_df}
     
     **Original df (before reduction) had this schema:
-    {get_df_schema_prompt(dynamic_schema, example_values, current_fields)}
+    {get_df_schema_prompt(dynamic_schema, example_values, current_fields, context_kind=context_kind)}
     
     Your task is to find a concise and direct answer as an English sentence to the user query.
         

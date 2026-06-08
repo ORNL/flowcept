@@ -20,7 +20,7 @@ from flowcept.agents.tools.in_memory_queries.pandas_agent_utils import (
 
 
 @mcp_flowcept.tool()
-def execute_generated_df_code(user_code: str) -> ToolResult:
+def execute_generated_df_code(user_code: str, context_kind: str = "tasks") -> ToolResult:
     """
     Execute externally generated pandas code against the current agent DataFrame.
 
@@ -34,14 +34,14 @@ def execute_generated_df_code(user_code: str) -> ToolResult:
     ToolResult
         Delegates to ``run_df_code`` and returns its execution result.
     """
-    df, _, _, _ = get_df_context()
+    df, _, _, _ = get_df_context(context_kind=context_kind)
     if df is None or not len(df):
         return ToolResult(code=404, result=EMPTY_DF_MESSAGE)
     return run_df_code(user_code=user_code, df=df)
 
 
 @mcp_flowcept.tool()
-def run_df_query(query: str, llm=None, plot=False) -> ToolResult:
+def run_df_query(query: str, llm=None, plot=False, context_kind: str = "tasks") -> ToolResult:
     r"""
     Run a natural language query against the current context DataFrame.
 
@@ -98,7 +98,7 @@ def run_df_query(query: str, llm=None, plot=False) -> ToolResult:
     >>> run_df_query("Show sales trend as a line chart", plot=True)
     ToolResult(code=301, result={'result_df': '...', 'plot_code': 'plt.plot(...)'})
     """
-    df, schema, value_examples, custom_user_guidance = get_df_context()
+    df, schema, value_examples, custom_user_guidance = get_df_context(context_kind=context_kind)
     if df is None or not len(df):
         return ToolResult(code=404, result=EMPTY_DF_MESSAGE)
     elif "save" in query:
@@ -107,13 +107,31 @@ def run_df_query(query: str, llm=None, plot=False) -> ToolResult:
         return run_df_code(user_code=query, df=df)
 
     if plot:
-        return generate_plot_code(llm, query, schema, value_examples, df, custom_user_guidance=custom_user_guidance)
+        return generate_plot_code(
+            llm,
+            query,
+            schema,
+            value_examples,
+            df,
+            custom_user_guidance=custom_user_guidance,
+            context_kind=context_kind,
+        )
     else:
-        return generate_result_df(llm, query, schema, value_examples, df, custom_user_guidance=custom_user_guidance)
+        return generate_result_df(
+            llm,
+            query,
+            schema,
+            value_examples,
+            df,
+            custom_user_guidance=custom_user_guidance,
+            context_kind=context_kind,
+        )
 
 
 @mcp_flowcept.tool()
-def generate_plot_code(llm, query, dynamic_schema, value_examples, df, custom_user_guidance=None) -> ToolResult:
+def generate_plot_code(
+    llm, query, dynamic_schema, value_examples, df, custom_user_guidance=None, context_kind="tasks"
+) -> ToolResult:
     """
     Generate DataFrame and plotting code from a natural language query using an LLM.
 
@@ -180,7 +198,9 @@ def generate_plot_code(llm, query, dynamic_schema, value_examples, df, custom_us
     >>> print(result.result["plot_code"])
     plt.bar(result_df["region"], result_df["total_sales"])
     """
-    plot_prompt = generate_plot_code_prompt(query, dynamic_schema, value_examples, list(df.columns))
+    plot_prompt = generate_plot_code_prompt(
+        query, dynamic_schema, value_examples, list(df.columns), context_kind=context_kind
+    )
     try:
         response = llm(plot_prompt)
     except Exception as e:
@@ -230,7 +250,15 @@ def generate_plot_code(llm, query, dynamic_schema, value_examples, df, custom_us
 
 @mcp_flowcept.tool()
 def generate_result_df(
-    llm, query: str, dynamic_schema, example_values, df, custom_user_guidance=None, attempt_fix=True, summarize=True
+    llm,
+    query: str,
+    dynamic_schema,
+    example_values,
+    df,
+    custom_user_guidance=None,
+    attempt_fix=True,
+    summarize=True,
+    context_kind="tasks",
 ):
     """
     Generate a result DataFrame from a natural language query using an LLM.
@@ -308,7 +336,12 @@ def generate_result_df(
         llm = build_llm_model()
     try:
         prompt = generate_pandas_code_prompt(
-            query, dynamic_schema, example_values, custom_user_guidance, list(df.columns)
+            query,
+            dynamic_schema,
+            example_values,
+            custom_user_guidance,
+            list(df.columns),
+            context_kind=context_kind,
         )
         response = llm(prompt)
     except Exception as e:
@@ -367,7 +400,14 @@ def generate_result_df(
     if summarize:
         try:
             tool_result = summarize_result(
-                llm, result_code, result_df, query, dynamic_schema, example_values, list(df.columns)
+                llm,
+                result_code,
+                result_df,
+                query,
+                dynamic_schema,
+                example_values,
+                list(df.columns),
+                context_kind=context_kind,
             )
             if tool_result.is_success():
                 return_code = 301
@@ -588,7 +628,9 @@ def extract_or_fix_json_code(llm, raw_text) -> ToolResult:
 
 
 @mcp_flowcept.tool()
-def summarize_result(llm, code, result, query: str, dynamic_schema, example_values, current_fields) -> ToolResult:
+def summarize_result(
+    llm, code, result, query: str, dynamic_schema, example_values, current_fields, context_kind="tasks"
+) -> ToolResult:
     """
     Summarize the pandas result with local reduction for large DataFrames.
     - For wide DataFrames, selects top columns based on variance and uniqueness.
@@ -596,7 +638,9 @@ def summarize_result(llm, code, result, query: str, dynamic_schema, example_valu
     - Constructs a detailed prompt for the LLM with original column context.
     """
     summarized_df = summarize_df(result, code)
-    prompt = dataframe_summarizer_context(code, summarized_df, dynamic_schema, example_values, query, current_fields)
+    prompt = dataframe_summarizer_context(
+        code, summarized_df, dynamic_schema, example_values, query, current_fields, context_kind=context_kind
+    )
     try:
         response = llm(prompt)
         return ToolResult(code=201, result=response)

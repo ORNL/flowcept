@@ -192,9 +192,18 @@ def prompt_handler(message: str) -> ToolResult:
         The AI response or routing feedback.
     """
     workflow_query_prefix = "w:"
+    task_query_prefix = "t:"
+    object_query_prefix = "o:"
+    normalized_message = message.strip().lower()
     if message.strip().lower().startswith(workflow_query_prefix):
         query = message.split(":", 1)[1].strip()
         return run_workflow_query(query=query)
+    if normalized_message.startswith(task_query_prefix):
+        query = message.split(":", 1)[1].strip()
+        return run_df_query(query=query, llm=None, plot=False, context_kind="tasks")
+    if normalized_message.startswith(object_query_prefix):
+        query = message.split(":", 1)[1].strip()
+        return run_df_query(query=query, llm=None, plot=False, context_kind="objects")
 
     df_key_words = ["df", "save", "result = df"]
     for key in df_key_words:
@@ -216,6 +225,7 @@ def prompt_handler(message: str) -> ToolResult:
             result=(
                 "external_llm mode is enabled. Internal LLM routing is disabled. "
                 "Use explicit commands such as 'save', 'result = df ...', "
+                "'t: <task question>', 'o: <object question>', 'w: <workflow question>', "
                 "'reset context', '@record', '@show records', or '@reset records'."
             ),
         )

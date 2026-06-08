@@ -42,6 +42,7 @@ class Flowcept(object):
     campaign_id = None
     buffer = None
     is_started = False
+    current_instance = None
 
     @ClassProperty
     def db(cls):
@@ -59,6 +60,7 @@ class Flowcept(object):
         campaign_id: str = None,
         workflow_id: str = None,
         workflow_name: str = None,
+        workflow_description: str = None,
         workflow_subtype: str = None,
         workflow_args: Dict = None,
         agent_id: str = None,
@@ -95,6 +97,9 @@ class Flowcept(object):
 
         workflow_name : str, optional
             A descriptive name for the workflow.
+
+        workflow_description : str, optional
+            Human-readable description of what the workflow is about.
 
         agent_id: str, optional
             Use it if there is an agent responsible for executing this workflow.
@@ -170,6 +175,7 @@ class Flowcept(object):
             self.bundle_exec_id = str(bundle_exec_id)
 
         self.workflow_name = workflow_name
+        self.workflow_description = workflow_description
         self.workflow_subtype = workflow_subtype
         self.workflow_args = workflow_args
         self.parent_workflow_id = parent_workflow_id
@@ -217,9 +223,20 @@ class Flowcept(object):
 
         else:
             Flowcept.current_workflow_id = None
+        Flowcept.current_instance = self
         Flowcept.is_started = self.is_started = True
         self.logger.debug("Flowcept started successfully.")
         return self
+
+    @staticmethod
+    def emit_message(message: Dict):
+        """Append a message to the active interceptor buffer."""
+        if Flowcept.current_instance is None:
+            return
+        interceptors = Flowcept.current_instance._interceptor_instances or []
+        if not interceptors:
+            return
+        interceptors[0].intercept(message)
 
     def get_buffer(self, return_df: bool = False):
         """
@@ -602,6 +619,8 @@ class Flowcept(object):
         wf_obj.agent_id = self.agent_id
         if self.workflow_name:
             wf_obj.name = self.workflow_name
+        if self.workflow_description:
+            wf_obj.workflow_description = self.workflow_description
         if self.workflow_subtype:
             wf_obj.subtype = self.workflow_subtype
         if self.workflow_args:
@@ -662,6 +681,7 @@ class Flowcept(object):
             pass
 
         Flowcept.buffer = self.buffer = None
+        Flowcept.current_instance = None
         Flowcept.is_started = self.is_started = False
         self.logger.debug("All stopped!")
 

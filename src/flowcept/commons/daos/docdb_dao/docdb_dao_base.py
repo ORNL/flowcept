@@ -350,7 +350,7 @@ class DocumentDBDAO(ABC):
         object_id,
         task_id,
         workflow_id,
-        type,
+        object_type,
         custom_metadata,
         save_data_in_collection,
         pickle_,
@@ -369,7 +369,7 @@ class DocumentDBDAO(ABC):
             Task ID associated with the object.
         workflow_id : str
             Workflow ID associated with the object.
-        type : str
+        object_type : str
             Type of the object.
         custom_metadata : dict
             Custom metadata to associate with the object.
@@ -393,7 +393,7 @@ class DocumentDBDAO(ABC):
         object_id,
         custom_metadata=None,
         tags=None,
-        type=None,
+        object_type=None,
         task_id=None,
         workflow_id=None,
         control_version=True,

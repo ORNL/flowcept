@@ -1,6 +1,7 @@
 """DB API module."""
 
 import uuid
+from datetime import datetime
 from typing import List, Dict
 
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
@@ -21,6 +22,45 @@ class DBAPI(object):
     # TODO: consider making all methods static
     def __init__(self):
         self.logger = FlowceptLogger()
+
+    @staticmethod
+    def _to_message_value(value):
+        """Convert object metadata values to MQ-safe values."""
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, bytes):
+            return None
+        if isinstance(value, dict):
+            return {str(k): DBAPI._to_message_value(v) for k, v in value.items() if k not in {"data", "_id"}}
+        if isinstance(value, list):
+            return [DBAPI._to_message_value(v) for v in value]
+        if isinstance(value, tuple):
+            return [DBAPI._to_message_value(v) for v in value]
+        if value is None or isinstance(value, (str, int, float, bool)):
+            return value
+        return str(value)
+
+    def _emit_object_metadata_message(self, object_id):
+        """Emit metadata-only object provenance to the active Flowcept buffer."""
+        try:
+            dao = DBAPI._dao()
+            if hasattr(dao, "get_blob_object_metadata_doc"):
+                doc = dao.get_blob_object_metadata_doc(object_id=object_id)
+            else:
+                doc = self.get_blob_object(object_id=object_id).to_dict()
+            if "data" in doc:
+                doc["storage_type"] = "in_object"
+            elif "grid_fs_file_id" in doc:
+                doc["storage_type"] = "gridfs"
+            msg = DBAPI._to_message_value(doc)
+            msg.pop("_id", None)
+            msg.pop("data", None)
+            msg["type"] = "object"
+            from flowcept.flowcept_api.flowcept_controller import Flowcept
+
+            Flowcept.emit_message(msg)
+        except Exception as e:
+            self.logger.error(f"Could not emit object metadata message for object_id={object_id}: {e}")
 
     @classmethod
     def _dao(cls) -> DocumentDBDAO:
@@ -518,7 +558,7 @@ class DBAPI(object):
         object_id=None,
         task_id=None,
         workflow_id=None,
-        type=None,
+        object_type=None,
         custom_metadata=None,
         save_data_in_collection=False,
         pickle=False,
@@ -537,7 +577,7 @@ class DBAPI(object):
             Associated task identifier.
         workflow_id : str, optional
             Associated workflow identifier. Defaults to current workflow when available.
-        type : str, optional
+        object_type : str, optional
             User-defined object category.
         custom_metadata : dict, optional
             Arbitrary metadata attached to the object.
@@ -563,25 +603,27 @@ class DBAPI(object):
                 workflow_id = Flowcept.current_workflow_id
             except Exception:
                 workflow_id = None
-        return DBAPI._dao().save_or_update_object(
+        object_id = DBAPI._dao().save_or_update_object(
             object,
             object_id,
             task_id,
             workflow_id,
-            type,
+            object_type,
             custom_metadata,
             save_data_in_collection=save_data_in_collection,
             pickle_=pickle,
             control_version=control_version,
             tags=tags,
         )
+        self._emit_object_metadata_message(object_id)
+        return object_id
 
     def update_object_metadata(
         self,
         object_id,
         custom_metadata=None,
         tags=None,
-        type=None,
+        object_type=None,
         task_id=None,
         workflow_id=None,
         control_version=True,
@@ -596,7 +638,7 @@ class DBAPI(object):
             Metadata dictionary to set.
         tags : list of str, optional
             Tags to set.
-        type : str, optional
+        object_type : str, optional
             Object type/category to set.
         task_id : str, optional
             Task identifier to set.
@@ -610,15 +652,17 @@ class DBAPI(object):
         str
             Updated object identifier.
         """
-        return DBAPI._dao().update_object_metadata(
+        updated_object_id = DBAPI._dao().update_object_metadata(
             object_id=object_id,
             custom_metadata=custom_metadata,
             tags=tags,
-            type=type,
+            object_type=object_type,
             task_id=task_id,
             workflow_id=workflow_id,
             control_version=control_version,
         )
+        self._emit_object_metadata_message(updated_object_id)
+        return updated_object_id
 
     def to_df(self, collection="tasks", filter=None):
         """Query a collection and return a pandas DataFrame.
@@ -679,7 +723,7 @@ class DBAPI(object):
         object_id=None,
         task_id=None,
         workflow_id=None,
-        type="ml_model",
+        object_type="ml_model",
         custom_metadata=None,
         save_data_in_collection=False,
         pickle=False,
@@ -698,7 +742,7 @@ class DBAPI(object):
             Associated task identifier.
         workflow_id : str, optional
             Associated workflow identifier.
-        type : str, optional
+        object_type : str, optional
             Category label. Defaults to ``"ml_model"``.
         custom_metadata : dict, optional
             Custom metadata.
@@ -721,7 +765,7 @@ class DBAPI(object):
             object_id=object_id,
             task_id=task_id,
             workflow_id=workflow_id,
-            type=type,
+            object_type=object_type,
             custom_metadata=custom_metadata,
             save_data_in_collection=save_data_in_collection,
             pickle=pickle,
@@ -735,7 +779,7 @@ class DBAPI(object):
         object_id=None,
         task_id=None,
         workflow_id=None,
-        type="dataset",
+        object_type="dataset",
         custom_metadata=None,
         save_data_in_collection=False,
         pickle=False,
@@ -754,7 +798,7 @@ class DBAPI(object):
             Associated task identifier.
         workflow_id : str, optional
             Associated workflow identifier.
-        type : str, optional
+        object_type : str, optional
             Category label. Defaults to ``"dataset"``.
         custom_metadata : dict, optional
             Custom metadata.
@@ -777,7 +821,7 @@ class DBAPI(object):
             object_id=object_id,
             task_id=task_id,
             workflow_id=workflow_id,
-            type=type,
+            object_type=object_type,
             custom_metadata=custom_metadata,
             save_data_in_collection=save_data_in_collection,
             pickle=pickle,
@@ -847,7 +891,7 @@ class DBAPI(object):
         obj_id = self.save_or_update_object(
             object=binary_data,
             object_id=object_id,
-            type="ml_model",
+            object_type="ml_model",
             task_id=task_id,
             workflow_id=workflow_id,
             custom_metadata=cm,
