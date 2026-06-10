@@ -79,9 +79,9 @@ def dask_map_gpus_to_worker():
 def get_wiki_text_dataset(train_data_path, val_data_path, test_data_path, dask_map_gpus=False):
     # Load the WikiText2 dataset
     t0 = time()
-    train_data = torch.load(train_data_path)
-    val_data = torch.load(val_data_path)
-    test_data = torch.load(test_data_path)
+    train_data = torch.load(train_data_path, weights_only=True)
+    val_data = torch.load(val_data_path, weights_only=True)
+    test_data = torch.load(test_data_path, weights_only=True)
     t1 = time()
     t_disk_load = t1 - t0
 
@@ -171,9 +171,9 @@ def dataprep_workflow(data_dir="input_data",
     else:
         print(f"Input files {base_path}* were found! We are not going to re-download or re-generate anything.")
 
-    train_data = torch.load(train_data_path)
-    val_data = torch.load(val_data_path)
-    test_data = torch.load(test_data_path)
+    train_data = torch.load(train_data_path, weights_only=True)
+    val_data = torch.load(val_data_path, weights_only=True)
+    test_data = torch.load(test_data_path, weights_only=True)
 
     with open(n_batches_path) as f:
         n_batches = json.load(f)
@@ -264,4 +264,3 @@ def download_files(batch_size, data_dir, eval_batch_size, subset_size, test_data
     torch.save(val_data_mapping, val_data_mapping_path)
     print(f"Saved files in {data_dir}.")
     return dataset, dataset_info, ntokens, test_data, test_n_batches, train_data, train_n_batches, val_data, val_n_batches
-

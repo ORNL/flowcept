@@ -1713,7 +1713,14 @@ def render_provenance_card_markdown(
         lines.append(f"- **status:** `{status_str}`")
         if subtype_values:
             subtype_text = ", ".join(f"`{subtype}`" for subtype in subtype_values)
-            lines.append(f"- **{activity_id}** (subtype={subtype_text})")
+            if n_runs > 1:
+                lines.append(f"- **{activity_id}** (`n={n_runs}`, subtype={subtype_text})")
+            else:
+                lines.append(f"- **{activity_id}** (subtype={subtype_text})")
+        elif n_runs > 1:
+            lines.append(f"- **{activity_id}** (`n={n_runs}`)")
+        else:
+            lines.append(f"- **{activity_id}**")
 
         if n_tasks == 1 and members:
             tags = members[0].get("tags")

@@ -88,13 +88,12 @@ dev = [
     "ruff",
     "pyyaml"
 ]
-# Torch and some other ml-specific libs, only used for dev purposes, require the following specific versions.
+# Torch and some other ML-specific libs are only used for dev/test workflows.
 ml_dev = [
-    "torch==2.2.2",
-    "torchvision==0.17.2",
-    "torchtext==0.17.2",
+    "torch>=2.6.0",
+    "torchvision",
+    "torchtext>=0.18.0",
     "datasets==2.17.0",
-    "numpy<2.0",
     "sacremoses",
     "nltk"
 ]
