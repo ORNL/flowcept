@@ -1153,6 +1153,12 @@ def render_provenance_card_markdown(
         for t in tasks_sorted
     )
     resource_rows: List[List[Any]] = []
+    io_heavy: List[Tuple[str, float, float]] = []
+    cpu_heavy: List[Tuple[str, float]] = []
+    mem_heavy: List[Tuple[str, float]] = []
+    process_cpu_heavy: List[Tuple[str, float]] = []
+    network_heavy: List[Tuple[str, float, float]] = []
+    gpu_heavy: List[Tuple[str, float]] = []
     total_mem = 0.0
     total_read = 0.0
     total_write = 0.0
@@ -1265,7 +1271,7 @@ def render_provenance_card_markdown(
                 ]
             )
 
-        sorted(
+        io_heavy = sorted(
             [
                 (activity, activity_read.get(activity, 0.0), activity_write.get(activity, 0.0))
                 for activity in activity_order
@@ -1273,7 +1279,7 @@ def render_provenance_card_markdown(
             key=lambda x: x[1] + x[2],
             reverse=True,
         )
-        sorted(
+        cpu_heavy = sorted(
             [
                 (
                     activity,
@@ -1288,17 +1294,17 @@ def render_provenance_card_markdown(
             key=lambda x: x[1],
             reverse=True,
         )
-        sorted(
+        mem_heavy = sorted(
             [(activity, activity_memory.get(activity, 0.0)) for activity in activity_order],
             key=lambda x: x[1],
             reverse=True,
         )
-        sorted(
+        process_cpu_heavy = sorted(
             [(activity, activity_process_cpu.get(activity, 0.0)) for activity in activity_order],
             key=lambda x: x[1],
             reverse=True,
         )
-        sorted(
+        network_heavy = sorted(
             [
                 (activity, activity_net_sent.get(activity, 0.0), activity_net_recv.get(activity, 0.0))
                 for activity in activity_order
@@ -1306,12 +1312,12 @@ def render_provenance_card_markdown(
             key=lambda x: x[1] + x[2],
             reverse=True,
         )
-        sorted(
+        gpu_heavy = sorted(
             [(activity, activity_gpu.get(activity, 0.0)) for activity in activity_order],
             key=lambda x: x[1],
             reverse=True,
         )
-    (sum(cpu_values) / len(cpu_values)) if cpu_values else None
+    avg_cpu = (sum(cpu_values) / len(cpu_values)) if cpu_values else None
     telemetry_overview = _extract_telemetry_overview(tasks_sorted) if telemetry_available else {}
     has_real_telemetry = int(telemetry_overview.get("rows", 0) or 0) > 0
 
@@ -1322,9 +1328,9 @@ def render_provenance_card_markdown(
     # ------------------------------------------------------------------ #
     lines: List[str] = []
     if workflow_title is None:
-        lines.append("# Workflow Card")
+        lines.append("# Workflow Provenance Card")
     else:
-        lines.append(f"# Workflow Card: {workflow_title}")
+        lines.append(f"# Workflow Provenance Card: {workflow_title}")
     lines.append("")
 
     # --- Section 1: Workflow ---
@@ -1335,13 +1341,16 @@ def render_provenance_card_markdown(
     default_description = (
         f"ML workflow run identified as '{workflow_name}', consisting of {len(activities)} {activity_label}."
     )
-    lines.append(f"- **description:** `{_to_str(workflow.get('description'), default=default_description)}`")
+    workflow_description = workflow.get("workflow_description") or workflow.get("description")
+    lines.append(f"- **description:** `{_to_str(workflow_description, default=default_description)}`")
     lines.append("")
 
     # --- Section 2: Summary ---
     lines.append("## 2. Summary")
     lines.append("")
     lines.append(f"- **execution_id:** `{_to_str(workflow.get('workflow_id'), default='~')}`")
+    if workflow.get("campaign_id") is not None:
+        lines.append(f"- **campaign_id:** `{_to_str(workflow.get('campaign_id'))}`")
     lines.append(f"- **version:** `{_to_str(workflow.get('version'), default='~')}`")
     lines.append(f"- **started_at (UTC):** `{fmt_timestamp_utc(min_start) or '~'}`")
     lines.append(f"- **ended_at (UTC):** `{fmt_timestamp_utc(max_end) or '~'}`")
@@ -1349,9 +1358,13 @@ def render_provenance_card_markdown(
     lines.append(f"- **status:** `{_to_str(workflow.get('status'), default='~')}`")
     lines.append(f"- **location:** `{_to_str(workflow.get('sys_name'), default='~')}`")
     lines.append(f"- **user:** `{_to_str(workflow.get('user'), default='~')}`")
+    if workflow.get("subtype") is not None:
+        lines.append(f"- **Workflow Subtype:** `{_to_str(workflow.get('subtype'))}`")
     lines.append(f"- **entrypoint.repository:** `{_to_str(code_repo.get('remote'), default='~')}`")
     lines.append(f"- **entrypoint.branch:** `{_to_str(code_repo.get('branch'), default='~')}`")
     lines.append(f"- **entrypoint.short_sha:** `{_to_str(code_repo.get('short_sha'), default='~')}`")
+    if code_repo.get("dirty") is not None:
+        lines.append(f"- **entrypoint.dirty:** `{_to_str(code_repo.get('dirty'))}`")
     lines.append("")
 
     # --- Section 3: Infrastructure ---
@@ -1374,6 +1387,9 @@ def render_provenance_card_markdown(
     lines.append("")
     lines.append(f"- **total_activities:** `{len(activities)}`")
     lines.append(f"- **status_counts:** `{status_counts}`")
+    lines.append(f"- **Total Activities:** `{len(activities)}`")
+    lines.append(f"- **Status Counts:** `{status_counts}`")
+    lines.append(f"- **Total Elapsed Workflow Time (s):** `{_fmt_seconds(total_elapsed)}`")
 
     # arguments – workflow-level custom_metadata / boolean flags
     arguments = workflow.get("arguments") or workflow.get("custom_metadata")
@@ -1439,6 +1455,8 @@ def render_provenance_card_markdown(
     lines.append("### 4.3 Resource Usage")
     lines.append("")
     if has_real_telemetry:
+        lines.append("### Workflow-level Resource Usage")
+        lines.append("")
         gpu_device_count = len(telemetry_overview.get("gpu_names", [])) or len(telemetry_overview.get("gpu_ids", []))
         peak_gpu_temp = None
         if telemetry_overview.get("gpu_temp_peaks"):
@@ -1464,6 +1482,11 @@ def render_provenance_card_markdown(
         gpu_ids = telemetry_overview.get("gpu_ids", [])
         gpu_names_text = ", ".join(gpu_names) if gpu_names else "-"
         gpu_ids_text = ", ".join(gpu_ids) if gpu_ids else "-"
+
+        overview_rows = [["Telemetry Samples (task start/end pairs)", telemetry_overview.get("rows", 0)]]
+        lines.append("#### Overview")
+        lines.append(_render_table(["Metric", "Value"], overview_rows))
+        lines.append("")
 
         # cpu sub-section
         cpu_rows = [
@@ -1491,6 +1514,25 @@ def render_provenance_card_markdown(
         if mem_rows:
             lines.append("#### Memory")
             lines.append(_render_table(["Metric", "Value"], mem_rows))
+            lines.append("")
+
+        process_rows = [
+            ["Process CPU User Delta (s)", _fmt_nonzero_seconds(telemetry_overview.get("proc_cpu_user"))],
+            ["Process CPU System Delta (s)", _fmt_nonzero_seconds(telemetry_overview.get("proc_cpu_system"))],
+            ["Process CPU (%) Delta", _fmt_percent(telemetry_overview.get("proc_cpu_percent_avg"))],
+            ["Process IO Read", _fmt_bytes(telemetry_overview.get("proc_read_bytes"))],
+            ["Process IO Write", _fmt_bytes(telemetry_overview.get("proc_write_bytes"))],
+            ["Process IO Read Ops", _fmt_count(telemetry_overview.get("proc_read_count"))],
+            ["Process IO Write Ops", _fmt_count(telemetry_overview.get("proc_write_count"))],
+            ["Process Max Threads", _fmt_count(telemetry_overview.get("proc_threads_max"))],
+            ["Process Max Open Files", _fmt_count(telemetry_overview.get("proc_open_files_max"))],
+            ["Process Max Open FDs", _fmt_count(telemetry_overview.get("proc_open_fds_max"))],
+            ["Process Max Connections", _fmt_count(telemetry_overview.get("proc_connections_max"))],
+        ]
+        process_rows = [r for r in process_rows if not _is_empty_metric(r[1])]
+        if process_rows:
+            lines.append("#### Process")
+            lines.append(_render_table(["Metric", "Value"], process_rows))
             lines.append("")
 
         # gpu sub-section (omit entirely if no GPU)
@@ -1540,12 +1582,89 @@ def render_provenance_card_markdown(
             lines.append("#### Network")
             lines.append(_render_table(["Metric", "Value"], net_rows))
             lines.append("")
+
+        workflow_resource_observations: List[str] = []
+        if not _is_empty_metric(_fmt_percent(avg_cpu)):
+            workflow_resource_observations.append(f"- CPU-heavy period (avg delta): `{_fmt_percent(avg_cpu)}`.")
+        if not _is_empty_metric(_fmt_bytes(total_mem)):
+            workflow_resource_observations.append(
+                "- Memory pressure (delta): "
+                f"`{_fmt_bytes(total_mem)}`; peak RSS: `{_fmt_bytes(telemetry_overview.get('proc_rss_max'))}`."
+            )
+        if not _is_empty_metric(_fmt_bytes(total_read)) or not _is_empty_metric(_fmt_bytes(total_write)):
+            workflow_resource_observations.append(
+                f"- Disk IO pressure: read `{_fmt_bytes(total_read)}`, write `{_fmt_bytes(total_write)}`."
+            )
+        if not _is_empty_metric(_fmt_bytes(net_metrics.get("net_bytes_sent"))) or not _is_empty_metric(
+            _fmt_bytes(net_metrics.get("net_bytes_recv"))
+        ):
+            workflow_resource_observations.append(
+                "- Network movement: sent "
+                f"`{_fmt_bytes(net_metrics.get('net_bytes_sent'))}`, received "
+                f"`{_fmt_bytes(net_metrics.get('net_bytes_recv'))}`."
+            )
+        if not _is_empty_metric(_fmt_seconds(telemetry_overview.get("proc_cpu_user"))) or not _is_empty_metric(
+            _fmt_seconds(telemetry_overview.get("proc_cpu_system"))
+        ):
+            workflow_resource_observations.append(
+                "- Process-level pressure: "
+                f"cpu_user_delta=`{_fmt_seconds(telemetry_overview.get('proc_cpu_user'))}`, "
+                f"cpu_system_delta=`{_fmt_seconds(telemetry_overview.get('proc_cpu_system'))}`."
+            )
+        if gpu_device_count:
+            peak_text = f"{peak_gpu_temp:.3f}" if peak_gpu_temp is not None else "~"
+            workflow_resource_observations.append(
+                f"- GPU activity detected on `{gpu_device_count}` device(s); peak temperature: `{peak_text}`."
+            )
     else:
         lines.append("~ *(resource telemetry was not captured)*")
         lines.append("")
 
+    lines.append("### 4.4 Observations")
+    lines.append("")
+    observation_lines: List[str] = []
+    workflow_observations = workflow.get("observations")
+    if workflow_observations:
+        observation_lines.append(f"- {_format_single_field_value(workflow_observations)}")
+    slowest_rows = [(_to_str(row.get("activity_id")), as_float(row.get("elapsed_median"))) for row in activities]
+    slowest_rows = [(name, sec) for name, sec in slowest_rows if sec is not None]
+    if slowest_rows:
+        slowest_name, slowest_seconds = sorted(slowest_rows, key=lambda x: x[1], reverse=True)[0]
+        observation_lines.append(f"- Slowest activity: `{slowest_name}` at `{_fmt_seconds(slowest_seconds)} s`.")
+    if io_heavy:
+        top_io = io_heavy[0]
+        if top_io[1] + top_io[2] > 0:
+            observation_lines.append(
+                f"- Largest IO activity: `{top_io[0]}` with read `{_fmt_bytes(top_io[1])}` "
+                f"and write `{_fmt_bytes(top_io[2])}`."
+            )
+    if has_real_telemetry:
+        observation_lines.extend(workflow_resource_observations)
+    if observation_lines:
+        lines.extend(observation_lines)
+    else:
+        lines.append("~")
+    lines.append("")
+
     # --- Section 5: Activities ---
     lines.append("## 5. Activities")
+    lines.append("")
+
+    if timing_rows:
+        lines.append("### Timing Report")
+        lines.append("Rows are sorted by **First Started At** (ascending).")
+        lines.append("")
+        lines.append(
+            _render_table(
+                ["Activity", "Status Counts", "First Started At", "Last Ended At", "Median Elapsed (s)"],
+                timing_rows,
+            )
+        )
+        lines.append("")
+        lines.extend(_timing_insights(activities))
+        lines.append("")
+
+    lines.append("### Per Activity Details")
     lines.append("")
 
     # Build hostname-per-activity lookup (reused below)
@@ -1563,6 +1682,10 @@ def render_provenance_card_markdown(
     for task in tasks_sorted:
         by_activity[_to_str(task.get("activity_id"))].append(task)
 
+    activity_used_field_counts: List[Tuple[str, int]] = []
+    activity_generated_field_counts: List[Tuple[str, int]] = []
+    variability_candidates: List[Tuple[str, str, float]] = []
+
     for row in activities:
         activity_id = _to_str(row.get("activity_id"))
         n_tasks = int(row.get("n_tasks", 0) or 0)
@@ -1570,6 +1693,15 @@ def render_provenance_card_markdown(
         ended_at_str = fmt_timestamp_utc(row.get("ended_at_max")) or "~"
         elapsed_str = _fmt_seconds(as_float(row.get("elapsed_median")))
         status_str = _to_str(row.get("status_counts"), default="~")
+        members = by_activity.get(activity_id, [])
+        n_runs = len(members)
+        subtype_values = sorted(
+            {
+                _to_str(member.get("subtype"), default="").strip()
+                for member in members
+                if _to_str(member.get("subtype"), default="").strip()
+            }
+        )
 
         lines.append(f"### Activity: `{activity_id}`")
         lines.append("")
@@ -1579,6 +1711,18 @@ def render_provenance_card_markdown(
         lines.append(f"- **ended_at (UTC):** `{ended_at_str}`")
         lines.append(f"- **duration:** `{elapsed_str}`")
         lines.append(f"- **status:** `{status_str}`")
+        if subtype_values:
+            subtype_text = ", ".join(f"`{subtype}`" for subtype in subtype_values)
+            lines.append(f"- **{activity_id}** (subtype={subtype_text})")
+
+        if n_tasks == 1 and members:
+            tags = members[0].get("tags")
+            if isinstance(tags, list) and tags:
+                if len(tags) == 1:
+                    lines.append(f"  - Tag: `{_safe_sample(tags[0], max_len=140)}`")
+                else:
+                    tags_text = ", ".join(f"`{_safe_sample(tag, max_len=140)}`" for tag in tags)
+                    lines.append(f"  - Tags: {tags_text}")
 
         # hosts
         host_counts = host_by_activity.get(activity_id)
@@ -1590,8 +1734,6 @@ def render_provenance_card_markdown(
             lines.append("- **hosts:** `~`")
 
         # inputs (used) and outputs (generated)
-        members = by_activity.get(activity_id, [])
-        n_runs = len(members)
         used_fields: Dict[str, List[Any]] = defaultdict(list)
         gen_fields: Dict[str, List[Any]] = defaultdict(list)
         for task in members:
@@ -1609,25 +1751,61 @@ def render_provenance_card_markdown(
                     gen_fields[k].append(v)
 
         if used_fields:
+            activity_used_field_counts.append((activity_id, len(used_fields)))
             lines.append("- **inputs:**")
             for key in sorted(used_fields.keys())[:15]:
                 if n_runs == 1:
                     lines.append(f"  - `{key}`: `{_format_single_field_value(used_fields[key][0])}`")
                 else:
                     lines.append(f"  - `{key}`: {_summarize_field_values(used_fields[key], n_runs)}")
+                numeric_vals = [as_float(v) for v in used_fields[key]]
+                numeric_vals = [v for v in numeric_vals if v is not None]
+                if numeric_vals and len(numeric_vals) == len(used_fields[key]):
+                    variability_candidates.append((activity_id, f"used.{key}", max(numeric_vals) - min(numeric_vals)))
         else:
             lines.append("- **inputs:** `~`")
 
         if gen_fields:
+            activity_generated_field_counts.append((activity_id, len(gen_fields)))
             lines.append("- **outputs:**")
             for key in sorted(gen_fields.keys())[:15]:
                 if n_runs == 1:
                     lines.append(f"  - `{key}`: `{_format_single_field_value(gen_fields[key][0])}`")
                 else:
                     lines.append(f"  - `{key}`: {_summarize_field_values(gen_fields[key], n_runs)}")
+                numeric_vals = [as_float(v) for v in gen_fields[key]]
+                numeric_vals = [v for v in numeric_vals if v is not None]
+                if numeric_vals and len(numeric_vals) == len(gen_fields[key]):
+                    variability_candidates.append(
+                        (activity_id, f"generated.{key}", max(numeric_vals) - min(numeric_vals))
+                    )
         else:
             lines.append("- **outputs:** `~`")
 
+        lines.append("")
+
+    activity_detail_insights: List[str] = []
+    if activity_used_field_counts:
+        top_used = sorted(activity_used_field_counts, key=lambda x: x[1], reverse=True)[:3]
+        activity_detail_insights.append(
+            "- Activities with richest **used** metadata: "
+            + ", ".join(f"`{activity}` ({count} fields)" for activity, count in top_used)
+        )
+    if activity_generated_field_counts:
+        top_generated = sorted(activity_generated_field_counts, key=lambda x: x[1], reverse=True)[:3]
+        activity_detail_insights.append(
+            "- Activities with richest **generated** metadata: "
+            + ", ".join(f"`{activity}` ({count} fields)" for activity, count in top_generated)
+        )
+    if variability_candidates:
+        top_variability = sorted(variability_candidates, key=lambda x: x[2], reverse=True)[:5]
+        activity_detail_insights.append(
+            "- Highest numeric variability fields: "
+            + ", ".join(f"`{activity}:{field}` (range={value:.3f})" for activity, field, value in top_variability)
+        )
+    if activity_detail_insights:
+        lines.append("### Per Activity Details Interpretation")
+        lines.extend(activity_detail_insights)
         lines.append("")
 
     # Per-activity resource usage table (kept from original, nested under section 5)
@@ -1657,12 +1835,58 @@ def render_provenance_card_markdown(
             lines.append(_render_table(per_activity_headers, resource_rows))
             lines.append("")
 
+        per_activity_insight_lines: List[str] = []
+        if any((read_b + write_b) > 0 for _, read_b, write_b in io_heavy):
+            per_activity_insight_lines.append("- Most IO-heavy Activities (Read + Write):")
+            for name, read_b, write_b in io_heavy[:5]:
+                if read_b + write_b <= 0:
+                    continue
+                per_activity_insight_lines.append(
+                    f"  - `{name}`: Read={_fmt_bytes(read_b)}, Write={_fmt_bytes(write_b)}"
+                )
+        if any(cpu_pct > 0 for _, cpu_pct in cpu_heavy):
+            per_activity_insight_lines.append("- Most CPU-active Activities:")
+            for name, cpu_pct in cpu_heavy[:5]:
+                if cpu_pct <= 0:
+                    continue
+                per_activity_insight_lines.append(f"  - `{name}`: CPU={_fmt_percent(cpu_pct)}")
+        if any(mem > 0 for _, mem in mem_heavy):
+            per_activity_insight_lines.append("- Largest memory growth Activities:")
+            for name, mem in mem_heavy[:5]:
+                if mem <= 0:
+                    continue
+                per_activity_insight_lines.append(f"  - `{name}`: Memory Delta={_fmt_bytes(mem)}")
+        if any((sent + recv) > 0 for _, sent, recv in network_heavy):
+            per_activity_insight_lines.append("- Most network-active Activities:")
+            for name, sent, recv in network_heavy[:5]:
+                if sent + recv <= 0:
+                    continue
+                per_activity_insight_lines.append(f"  - `{name}`: Sent={_fmt_bytes(sent)}, Received={_fmt_bytes(recv)}")
+        if any(proc_cpu > 0 for _, proc_cpu in process_cpu_heavy):
+            per_activity_insight_lines.append("- Highest process CPU delta Activities:")
+            for name, proc_cpu in process_cpu_heavy[:5]:
+                if proc_cpu <= 0:
+                    continue
+                per_activity_insight_lines.append(f"  - `{name}`: Process CPU Delta={_fmt_percent(proc_cpu)}")
+        if any(gpu_delta > 0 for _, gpu_delta in gpu_heavy):
+            per_activity_insight_lines.append("- Highest GPU memory delta Activities:")
+            for name, gpu_delta in gpu_heavy[:5]:
+                if gpu_delta <= 0:
+                    continue
+                per_activity_insight_lines.append(f"  - `{name}`: GPU Used Delta={_fmt_bytes(gpu_delta)}")
+        if per_activity_insight_lines:
+            lines.append("### Per-activity Resource Interpretation")
+            lines.extend(per_activity_insight_lines)
+            lines.append("")
+
     # --- Section 6: Significant Workflow Artifacts ---
     lines.append("## 6. Significant Workflow Artifacts")
     lines.append("")
 
     total_objects = int(object_summary.get("total_objects", 0) or 0)
     if total_objects > 0:
+        lines.append("### Object Artifacts Summary")
+        lines.append("")
         lines.append("### Input Artifacts")
         lines.append("")
         lines.append(

@@ -11,9 +11,9 @@ Handles two campaign types automatically:
   per-stage mini-cards with hostname detail, and a unified artifact summary.
 
 Both types follow the same template as the single-workflow provenance card:
-    Title → Summary → Campaign-level Summary → Structure → Timing Report
-    → Per Activity Details → Per-activity Resource Usage
-    → Object Artifacts Summary → Footer
+    Title → Workflow → Summary → Campaign-level Summary → Structure
+    → Timing/Activity Details → Per-activity Resource Usage
+    → Significant Workflow Artifacts → Footer
 """
 
 from __future__ import annotations
@@ -151,10 +151,13 @@ def _render_summary_section(
     description = f"ML workflow run identified as '{campaign_id}', consisting of {n_workflows} {activity_label}"
     lines.append(f"- **description:** {description}")
     lines.append("## 2. Summary")
-    lines.append(f"- **execution_id:** {n_workflows}")
-    lines.append(f"- **version:** {n_workflows}")
+    lines.append("- **execution_id:** ~")
+    if campaign_id is not None:
+        lines.append(f"- **campaign_id:** {_to_str(campaign_id)}")
+    lines.append("- **version:** ~")
     if campaign_type == "pipeline":
         lines.append("- **Type:** Pipeline")
+    lines.append(f"- **workflow_runs:** {n_workflows}")
     if min_start:
         lines.append(f"- **started_at:** `{fmt_timestamp_utc(min_start)} (UTC)`")
     if max_end:
@@ -385,7 +388,7 @@ def _render_pipeline(
     # ------------------------------------------------------------------
     # Title
     # ------------------------------------------------------------------
-    lines.append("# Campaign Workflow Card — Pipeline")
+    lines.append("# Campaign Provenance Card — Pipeline")
     lines.append("")
 
     # ------------------------------------------------------------------

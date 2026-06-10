@@ -8,6 +8,11 @@ Current report implementations:
 - ``report_type="provenance_card"`` with ``format="markdown"`` (**default**)
 - ``report_type="provenance_report"`` with ``format="pdf"`` (executive PDF with plots)
 
+The markdown workflow cards follow the upstream Workflow Provenance Card template:
+`workflow-provenance-card <https://github.com/data-cards/workflow-provenance-card>`_.
+Flowcept keeps its legacy timing, resource, and artifact summaries inside the template's
+optional sections so the report stays compact without losing useful provenance detail.
+
 
 API
 ---
