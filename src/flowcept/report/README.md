@@ -23,7 +23,7 @@ report/
 ## Report Types
 
 ### Single-workflow provenance card (markdown)
-Generated when the input data contains a single `workflow_id`. Covers workflow overview, activity timing, resource telemetry, per-activity detail, and object artifact summary.
+Generated when the input data contains a single `workflow_id`. Covers workflow overview, activity timing, resource telemetry, per-activity detail, and object artifact summary. The markdown layout follows the upstream Workflow Provenance Card template: https://github.com/data-cards/workflow-provenance-card.
 
 ### Campaign provenance card (markdown)
 Generated automatically when the input data contains multiple `workflow_id` values sharing a `campaign_id`. Two sub-types are handled:

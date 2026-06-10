@@ -494,6 +494,9 @@ Default report mode:
 - `report_type="provenance_card"`
 - `format="markdown"`
 
+The rendered workflow card follows the upstream Workflow Provenance Card template:
+https://github.com/data-cards/workflow-provenance-card.
+
 Python API:
 
 ```python
