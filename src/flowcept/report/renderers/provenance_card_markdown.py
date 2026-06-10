@@ -1153,12 +1153,6 @@ def render_provenance_card_markdown(
         for t in tasks_sorted
     )
     resource_rows: List[List[Any]] = []
-    io_heavy: List[Tuple[str, float, float]] = []
-    cpu_heavy: List[Tuple[str, float]] = []
-    mem_heavy: List[Tuple[str, float]] = []
-    process_cpu_heavy: List[Tuple[str, float]] = []
-    network_heavy: List[Tuple[str, float, float]] = []
-    gpu_heavy: List[Tuple[str, float]] = []
     total_mem = 0.0
     total_read = 0.0
     total_write = 0.0
@@ -1271,7 +1265,7 @@ def render_provenance_card_markdown(
                 ]
             )
 
-        io_heavy = sorted(
+        sorted(
             [
                 (activity, activity_read.get(activity, 0.0), activity_write.get(activity, 0.0))
                 for activity in activity_order
@@ -1279,7 +1273,7 @@ def render_provenance_card_markdown(
             key=lambda x: x[1] + x[2],
             reverse=True,
         )
-        cpu_heavy = sorted(
+        sorted(
             [
                 (
                     activity,
@@ -1294,17 +1288,17 @@ def render_provenance_card_markdown(
             key=lambda x: x[1],
             reverse=True,
         )
-        mem_heavy = sorted(
+        sorted(
             [(activity, activity_memory.get(activity, 0.0)) for activity in activity_order],
             key=lambda x: x[1],
             reverse=True,
         )
-        process_cpu_heavy = sorted(
+        sorted(
             [(activity, activity_process_cpu.get(activity, 0.0)) for activity in activity_order],
             key=lambda x: x[1],
             reverse=True,
         )
-        network_heavy = sorted(
+        sorted(
             [
                 (activity, activity_net_sent.get(activity, 0.0), activity_net_recv.get(activity, 0.0))
                 for activity in activity_order
@@ -1312,12 +1306,12 @@ def render_provenance_card_markdown(
             key=lambda x: x[1] + x[2],
             reverse=True,
         )
-        gpu_heavy = sorted(
+        sorted(
             [(activity, activity_gpu.get(activity, 0.0)) for activity in activity_order],
             key=lambda x: x[1],
             reverse=True,
         )
-    avg_cpu = (sum(cpu_values) / len(cpu_values)) if cpu_values else None
+    (sum(cpu_values) / len(cpu_values)) if cpu_values else None
     telemetry_overview = _extract_telemetry_overview(tasks_sorted) if telemetry_available else {}
     has_real_telemetry = int(telemetry_overview.get("rows", 0) or 0) > 0
 
@@ -1337,7 +1331,11 @@ def render_provenance_card_markdown(
     lines.append("## 1. Workflow")
     lines.append("")
     lines.append(f"- **name:** `{workflow_name}`")
-    lines.append(f"- **description:** `{_to_str(workflow.get('description'), default= f"ML workflow run identified as '{workflow_name}', consisting of {len(activities)} sub-activit{'ies' if len(activities) != 1 else 'y'}.")}`")
+    activity_label = "sub-activities" if len(activities) != 1 else "sub-activity"
+    default_description = (
+        f"ML workflow run identified as '{workflow_name}', consisting of {len(activities)} {activity_label}."
+    )
+    lines.append(f"- **description:** `{_to_str(workflow.get('description'), default=default_description)}`")
     lines.append("")
 
     # --- Section 2: Summary ---

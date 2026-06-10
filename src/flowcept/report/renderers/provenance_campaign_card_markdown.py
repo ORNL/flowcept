@@ -147,7 +147,9 @@ def _render_summary_section(
     """Render the ``## Summary`` section (mirrors the single-workflow card)."""
     lines.append("## 1. Workflow")
     lines.append(f"- **name:** `{_to_str(campaign_id)}`")
-    lines.append(f"- **description:** ML workflow run identified as '{campaign_id}', consisting of {n_workflows} sub-activit{'ies' if n_workflows != 1 else 'y'}")
+    activity_label = "sub-activities" if n_workflows != 1 else "sub-activity"
+    description = f"ML workflow run identified as '{campaign_id}', consisting of {n_workflows} {activity_label}"
+    lines.append(f"- **description:** {description}")
     lines.append("## 2. Summary")
     lines.append(f"- **execution_id:** {n_workflows}")
     lines.append(f"- **version:** {n_workflows}")
@@ -159,12 +161,12 @@ def _render_summary_section(
         lines.append(f"- **ended_at:** `{fmt_timestamp_utc(max_end)} (UTC)`")
     if total_elapsed is not None:
         lines.append(f"- **duration:** `{float(total_elapsed):.3f}` (s)")
-    lines.append(f"- **status:** ~")
-    lines.append(f"- **location:** ~")
-    lines.append(f"- **user:** ~")
-    lines.append(f"- **entrypoint.repository:** ~")
-    lines.append(f"- **entrypoint.branch:** ~")
-    lines.append(f"- **entrypoint.short_sha:** ~")
+    lines.append("- **status:** ~")
+    lines.append("- **location:** ~")
+    lines.append("- **user:** ~")
+    lines.append("- **entrypoint.repository:** ~")
+    lines.append("- **entrypoint.branch:** ~")
+    lines.append("- **entrypoint.short_sha:** ~")
     for line in extra_lines:
         lines.append(line)
     lines.append("")
