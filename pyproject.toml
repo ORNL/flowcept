@@ -92,7 +92,6 @@ dev = [
 ml_dev = [
     "torch>=2.6.0",
     "torchvision",
-    "torchtext>=0.18.0",
     "datasets==2.17.0",
     "sacremoses",
     "nltk"

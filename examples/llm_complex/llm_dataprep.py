@@ -5,9 +5,8 @@ import torch
 import os
 
 from torch.utils.data import Subset
-from torchtext.data.utils import get_tokenizer
-from torchtext.vocab import build_vocab_from_iterator
 from datasets import load_dataset, load_from_disk
+from text_vocab import build_text_vocab, get_text_tokenizer
 
 from flowcept.commons.utils import replace_non_serializable
 
@@ -238,9 +237,8 @@ def download_files(batch_size, data_dir, eval_batch_size, subset_size, test_data
         train_dataset = Subset(train_dataset, range(subset_size))
         validation_dataset = Subset(validation_dataset, range(subset_size))
     # Build the vocabulary from the training dataset
-    tokenizer = get_tokenizer(tokenizer_type)
-    vocab = build_vocab_from_iterator(yield_tokens(tokenizer, train_dataset))
-    vocab.set_default_index(vocab["<unk>"])
+    tokenizer = get_text_tokenizer(tokenizer_type)
+    vocab = build_text_vocab(yield_tokens(tokenizer, train_dataset))
     ntokens = len(vocab)
     with open(n_tokens_path, 'w') as f:
         f.write(str(ntokens))
