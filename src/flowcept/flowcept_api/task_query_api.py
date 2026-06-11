@@ -3,13 +3,10 @@
 from collections import OrderedDict
 from typing import List, Dict, Tuple
 from datetime import timedelta
-import json
-import warnings
 
 import numpy as np
 import pandas as pd
 import pymongo
-import requests
 
 from bson.objectid import ObjectId
 
@@ -25,7 +22,7 @@ from flowcept.commons.query_utils import (
     to_datetime,
     calculate_telemetry_diff_for_docs,
 )
-from flowcept.configs import WEBSERVER_HOST, WEBSERVER_PORT, ANALYTICS
+from flowcept.configs import ANALYTICS
 
 
 class TaskQueryAPI(object):
@@ -47,36 +44,19 @@ class TaskQueryAPI(object):
     def __init__(
         self,
         with_webserver=False,
-        host: str = WEBSERVER_HOST,
-        port: int = WEBSERVER_PORT,
+        host: str | None = None,
+        port: int | None = None,
         auth=None,
     ):
+        if with_webserver:
+            raise RuntimeError(
+                "TaskQueryAPI(with_webserver=True) was removed with the legacy "
+                "flowcept_webserver package. Use flowcept.webservice (FastAPI) instead."
+            )
         if not hasattr(self, "_initialized"):
             self._initialized = True
             self.logger = FlowceptLogger()
-            self._with_webserver = with_webserver
-            if self._with_webserver:
-                warnings.warn(
-                    "TaskQueryAPI(with_webserver=True) relies on deprecated legacy "
-                    "package flowcept.flowcept_webserver. Use flowcept.webservice "
-                    "(FastAPI) instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-                from flowcept.flowcept_webserver.app import BASE_ROUTE
-                from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
-
-                self._host = host
-                self._port = port
-                _base_url = f"http://{self._host}:{self._port}"
-                self._url = f"{_base_url}{BASE_ROUTE}{TaskQuery.ROUTE}"
-                try:
-                    r = requests.get(_base_url)
-                    if r.status_code > 300:
-                        raise Exception(r.text)
-                    self.logger.debug("Ok, webserver is ready to receive requests.")
-                except Exception:
-                    raise Exception(f"Error when accessing the webserver at {_base_url}")
+            self._with_webserver = False
 
     def query(
         self,
@@ -123,39 +103,19 @@ class TaskQueryAPI(object):
             aggregation=[("avg", "ended_at"), ("min", "started_at")]
         )
         """
-        if self._with_webserver:
-            request_data = {"filter": json.dumps(filter)}
-            if projection:
-                request_data["projection"] = json.dumps(projection)
-            if limit:
-                request_data["limit"] = limit
-            if sort:
-                request_data["sort"] = json.dumps(sort)
-            if aggregation:
-                request_data["aggregation"] = json.dumps(aggregation)
-            if remove_json_unserializables:
-                request_data["remove_json_unserializables"] = remove_json_unserializables
-
-            r = requests.post(self._url, json=request_data)
-            if 200 <= r.status_code < 300:
-                return r.json()
-            else:
-                raise Exception(r.text)
-
+        db_api = Flowcept.db
+        docs = db_api.task_query(
+            filter,
+            projection,
+            limit,
+            sort,
+            aggregation,
+            remove_json_unserializables,
+        )
+        if docs is not None:
+            return docs
         else:
-            db_api = Flowcept.db
-            docs = db_api.task_query(
-                filter,
-                projection,
-                limit,
-                sort,
-                aggregation,
-                remove_json_unserializables,
-            )
-            if docs is not None:
-                return docs
-            else:
-                self.logger.error("Error when executing query.")
+            self.logger.error("Error when executing query.")
 
     def get_subworkflows_tasks_from_a_parent_workflow(self, parent_workflow_id: str) -> List[Dict]:
         """Get subworkflows."""
