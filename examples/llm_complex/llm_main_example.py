@@ -567,21 +567,33 @@ def parse_args():
 def delete_mongo_data(mongo_dao, campaign_id):
     print("Deleting generated data in MongoDB")
 
-    workflow_ids = []
     workflows = Flowcept.db.query({"campaign_id": campaign_id}, collection="workflows")
-    for w in workflows:
-        workflow_ids.append(w["workflow_id"])
+    workflow_ids = [w["workflow_id"] for w in workflows if w.get("workflow_id")]
 
     tasks = Flowcept.db.query({"campaign_id": campaign_id})
-    task_ids = []
-    best_obj_ids = []
-    for t in tasks:
-        task_ids.append(t["task_id"])
-        if t["activity_id"] == "model_train":
-            best_obj_ids.append(t["generated"]["best_obj_id"])
+    task_ids = [t["task_id"] for t in tasks if t.get("task_id")]
 
-    print(f"Going to delete {len(best_obj_ids)} objects.")
-    mongo_dao.delete_object_keys("object_id", best_obj_ids)
+    model_train_tasks = [
+        task for task in tasks
+        if task.get("activity_id") == "model_train" and task.get("status") == "FINISHED"
+    ]
+    best_obj_ids = [
+        task["generated"]["best_obj_id"] for task in model_train_tasks
+        if task.get("generated", {}).get("best_obj_id")
+    ]
+    if len(best_obj_ids) != len(model_train_tasks):
+        raise AssertionError("Every finished model_train task must contain generated.best_obj_id.")
+
+    objects = []
+    if workflow_ids:
+        objects = Flowcept.db.query({"workflow_id": {"$in": workflow_ids}}, collection="objects")
+    object_ids = [obj["object_id"] for obj in objects if obj.get("object_id")]
+    missing_best_obj_ids = sorted(set(best_obj_ids) - set(object_ids))
+    if missing_best_obj_ids:
+        raise AssertionError(f"Best model objects not found in MongoDB: {missing_best_obj_ids}")
+
+    print(f"Going to delete {len(object_ids)} objects.")
+    mongo_dao.delete_object_keys("object_id", object_ids)
     print(f"Going to delete {len(task_ids)} tasks.")
     mongo_dao.delete_task_keys("task_id", task_ids)
     print(f"Going to delete {len(workflow_ids)} workflows.")
