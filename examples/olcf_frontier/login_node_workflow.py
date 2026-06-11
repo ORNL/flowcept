@@ -65,10 +65,10 @@ def save_outputs(workflow_id: str) -> None:
     os.makedirs(tasks_dir, exist_ok=True)
 
     Flowcept.generate_report(
-        report_type="provenance_card",
+        report_type="workflow_card",
         format="markdown",
         workflow_id=workflow_id,
-        output_path=os.path.join(reports_dir, f"provenance_card_{workflow_id}.md"),
+        output_path=os.path.join(reports_dir, f"workflow_card_{workflow_id}.md"),
     )
     Flowcept.generate_report(
         report_type="provenance_report",

@@ -128,13 +128,13 @@ def reset_context() -> ToolResult:
 
 
 @mcp_flowcept.tool()
-def generate_provenance_card(
+def generate_workflow_card(
     workflow_id: str | None = None,
     campaign_id: str | None = None,
     input_jsonl_path: str | None = None,
 ) -> ToolResult:
     """
-    Generate and return a markdown provenance card as text.
+    Generate and return a markdown workflow card as text.
 
     Exactly one of ``workflow_id``, ``campaign_id``, or ``input_jsonl_path`` must be provided.
 
@@ -158,7 +158,7 @@ def generate_provenance_card(
             return ToolResult(code=400, result="One of workflow_id, campaign_id, or input_jsonl_path is required.")
 
         stats = Flowcept.generate_report(
-            report_type="provenance_card",
+            report_type="workflow_card",
             format="markdown",
             workflow_id=workflow_id,
             campaign_id=campaign_id,

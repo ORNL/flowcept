@@ -61,7 +61,7 @@ git add path/to/file1 path/to/file2
 - `agent_sandbox/` is the assistant scratch area.
 - Put plans and handoffs under `agent_sandbox/plans/`.
 - Do not create scratch scripts in source, tests, docs, or `/tmp` when `agent_sandbox/` is appropriate.
-- Do not run full test suites against `agent_sandbox/`, `tmp_tests/`, generated provenance cards, caches, or local data artifacts.
+- Do not run full test suites against `agent_sandbox/`, `tmp_tests/`, generated workflow cards, caches, or local data artifacts.
 - Deployment templates under `deployment/*.yaml` must use `${DATA_DIR}` placeholders for data paths.
 - Personal absolute paths belong only in untracked local settings files.
 
@@ -74,7 +74,7 @@ git add path/to/file1 path/to/file2
 - `src/flowcept/flowceptor/`: adapters, interceptors, telemetry, consumers.
 - `src/flowcept/commons/`: dataclasses, DAOs, buffers, logging, shared utilities.
 - `src/flowcept/agents/`: MCP agent server, client, tools, prompts, LLM wrappers.
-- `src/flowcept/report/`: provenance card/report generation.
+- `src/flowcept/report/`: workflow card/report generation.
 - `src/flowcept/webservice/`: FastAPI REST API.
 - `resources/sample_settings.yaml`: canonical full settings template.
 - `.github/workflows/`: CI truth.
@@ -96,7 +96,7 @@ Use the RST docs as the maintained user documentation. Do not recreate these gui
 - `docs/prov_storage.rst`: MQ, MongoDB, LMDB, JSONL buffer behavior.
 - `docs/telemetry_capture.rst`: telemetry configuration and captured fields.
 - `docs/agent.rst`: Flowcept MCP agent usage.
-- `docs/reporting.rst`: provenance cards and reports.
+- `docs/reporting.rst`: workflow cards and reports.
 - `docs/rest_api.rst`: REST API usage.
 - `docs/architecture.rst`: system architecture.
 - `docs/task_schema.rst`: task record schema.
