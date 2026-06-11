@@ -209,7 +209,7 @@ def select_best_model(workflow_id):
         collection="objects",
         filter={
             "workflow_id": workflow_id,
-            "type": "ml_model",
+            "object_type": "ml_model",
             "custom_metadata.loss": {"$exists": True},
         },
         sort=[("custom_metadata.loss", 1)],
@@ -298,7 +298,7 @@ def asserts(tasks):
 
     dataset_docs = Flowcept.db.dataset_query(
         filter={
-            "type": "dataset",
+            "object_type": "dataset",
             "task_id": dataset_task.get("task_id"),
             "workflow_id": Flowcept.current_workflow_id,
         }
@@ -307,7 +307,7 @@ def asserts(tasks):
     assert len(dataset_docs) > 0
     dataset_blob = Flowcept.db.get_dataset(dataset_docs[0]["object_id"])
     assert dataset_blob is not None
-    assert dataset_blob.type == "dataset"
+    assert dataset_blob.object_type == "dataset"
     assert dataset_blob.task_id == dataset_task.get("task_id")
     assert dataset_blob.workflow_id == Flowcept.current_workflow_id
 
@@ -498,7 +498,7 @@ class SingleLayerPerceptronTests(unittest.TestCase):
         flowcept_model_object = reloaded_torch_model._flowcept_model_object
         assert flowcept_model_object["object_id"] == torch_model_object_id
         assert "data" not in flowcept_model_object
-        assert flowcept_model_object["type"] == "ml_model"
+        assert flowcept_model_object["object_type"] == "ml_model"
         assert flowcept_model_object["task_id"] is not None
         assert flowcept_model_object["workflow_id"] is not None
         assert flowcept_model_object["custom_metadata"] is not None

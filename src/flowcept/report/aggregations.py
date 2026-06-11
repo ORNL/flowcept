@@ -101,7 +101,7 @@ def summarize_objects(objects: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
     object_sizes: List[int] = []
 
     for obj in objects:
-        obj_type = str(obj.get("type", "unknown"))
+        obj_type = str(obj.get("object_type", "unknown"))
         by_type[obj_type] += 1
         storage_type = obj.get("storage_type")
         if storage_type == "in_object":

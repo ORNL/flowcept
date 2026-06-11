@@ -11,9 +11,9 @@ Handles two campaign types automatically:
   per-stage mini-cards with hostname detail, and a unified artifact summary.
 
 Both types follow the same template as the single-workflow provenance card:
-    Title → Summary → Campaign-level Summary → Structure → Timing Report
-    → Per Activity Details → Per-activity Resource Usage
-    → Object Artifacts Summary → Footer
+    Title → Workflow → Summary → Campaign-level Summary → Structure
+    → Timing/Activity Details → Per-activity Resource Usage
+    → Significant Workflow Artifacts → Footer
 """
 
 from __future__ import annotations
@@ -145,17 +145,31 @@ def _render_summary_section(
     lines: List[str],
 ) -> None:
     """Render the ``## Summary`` section (mirrors the single-workflow card)."""
-    lines.append("## Summary")
-    lines.append(f"- **Campaign ID:** `{_to_str(campaign_id)}`")
+    lines.append("## 1. Workflow")
+    lines.append(f"- **name:** `{_to_str(campaign_id)}`")
+    activity_label = "sub-activities" if n_workflows != 1 else "sub-activity"
+    description = f"ML workflow run identified as '{campaign_id}', consisting of {n_workflows} {activity_label}"
+    lines.append(f"- **description:** {description}")
+    lines.append("## 2. Summary")
+    lines.append("- **execution_id:** ~")
+    if campaign_id is not None:
+        lines.append(f"- **campaign_id:** {_to_str(campaign_id)}")
+    lines.append("- **version:** ~")
     if campaign_type == "pipeline":
         lines.append("- **Type:** Pipeline")
-    lines.append(f"- **Workflow runs:** {n_workflows}")
+    lines.append(f"- **workflow_runs:** {n_workflows}")
     if min_start:
-        lines.append(f"- **Execution Start (UTC):** `{fmt_timestamp_utc(min_start)}`")
+        lines.append(f"- **started_at:** `{fmt_timestamp_utc(min_start)} (UTC)`")
     if max_end:
-        lines.append(f"- **Execution End (UTC):** `{fmt_timestamp_utc(max_end)}`")
+        lines.append(f"- **ended_at:** `{fmt_timestamp_utc(max_end)} (UTC)`")
     if total_elapsed is not None:
-        lines.append(f"- **Total Elapsed (s):** `{float(total_elapsed):.3f}`")
+        lines.append(f"- **duration:** `{float(total_elapsed):.3f}` (s)")
+    lines.append("- **status:** ~")
+    lines.append("- **location:** ~")
+    lines.append("- **user:** ~")
+    lines.append("- **entrypoint.repository:** ~")
+    lines.append("- **entrypoint.branch:** ~")
+    lines.append("- **entrypoint.short_sha:** ~")
     for line in extra_lines:
         lines.append(line)
     lines.append("")

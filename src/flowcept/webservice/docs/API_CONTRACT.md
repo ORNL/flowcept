@@ -104,7 +104,7 @@ Returns version history metadata sorted latest-first.
 
 Same query model as above, plus `include_data`.
 
-### Datasets (`type=dataset`)
+### Datasets (`object_type=dataset`)
 
 - `GET /api/v1/datasets`
 - `GET /api/v1/datasets/{object_id}`
@@ -112,7 +112,7 @@ Same query model as above, plus `include_data`.
 - `GET /api/v1/datasets/{object_id}/download`
 - `POST /api/v1/datasets/query`
 
-### Models (`type=ml_model`)
+### Models (`object_type=ml_model`)
 
 - `GET /api/v1/models`
 - `GET /api/v1/models/{object_id}`
@@ -126,7 +126,7 @@ Unified scoped read-only query endpoint.
 
 - `scope`: `workflows | tasks | objects | models | datasets`
 - Uses the same query body model as other `/query` routes.
-- `models` and `datasets` scopes enforce fixed type filters.
+- `models` and `datasets` scopes enforce fixed `object_type` filters.
 - Rejects unsupported filter operators.
 
 ## Status codes

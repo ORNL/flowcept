@@ -62,6 +62,9 @@ class WorkflowObject:
     name: AnyStr = None
     """Descriptive name for the workflow."""
 
+    workflow_description: AnyStr = None
+    """Human-readable description of what the workflow is about."""
+
     custom_metadata: Dict = None
     """User-defined metadata dictionary with additional annotations."""
 
@@ -185,6 +188,7 @@ class WorkflowObject:
             f"adapter_id={repr(self.adapter_id)}, "
             f"interceptor_ids={repr(self.interceptor_ids)}, "
             f"name={repr(self.name)}, "
+            f"workflow_description={repr(self.workflow_description)}, "
             f"used={repr(self.used)}, "
             f"generated={repr(self.generated)}, "
             f"custom_metadata={repr(self.custom_metadata)})"

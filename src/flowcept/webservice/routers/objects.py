@@ -44,7 +44,7 @@ def list_objects(
     object_id: str | None = None,
     workflow_id: str | None = None,
     task_id: str | None = None,
-    type: str | None = None,
+    object_type: str | None = None,
     filter_json: str | None = None,
     include_data: bool = False,
     db: DBAPI = Depends(get_db_api),
@@ -57,8 +57,8 @@ def list_objects(
         query_filter["workflow_id"] = workflow_id
     if task_id is not None:
         query_filter["task_id"] = task_id
-    if type is not None:
-        query_filter["type"] = type
+    if object_type is not None:
+        query_filter["object_type"] = object_type
 
     docs = db.blob_object_query(filter=query_filter) or []
     docs = sort_docs_by_first_date_field(docs, ["created_at", "updated_at", "utc_timestamp", "timestamp"])

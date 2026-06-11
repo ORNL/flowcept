@@ -27,17 +27,18 @@ The goal is to keep agent interactions, model calls, and traditional tasks in on
 How Flowcept represents PROV-AGENT
 ----------------------------------
 Flowcept stores provenance according to PROV-AGENT, but keeps the storage model simple.
-Everything is captured with **two record types**:
+Everything is captured with **three main record types**:
 
 - **Workflow**: high-level run context, user and environment info, and workflow-level inputs and outputs.
 - **Task**: units of work with inputs, outputs, timing, telemetry, and links to other tasks and agents.
+- **Blob/Object**: metadata and linkage for stored binary payloads, datasets, models, artifacts, and input files.
 
 At a high level:
 
 - **Activities** map to the *Workflow* and *Task* records.
 - **Agents** attach to those records through simple fields, for example an agent identifier.
-- **Data Objects** live inside the records, most often in ``used`` and ``generated`` or in small structured blocks
-  like telemetry and scheduling.
+- **Data Objects** live in ``used`` and ``generated`` for inline provenance values, or in the ``objects`` collection
+  when Flowcept stores payload metadata through ``BlobObject``.
 - **Relations** are preserved with IDs and standard fields (for example, workflow IDs, parent or dependency links),
   so the graph remains connected and queryable.
 

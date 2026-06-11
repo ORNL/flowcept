@@ -281,6 +281,9 @@ class DocumentInserter(BaseConsumer):
         elif msg_type == "workflow":
             self._handle_workflow_message(msg_obj)
             return True
+        elif msg_type == "object":
+            self.logger.debug("Ignoring object metadata message in DocumentInserter; DBAPI persists objects directly.")
+            return True
         elif msg_type is None:
             # Trying to infer the type
             if "task_id" in msg_obj or "activity_id" in msg_obj:

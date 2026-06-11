@@ -543,7 +543,7 @@ class MongoDBDAO(DocumentDBDAO):
             "prev_version": doc.get("prev_version"),
             "task_id": doc.get("task_id"),
             "workflow_id": doc.get("workflow_id"),
-            "type": doc.get("type"),
+            "object_type": doc.get("object_type"),
             "custom_metadata": doc.get("custom_metadata"),
             "tags": doc.get("tags"),
             "object_size_bytes": doc.get("object_size_bytes"),
@@ -566,7 +566,7 @@ class MongoDBDAO(DocumentDBDAO):
             "source": "objects_snapshot",
             "task_id": latest_doc.get("task_id"),
             "workflow_id": latest_doc.get("workflow_id"),
-            "type": latest_doc.get("type"),
+            "object_type": latest_doc.get("object_type"),
             "custom_metadata": latest_doc.get("custom_metadata"),
             "tags": latest_doc.get("tags"),
             "object_size_bytes": latest_doc.get("object_size_bytes"),
@@ -748,7 +748,7 @@ class MongoDBDAO(DocumentDBDAO):
         object_id=None,
         task_id=None,
         workflow_id=None,
-        type=None,
+        object_type=None,
         custom_metadata=None,
         save_data_in_collection=False,
         pickle_=False,
@@ -776,8 +776,8 @@ class MongoDBDAO(DocumentDBDAO):
             obj_doc["task_id"] = task_id
         if workflow_id is not None:
             obj_doc["workflow_id"] = workflow_id
-        if type is not None:
-            obj_doc["type"] = type
+        if object_type is not None:
+            obj_doc["object_type"] = object_type
         if custom_metadata is not None:
             obj_doc["custom_metadata"] = custom_metadata
         if tags is not None:
@@ -856,7 +856,7 @@ class MongoDBDAO(DocumentDBDAO):
         object_id,
         custom_metadata=None,
         tags=None,
-        type=None,
+        object_type=None,
         task_id=None,
         workflow_id=None,
         control_version=True,
@@ -875,8 +875,8 @@ class MongoDBDAO(DocumentDBDAO):
             set_fields["custom_metadata"] = custom_metadata
         if tags is not None:
             set_fields["tags"] = list(tags)
-        if type is not None:
-            set_fields["type"] = type
+        if object_type is not None:
+            set_fields["object_type"] = object_type
         if task_id is not None:
             set_fields["task_id"] = task_id
         if workflow_id is not None:

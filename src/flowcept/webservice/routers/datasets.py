@@ -1,4 +1,4 @@
-"""Dataset object endpoints (type=dataset)."""
+"""Dataset object endpoints (object_type=dataset)."""
 
 import json
 from typing import Any, Dict
@@ -49,7 +49,7 @@ def list_datasets(
 ) -> ListResponse:
     """List dataset objects with optional filters."""
     query_filter = _json_filter(filter_json)
-    query_filter["type"] = "dataset"
+    query_filter["object_type"] = "dataset"
     if workflow_id is not None:
         query_filter["workflow_id"] = workflow_id
     if task_id is not None:
@@ -75,7 +75,7 @@ def get_dataset(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    if blob is None or getattr(blob, "type", None) != "dataset":
+    if blob is None or getattr(blob, "object_type", None) != "dataset":
         raise HTTPException(status_code=404, detail=f"Dataset not found: {object_id}")
 
     return normalize_docs([blob.to_dict()], include_data=include_data)[0]
@@ -104,7 +104,7 @@ def download_dataset(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    if blob is None or getattr(blob, "type", None) != "dataset":
+    if blob is None or getattr(blob, "object_type", None) != "dataset":
         raise HTTPException(status_code=404, detail=f"Dataset not found: {object_id}")
 
     doc = blob.to_dict()
@@ -121,7 +121,7 @@ def download_dataset(
 def query_datasets(payload: ObjectQueryRequest, db: DBAPI = Depends(get_db_api)):
     """Run an advanced read-only query for dataset objects."""
     query_filter = dict(payload.filter)
-    query_filter["type"] = "dataset"
+    query_filter["object_type"] = "dataset"
     docs = db.query(
         collection="objects",
         filter=query_filter,

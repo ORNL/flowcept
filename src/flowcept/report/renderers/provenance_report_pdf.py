@@ -1925,7 +1925,7 @@ def _build_pdf_document(
         story.append(Paragraph("Object Details by Type", styles["h3"]))
         grouped_objects: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
         for obj in objects:
-            grouped_objects[_to_str(obj.get("type"), "unknown")].append(obj)
+            grouped_objects[_to_str(obj.get("object_type"), "unknown")].append(obj)
 
         for obj_type in sorted(grouped_objects.keys()):
             story.append(Paragraph(f"• <b>{html.escape(_object_type_label(obj_type))}</b>:", styles["b1"]))
