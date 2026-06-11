@@ -7,6 +7,7 @@ from omegaconf import OmegaConf, DictConfig
 from flowcept.version import __version__
 from flowcept.commons.utils import get_utc_now, get_git_info
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.commons.sanitization import sanitize_json_like
 from flowcept.configs import (
     settings,
     SYS_NAME,
@@ -115,14 +116,15 @@ class WorkflowObject:
         result_dict = {}
         for attr, value in self.__dict__.items():
             if value is not None:
-                result_dict[attr] = value
+                result_dict[attr] = sanitize_json_like(value) if attr == "flowcept_settings" else value
         result_dict["type"] = "workflow"
         return result_dict
 
     def enrich(self, adapter_key=None):
         """Enrich it."""
         self.utc_timestamp = get_utc_now()
-        self.flowcept_settings = OmegaConf.to_container(settings) if isinstance(settings, DictConfig) else settings
+        active_settings = OmegaConf.to_container(settings) if isinstance(settings, DictConfig) else settings
+        self.flowcept_settings = sanitize_json_like(active_settings)
         self.conf = {"settings_path": SETTINGS_PATH}
         if adapter_key is not None:
             # TODO :base-interceptor-refactor: :code-reorg: :usability:
