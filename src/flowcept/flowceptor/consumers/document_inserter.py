@@ -120,11 +120,7 @@ class DocumentInserter(BaseConsumer):
                 message["workflow_id"] = wf_id
 
         if "campaign_id" not in message:
-            # Try the KV-DAO-backed lookup, but only if the KV store is actually
-            # enabled. With kv_db.enabled=false in settings.yaml,
-            # self._mq_dao._keyvalue_dao is None and calling .get_key() on it
-            # raises AttributeError for every campaign_id-less message
-            # (notably @flowcept_torch per-batch model captures).
+            # The current campaign lookup is optional because kv_db can be disabled.
             try:
                 kv_dao = getattr(self._mq_dao, "_keyvalue_dao", None)
                 if kv_dao is not None:

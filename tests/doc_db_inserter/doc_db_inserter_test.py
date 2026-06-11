@@ -1,9 +1,32 @@
 import unittest
+from types import SimpleNamespace
 from uuid import uuid4
 
 
 from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 from flowcept.configs import MONGO_ENABLED
+from flowcept.flowceptor.consumers.document_inserter import DocumentInserter
+
+
+class DummyLogger:
+    def debug(self, *_args, **_kwargs):
+        pass
+
+    def error(self, *_args, **_kwargs):
+        pass
+
+
+def test_task_message_without_campaign_id_does_not_require_kv_dao():
+    inserter = DocumentInserter.__new__(DocumentInserter)
+    inserter._mq_dao = SimpleNamespace(_keyvalue_dao=None)
+    inserter.buffer = []
+    inserter.logger = DummyLogger()
+
+    message = {"type": "task", "task_id": "task-1", "activity_id": "activity"}
+
+    inserter._handle_task_message(message)
+
+    assert inserter.buffer == [{"task_id": "task-1", "activity_id": "activity"}]
 
 
 @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")

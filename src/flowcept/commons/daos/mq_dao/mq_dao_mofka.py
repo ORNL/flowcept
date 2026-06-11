@@ -3,10 +3,9 @@ from typing import Callable
 
 import msgpack
 from time import time
-import json
 
 import mochi.mofka.client as mofka
-from mochi.mofka.client import ThreadPool, AdaptiveBatchSize
+from mochi.mofka.client import AdaptiveBatchSize, ThreadPool
 
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
 from flowcept.configs import MQ_SETTINGS, MQ_CHANNEL
@@ -15,7 +14,7 @@ from flowcept.configs import MQ_SETTINGS, MQ_CHANNEL
 class MQDaoMofka(MQDao):
     """Main class to communicate with Mofka."""
 
-    _driver = mofka.MofkaDriver(group_file=MQ_SETTINGS.get("group_file",None))
+    _driver = mofka.MofkaDriver(group_file=MQ_SETTINGS.get("group_file", None))
     _topic = _driver.open_topic(MQ_SETTINGS["channel"])
 
     def __init__(self, adapter_settings=None, with_producer=True):
@@ -26,13 +25,16 @@ class MQDaoMofka(MQDao):
             self.producer = MQDaoMofka._topic.producer(
                 "p" + MQ_CHANNEL,
                 batch_size=mofka.AdaptiveBatchSize,
+                thread_pool=mofka.ThreadPool(1),
                 ordering=mofka.Ordering.Strict,
             )
 
     def subscribe(self):
         """Subscribe to Mofka topic."""
         self.consumer = MQDaoMofka._topic.consumer(
-            name=MQ_CHANNEL + str(uuid.uuid4()), batch_size=AdaptiveBatchSize
+            name=MQ_CHANNEL + str(uuid.uuid4()),
+            thread_pool=ThreadPool(0),
+            batch_size=AdaptiveBatchSize,
         )
 
     def message_listener(self, message_handler: Callable):
@@ -40,7 +42,6 @@ class MQDaoMofka(MQDao):
         try:
             while True:
                 event = self.consumer.pull().wait()
-                # message = json.loads(event.metadata)
                 message = event.metadata
                 self.logger.debug(f"Received message: {message}")
                 if not message_handler(message):
