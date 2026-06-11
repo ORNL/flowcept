@@ -171,7 +171,6 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
         cluster = LocalCluster(n_workers=1)
         scheduler = cluster.scheduler
         client = Client(scheduler.address)
-        client.forward_logging()
         # Registering Flowcept's worker adapters
         if with_flowcept:
             from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskWorkerAdapter
@@ -191,6 +190,13 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
 
 
 def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _flowcept=None):
+    def stop_flowcept():
+        if not _flowcept:
+            return
+        print("Now closing flowcept consumer...")
+        _flowcept.stop()
+        print("Flowcept consumer closed.")
+
     try:
         if start_dask_cluster or scheduler_file:
             print("Closing dask...")
@@ -199,16 +205,13 @@ def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _
                 client.retire_workers(close_workers=True)
             except Exception as e:
                 print(f"Some exception when retiring workers: {e}")
+            stop_flowcept()
             client.shutdown()
             try:
                 client.close()
             except Exception as e:
                 print(f"Some exception when closing client: {e}")
             print("Dask closed.")
-            if _flowcept:
-                print("Now closing flowcept consumer...")
-                _flowcept.stop()
-                print("Flowcept consumer closed.")
         else:
             print("Closing dask...")
             try:
@@ -216,6 +219,7 @@ def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _
                     client.retire_workers(close_workers=True)
                 except Exception as e:
                     print(f"Some exception when retiring workers: {e}")
+                stop_flowcept()
                 client.close()
                 cluster.close()
                 print("Dask closed.")
@@ -226,10 +230,6 @@ def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _
                     logging.getLogger("distributed.worker").setLevel(logging.WARNING)
                 except:
                     pass
-            if _flowcept:
-                print("Now closing flowcept consumer...")
-                _flowcept.stop()
-                print("Flowcept consumer closed.")
     except Exception as e:
         print(e)
 
