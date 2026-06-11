@@ -4,11 +4,11 @@ Welcome to the FlowCept project! To make sure new contributions align well with 
 
 ## Code Linting and Formatting
 
-All Python code in the FlowCept package should adhere to the [PEP 8](https://peps.python.org/pep-0008/) style guide. All linting and formatting checks should be performed with [Ruff](https://github.com/astral-sh/ruff). Configuration for Ruff is defined in the [pyproject.toml](./pyproject.toml) file. The commands shown below will run the Ruff linter and formatter checks on the source directory:
+All Python code in the FlowCept package should adhere to the [PEP 8](https://peps.python.org/pep-0008/) style guide. Linting and formatting are handled through the project Makefile, which wraps [Ruff](https://github.com/astral-sh/ruff). Configuration for Ruff is defined in the [pyproject.toml](./pyproject.toml) file.
 
 ```text
-ruff check src
-ruff format --check src
+make reformat
+make checks
 ```
 
 ## Documentation
@@ -38,31 +38,39 @@ When a new issue is created a priority label should be added indicating how impo
 
 ## CI/CD Pipeline
 
-### Automated versioning
+### Automated versioning and releases
 
-FlowCept follows semantic versioning. There is a [GitHub Action](.github/workflows/create-release-n-publish.yml) that automatically bumps the patch number of the version at PRs to the main branch and uploads the package to PyPI.
+FlowCept follows semantic versioning. The [release workflow](.github/workflows/create-release-n-publish.yml) runs on pushes to `main`, creates a tagged release, and publishes the package to [PyPI](https://pypi.org/project/flowcept).
 
 ### Automated tests and code format check
 
-All human-triggered commits to any branch will launch the [automated tests GitHub Action](.github/workflows/run-tests.yml). PRs into `dev` or `main` will also trigger the [code linter and formatter checks](.github/workflows/run-checks.yml), using Ruff.
+Several GitHub Actions cover different runtime environments:
 
-### Automated releases
+* [checks.yml](.github/workflows/checks.yml) runs code and documentation checks.
+* [run-tests.yml](.github/workflows/run-tests.yml) runs the main test matrix, including Redis and Kafka paths.
+* [run-tests-simple.yml](.github/workflows/run-tests-simple.yml) runs tests without MongoDB.
+* [run-tests-offline.yml](.github/workflows/run-tests-offline.yml) runs the full-offline profile.
+* [run-tests-kafka.yml](.github/workflows/run-tests-kafka.yml) runs Mongo-backed tests with Kafka MQ.
+* [run-tests-all-dbs.yml](.github/workflows/run-tests-all-dbs.yml) runs Mongo and non-Mongo database paths.
+* [run-tests-in-container.yml](.github/workflows/run-tests-in-container.yml) runs tests inside the FlowCept container.
+* [run-tests-py313.yml](.github/workflows/run-tests-py313.yml) runs the Python 3.13-compatible subset.
+* [run-llm-tests.yml](.github/workflows/run-llm-tests.yml) runs the LLM/Dask example tests.
 
-All commits to the `main` branch will launch the [automated publish and release GitHub Action](.github/workflows/create-release-n-publish.yml). This will create a [tagged release](https://github.com/ORNL/flowcept/releases) and publish the package to [PyPI](https://pypi.org/project/flowcept).
+The main test workflows also run on the daily schedule configured in the workflow files.
 
 ## Checklist for Creating a new FlowCept adapter
 
-1. Create a new package directory under `flowcept/flowceptor/plugins`
+1. Create a new package directory under `flowcept/flowceptor/adapters`
 2. Create a new class that inherits from `BaseInterceptor`, and consider implementing the abstract methods:
     - Observe
     - Intercept
     - Callback
     - Prepare_task_msg
 
-See the existing plugins for a reference.
+See the existing adapters for a reference.
 
 3. [Optional] You may need extra classes, such as local state manager (we provide a generic [`Interceptor State Manager`](flowcept/flowceptor/adapters/interceptor_state_manager.py)), `@dataclasses`, Data Access Objects (`DAOs`), and event handlers.
-4. Create a new entry in the [settings.yaml](resources/settings.yaml) file and in the [Settings factory](flowcept/commons/settings_factory.py)
+4. Create a new entry in the [sample_settings.yaml](resources/sample_settings.yaml) file and in the [Settings factory](flowcept/commons/settings_factory.py)
 5. Create a new entry in the [pyproject.toml](./pyproject.toml) file under the `[project.optional-dependencies]` section and adjust the rest of the file accordingly.
 6. [Optional] Add a new constant to [vocabulary.py](flowcept/commons/vocabulary.py).
 7. [Optional] Adjust flowcept.__init__.py.

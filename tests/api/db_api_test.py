@@ -66,6 +66,33 @@ class DBAPITest(unittest.TestCase):
         if MONGO_ENABLED:
             assert len(wf_obj.machine_info) == 2
 
+    def test_workflow_enrich_redacts_sensitive_settings(self):
+        wf = WorkflowObject()
+        test_settings = {
+            "mq": {"password": "redis-pass", "host": "localhost"},
+            "kv_db": {"passwd": "kv-pass"},
+            "agent": {"api_key": "agent-key"},
+        }
+
+        with patch("flowcept.commons.flowcept_dataclasses.workflow_object.settings", test_settings):
+            wf.enrich()
+
+        assert wf.flowcept_settings["mq"].get("password") == "REDACTED"
+        assert wf.flowcept_settings["mq"].get("host") == "localhost"
+        assert wf.flowcept_settings["kv_db"].get("passwd") == "REDACTED"
+        assert wf.flowcept_settings["agent"].get("api_key") == "REDACTED"
+
+    def test_workflow_to_dict_redacts_sensitive_settings(self):
+        wf = WorkflowObject()
+        wf.flowcept_settings = {"mq": {"password": "redis-pass"}, "agent": {"api_key": "agent-key"}}
+
+        wf_dict = wf.to_dict()
+
+        assert wf_dict["flowcept_settings"]["mq"]["password"] == "REDACTED"
+        assert wf_dict["flowcept_settings"]["agent"]["api_key"] == "REDACTED"
+        assert "redis-pass" not in str(wf_dict)
+        assert "agent-key" not in str(wf_dict)
+
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_save_blob(self):
         import pickle
