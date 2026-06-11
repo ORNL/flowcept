@@ -1,7 +1,9 @@
 .idea
 **/*mlruns*
 **/*.env*
-**/*build*
+build/
+docs/_build/
+ui/tsconfig.tsbuildinfo
 **/*egg*
 **/*pycache*
 #**/*dist*
@@ -35,4 +37,11 @@ core.*
 uv.lock
 examples/flowcept_messages.jsonl
 agents.md
+claude.md
 tests/instrumentation_tests/ml_tests/PROVENANCE*.md
+
+# Web UI (Node toolchain + built assets)
+ui/node_modules/
+ui/dist/
+ui/.vite/
+src/flowcept/webservice/ui_build/

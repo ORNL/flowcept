@@ -90,6 +90,14 @@ class FlowceptAgent:
 
     def _run_server(self):
         """Run the MCP server (blocking call)."""
+        try:
+            # sse-starlette keeps a module-level exit Event bound to the first event loop that
+            # served SSE; reset it so this server's fresh loop can serve SSE in the same process.
+            from sse_starlette.sse import AppStatus
+
+            AppStatus.should_exit_event = None
+        except ImportError:
+            pass
         config = uvicorn.Config(mcp_flowcept.streamable_http_app, host=AGENT_HOST, port=AGENT_PORT, lifespan="on")
         self._server = uvicorn.Server(config)
         self._server.run()
@@ -109,17 +117,24 @@ class FlowceptAgent:
             else:
                 self._load_buffer_once()
 
-        self._server_thread = Thread(target=self._run_server, daemon=False)
+        # Daemon thread so the hosting process can always exit (e.g., test runners);
+        # long-running deployments block explicitly via wait().
+        self._server_thread = Thread(target=self._run_server, daemon=True)
         self._server_thread.start()
         self.logger.info(f"Flowcept agent server started on {AGENT_HOST}:{AGENT_PORT}")
         return self
 
     def stop(self):
         """Stop the agent server and wait briefly for shutdown."""
+        if self._server is None and self._server_thread is not None:
+            # The server object is created inside the thread; give it a moment to appear.
+            self._server_thread.join(timeout=1)
         if self._server is not None:
             self._server.should_exit = True
         if self._server_thread is not None:
             self._server_thread.join(timeout=5)
+            if self._server_thread.is_alive():
+                self.logger.warning("Agent server thread did not stop within 5s; continuing shutdown.")
 
     def wait(self):
         """Block until the server thread exits."""

@@ -84,6 +84,7 @@ class MongoDBDAO(DocumentDBDAO):
         self._wfs_collection = self._db["workflows"]
         self._obj_collection = self._db["objects"]
         self._obj_history_collection = self._db["object_history"]
+        self._dashboards_collection = self._db["dashboards"]
 
         if create_indices:
             self._create_indices()
@@ -130,6 +131,11 @@ class MongoDBDAO(DocumentDBDAO):
             self._obj_history_collection.create_index("object_id")
         if ["created_at"] not in existing_history_indices:
             self._obj_history_collection.create_index("created_at")
+
+        # Creating dashboards collection indices:
+        existing_indices = [list(x["key"].keys())[0] for x in self._dashboards_collection.list_indexes()]
+        if "dashboard_id" not in existing_indices:
+            self._dashboards_collection.create_index("dashboard_id", unique=True)
 
     def _pipeline(
         self,
@@ -985,6 +991,117 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return None
 
+    def raw_pipeline(self, pipeline: List[Dict], collection: str = "tasks"):
+        """
+        Run a raw MongoDB aggregation pipeline on a chosen collection.
+
+        Generalization of :meth:`raw_task_pipeline` for the other collections
+        (``workflows``, ``objects``, ``object_history``).
+
+        Parameters
+        ----------
+        pipeline : list of dict
+            A MongoDB aggregation pipeline represented as a list of stage documents.
+        collection : str, optional
+            Target collection name. Defaults to ``"tasks"``.
+
+        Returns
+        -------
+        list of dict or None
+            The aggregation results, or ``None`` if an error occurred.
+        """
+        collections = {
+            "tasks": self._tasks_collection,
+            "workflows": self._wfs_collection,
+            "objects": self._obj_collection,
+            "object_history": self._obj_history_collection,
+        }
+        if collection not in collections:
+            raise ValueError(f"Unknown collection: {collection}. Expected one of {sorted(collections)}.")
+        try:
+            return list(collections[collection].aggregate(pipeline))
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def save_dashboard(self, dashboard: Dict) -> bool:
+        """Insert or replace a dashboard document keyed by ``dashboard_id``.
+
+        Parameters
+        ----------
+        dashboard : dict
+            Dashboard spec document containing a ``dashboard_id`` field.
+
+        Returns
+        -------
+        bool
+            True on success, False otherwise.
+        """
+        try:
+            self._dashboards_collection.replace_one({"dashboard_id": dashboard["dashboard_id"]}, dashboard, upsert=True)
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
+    def get_dashboard(self, dashboard_id: str) -> Dict:
+        """Get a dashboard document by id.
+
+        Parameters
+        ----------
+        dashboard_id : str
+            Dashboard identifier.
+
+        Returns
+        -------
+        dict or None
+            The dashboard document, or None when not found.
+        """
+        try:
+            return self._dashboards_collection.find_one({"dashboard_id": dashboard_id}, projection={"_id": 0})
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def list_dashboards(self, filter: Dict = None) -> List[Dict]:
+        """List dashboard documents.
+
+        Parameters
+        ----------
+        filter : dict, optional
+            Mongo-style filter. Defaults to all dashboards.
+
+        Returns
+        -------
+        list of dict
+            Matching dashboard documents.
+        """
+        try:
+            return list(self._dashboards_collection.find(filter or {}, projection={"_id": 0}))
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def delete_dashboard(self, dashboard_id: str) -> bool:
+        """Delete a dashboard document by id.
+
+        Parameters
+        ----------
+        dashboard_id : str
+            Dashboard identifier.
+
+        Returns
+        -------
+        bool
+            True when a document was deleted, False otherwise.
+        """
+        try:
+            result = self._dashboards_collection.delete_one({"dashboard_id": dashboard_id})
+            return result.deleted_count > 0
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
     def task_query(
         self,
         filter: Dict = None,
@@ -1044,7 +1161,12 @@ class MongoDBDAO(DocumentDBDAO):
                     _projection[proj_field] = 1
 
             if remove_json_unserializables:
-                _projection.update({"_id": 0, "timestamp": 0})
+                # Mongo only allows excluding `_id` inside an inclusion projection; excluding
+                # other fields (e.g., `timestamp`) is valid only in exclusion-only projections.
+                _projection.pop("timestamp", None)
+                _projection["_id"] = 0
+                if projection is None:
+                    _projection["timestamp"] = 0
             try:
                 rs = self._tasks_collection.find(
                     filter=filter,

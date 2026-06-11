@@ -33,6 +33,62 @@ def _resolve_input_mode(
     return "db"
 
 
+def build_provenance_card(
+    input_jsonl_path: str | None = None,
+    records: List[Dict[str, Any]] | None = None,
+    workflow_id: str | None = None,
+    campaign_id: str | None = None,
+) -> Dict[str, Any]:
+    """Build the structured provenance-card content without rendering it.
+
+    Accepts exactly one input mode (JSONL path, pre-loaded records, or DB query
+    by workflow/campaign id) and returns the aggregated structures consumed by
+    renderers and APIs.
+
+    Parameters
+    ----------
+    input_jsonl_path : str, optional
+        Path to a Flowcept JSONL buffer file.
+    records : list of dict, optional
+        Pre-loaded Flowcept records (workflow/task/object dicts).
+    workflow_id : str, optional
+        Workflow identifier for DB query mode.
+    campaign_id : str, optional
+        Campaign identifier for DB query mode.
+
+    Returns
+    -------
+    dict
+        ``{"dataset", "transformations", "object_summary", "input_mode", "skipped_lines"}``.
+    """
+    mode = _resolve_input_mode(
+        input_jsonl_path=input_jsonl_path,
+        records=records,
+        workflow_id=workflow_id,
+        campaign_id=campaign_id,
+    )
+
+    skipped_lines = 0
+    if mode == "jsonl":
+        jsonl_path = Path(input_jsonl_path)  # type: ignore[arg-type]
+        if not jsonl_path.exists():
+            raise FileNotFoundError(f"Input JSONL not found: {jsonl_path}")
+        parsed_records, skipped_lines = read_jsonl(jsonl_path)
+        dataset = split_records(parsed_records)
+    elif mode == "records":
+        dataset = split_records(records or [])
+    else:
+        dataset = load_records_from_db(workflow_id=workflow_id, campaign_id=campaign_id)
+
+    return {
+        "dataset": dataset,
+        "transformations": group_transformations(dataset.get("tasks", [])),
+        "object_summary": summarize_objects(dataset.get("objects", [])),
+        "input_mode": mode,
+        "skipped_lines": skipped_lines,
+    }
+
+
 def generate_report(
     report_type: str = "provenance_card",
     format: str = "markdown",
@@ -66,13 +122,6 @@ def generate_report(
     dict
         Report generation statistics and output path.
     """
-    mode = _resolve_input_mode(
-        input_jsonl_path=input_jsonl_path,
-        records=records,
-        workflow_id=workflow_id,
-        campaign_id=campaign_id,
-    )
-
     if report_type != "provenance_card":
         raise ValueError(f"Unsupported report_type: {report_type}")
     if format != "markdown":
@@ -82,31 +131,23 @@ def generate_report(
         output_path = "PROVENANCE_CARD.md"
     output = Path(output_path)
 
-    skipped_lines = 0
-    if mode == "jsonl":
-        jsonl_path = Path(input_jsonl_path)  # type: ignore[arg-type]
-        if not jsonl_path.exists():
-            raise FileNotFoundError(f"Input JSONL not found: {jsonl_path}")
-        parsed_records, skipped_lines = read_jsonl(jsonl_path)
-        dataset = split_records(parsed_records)
-    elif mode == "records":
-        dataset = split_records(records or [])
-    else:
-        dataset = load_records_from_db(workflow_id=workflow_id, campaign_id=campaign_id)
-
-    transformations = group_transformations(dataset.get("tasks", []))
-    object_summary = summarize_objects(dataset.get("objects", []))
+    card = build_provenance_card(
+        input_jsonl_path=input_jsonl_path,
+        records=records,
+        workflow_id=workflow_id,
+        campaign_id=campaign_id,
+    )
     render_stats = render_provenance_card_markdown(
-        dataset=dataset,
-        transformations=transformations,
-        object_summary=object_summary,
+        dataset=card["dataset"],
+        transformations=card["transformations"],
+        object_summary=card["object_summary"],
         output_path=output,
     )
     return {
         "report_type": report_type,
         "format": format,
         "output": str(output),
-        "input_mode": mode,
-        "skipped_lines": skipped_lines,
+        "input_mode": card["input_mode"],
+        "skipped_lines": card["skipped_lines"],
         **render_stats,
     }

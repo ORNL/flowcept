@@ -328,6 +328,27 @@ def start_agent():  # TODO: start with gui
     main()
 
 
+def start_webservice(host: str = None, port: str = None):
+    """Start the Flowcept webservice (REST API + web UI).
+
+    Parameters
+    ----------
+    host : str, optional
+        Host to bind. Defaults to the web_server.host setting.
+    port : str, optional
+        Port to bind. Defaults to the web_server.port setting.
+    """
+    import uvicorn
+
+    from flowcept.configs import WEBSERVER_HOST, WEBSERVER_PORT
+
+    uvicorn.run(
+        "flowcept.webservice.main:app",
+        host=host or WEBSERVER_HOST,
+        port=int(port) if port else WEBSERVER_PORT,
+    )
+
+
 def start_agent_gui(port: int = None):
     """Start Flowcept agent GUI service.
 
@@ -612,6 +633,7 @@ def start_redis() -> None:
 
 COMMAND_GROUPS = [
     ("Basic Commands", [version, check_services, show_settings, init_settings, start_services, stop_services]),
+    ("Web Service Commands", [start_webservice]),
     ("Consumption Commands", [start_consumption_services, stop_consumption_services, stream_messages]),
     ("Database Commands", [workflow_count, query, get_task]),
     ("Agent Commands", [start_agent, agent_client, start_agent_gui]),
@@ -684,6 +706,7 @@ def main():  # noqa: D103
         description="Flowcept CLI", formatter_class=argparse.RawTextHelpFormatter, add_help=False
     )
 
+    added_args = set()
     for func in COMMANDS:
         doc = func.__doc__ or ""
         func_name = func.__name__
@@ -693,6 +716,10 @@ def main():  # noqa: D103
 
         for pname, param in inspect.signature(func).parameters.items():
             arg_name = f"--{pname.replace('_', '-')}"
+            if arg_name in added_args:
+                # Parameter flags are global; commands may share names (e.g., --port).
+                continue
+            added_args.add(arg_name)
             params_doc = _parse_numpy_doc(doc).get(pname, {})
 
             help_text = f"{params_doc.get('type', '')} - {params_doc.get('desc', '').strip()}"

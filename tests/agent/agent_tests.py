@@ -51,6 +51,53 @@ class TestAgent(unittest.TestCase):
         finally:
             agent.stop()
 
+    def test_mcp_db_backed_provenance_tools(self):
+        """The shared prov tools are exposed as MCP tools and query the real DB."""
+        from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
+        from flowcept.configs import MONGO_ENABLED
+
+        if not MONGO_ENABLED:
+            FlowceptLogger().warning("Skipping MCP DB tools test because MongoDB is disabled.")
+            self.skipTest("MongoDB is disabled.")
+        if not Flowcept.services_alive():
+            FlowceptLogger().warning("Skipping MCP DB tools test because services are not alive.")
+            self.skipTest("Flowcept services are not alive.")
+
+        from uuid import uuid4
+
+        from flowcept.agents import flowcept_agent as agent_module
+        from flowcept.agents.agent_client import run_tool
+        from flowcept.instrumentation.task_capture import FlowceptTask
+
+        campaign_id = f"mcp-campaign-{uuid4()}"
+        with Flowcept(campaign_id=campaign_id, workflow_name=f"mcp-tools-wf-{uuid4()}"):
+            workflow_id = Flowcept.current_workflow_id
+            with FlowceptTask(activity_id="mcp_seed", used={"x": 1}) as task:
+                task.end(generated={"y": 2})
+
+        deadline = 20
+        while deadline > 0 and not (Flowcept.db.task_query(filter={"workflow_id": workflow_id}) or []):
+            sleep(0.5)
+            deadline -= 1
+
+        agent = agent_module.FlowceptAgent()
+        agent.start()
+        try:
+            resp = run_tool("query_provenance_tasks", kwargs={"filter": {"workflow_id": workflow_id}})[0]
+            tool_result = ToolResult(**json.loads(resp))
+            self.assertIn(tool_result.code, {201, 301})
+            items = tool_result.result["items"]
+            self.assertTrue(any(t["activity_id"] == "mcp_seed" for t in items))
+
+            resp = run_tool("list_provenance_campaigns", kwargs={})[0]
+            tool_result = ToolResult(**json.loads(resp))
+            self.assertIn(tool_result.code, {201, 301})
+            self.assertTrue(any(c["campaign_id"] == campaign_id for c in tool_result.result["items"]))
+        finally:
+            agent.stop()
+            if DocumentDBDAO._instance is not None:
+                DocumentDBDAO._instance.close()
+
     def test_llm_query_over_buffer(self):
         if not AGENT.get("api_key"):
             FlowceptLogger().warning("Skipping LLM agent query test because agent.api_key is not set.")

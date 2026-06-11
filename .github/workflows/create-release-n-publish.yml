@@ -73,6 +73,16 @@ jobs:
                 -H "Authorization: Bearer ${ACCESS_TOKEN}" \
                 https://api.github.com/repos/${REPOSITORY}/releases
 
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build the web UI
+        run: |
+          make ui-install
+          make ui-build
+
       - name: Install pypa/build
         run: >-
           python -m

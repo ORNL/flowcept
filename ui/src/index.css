@@ -1,0 +1,62 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-bg: #0b0e14;
+  --color-surface: #11151f;
+  --color-surface-2: #181d2a;
+  --color-border: #232a3b;
+  --color-fg: #d6dbe7;
+  --color-fg-muted: #8b93a7;
+  --color-accent: #4f8cff;
+  --color-accent-soft: #1a2c4e;
+  --color-ok: #34d399;
+  --color-warn: #fbbf24;
+  --color-err: #f87171;
+  --color-running: #60a5fa;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg text-fg antialiased;
+  font-family:
+    "Inter",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 13px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.card {
+  @apply bg-surface border border-border rounded-lg;
+}
+
+.prose-flowcept {
+  @apply prose prose-invert prose-sm max-w-none;
+}
+.prose-flowcept table {
+  @apply block overflow-x-auto whitespace-nowrap;
+}
+.prose-flowcept pre {
+  @apply bg-surface-2 border border-border;
+}

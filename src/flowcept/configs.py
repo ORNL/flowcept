@@ -255,8 +255,15 @@ EXTRA_METADATA.update({"mq_port": MQ_PORT})
 ######################
 settings.setdefault("web_server", {})
 _webserver_settings = settings.get("web_server", {})
-WEBSERVER_HOST = _webserver_settings.get("host", "0.0.0.0")
-WEBSERVER_PORT = int(_webserver_settings.get("port", 5000))
+WEBSERVER_HOST = _get_env("WEBSERVER_HOST", _webserver_settings.get("host", "0.0.0.0"))
+WEBSERVER_PORT = int(_get_env("WEBSERVER_PORT", _webserver_settings.get("port", 5000)))
+WEBSERVER_UI_ENABLED = _webserver_settings.get("ui_enabled", True)
+WEBSERVER_CORS_ORIGINS = _webserver_settings.get("cors_origins", [])
+WEBSERVER_SSE_POLL_INTERVAL = float(_webserver_settings.get("sse_poll_interval_sec", 2.0))
+WEBSERVER_SSE_MAX_BATCH = int(_webserver_settings.get("sse_max_batch", 500))
+WEBSERVER_DASHBOARDS_DIR = os.path.expanduser(
+    _webserver_settings.get("dashboards_dir", f"~/.{PROJECT_NAME}/dashboards")
+)
 
 ######################
 #    ANALYTICS      #
@@ -272,6 +279,9 @@ INSTRUMENTATION = settings.get("instrumentation", {})
 INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", True)
 
 AGENT = settings.get("agent", {})
+AGENT_CHAT_ENABLED = AGENT.get("chat_enabled", True)
+AGENT_CHAT_MAX_TOOL_ITERATIONS = int(AGENT.get("chat_max_tool_iterations", 5))
+AGENT_CHAT_MAX_QUERY_LIMIT = int(AGENT.get("chat_max_query_limit", 1000))
 AGENT_AUDIO = _get_env_bool("AGENT_AUDIO", settings["agent"].get("audio_enabled", "false"))
 AGENT_HOST = _get_env("AGENT_HOST", settings["agent"].get("mcp_host", "localhost"))
 AGENT_PORT = int(_get_env("AGENT_PORT", settings["agent"].get("mcp_port", "8000")))

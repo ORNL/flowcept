@@ -22,11 +22,32 @@ help:
 	@printf "\033[32mdocs\033[0m                      build HTML documentation using Sphinx\n"
 	@printf "\033[32mchecks\033[0m                    run ruff linter and formatter checks\n"
 	@printf "\033[32mreformat\033[0m                  run ruff linter and formatter\n"
+	@printf "\033[32mui-install\033[0m                install web UI dependencies (npm ci)\n"
+	@printf "\033[32mui-dev\033[0m                    run the web UI dev server (proxies /api to :5000)\n"
+	@printf "\033[32mui-build\033[0m                  build the web UI into src/flowcept/webservice/ui_build\n"
+	@printf "\033[32mui-checks\033[0m                 typecheck the web UI\n"
+	@printf "\033[32mwebservice\033[0m                start the Flowcept webservice (REST API + web UI)\n"
 
 # Run linter and formatter checks using ruff
 checks:
 	ruff check src
 	ruff format --check src
+
+.PHONY: ui-install ui-dev ui-build ui-checks webservice
+ui-install:
+	npm ci --prefix ui --no-audit --no-fund
+
+ui-dev:
+	npm run dev --prefix ui
+
+ui-build:
+	npm run build --prefix ui
+
+ui-checks:
+	npm run lint --prefix ui
+
+webservice:
+	flowcept --start-webservice
 
 reformat:
 	ruff check src --fix --unsafe-fixes

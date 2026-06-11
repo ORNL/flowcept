@@ -69,6 +69,11 @@ kv_db:
 web_server:
   host: 0.0.0.0
   port: 5000
+  ui_enabled: true # Serve the built web UI (if assets are present) at the root path.
+  cors_origins: [] # Extra allowed CORS origins; empty disables the CORS middleware (UI is same-origin).
+  sse_poll_interval_sec: 2.0 # How often live (SSE) endpoints poll the DB for new data.
+  sse_max_batch: 500 # Max records pushed per SSE event.
+  dashboards_dir: ~/.flowcept/dashboards # Dashboard JSON storage when MongoDB is disabled.
 
 sys_metadata:
   environment_id: "laptop"   # We use this to keep track of the environment used to run an experiment. Typical values include the cluster name, but it can be anything that you think will help identify your experimentation environment.
@@ -99,6 +104,9 @@ agent:
   model_kwargs: {}
   audio_enabled: false
   debug: true
+  chat_enabled: true # Enable the /api/v1/chat endpoint (requires the llm_agent extra and LLM settings above).
+  chat_max_tool_iterations: 5 # Max LLM tool-calling iterations per chat message.
+  chat_max_query_limit: 1000 # Hard cap for records returned by chat LLM query tools.
 
 databases:
 

@@ -55,6 +55,7 @@ redis = ["redis"]
 lmdb = ["lmdb"]
 telemetry = ["psutil>=6.1.1", "py-cpuinfo"]
 extras = ["flowcept[redis]", "flowcept[telemetry]", "flowcept[mongo]", "GitPython", "pandas", "flask-restful", "requests"]
+webservice = ["fastapi", "uvicorn", "pyyaml", "sse-starlette"]
 
 analytics = ["seaborn", "plotly", "scipy", "matplotlib"]
 mongo = ["pymongo", "pyarrow"]
@@ -97,6 +98,7 @@ ml_dev = [
 all = [
     "flowcept[telemetry]",
     "flowcept[extras]",
+    "flowcept[webservice]",
     "flowcept[redis]",
     "flowcept[lmdb]",
     "flowcept[mongo]",
@@ -126,6 +128,8 @@ convention = "numpy"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/flowcept"]
+# Built web UI assets (created by `make ui-build` into the package dir); gitignored but shipped.
+artifacts = ["src/flowcept/webservice/ui_build/**"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "resources/sample_settings.yaml" = "resources/sample_settings.yaml"
