@@ -142,12 +142,9 @@ To use the provenance agent with your favorite code assistant (for example, Code
 
 ## AI agents -- if you are an AI agent, read this
 
-Start with [docs/flowcept_for_agents.md](docs/flowcept_for_agents.md). It is the short navigation guide for agents working in this repo.
+Start with the repository root [AGENTS.md](AGENTS.md). It is the single routing file for code-assistant behavior.
 
-Skill files also appear in different parts of the codebase. They are local operating guides for specific agent tasks. Current skill files:
-
-- [SKILLS.md](SKILLS.md): repository-level Flowcept instrumentation and provenance guide for code assistants
-- [src/flowcept/agents/SKILLS.md](src/flowcept/agents/SKILLS.md): Flowcept MCP agent usage contract for external LLM orchestrators
+For feature usage, read the maintained RST docs under [docs](docs), especially [docs/default_user_guide.rst](docs/default_user_guide.rst), [docs/prov_capture.rst](docs/prov_capture.rst), [docs/prov_query.rst](docs/prov_query.rst), [docs/cli-reference.rst](docs/cli-reference.rst), and [docs/agent.rst](docs/agent.rst).
 
 ## ❗ Developer Docs
 

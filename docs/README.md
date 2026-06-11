@@ -267,7 +267,7 @@ Agentic provenance / MCP:
 
 - docs: https://flowcept.readthedocs.io/en/latest/agent.html
 - agent readme: `src/flowcept/agents/README.md`
-- skills contract: `src/flowcept/agents/SKILLS.md`
+- code-assistant routing: `AGENTS.md`
 - agent tests: `tests/agent/agent_tests.py`
 - PROV-AGENT paper: https://arxiv.org/abs/2508.02866
 
@@ -441,11 +441,7 @@ agent:
   mcp_port: 8000
 ```
 
-3. In your assistant session, load:
-
-- `src/flowcept/agents/SKILLS.md`
-
-Recommended flow: clone this repo and ask your assistant to read that file.
+3. In your assistant session, read `AGENTS.md`, then follow `docs/agent.rst` and `src/flowcept/agents/README.md`.
 
 #### Internal-LLM mode
 
@@ -579,7 +575,7 @@ Read more:
   - Fix:
     - start server: `flowcept --start-agent`
     - confirm `agent.mcp_host`/`agent.mcp_port` in settings
-    - in external assistant mode, load `src/flowcept/agents/SKILLS.md`
+    - in external assistant mode, follow `AGENTS.md` and `docs/agent.rst`
 - Symptom: PDF report generation fails
   - Fix: install report deps: `pip install flowcept[report_pdf]`
 
