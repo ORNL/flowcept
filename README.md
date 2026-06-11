@@ -216,7 +216,6 @@ pip install flowcept[lmdb]          # LMDB lightweight database
 pip install flowcept[mqtt]          # MQTT support
 pip install flowcept[llm_agent]     # MCP agent, LangChain, Streamlit integration: needed either for MCP capture or for the Flowcept Agent.
 pip install flowcept[llm_google]    # Google GenAI + Flowcept agent support
-pip install flowcept[analytics]     # Extra analytics (seaborn, plotly, scipy)
 pip install flowcept[dev]           # Developer dependencies (docs, tests, lint, etc.)
 ```
 

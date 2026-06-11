@@ -18,7 +18,6 @@ This directory contains the runtime package. Use this README as a code-orientati
 - `agents/`: MCP agent server/client/tools/prompts.
 - `report/`: workflow card and PDF report generation.
 - `webservice/`: FastAPI read-only REST API.
-- `analytics/`: plotting and analysis helpers.
 
 ## Code Rules
 

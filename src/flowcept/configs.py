@@ -21,7 +21,6 @@ DEFAULT_SETTINGS = {
     "web_server": {},
     "sys_metadata": {},
     "extra_metadata": {},
-    "analytics": {},
     "db_buffer": {},
     "databases": {"mongodb": {"enabled": False}, "lmdb": {"enabled": False}},
     "adapters": {},
@@ -254,12 +253,6 @@ settings.setdefault("web_server", {})
 _webserver_settings = settings.get("web_server", {})
 WEBSERVER_HOST = _webserver_settings.get("host", "0.0.0.0")
 WEBSERVER_PORT = int(_webserver_settings.get("port", 5000))
-
-######################
-#    ANALYTICS      #
-######################
-
-ANALYTICS = settings.get("analytics", None)
 
 ####################
 # INSTRUMENTATION  #

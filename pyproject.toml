@@ -57,7 +57,6 @@ telemetry = ["psutil>=6.1.1", "py-cpuinfo"]
 extras = ["flowcept[redis]", "flowcept[telemetry]", "flowcept[mongo]", "GitPython", "pandas", "pyarrow", "requests", "rich"]
 webservice = ["fastapi", "uvicorn", "pyyaml"]
 
-analytics = ["seaborn", "plotly", "scipy", "matplotlib"]
 report_pdf = ["matplotlib", "reportlab", "networkx"]
 mongo = ["pymongo", "pyarrow"]
 dask = ["tomli", "dask[distributed]<=2024.10.0"]
@@ -102,7 +101,6 @@ all = [
     "flowcept[redis]",
     "flowcept[lmdb]",
     "flowcept[mongo]",
-    "flowcept[analytics]",
     "flowcept[dask]",
     "flowcept[kafka]",
     "flowcept[mlflow]",
