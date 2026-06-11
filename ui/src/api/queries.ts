@@ -115,7 +115,7 @@ export function useWorkflowsWithTasks() {
         data: {
           source: "tasks",
           group_by: "workflow_id",
-          filter: { started_at: { $gt: 0 } },
+          filter: { started_at: { $exists: true, $ne: null } },
           metrics: [{ field: "task_id", agg: "count" }],
           limit: 5000,
         },

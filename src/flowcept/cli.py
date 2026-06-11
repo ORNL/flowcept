@@ -889,19 +889,39 @@ def stop_redis() -> None:
         print(f"Failed to stop Redis: {e}")
 
 
+def _kill_port(port: int) -> None:
+    """Kill any process listening on *port* (best-effort, silent on failure)."""
+    try:
+        result = subprocess.run(
+            ["lsof", "-ti", f"tcp:{port}"],
+            capture_output=True,
+            text=True,
+        )
+        for pid in result.stdout.split():
+            subprocess.run(["kill", pid.strip()], capture_output=True)
+        if result.stdout.strip():
+            import time
+            time.sleep(1)
+    except Exception:
+        pass
+
+
 def start_webservice(webservice_host: str = "127.0.0.1", webservice_port: str = "8008"):
     """
     Start the Flowcept FastAPI webservice locally.
+
+    Kills any process already bound to the port before starting.
 
     Parameters
     ----------
     webservice_host : str, optional
         Host interface to bind (default: 127.0.0.1).
-    webservice_port : int, optional
+    webservice_port : str, optional
         Port to bind (default: 8008).
     """
     host = webservice_host
     port = webservice_port
+    _kill_port(int(port))
     print(f"Starting Flowcept webservice on http://{host}:{port}")
     print(f"Web UI:       http://{host}:{port}/")
     print(f"Swagger UI:   http://{host}:{port}/docs")
@@ -941,11 +961,11 @@ def start_ui(
         Path to the UI directory containing package.json (default: ui).
     """
     import sys
-
-    subprocess.run(["pkill", "-f", "flowcept.*start-webservice"], capture_output=True)
-    subprocess.run(["pkill", "-f", "vite"], capture_output=True)
     import time
 
+    _kill_port(int(webservice_port))
+    subprocess.run(["pkill", "-f", "flowcept.*start-webservice"], capture_output=True)
+    subprocess.run(["pkill", "-f", "vite"], capture_output=True)
     time.sleep(1)
 
     ws_proc = subprocess.Popen(

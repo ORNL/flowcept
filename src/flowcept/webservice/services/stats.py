@@ -14,6 +14,23 @@ from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.schemas.dashboards import ChartData, MetricSpec
 
 
+def _to_epoch(value) -> Optional[float]:
+    """Normalize a timestamp value (float epoch-sec, epoch-ms, or ISO string) to epoch seconds."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        # Epoch milliseconds have 13 digits; epoch seconds have 10.
+        return value / 1000.0 if value > 1e12 else float(value)
+    if isinstance(value, str):
+        from datetime import datetime, timezone
+        try:
+            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return dt.replace(tzinfo=timezone.utc).timestamp() if dt.tzinfo is None else dt.timestamp()
+        except ValueError:
+            return None
+    return None
+
+
 def _mongo_dao_or_none() -> Optional[DocumentDBDAO]:
     """Return the DAO singleton when it supports raw aggregation pipelines, else None."""
     dao = DocumentDBDAO.get_instance(create_indices=False)
@@ -177,9 +194,11 @@ def _merge_summary_rows(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
             activity["_weighted_count"] += count
 
         if row.get("min_started_at") is not None:
-            min_started = row["min_started_at"] if min_started is None else min(min_started, row["min_started_at"])
+            val = _to_epoch(row["min_started_at"])
+            min_started = val if min_started is None else min(min_started, val)
         if row.get("max_ended_at") is not None:
-            max_ended = row["max_ended_at"] if max_ended is None else max(max_ended, row["max_ended_at"])
+            val = _to_epoch(row["max_ended_at"])
+            max_ended = val if max_ended is None else max(max_ended, val)
 
     activity_stats = []
     for activity in activities.values():
@@ -515,16 +534,25 @@ def _resolve_grouped(db: DBAPI, data: "ChartData", query_filter: Dict[str, Any])
     if dao is not None and data.source in ("tasks", "workflows", "objects"):
         group_id = f"${data.group_by}" if data.group_by else None
         group_stage: Dict[str, Any] = {"_id": group_id}
+        # MongoDB forbids dots in $group output field names; use underscores internally
+        # and remap back to the canonical key before returning.
+        mongo_key_map: Dict[str, str] = {}
         for metric in metrics:
+            canonical = _metric_key(metric)
+            mongo_key = canonical.replace(".", "_")
+            mongo_key_map[mongo_key] = canonical
             if metric.agg == "count":
-                group_stage[_metric_key(metric)] = {"$sum": 1}
+                group_stage[mongo_key] = {"$sum": 1}
             else:
-                group_stage[_metric_key(metric)] = {f"${metric.agg}": f"${metric.field}"}
+                group_stage[mongo_key] = {f"${metric.agg}": f"${metric.field}"}
         pipeline = ([{"$match": query_filter}] if query_filter else []) + [{"$group": group_stage}]
         rows = dao.raw_pipeline(pipeline, collection=data.source) or []
         out = []
         for row in rows:
             record = {data.group_by or "group": row.pop("_id")}
+            for mongo_key, canonical in mongo_key_map.items():
+                if mongo_key in row:
+                    record[canonical] = row.pop(mongo_key)
             record.update(row)
             out.append(record)
         out.sort(key=lambda r: str(r.get(data.group_by or "group")))

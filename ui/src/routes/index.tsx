@@ -13,13 +13,20 @@ function Overview() {
   const workflowsWithTasks = useWorkflowsWithTasks();
 
   const latestTs = useMemo(() => {
-    const items = workflows.data?.items ?? [];
-    if (!items.length) return undefined;
-    return items.reduce<typeof items[0] | undefined>((best, w) => {
+    const campTs = (campaigns.data?.items ?? [])
+      .map((c) => c.last_ts)
+      .filter((t): t is number => t != null && t > 0);
+    if (campTs.length) return Math.max(...campTs);
+    // Fall back to most recent workflow with tasks
+    const wfItems = (workflows.data?.items ?? [])
+      .filter((w) => w.name && (toEpochSec(w.utc_timestamp) ?? 0) > 0)
+      .filter((w) => !workflowsWithTasks.data || workflowsWithTasks.data.has(w.workflow_id));
+    if (!wfItems.length) return undefined;
+    return wfItems.reduce<(typeof wfItems)[0] | undefined>((best, w) => {
       if (!best) return w;
       return (toEpochSec(w.utc_timestamp) ?? 0) > (toEpochSec(best.utc_timestamp) ?? 0) ? w : best;
     }, undefined)?.utc_timestamp;
-  }, [workflows.data]);
+  }, [campaigns.data, workflows.data, workflowsWithTasks.data]);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">

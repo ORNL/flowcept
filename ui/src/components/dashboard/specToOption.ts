@@ -49,23 +49,44 @@ export function specToOption(card: Chart, rows: Record<string, unknown>[]): ECha
     };
   }
 
-  // x/y timeseries data.
+  // x/y timeseries or numeric scatter data.
   if (data?.x && data?.y?.length) {
     const x = data.x;
+    const validRows = rows.filter((r) => r[x] !== null && r[x] !== undefined);
+
+    // Detect axis type: treat as time if values look like epoch seconds/ms or ISO strings.
+    const sampleX = validRows[0]?.[x];
+    const isTimeAxis =
+      typeof sampleX === "string" ||
+      (typeof sampleX === "number" && sampleX > 1_000_000_000);
+
+    const mapX = (r: Record<string, unknown>) => {
+      const raw = r[x];
+      if (isTimeAxis) return (toEpochSec(raw as TimeValue) as number) * 1000;
+      return raw as number;
+    };
+
     return {
       grid: { left: 56, right: 12, top: 28, bottom: 32 },
       legend: data.y.length > 1 ? { textStyle: { color: "#8b93a7" } } : undefined,
       tooltip: { trigger: "axis" },
-      xAxis: { type: "time", ...AXIS_STYLE },
+      xAxis: {
+        type: isTimeAxis ? "time" : "value",
+        name: x.split(".").at(-1),
+        nameLocation: "middle",
+        nameGap: 24,
+        nameTextStyle: { color: "#8b93a7", fontSize: 11 },
+        ...AXIS_STYLE,
+      },
       yAxis: { type: "value", ...AXIS_STYLE },
       series: data.y.map((field) => ({
         name: field.split(".").at(-1),
         type: viz.kind === "scatter" ? "scatter" : viz.kind === "bar" ? "bar" : "line",
         areaStyle: viz.kind === "area" ? {} : undefined,
-        showSymbol: viz.kind === "scatter",
-        data: rows
-          .filter((r) => r[field] !== null && r[field] !== undefined && toEpochSec(r[x] as TimeValue) !== null)
-          .map((r) => [(toEpochSec(r[x] as TimeValue) as number) * 1000, r[field] as number]),
+        showSymbol: viz.kind !== "line",
+        data: validRows
+          .filter((r) => r[field] !== null && r[field] !== undefined)
+          .map((r) => [mapX(r), r[field] as number]),
       })),
     };
   }
