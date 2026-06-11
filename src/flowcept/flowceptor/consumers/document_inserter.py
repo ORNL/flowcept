@@ -120,10 +120,13 @@ class DocumentInserter(BaseConsumer):
                 message["workflow_id"] = wf_id
 
         if "campaign_id" not in message:
+            # The current campaign lookup is optional because kv_db can be disabled.
             try:
-                campaign_id = self._mq_dao._keyvalue_dao.get_key("current_campaign_id")
-                if campaign_id:
-                    message["campaign_id"] = campaign_id
+                kv_dao = getattr(self._mq_dao, "_keyvalue_dao", None)
+                if kv_dao is not None:
+                    campaign_id = kv_dao.get_key("current_campaign_id")
+                    if campaign_id:
+                        message["campaign_id"] = campaign_id
             except Exception as e:
                 self.logger.error(e)
 
