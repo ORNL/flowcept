@@ -18,7 +18,6 @@ import { Route as AgentsIndexRouteImport } from './routes/agents.index'
 import { Route as WorkflowsWorkflowIdRouteImport } from './routes/workflows.$workflowId'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
 import { Route as ObjectsObjectIdRouteImport } from './routes/objects.$objectId'
-import { Route as DashboardsDashboardIdRouteImport } from './routes/dashboards.$dashboardId'
 import { Route as CampaignsCampaignIdRouteImport } from './routes/campaigns.$campaignId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -66,11 +65,6 @@ const ObjectsObjectIdRoute = ObjectsObjectIdRouteImport.update({
   path: '/objects/$objectId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardsDashboardIdRoute = DashboardsDashboardIdRouteImport.update({
-  id: '/dashboards/$dashboardId',
-  path: '/dashboards/$dashboardId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CampaignsCampaignIdRoute = CampaignsCampaignIdRouteImport.update({
   id: '/campaigns/$campaignId',
   path: '/campaigns/$campaignId',
@@ -80,7 +74,6 @@ const CampaignsCampaignIdRoute = CampaignsCampaignIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/campaigns/$campaignId': typeof CampaignsCampaignIdRoute
-  '/dashboards/$dashboardId': typeof DashboardsDashboardIdRoute
   '/objects/$objectId': typeof ObjectsObjectIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
@@ -93,7 +86,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/campaigns/$campaignId': typeof CampaignsCampaignIdRoute
-  '/dashboards/$dashboardId': typeof DashboardsDashboardIdRoute
   '/objects/$objectId': typeof ObjectsObjectIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
@@ -107,7 +99,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/campaigns/$campaignId': typeof CampaignsCampaignIdRoute
-  '/dashboards/$dashboardId': typeof DashboardsDashboardIdRoute
   '/objects/$objectId': typeof ObjectsObjectIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/workflows/$workflowId': typeof WorkflowsWorkflowIdRoute
@@ -122,7 +113,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/campaigns/$campaignId'
-    | '/dashboards/$dashboardId'
     | '/objects/$objectId'
     | '/tasks/$taskId'
     | '/workflows/$workflowId'
@@ -135,7 +125,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/campaigns/$campaignId'
-    | '/dashboards/$dashboardId'
     | '/objects/$objectId'
     | '/tasks/$taskId'
     | '/workflows/$workflowId'
@@ -148,7 +137,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/campaigns/$campaignId'
-    | '/dashboards/$dashboardId'
     | '/objects/$objectId'
     | '/tasks/$taskId'
     | '/workflows/$workflowId'
@@ -162,7 +150,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CampaignsCampaignIdRoute: typeof CampaignsCampaignIdRoute
-  DashboardsDashboardIdRoute: typeof DashboardsDashboardIdRoute
   ObjectsObjectIdRoute: typeof ObjectsObjectIdRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   WorkflowsWorkflowIdRoute: typeof WorkflowsWorkflowIdRoute
@@ -238,13 +225,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ObjectsObjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboards/$dashboardId': {
-      id: '/dashboards/$dashboardId'
-      path: '/dashboards/$dashboardId'
-      fullPath: '/dashboards/$dashboardId'
-      preLoaderRoute: typeof DashboardsDashboardIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/campaigns/$campaignId': {
       id: '/campaigns/$campaignId'
       path: '/campaigns/$campaignId'
@@ -258,7 +238,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CampaignsCampaignIdRoute: CampaignsCampaignIdRoute,
-  DashboardsDashboardIdRoute: DashboardsDashboardIdRoute,
   ObjectsObjectIdRoute: ObjectsObjectIdRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
   WorkflowsWorkflowIdRoute: WorkflowsWorkflowIdRoute,

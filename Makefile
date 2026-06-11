@@ -85,7 +85,7 @@ docs:
 
 .PHONY: webservice
 webservice:
-	FLOWCEPT_SETTINGS_PATH=$(or $(FLOWCEPT_SETTINGS_PATH),$(PWD)/agent_sandbox/settings.yaml) PYTHONPATH=src python -m flowcept.cli --start-webservice --webservice-host 127.0.0.1 --webservice-port 8008
+	FLOWCEPT_SETTINGS_PATH=$(or $(FLOWCEPT_SETTINGS_PATH),$(PWD)/agent_sandbox/settings.yaml) PYTHONPATH=src python -m flowcept.cli --start-webservice
 
 # Run services using Docker
 services:

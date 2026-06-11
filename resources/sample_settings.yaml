@@ -68,17 +68,13 @@ kv_db:
   # uri: use Redis connection uri here
 
 web_server:
-  host: 0.0.0.0
-  port: 5000
+  host: 127.0.0.1  # Bind address; use 0.0.0.0 to expose on all interfaces. Env: WEBSERVER_HOST.
+  port: 8008       # HTTP port for the FastAPI webservice and built UI. Env: WEBSERVER_PORT.
   ui_enabled: true # Serve the built web UI (if assets are present) at the root path.
   cors_origins: [] # Extra allowed CORS origins; empty disables the CORS middleware (UI is same-origin).
   sse_poll_interval_sec: 2.0 # How often live (SSE) endpoints poll the DB for new data.
   sse_max_batch: 500 # Max records pushed per SSE event.
   dashboards_dir: ~/.flowcept/dashboards # Dashboard JSON storage when MongoDB is disabled.
-  # Optional: override the default dashboard charts shown in the Web UI.
-  # See agent_sandbox/settings.yaml for a full example.
-  # workflow_dashboard: []
-  # campaign_dashboard: []
 
 sys_metadata:
   environment_id: "laptop"   # We use this to keep track of the environment used to run an experiment. Typical values include the cluster name, but it can be anything that you think will help identify your experimentation environment.

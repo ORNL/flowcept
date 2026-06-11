@@ -80,3 +80,23 @@ class DashboardSpec(BaseModel):
     layout: List[LayoutItem] = Field(default_factory=list)
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+
+
+class DashboardConfig(BaseModel):
+    """A dashboard configuration: one of four types (common/custom × workflow/campaign).
+
+    ``target`` is required for custom types:
+    - ``custom_workflow``: the workflow **name** (not id) this config applies to.
+    - ``custom_campaign``: the ``campaign_id`` this config applies to.
+    Common types leave ``target`` null and apply to every workflow or campaign.
+    """
+
+    dashboard_id: Optional[str] = None
+    dashboard_type: Literal[
+        "common_workflow", "common_campaign", "custom_workflow", "custom_campaign"
+    ]
+    target: Optional[str] = None
+    name: str = ""
+    charts: List[DashboardChart] = Field(default_factory=list)
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None

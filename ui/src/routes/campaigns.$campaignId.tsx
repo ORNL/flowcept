@@ -4,14 +4,15 @@ import { useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
 import { Trash2 } from "lucide-react";
-import { useCampaign, useInfo, useProvenanceCard } from "../api/queries";
+import { useCampaign, useProvenanceCard, useResolveDashboard, useWorkflowsWithTasks } from "../api/queries";
 import { apiDelete } from "../api/client";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import { ChartRenderer } from "../components/dashboard/ChartRenderer";
 import { chart as chartSchema, dashboardSpec, type DashboardSpec } from "../components/dashboard/spec";
 import { StatusStrip } from "../components/charts/StatusStrip";
 import { Markdown } from "../components/markdown/Markdown";
-import { fmtTs, shortId } from "../lib/format";
+import { fmtTs, fmtUserTs, shortId } from "../lib/format";
+
 
 export const Route = createFileRoute("/campaigns/$campaignId")({
   component: CampaignDetail,
@@ -26,6 +27,7 @@ function CampaignDetail() {
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const { data, isLoading, error } = useCampaign(campaignId);
+  const workflowsWithTasks = useWorkflowsWithTasks();
   const provCard = useProvenanceCard("campaigns", campaignId, tab === "card");
 
   async function handleDelete() {
@@ -82,22 +84,22 @@ function CampaignDetail() {
 
       {tab === "workflows" && (
         <div className="card divide-y divide-border/50">
-          {data.workflows.map((w) => (
-            <Link
-              key={w.workflow_id}
-              to="/workflows/$workflowId"
-              params={{ workflowId: w.workflow_id }}
-              className="hover:bg-surface-2 flex items-center justify-between px-4 py-2.5 text-xs"
-            >
-              <span>
-                <span className="font-medium">{w.name ?? "unnamed"}</span>{" "}
-                <span className="text-fg-muted font-mono">{shortId(w.workflow_id)}</span>
-              </span>
-              <span className="text-fg-muted">
-                {w.user ?? "—"} · {fmtTs(w.utc_timestamp)}
-              </span>
-            </Link>
-          ))}
+          {data.workflows
+            .filter((w) => w.name && workflowsWithTasks.data?.has(w.workflow_id))
+            .map((w) => (
+              <Link
+                key={w.workflow_id}
+                to="/workflows/$workflowId"
+                params={{ workflowId: w.workflow_id }}
+                className="hover:bg-surface-2 flex items-center justify-between px-4 py-2.5 text-xs"
+              >
+                <span>
+                  <span className="font-medium">{w.name}</span>{" "}
+                  <span className="text-fg-muted font-mono">{shortId(w.workflow_id)}</span>
+                </span>
+                <span className="text-fg-muted">{fmtUserTs(w.user, w.utc_timestamp)}</span>
+              </Link>
+            ))}
         </div>
       )}
 
@@ -129,8 +131,8 @@ function CampaignDetail() {
 }
 
 function CampaignDashboardTab({ campaignId }: { campaignId: string }) {
-  const { data: info } = useInfo();
-  const rawCharts = info?.campaign_dashboard ?? [];
+  const resolved = useResolveDashboard({ campaign_id: campaignId });
+  const rawCharts = resolved.data ?? [];
   const charts = rawCharts.map((raw) => chartSchema.parse({ ...raw, data: { filter: {}, ...(raw.data as object) } }));
   const spec: DashboardSpec = dashboardSpec.parse({
     type: "campaign",
@@ -140,11 +142,12 @@ function CampaignDashboardTab({ campaignId }: { campaignId: string }) {
     layout: [],
   });
 
+  if (resolved.isLoading) return <div className="text-fg-muted text-xs">Loading…</div>;
+
   if (!charts.length) {
     return (
       <p className="text-fg-muted text-sm">
-        No charts configured. Add <code>campaign_dashboard</code> under <code>web_server</code> in{" "}
-        <code>settings.yaml</code>.
+        No charts configured. Visit <span className="font-medium">Dashboard configs</span> to add charts for this campaign.
       </p>
     );
   }

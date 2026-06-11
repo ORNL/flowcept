@@ -26,7 +26,7 @@ const NAV = [
   { to: "/workflows", label: "Workflows", icon: Workflow },
   { to: "/objects", label: "Artifacts", icon: Boxes },
   { to: "/agents", label: "Agents", icon: Bot },
-  { to: "/dashboards", label: "Dashboards", icon: LayoutDashboard },
+  { to: "/dashboards", label: "Dashboard configs", icon: LayoutDashboard },
 ] as const;
 
 function AppShell() {
@@ -68,7 +68,7 @@ function AppShell() {
       >
         <div className="flex items-center px-4 py-4">
           <a href="https://flowcept.org/" target="_blank" rel="noreferrer" title="flowcept.org">
-            <img src="/flowcept-logo.png" alt="Flowcept" className="h-8 w-auto" />
+            <img src="/flowcept-logo.png" alt="Flowcept" className="h-10 w-auto" />
           </a>
         </div>
         <nav className="flex-1 space-y-0.5 px-2">
@@ -128,7 +128,7 @@ function AppShell() {
             }
           }}
           className="absolute right-[-10px] top-1/2 -translate-y-1/2 z-10 flex h-6 w-5 items-center justify-center rounded-r border border-border bg-surface text-fg-muted hover:text-fg text-[10px]"
-          title="Toggle agent panel"
+          title="Toggle inspector panel"
         >
           <ChevronsRight size={11} />
         </button>

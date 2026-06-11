@@ -15,7 +15,7 @@ from flowcept.webservice.schemas.dashboards import ChartData, MetricSpec
 
 
 def _to_epoch(value) -> Optional[float]:
-    """Normalize a timestamp value (float epoch-sec, epoch-ms, or ISO string) to epoch seconds."""
+    """Normalize a timestamp value (float epoch-sec, epoch-ms, ISO string, or datetime) to epoch seconds."""
     if value is None:
         return None
     if isinstance(value, (int, float)):
@@ -28,6 +28,13 @@ def _to_epoch(value) -> Optional[float]:
             return dt.replace(tzinfo=timezone.utc).timestamp() if dt.tzinfo is None else dt.timestamp()
         except ValueError:
             return None
+    # pymongo returns datetime objects for BSON Date fields (e.g. from $min/$max aggregations)
+    try:
+        from datetime import datetime, timezone
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=timezone.utc).timestamp() if value.tzinfo is None else value.timestamp()
+    except Exception:
+        pass
     return None
 
 
@@ -48,8 +55,8 @@ def get_nested(item: Dict[str, Any], field: str) -> Any:
 
 
 def _duration(doc: Dict[str, Any]) -> Optional[float]:
-    started, ended = doc.get("started_at"), doc.get("ended_at")
-    if isinstance(started, (int, float)) and isinstance(ended, (int, float)):
+    started, ended = _to_epoch(doc.get("started_at")), _to_epoch(doc.get("ended_at"))
+    if started is not None and ended is not None:
         return ended - started
     return None
 
@@ -245,8 +252,9 @@ def derive_campaigns(db: DBAPI) -> List[Dict[str, Any]]:
         )
 
     def _expand_range(record: Dict[str, Any], *values) -> None:
-        for value in values:
-            if not isinstance(value, (int, float)):
+        for raw in values:
+            value = _to_epoch(raw)
+            if value is None:
                 continue
             record["first_ts"] = value if record["first_ts"] is None else min(record["first_ts"], value)
             record["last_ts"] = value if record["last_ts"] is None else max(record["last_ts"], value)
@@ -531,7 +539,8 @@ def _resolve_grouped(db: DBAPI, data: "ChartData", query_filter: Dict[str, Any])
     """Group/aggregate rows for a card, using Mongo pipelines when available."""
     metrics = data.metrics or [MetricSpec(field="", agg="count")]
     dao = _mongo_dao_or_none()
-    if dao is not None and data.source in ("tasks", "workflows", "objects"):
+    has_elapsed_metric = any(getattr(m, "field", None) == "elapsed" for m in metrics)
+    if dao is not None and data.source in ("tasks", "workflows", "objects") and not has_elapsed_metric:
         group_id = f"${data.group_by}" if data.group_by else None
         group_stage: Dict[str, Any] = {"_id": group_id}
         # MongoDB forbids dots in $group output field names; use underscores internally
@@ -558,8 +567,13 @@ def _resolve_grouped(db: DBAPI, data: "ChartData", query_filter: Dict[str, Any])
         out.sort(key=lambda r: str(r.get(data.group_by or "group")))
         return out
 
-    fields = sorted({m.field for m in metrics if m.field})
-    top_level = sorted({f.split(".")[0] for f in fields} | ({data.group_by.split(".")[0]} if data.group_by else set()))
+    fields = sorted({m.field for m in metrics if m.field and m.field != "elapsed"})
+    elapsed_fields = ["started_at", "ended_at"] if has_elapsed_metric else []
+    top_level = sorted(
+        {f.split(".")[0] for f in fields}
+        | ({data.group_by.split(".")[0]} if data.group_by else set())
+        | set(elapsed_fields)
+    )
     docs = (
         db.query(
             collection=data.source,
@@ -575,7 +589,14 @@ def _resolve_grouped(db: DBAPI, data: "ChartData", query_filter: Dict[str, Any])
     for key, docs_in_group in grouped.items():
         record = {data.group_by or "group": key}
         for metric in metrics:
-            values = [v for v in (get_nested(d, metric.field) for d in docs_in_group) if isinstance(v, (int, float))]
+            if metric.field == "elapsed":
+                # Compute elapsed as ended_at - started_at for each doc
+                def _elapsed(d: Dict[str, Any]) -> Optional[float]:
+                    s, e = _to_epoch(d.get("started_at")), _to_epoch(d.get("ended_at"))
+                    return (e - s) if s is not None and e is not None else None
+                values = [v for v in (_elapsed(d) for d in docs_in_group) if v is not None]
+            else:
+                values = [v for v in (get_nested(d, metric.field) for d in docs_in_group) if isinstance(v, (int, float))]
             if metric.agg == "count":
                 record[_metric_key(metric)] = len(docs_in_group)
             elif not values:

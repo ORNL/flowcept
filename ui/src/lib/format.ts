@@ -26,6 +26,14 @@ export function fmtTs(ts?: TimeValue): string {
   });
 }
 
+/** "user · timestamp" omitting missing parts; never renders bare dashes. */
+export function fmtUserTs(user?: string | null, ts?: TimeValue): string {
+  const parts: string[] = [];
+  if (user) parts.push(user);
+  if (toEpochSec(ts) !== null) parts.push(fmtTs(ts));
+  return parts.join(" · ");
+}
+
 export function fmtDuration(seconds?: number | null): string {
   if (seconds === undefined || seconds === null || Number.isNaN(seconds)) return "—";
   if (seconds < 0) return "—";

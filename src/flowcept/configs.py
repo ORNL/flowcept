@@ -252,8 +252,8 @@ EXTRA_METADATA.update({"mq_port": MQ_PORT})
 ######################
 settings.setdefault("web_server", {})
 _webserver_settings = settings.get("web_server", {})
-WEBSERVER_HOST = _get_env("WEBSERVER_HOST", _webserver_settings.get("host", "0.0.0.0"))
-WEBSERVER_PORT = int(_get_env("WEBSERVER_PORT", _webserver_settings.get("port", 5000)))
+WEBSERVER_HOST = _get_env("WEBSERVER_HOST", _webserver_settings.get("host", "127.0.0.1"))
+WEBSERVER_PORT = int(_get_env("WEBSERVER_PORT", _webserver_settings.get("port", 8008)))
 WEBSERVER_UI_ENABLED = _webserver_settings.get("ui_enabled", True)
 WEBSERVER_CORS_ORIGINS = _webserver_settings.get("cors_origins", [])
 WEBSERVER_SSE_POLL_INTERVAL = float(_webserver_settings.get("sse_poll_interval_sec", 2.0))
@@ -261,9 +261,6 @@ WEBSERVER_SSE_MAX_BATCH = int(_webserver_settings.get("sse_max_batch", 500))
 WEBSERVER_DASHBOARDS_DIR = os.path.expanduser(
     _webserver_settings.get("dashboards_dir", f"~/.{PROJECT_NAME}/dashboards")
 )
-
-WEBSERVER_WORKFLOW_DASHBOARD = _webserver_settings.get("workflow_dashboard", [])
-WEBSERVER_CAMPAIGN_DASHBOARD = _webserver_settings.get("campaign_dashboard", [])
 
 ######################
 #    ANALYTICS      #

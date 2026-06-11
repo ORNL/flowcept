@@ -1411,9 +1411,6 @@ def render_provenance_card_markdown(
                 lines.append("    ```")
             else:
                 lines.append(f"  - `{key}`: `{_format_single_field_value(value)}`")
-    else:
-        lines.append("- **arguments:** `~`")
-
     # significant inputs – from workflow.used
     used_data = workflow.get("used")
     if isinstance(used_data, dict) and used_data:
@@ -1428,8 +1425,6 @@ def render_provenance_card_markdown(
                 lines.append("    ```")
             else:
                 lines.append(f"  - `{key}`: `{_format_single_field_value(value)}`")
-    else:
-        lines.append("- **significant inputs:** `~`")
 
     # significant outputs – from workflow.generated
     generated_data = workflow.get("generated")
@@ -1445,10 +1440,10 @@ def render_provenance_card_markdown(
                 lines.append("    ```")
             else:
                 lines.append(f"  - `{key}`: `{_format_single_field_value(value)}`")
-    else:
-        lines.append("- **significant outputs:** `~`")
 
-    lines.append(f"- **observations:** `{_to_str(workflow.get('observations'), default='~')}`")
+    obs = workflow.get("observations")
+    if obs:
+        lines.append(f"- **observations:** `{_format_single_field_value(obs)}`")
     lines.append("")
 
     # 4.2 Workflow Structure
@@ -1623,7 +1618,7 @@ def render_provenance_card_markdown(
                 f"- GPU activity detected on `{gpu_device_count}` device(s); peak temperature: `{peak_text}`."
             )
     else:
-        lines.append("~ *(resource telemetry was not captured)*")
+        lines.append("*Resource telemetry was not captured.*")
         lines.append("")
 
     lines.append("### 4.4 Observations")
@@ -1743,9 +1738,6 @@ def render_provenance_card_markdown(
             lines.append("- **hosts:**")
             for host, count in host_counts.most_common():
                 lines.append(f"  - `{host}`: {count} task(s)")
-        else:
-            lines.append("- **hosts:** `~`")
-
         # inputs (used) and outputs (generated)
         used_fields: Dict[str, List[Any]] = defaultdict(list)
         gen_fields: Dict[str, List[Any]] = defaultdict(list)
@@ -1775,9 +1767,6 @@ def render_provenance_card_markdown(
                 numeric_vals = [v for v in numeric_vals if v is not None]
                 if numeric_vals and len(numeric_vals) == len(used_fields[key]):
                     variability_candidates.append((activity_id, f"used.{key}", max(numeric_vals) - min(numeric_vals)))
-        else:
-            lines.append("- **inputs:** `~`")
-
         if gen_fields:
             activity_generated_field_counts.append((activity_id, len(gen_fields)))
             lines.append("- **outputs:**")
@@ -1792,9 +1781,6 @@ def render_provenance_card_markdown(
                     variability_candidates.append(
                         (activity_id, f"generated.{key}", max(numeric_vals) - min(numeric_vals))
                     )
-        else:
-            lines.append("- **outputs:** `~`")
-
         lines.append("")
 
     activity_detail_insights: List[str] = []
@@ -1922,16 +1908,16 @@ def render_provenance_card_markdown(
         lines.append("")
         lines.append("### Output Artifacts")
         lines.append("")
-        lines.append("~ *(output artifacts captured at the activity level above)*")
+        lines.append("*Output artifacts are captured at the activity level above.*")
         lines.append("")
     else:
         lines.append("### Input Artifacts")
         lines.append("")
-        lines.append("~ *(no object artifacts were recorded for this run)*")
+        lines.append("*No object artifacts were recorded for this run.*")
         lines.append("")
         lines.append("### Output Artifacts")
         lines.append("")
-        lines.append("~ *(no object artifacts were recorded for this run)*")
+        lines.append("*No object artifacts were recorded for this run.*")
         lines.append("")
 
     has_aggregated_activity = any(int(row.get("n_tasks", 0) or 0) > 1 for row in activities)

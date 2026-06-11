@@ -568,26 +568,6 @@ def start_agent():  # TODO: start with gui
     main()
 
 
-def start_webservice(host: str = None, port: str = None):
-    """Start the Flowcept webservice (REST API + web UI).
-
-    Parameters
-    ----------
-    host : str, optional
-        Host to bind. Defaults to the web_server.host setting.
-    port : str, optional
-        Port to bind. Defaults to the web_server.port setting.
-    """
-    import uvicorn
-
-    from flowcept.configs import WEBSERVER_HOST, WEBSERVER_PORT
-
-    uvicorn.run(
-        "flowcept.webservice.main:app",
-        host=host or WEBSERVER_HOST,
-        port=int(port) if port else WEBSERVER_PORT,
-    )
-
 
 def start_agent_gui(port: int = None):
     """Start Flowcept agent GUI service.
@@ -906,21 +886,23 @@ def _kill_port(port: int) -> None:
         pass
 
 
-def start_webservice(webservice_host: str = "127.0.0.1", webservice_port: str = "8008"):
+def start_webservice(webservice_host: str = None, webservice_port: str = None):
     """
     Start the Flowcept FastAPI webservice locally.
 
     Kills any process already bound to the port before starting.
+    Host and port default to ``web_server.host``/``web_server.port`` in
+    settings.yaml (or ``WEBSERVER_HOST``/``WEBSERVER_PORT`` env vars).
 
     Parameters
     ----------
     webservice_host : str, optional
-        Host interface to bind (default: 127.0.0.1).
+        Host interface to bind. Defaults to settings.yaml ``web_server.host``.
     webservice_port : str, optional
-        Port to bind (default: 8008).
+        Port to bind. Defaults to settings.yaml ``web_server.port``.
     """
-    host = webservice_host
-    port = webservice_port
+    host = webservice_host or configs.WEBSERVER_HOST
+    port = webservice_port or str(configs.WEBSERVER_PORT)
     _kill_port(int(port))
     print(f"Starting Flowcept webservice on http://{host}:{port}")
     print(f"Web UI:       http://{host}:{port}/")
@@ -940,8 +922,8 @@ def start_webservice(webservice_host: str = "127.0.0.1", webservice_port: str = 
 
 
 def start_ui(
-    webservice_host: str = "127.0.0.1",
-    webservice_port: str = "8008",
+    webservice_host: str = None,
+    webservice_port: str = None,
     ui_dir: str = "ui",
 ):
     """
@@ -950,19 +932,23 @@ def start_ui(
     Kills any previously-running webservice or Vite processes first, then
     launches the webservice in the background and the Vite dev server in the
     foreground (Ctrl+C stops both).
+    Host and port default to ``web_server.host``/``web_server.port`` in
+    settings.yaml (or ``WEBSERVER_HOST``/``WEBSERVER_PORT`` env vars).
 
     Parameters
     ----------
     webservice_host : str, optional
-        Host interface for the webservice (default: 127.0.0.1).
+        Host interface for the webservice. Defaults to settings.yaml ``web_server.host``.
     webservice_port : str, optional
-        Port for the webservice (default: 8008).
+        Port for the webservice. Defaults to settings.yaml ``web_server.port``.
     ui_dir : str, optional
         Path to the UI directory containing package.json (default: ui).
     """
     import sys
     import time
 
+    webservice_host = webservice_host or configs.WEBSERVER_HOST
+    webservice_port = webservice_port or str(configs.WEBSERVER_PORT)
     _kill_port(int(webservice_port))
     subprocess.run(["pkill", "-f", "flowcept.*start-webservice"], capture_output=True)
     subprocess.run(["pkill", "-f", "vite"], capture_output=True)

@@ -60,3 +60,7 @@ body {
 .prose-flowcept pre {
   @apply bg-surface-2 border border-border;
 }
+.prose-flowcept :not(pre) > code {
+  @apply bg-surface-2 text-accent rounded px-1;
+  font-size: 0.875em;
+}

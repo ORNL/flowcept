@@ -11,6 +11,8 @@ from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import WEBSERVER_DASHBOARDS_DIR
 
+_SEED_FILE = Path(__file__).parent.parent / "ui_build" / "default_dashboard_configs.json"
+
 
 class MongoDashboardStore:
     """Dashboard store backed by the ``dashboards`` MongoDB collection."""
@@ -27,12 +29,35 @@ class MongoDashboardStore:
         return self._dao.get_dashboard(dashboard_id)
 
     def list(self) -> List[Dict]:
-        """List all dashboard documents."""
-        return self._dao.list_dashboards() or []
+        """List all dashboard documents, seeding defaults if the collection is empty."""
+        docs = self._dao.list_dashboards() or []
+        if not docs:
+            docs = self._seed()
+        return docs
+
+    def list_by_type(self, dashboard_type: str) -> List[Dict]:
+        """List dashboard documents of a specific type."""
+        self.list()  # ensure seeded
+        return self._dao.list_dashboards(filter={"dashboard_type": dashboard_type}) or []
 
     def delete(self, dashboard_id: str) -> bool:
         """Delete a dashboard document by id."""
         return self._dao.delete_dashboard(dashboard_id)
+
+    def _seed(self) -> List[Dict]:
+        """Load default configs from the bundled JSON file and persist them."""
+        if not _SEED_FILE.exists():
+            FlowceptLogger().warning(f"Default dashboard configs not found at {_SEED_FILE}")
+            return []
+        try:
+            with open(_SEED_FILE) as f:
+                configs = json.load(f)
+            for doc in configs:
+                self._dao.save_dashboard(doc)
+            return configs
+        except Exception as e:
+            FlowceptLogger().exception(e)
+            return []
 
 
 class FileDashboardStore:
@@ -70,15 +95,16 @@ class FileDashboardStore:
             return None
 
     def list(self) -> List[Dict]:
-        """List all dashboards stored as JSON files."""
-        dashboards = []
-        for path in sorted(self._dir.glob("*.json")):
-            try:
-                with open(path) as handle:
-                    dashboards.append(json.load(handle))
-            except Exception as e:
-                self.logger.exception(e)
-        return dashboards
+        """List all dashboards, seeding defaults if the directory is empty."""
+        docs = self._load_all()
+        if not docs:
+            docs = self._seed()
+        return docs
+
+    def list_by_type(self, dashboard_type: str) -> List[Dict]:
+        """List dashboards of a specific type."""
+        self.list()  # ensure seeded
+        return [d for d in self._load_all() if d.get("dashboard_type") == dashboard_type]
 
     def delete(self, dashboard_id: str) -> bool:
         """Delete a dashboard JSON file."""
@@ -91,6 +117,31 @@ class FileDashboardStore:
         except Exception as e:
             self.logger.exception(e)
             return False
+
+    def _load_all(self) -> List[Dict]:
+        dashboards = []
+        for path in sorted(self._dir.glob("*.json")):
+            try:
+                with open(path) as handle:
+                    dashboards.append(json.load(handle))
+            except Exception as e:
+                self.logger.exception(e)
+        return dashboards
+
+    def _seed(self) -> List[Dict]:
+        """Load default configs from the bundled JSON file and persist them."""
+        if not _SEED_FILE.exists():
+            self.logger.warning(f"Default dashboard configs not found at {_SEED_FILE}")
+            return []
+        try:
+            with open(_SEED_FILE) as f:
+                configs = json.load(f)
+            for doc in configs:
+                self.save(doc)
+            return configs
+        except Exception as e:
+            self.logger.exception(e)
+            return []
 
 
 def get_dashboard_store():

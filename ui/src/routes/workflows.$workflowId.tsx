@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Radio, Trash2 } from "lucide-react";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { useInfo, useObjects, useProvenanceCard, useTask, useTasksQuery, useTaskSummary, useWorkflow } from "../api/queries";
+import { useObjects, useProvenanceCard, useResolveDashboard, useTask, useTasksQuery, useTaskSummary, useWorkflow } from "../api/queries";
 import { useEventStream } from "../api/sse";
 import type { BlobObjectDoc, ListResponse, Task } from "../api/types";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
@@ -322,7 +322,7 @@ function WorkflowDetail() {
 
       {search.tab === "artifacts" && <ArtifactsTab workflowId={workflowId} />}
 
-      {search.tab === "dashboard" && <WorkflowDashboardTab workflowId={workflowId} />}
+      {search.tab === "dashboard" && <WorkflowDashboardTab workflowId={workflowId} workflowName={workflow.data?.name} />}
 
       {search.tab === "raw" && (
         <div className="card p-4">
@@ -349,8 +349,25 @@ function WorkflowDetail() {
 
 function ProvCardTab({ workflowId }: { workflowId: string }) {
   const card = useProvenanceCard("workflows", workflowId);
+
+  function downloadMd() {
+    const blob = new Blob([card.data ?? ""], { type: "text/markdown" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `workflow_card_${workflowId}.md`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   return (
     <div className="card p-5 space-y-4">
+      {!card.isLoading && !card.error && card.data && (
+        <div className="flex gap-2 justify-end">
+          <button onClick={downloadMd} className="text-xs text-fg-muted hover:text-fg border border-border rounded px-2.5 py-1">
+            Download MD
+          </button>
+        </div>
+      )}
       {card.isLoading ? (
         <div className="text-fg-muted text-xs">Generating provenance card…</div>
       ) : card.error ? (
@@ -387,9 +404,9 @@ function ArtifactsTab({ workflowId }: { workflowId: string }) {
   );
 }
 
-function WorkflowDashboardTab({ workflowId }: { workflowId: string }) {
-  const { data: info } = useInfo();
-  const rawCharts = info?.workflow_dashboard ?? [];
+function WorkflowDashboardTab({ workflowId, workflowName }: { workflowId: string; workflowName?: string | null }) {
+  const resolved = useResolveDashboard({ workflow_name: workflowName ?? undefined });
+  const rawCharts = resolved.data ?? [];
   const charts = rawCharts.map((raw) => chart.parse({ ...raw, data: { filter: {}, ...(raw.data as object) } }));
   const spec: DashboardSpec = dashboardSpec.parse({
     type: "workflow",
@@ -399,11 +416,13 @@ function WorkflowDashboardTab({ workflowId }: { workflowId: string }) {
     layout: [],
   });
 
+  if (resolved.isLoading) return <div className="text-fg-muted text-xs">Loading…</div>;
+
   if (!charts.length) {
     return (
       <p className="text-fg-muted text-sm">
-        No charts configured. Add <code>workflow_dashboard</code> under <code>web_server</code> in{" "}
-        <code>settings.yaml</code>.
+        No charts configured. Visit{" "}
+        <span className="font-medium">Dashboard configs</span> to add charts for this workflow.
       </p>
     );
   }

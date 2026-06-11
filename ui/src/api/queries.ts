@@ -1,7 +1,9 @@
 /** TanStack Query hooks for Flowcept API resources. */
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet, apiGetText, apiPost } from "./client";
+import { toEpochSec } from "../lib/format";
 import type {
   AgentSummary,
   BlobObjectDoc,
@@ -16,14 +18,27 @@ import type {
 export function useInfo() {
   return useQuery({
     queryKey: ["info"],
-    queryFn: () =>
-      apiGet<{
-        service: string;
-        version: string;
-        workflow_dashboard: Record<string, unknown>[];
-        campaign_dashboard: Record<string, unknown>[];
-      }>("/info"),
+    queryFn: () => apiGet<{ service: string; version: string }>("/info"),
     staleTime: Infinity,
+  });
+}
+
+export function useDashboardConfigs(dashboard_type?: string) {
+  return useQuery({
+    queryKey: ["dashboardConfigs", dashboard_type],
+    queryFn: () =>
+      apiGet<{ items: Record<string, unknown>[]; count: number }>("/dashboards", dashboard_type ? { dashboard_type } : {}),
+    staleTime: 30_000,
+  });
+}
+
+export function useResolveDashboard(params: { workflow_name?: string; campaign_id?: string }) {
+  const enabled = !!(params.workflow_name || params.campaign_id);
+  return useQuery({
+    queryKey: ["resolveDashboard", params],
+    queryFn: () => apiGet<Record<string, unknown>[]>("/dashboards/resolve", params),
+    enabled,
+    staleTime: 30_000,
   });
 }
 
@@ -124,6 +139,27 @@ export function useWorkflowsWithTasks() {
     },
     staleTime: 30_000,
   });
+}
+
+/**
+ * The single source of truth for user-facing workflow lists: only named
+ * workflows that have at least one task, sorted newest first. Renders
+ * nothing until both queries resolve — never falls back to unfiltered data.
+ */
+export function useVisibleWorkflows(params: { campaign_id?: string } = {}) {
+  const workflows = useWorkflows(params);
+  const withTasks = useWorkflowsWithTasks();
+  const items = useMemo(() => {
+    if (!workflows.data || !withTasks.data) return [];
+    return workflows.data.items
+      .filter((w) => w.name && withTasks.data.has(w.workflow_id))
+      .sort((a, b) => (toEpochSec(b.utc_timestamp) ?? 0) - (toEpochSec(a.utc_timestamp) ?? 0));
+  }, [workflows.data, withTasks.data]);
+  return {
+    items,
+    isLoading: workflows.isLoading || withTasks.isLoading,
+    error: workflows.error ?? withTasks.error,
+  };
 }
 
 export function useProvenanceCard(scope: "workflows" | "campaigns", id: string, enabled = true) {
