@@ -1,7 +1,8 @@
-# Flowcept Agents: External LLM Usage (Step by Step)
+# Flowcept Agents
 
-This guide explains how to use Flowcept Agents with an external LLM orchestrator
-(for example, Codex), using `SKILLS.md` as the operating contract.
+This package contains the Flowcept MCP agent server, client helpers, tools, prompts, and optional UI pieces.
+
+For code-assistant behavior, use the repository root `AGENTS.md`. Do not duplicate agent rules here. For user-facing usage, see `docs/agent.rst`.
 
 ## 1) Enable external mode
 
@@ -39,15 +40,9 @@ Important:
 - Client transport is HTTP (`streamable-http`) and requires reachable
   `http://<host>:<port>/mcp`.
 
-## 3) Load the skills contract
+## 3) Tool routing model
 
-Before orchestrating tools, read:
-
-```text
-src/flowcept/agents/SKILLS.md
-```
-
-That file defines allowed patterns, routing constraints, and safety behavior.
+The agent is an MCP tools backend. External assistants should use explicit tool calls and prompts instead of relying on hidden conversational state.
 
 ## 4) Use explicit tool commands only
 

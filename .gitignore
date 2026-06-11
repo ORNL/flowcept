@@ -35,10 +35,15 @@ core.*
 flowcept_code_assistants_memory.md
 uv.lock
 examples/flowcept_messages.jsonl
-agents.md
 agent_sandbox/
 *PROVENANCE_*md
 *PROVENANCE_*pdf
 CLAUDE.md
+GEMINI.md
+SKILL.md
+SKILLS.md
+**/SKILL.md
+**/SKILLS.md
+.cursor/rules/
 .claude/
 input_data/

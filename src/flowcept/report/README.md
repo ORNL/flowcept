@@ -13,12 +13,13 @@ report/
 ├── service.py                  # Entry point: orchestrates loading, aggregation, and rendering
 ├── loaders.py                  # Data loading from JSONL files, in-memory records, or DB
 ├── aggregations.py             # Activity grouping, timing statistics, hostname extraction
-├── sanitization.py             # Redacts sensitive fields before rendering
 └── renderers/
     ├── provenance_card_markdown.py          # Single-workflow markdown report
     ├── provenance_campaign_card_markdown.py # Multi-workflow campaign markdown report
     └── provenance_report_pdf.py             # Single-workflow PDF report (requires matplotlib + reportlab)
 ```
+
+Sensitive-field redaction is shared from `flowcept.commons.sanitization`.
 
 ## Report Types
 
