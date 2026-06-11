@@ -50,7 +50,7 @@ All API routes are mounted under:
 - `GET /api/v1/workflows`
 - `GET /api/v1/workflows/{workflow_id}`
 - `POST /api/v1/workflows/query`
-- `POST /api/v1/workflows/{workflow_id}/reports/provenance-card/download`
+- `POST /api/v1/workflows/{workflow_id}/reports/workflow-card/download`
 
 ### Tasks
 

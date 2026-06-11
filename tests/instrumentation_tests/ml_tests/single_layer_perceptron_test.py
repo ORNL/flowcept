@@ -447,21 +447,21 @@ class SingleLayerPerceptronTests(unittest.TestCase):
         expected_content_lines,
     ):
         """Generate and validate markdown/pdf provenance reports for a workflow."""
-        card_md_path = f"./PROVENANCE_CARD_{workflow_id}.md"
+        card_md_path = f"./WORKFLOW_CARD_{workflow_id}.md"
         if os.path.exists(card_md_path):
             os.remove(card_md_path)
         md_stats = Flowcept.generate_report(
-            report_type="provenance_card",
+            report_type="workflow_card",
             format="markdown",
             output_path=card_md_path,
             workflow_id=workflow_id,
         )
         assert os.path.exists(card_md_path)
-        assert md_stats["report_type"] == "provenance_card"
+        assert md_stats["report_type"] == "workflow_card"
         assert md_stats["format"] == "markdown"
         with open(card_md_path, "r", encoding="utf-8") as f:
             card_text = f.read()
-        assert f"# Workflow Provenance Card: {workflow_title}" in card_text
+        assert f"# Workflow Card: {workflow_title}" in card_text
         assert workflow_title in card_text
         if expect_aggregation_method:
             assert "## Aggregation Method" in card_text

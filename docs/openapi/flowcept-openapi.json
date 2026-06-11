@@ -290,14 +290,14 @@
         }
       }
     },
-    "/api/v1/workflows/{workflow_id}/reports/provenance-card/download": {
+    "/api/v1/workflows/{workflow_id}/reports/workflow-card/download": {
       "post": {
         "tags": [
           "workflows"
         ],
-        "summary": "Download Workflow Provenance Card",
-        "description": "Generate and download a workflow provenance card markdown file.",
-        "operationId": "download_workflow_provenance_card_api_v1_workflows__workflow_id__reports_provenance_card_download_post",
+        "summary": "Download Workflow Card",
+        "description": "Generate and download a workflow card markdown file.",
+        "operationId": "download_workflow_card_api_v1_workflows__workflow_id__reports_workflow_card_download_post",
         "parameters": [
           {
             "name": "workflow_id",

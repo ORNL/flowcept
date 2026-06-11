@@ -1,4 +1,4 @@
-"""Markdown renderer for provenance-card reports."""
+"""Markdown renderer for workflow-card reports."""
 
 from __future__ import annotations
 
@@ -1105,7 +1105,7 @@ def _timing_insights(activities: List[Dict[str, Any]]) -> List[str]:
     return lines
 
 
-def render_provenance_card_markdown(
+def render_workflow_card_markdown(
     dataset: Dict[str, Any],
     activities: List[Dict[str, Any]],
     object_summary: Dict[str, Any],
@@ -1328,9 +1328,9 @@ def render_provenance_card_markdown(
     # ------------------------------------------------------------------ #
     lines: List[str] = []
     if workflow_title is None:
-        lines.append("# Workflow Provenance Card")
+        lines.append("# Workflow Card")
     else:
-        lines.append(f"# Workflow Provenance Card: {workflow_title}")
+        lines.append(f"# Workflow Card: {workflow_title}")
     lines.append("")
 
     # --- Section 1: Workflow ---

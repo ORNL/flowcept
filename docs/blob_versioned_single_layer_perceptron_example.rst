@@ -196,7 +196,7 @@ It shows:
 
        # Generate markdown report
        Flowcept.generate_report(
-           output_path=f"./PROVENANCE_CARD_{workflow_id}.md",
+           output_path=f"./WORKFLOW_CARD_{workflow_id}.md",
            workflow_id=workflow_id,
        )
 

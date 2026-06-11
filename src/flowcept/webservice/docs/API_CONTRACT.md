@@ -36,9 +36,9 @@ Returns one workflow or `404`.
 
 Request body: shared query model.
 
-### POST /api/v1/workflows/{workflow_id}/reports/provenance-card/download
+### POST /api/v1/workflows/{workflow_id}/reports/workflow-card/download
 
-Generates a provenance card markdown report for the workflow and downloads it as an attachment.
+Generates a workflow card markdown report for the workflow and downloads it as an attachment.
 
 ### GET /api/v1/tasks
 

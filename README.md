@@ -96,7 +96,7 @@ This prints out:
 
 ---
 
-##### Workflow Provenance Card
+##### Workflow Card
 
 ###### Summary
 - Workflow ID: fe546706-ef46-4482-8f70-3af664a7131b
@@ -130,7 +130,7 @@ This prints out:
 
 ---
 
-→ See [Provenance Card](#provenance-card) for details.
+→ See [Workflow Card](#workflow-cards) for details.
 
 That is the simplest, vanilla run of Flowcept, good for quick sanity checks on a laptop, small-scale run. 
 For diskless runs (no JSON files), OpenAPI RESTful services, online querying using databases,
@@ -158,7 +158,7 @@ For an end-to-end workflow developer tutorial (default user guide), start with [
 - [Setup and the Settings File](#setup)
 - [Running with Containers](#running-with-containers)
 - [Examples](#examples)
-- [Provenance Card](#provenance-card)
+- [Workflow Card](#workflow-cards)
 - [Data Persistence](#data-persistence)
 - [Performance Tuning](#performance-tuning-for-performance-evaluation)
 - [AMD GPU Setup](#install-amd-gpu-lib)
@@ -413,11 +413,11 @@ They add `adapters.<name>` to the current settings file instead of replacing the
 
  See the [Jupyter Notebooks](notebooks) and [Examples directory](examples) for utilization examples.
 
-## Provenance Cards
+## Workflow Cards
 
-The [Quickstart](#quickstart) example (`python quickstart.py`) shows a provenance card.
+The [Quickstart](#quickstart) example (`python quickstart.py`) shows a workflow card.
 
-Flowcept introduces the Workflow Provenance Card concept: a structured markdown summary of a workflow execution covering:
+Flowcept introduces the Workflow Card concept: a structured markdown summary of a workflow execution covering:
 
 - **Summary** — workflow name, IDs, execution window, elapsed time, host, git info
 - **Workflow-level Summary** — activity count, status counts, top slowest activities

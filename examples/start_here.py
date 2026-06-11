@@ -47,9 +47,9 @@ if __name__ == "__main__":
     # Reporting and verifications:
     prov_buffer = Flowcept.read_buffer_file()
     assert len(prov_buffer) == 2
-    provenance_card_path = "PROVENANCE_CARD.md"
+    workflow_card_path = "WORKFLOW_CARD.md"
     report_stats = Flowcept.generate_report(
         records=prov_buffer,
-        output_path=provenance_card_path,
+        output_path=workflow_card_path,
     )
-    print(f"{provenance_card_path} generated!")
+    print(f"{workflow_card_path} generated!")

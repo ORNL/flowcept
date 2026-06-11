@@ -45,7 +45,7 @@ Then inspect `flowcept_buffer.jsonl`.
     - [Internal-LLM mode](#internal-llm-mode)
   - [Grafana monitoring](#grafana-monitoring)
 - [4) Provenance reports](#4-provenance-reports)
-  - [Provenance cards (markdown)](#provenance-cards-markdown)
+  - [Workflow cards (markdown)](#workflow-cards-markdown)
   - [Full reports (pdf)](#full-reports-pdf)
 - [5) Architecture](#5-architecture)
 
@@ -483,14 +483,14 @@ Telemetry docs:
 
 ## 4) Provenance reports
 
-### Provenance cards (markdown)
+### Workflow cards (markdown)
 
 Default report mode:
 
-- `report_type="provenance_card"`
+- `report_type="workflow_card"`
 - `format="markdown"`
 
-The rendered workflow card follows the upstream Workflow Provenance Card template:
+The rendered workflow card follows the upstream Workflow Card template:
 https://github.com/data-cards/workflow-provenance-card.
 
 Python API:
@@ -499,10 +499,10 @@ Python API:
 from flowcept import Flowcept
 
 Flowcept.generate_report(
-    report_type="provenance_card",
+    report_type="workflow_card",
     format="markdown",
     workflow_id="<workflow_id>",
-    output_path="PROVENANCE_CARD.md",
+    output_path="WORKFLOW_CARD.md",
 )
 ```
 
@@ -510,7 +510,7 @@ REST download:
 
 ```bash
 curl -s -X POST \
-  http://127.0.0.1:8008/api/v1/workflows/<workflow_id>/reports/provenance-card/download
+  http://127.0.0.1:8008/api/v1/workflows/<workflow_id>/reports/workflow-card/download
 ```
 
 Docs:
@@ -617,12 +617,12 @@ from flowcept import Flowcept
 docs = Flowcept.read_buffer_file("flowcept_buffer.jsonl")
 df = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=True)
 
-# Generate markdown provenance card
+# Generate markdown workflow card
 Flowcept.generate_report(
-    report_type="provenance_card",
+    report_type="workflow_card",
     format="markdown",
     workflow_id="<workflow_id>",
-    output_path="PROVENANCE_CARD.md",
+    output_path="WORKFLOW_CARD.md",
 )
 
 # Generate PDF provenance report

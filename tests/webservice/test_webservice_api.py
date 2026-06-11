@@ -256,21 +256,21 @@ def test_workflows_list_get_and_query():
     assert rs.json()["count"] == 1
 
 
-def test_workflow_provenance_card_download_route():
+def test_workflow_card_download_route():
     client, _ = build_client()
 
     def _fake_generate_report(**kwargs):
         output = kwargs["output_path"]
-        Path(output).write_text("# Provenance Card\n\nworkflow: wf-1\n", encoding="utf-8")
+        Path(output).write_text("# Workflow Card\n\nworkflow: wf-1\n", encoding="utf-8")
         return {"output": output}
 
     with patch("flowcept.webservice.routers.workflows.Flowcept.generate_report", side_effect=_fake_generate_report):
-        rs = client.post("/api/v1/workflows/wf-1/reports/provenance-card/download")
+        rs = client.post("/api/v1/workflows/wf-1/reports/workflow-card/download")
 
     assert rs.status_code == 200
     assert rs.headers["content-type"].startswith("text/markdown")
-    assert "attachment; filename=\"provenance_card_wf-1.md\"" == rs.headers["content-disposition"]
-    assert "# Provenance Card" in rs.text
+    assert "attachment; filename=\"workflow_card_wf-1.md\"" == rs.headers["content-disposition"]
+    assert "# Workflow Card" in rs.text
 
 
 def test_workflows_errors():
@@ -282,21 +282,21 @@ def test_workflows_errors():
     rs = client.get("/api/v1/workflows", params={"filter_json": "not-json"})
     assert rs.status_code == 400
 
-    rs = client.post("/api/v1/workflows/does-not-exist/reports/provenance-card/download")
+    rs = client.post("/api/v1/workflows/does-not-exist/reports/workflow-card/download")
     assert rs.status_code == 404
 
 
-def test_workflow_provenance_card_download_generation_error():
+def test_workflow_card_download_generation_error():
     client, _ = build_client()
 
     with patch(
         "flowcept.webservice.routers.workflows.Flowcept.generate_report",
         side_effect=RuntimeError("report generation failed"),
     ):
-        rs = client.post("/api/v1/workflows/wf-1/reports/provenance-card/download")
+        rs = client.post("/api/v1/workflows/wf-1/reports/workflow-card/download")
 
     assert rs.status_code == 500
-    assert "Could not generate provenance card" in rs.json()["detail"]
+    assert "Could not generate workflow card" in rs.json()["detail"]
 
 
 def test_tasks_list_get_by_workflow_and_query():

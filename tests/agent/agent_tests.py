@@ -111,24 +111,25 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
         self.assertIn("1", tool_result.result["result_df"])
         self.assertIn("2", tool_result.result["result_df"])
 
-    def test_generate_workflow_provenance_card_tool(self):
+    def test_generate_workflow_card_tool(self):
         from flowcept.agents.tools import general_tools as g
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as tmp:
-            tmp.write("# Workflow Provenance Card: Demo\n\nBody")
-            tmp_path = tmp.name
-        expected_stats = {"output": tmp_path}
+        expected_stats = {"markdown": "# Workflow Card: Demo\n\nBody"}
 
         with patch.object(Flowcept, "generate_report", return_value=expected_stats) as mocked:
-            tool_result = g.generate_workflow_provenance_card(workflow_id="wf-1", output_path=tmp_path)
+            tool_result = g.generate_workflow_card(workflow_id="wf-1")
 
-        self.assertEqual(tool_result.code, 201)
-        self.assertEqual(tool_result.result["format"], "markdown")
+        self.assertEqual(tool_result.code, 301)
         self.assertEqual(tool_result.result["workflow_id"], "wf-1")
         self.assertIn("markdown", tool_result.result)
-        self.assertIn("Workflow Provenance Card", tool_result.result["markdown"])
-        mocked.assert_called_once()
-        os.remove(tmp_path)
+        self.assertIn("Workflow Card", tool_result.result["markdown"])
+        mocked.assert_called_once_with(
+            report_type="workflow_card",
+            format="markdown",
+            workflow_id="wf-1",
+            campaign_id=None,
+            input_jsonl_path=None,
+        )
 
     def test_llm_query_over_buffer(self):
         if not AGENT.get("api_key"):

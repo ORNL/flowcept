@@ -429,7 +429,7 @@ class Flowcept(object):
 
     @staticmethod
     def generate_report(
-        report_type: str = "provenance_card",
+        report_type: str = "workflow_card",
         format: str = "markdown",
         print_markdown: bool = False,
         output_path: str | None = None,
@@ -443,10 +443,10 @@ class Flowcept(object):
         Parameters
         ----------
         report_type : str, optional
-            Report identifier. Supported values are ``"provenance_card"`` and
-            ``"provenance_report"``. Default is ``"provenance_card"``.
+            Report identifier. Supported values are ``"workflow_card"`` and
+            ``"provenance_report"``. Default is ``"workflow_card"``.
         format : str, optional
-            Output format. ``"provenance_card"`` supports only ``"markdown"``,
+            Output format. ``"workflow_card"`` supports only ``"markdown"``,
             and ``"provenance_report"`` supports only ``"pdf"``.
             Default is ``"markdown"``.
         print_markdown : bool, optional
