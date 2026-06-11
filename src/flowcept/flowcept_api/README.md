@@ -6,7 +6,6 @@ Public Python-facing control and query layer.
 
 - `flowcept_controller.py`: defines `Flowcept`, the main context manager/controller. It starts/stops interceptors, persistence, workflow registration, reports, services, and utility APIs.
 - `db_api.py`: high-level database API exposed through `Flowcept.db`. It routes task, workflow, and object operations to the configured document DAO.
-- `task_query_api.py`: dataframe-oriented task query and analysis helpers.
 
 ## Runtime Flow
 

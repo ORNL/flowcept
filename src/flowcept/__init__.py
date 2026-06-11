@@ -72,16 +72,11 @@ def __getattr__(name):
         from flowcept.configs import SETTINGS_PATH
 
         return SETTINGS_PATH
-    elif name == "TaskQueryAPI":
-        from flowcept.flowcept_api.task_query_api import TaskQueryAPI
-
-        return TaskQueryAPI
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 __all__ = [
     "FlowceptDaskWorkerAdapter",
-    "TaskQueryAPI",
     "flowcept_task",
     "FlowceptLoop",
     "FlowceptLightweightLoop",
