@@ -191,6 +191,7 @@ Flowcept Settings File
 Flowcept uses a settings file for configuration.
 
 - To create a minimal settings file (**recommended**):
+  use:
 
 .. code-block:: bash
 
@@ -199,12 +200,26 @@ Flowcept uses a settings file for configuration.
 Creates ``~/.flowcept/settings.yaml``.
 
 - To create a full settings file with all options:
+  use:
 
 .. code-block:: bash
 
    flowcept --init-settings --full
 
 Also creates ``~/.flowcept/settings.yaml``.
+
+Recommended pattern:
+
+.. code-block:: bash
+
+   flowcept --init-settings --full -y
+   flowcept --config-profile full-online -y
+
+Meaning:
+
+- ``flowcept --init-settings``: minimal file from ``DEFAULT_SETTINGS``
+- ``flowcept --init-settings --full``: copy ``resources/sample_settings.yaml``
+- ``flowcept --config-profile ...``: apply a runtime overlay to the existing file
 
 What You Can Configure
 -----------------------
@@ -218,13 +233,29 @@ What You Can Configure
 - Data observability adapters  
 - And more (see `example file <https://github.com/ORNL/flowcept/blob/main/resources/sample_settings.yaml>`_)  
 
+Common profiles:
+
+- ``full-online``: Redis MQ + Redis KV + Mongo + online flush
+- ``full-offline``: offline flush + dump buffer + MQ/KV/DB disabled
+- ``mq-only``: MQ only, no KV/Mongo/LMDB
+- ``mq-only-no-flush``: MQ enabled, tasks accumulate locally and are bulk-published to MQ in a single end-of-run flush; also dumps to local JSONL; use with ``Flowcept(check_safe_stops=False)``
+- ``full-telemetry``: telemetry on except GPU
+
+Adapter flags are additive:
+
+.. code-block:: bash
+
+   flowcept --init-settings --dask -y
+   flowcept --init-settings --mlflow -y
+   flowcept --init-settings --tensorboard -y
+
 Custom Settings File
 ---------------------
 
 Flowcept looks for its settings in the following order:
 
-1. ``~/.flowcept/settings.yaml`` — created by ``flowcept --init-settings``  
-2. Environment variable ``FLOWCEPT_SETTINGS_PATH`` — if set, Flowcept will use this  
+1. Environment variable ``FLOWCEPT_SETTINGS_PATH`` — if set, Flowcept will use this path
+2. ``~/.flowcept/settings.yaml`` — created by ``flowcept --init-settings``  
 3. Default sample file — `sample_settings.yaml <https://github.com/ORNL/flowcept/blob/main/resources/sample_settings.yaml>`_  
 
 Environment Variables
@@ -236,6 +267,12 @@ Environment Variables
    If ``FLOWCEPT_USE_DEFAULT=true``, Flowcept runs in strict default mode:
    external settings files and runtime env overrides (MQ/DB host/ports/toggles, etc.)
    are ignored.
+
+Short version:
+
+- settings file controls the normal behavior
+- profiles modify the settings file
+- environment variables can still override those values at runtime
 
 General
 ~~~~~~~
@@ -318,6 +355,8 @@ LMDB
      - Purpose / Default
    * - ``LMDB_ENABLED``
      - Enable LMDB persistence. Parsed as boolean: ``"true"`` to enable. Default from settings.
+   * - ``LMDB_PATH``
+     - Override the LMDB database directory. Default from ``databases.lmdb.path`` in settings (``flowcept_lmdb`` if unset).
 
 Agent / MCP
 ~~~~~~~~~~~

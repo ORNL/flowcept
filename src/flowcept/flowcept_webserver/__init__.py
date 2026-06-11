@@ -1,1 +1,1 @@
-"""Webserver subpackage."""
+"""Legacy webserver subpackage (deprecated)."""

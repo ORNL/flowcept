@@ -63,7 +63,7 @@ def scatter2d_with_colors(
             y=df[y_col],
             mode="markers",
             name="",
-            customdata=df[[x_col, y_col, color_col]].applymap(format_number),
+            customdata=df[[x_col, y_col, color_col]].map(format_number),
             hovertemplate=hovertemplate,
             marker=dict(
                 color=df[color_col],

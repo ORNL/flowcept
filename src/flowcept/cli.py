@@ -12,6 +12,12 @@ Supports:
 - `flowcept --command --arg=value`
 - `flowcept -h` or `flowcept` for full help
 - `flowcept --help --command` for command-specific help
+
+Configuration model:
+- `flowcept --init-settings` creates a minimal settings file from `DEFAULT_SETTINGS`.
+- `flowcept --init-settings --full` copies `resources/sample_settings.yaml`.
+- `flowcept --config-profile <name>` applies an overlay to the existing settings file.
+- Adapter flags such as `--dask` and `--mlflow` are additive and reuse the current file.
 """
 
 import subprocess
@@ -29,6 +35,61 @@ from pathlib import Path
 from typing import List
 
 from flowcept import configs
+
+FLOWCEPT_BANNER = r"""
+███████╗██╗      ██████╗ ██╗    ██╗ ██████╗███████╗██████╗ ████████╗
+██╔════╝██║     ██╔═══██╗██║    ██║██╔════╝██╔════╝██╔══██╗╚══██╔══╝
+█████╗  ██║     ██║   ██║██║ █╗ ██║██║     █████╗  ██████╔╝   ██║
+██╔══╝  ██║     ██║   ██║██║███╗██║██║     ██╔══╝  ██╔═══╝    ██║
+██║     ███████╗╚██████╔╝╚███╔███╔╝╚██████╗███████╗██║        ██║
+╚═╝     ╚══════╝ ╚═════╝  ╚══╝╚══╝  ╚═════╝╚══════╝╚═╝        ╚═╝
+           Lightweight Distributed Workflow Provenance
+                    https://flowcept.org/
+"""
+
+CONFIG_PROFILES = {
+    "full-online": {
+        "project.db_flush_mode": "online",
+        "mq.enabled": True,
+        "kv_db.enabled": True,
+        "databases.mongodb.enabled": True,
+        "databases.lmdb.enabled": False,
+        "db_buffer.insertion_buffer_time_secs": 5,
+    },
+    "full-telemetry": {
+        "telemetry_capture.cpu": True,
+        "telemetry_capture.per_cpu": True,
+        "telemetry_capture.process_info": True,
+        "telemetry_capture.mem": True,
+        "telemetry_capture.disk": True,
+        "telemetry_capture.network": True,
+        "telemetry_capture.machine_info": True,
+        "telemetry_capture.gpu": None,
+    },
+    "mq-only": {
+        "project.db_flush_mode": "online",
+        "mq.enabled": True,
+        "kv_db.enabled": False,
+        "databases.mongodb.enabled": False,
+        "databases.lmdb.enabled": False,
+    },
+    "full-offline": {
+        "project.db_flush_mode": "offline",
+        "project.dump_buffer.enabled": True,
+        "mq.enabled": False,
+        "kv_db.enabled": False,
+        "databases.mongodb.enabled": False,
+        "databases.lmdb.enabled": False,
+    },
+    "mq-only-no-flush": {
+        "project.db_flush_mode": "offline",
+        "project.dump_buffer.enabled": True,
+        "mq.enabled": True,
+        "kv_db.enabled": False,
+        "databases.mongodb.enabled": False,
+        "databases.lmdb.enabled": False,
+    },
+}
 
 
 def no_docstring(func):
@@ -55,14 +116,40 @@ def show_settings():
     )
 
 
-def init_settings(full: bool = False):
+def init_settings(
+    full: bool = False,
+    yes: bool = False,
+    dask: bool = False,
+    mlflow: bool = False,
+    tensorboard: bool = False,
+):
     """
-    Create a new settings.yaml file in your home directory under ~/.flowcept.
+    Create or extend the user settings file.
 
     Parameters
     ----------
-    full : bool, optional -- Run with full to generate a complete version of the settings file.
+    full : bool, optional
+        If true, copy `resources/sample_settings.yaml`. Otherwise create the minimal
+        settings file from `flowcept.configs.DEFAULT_SETTINGS`.
+    yes : bool, optional
+        Auto-confirm overwrite if the settings file already exists.
+    dask : bool, optional
+        Add default dask adapter settings under `adapters.dask`.
+    mlflow : bool, optional
+        Add default mlflow adapter settings under `adapters.mlflow`.
+    tensorboard : bool, optional
+        Add default tensorboard adapter settings under `adapters.tensorboard`.
+
+    Notes
+    -----
+    - If `FLOWCEPT_SETTINGS_PATH` is set, that path is used instead of
+      `~/.flowcept/settings.yaml`.
+    - Adapter flags are additive: if the target file already exists, Flowcept reuses it
+      and only writes adapter sections.
+    - `--full` only copies the full sample file. It does not apply a runtime profile.
     """
+    add_adapters = dask or mlflow or tensorboard
+
     settings_path_env = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
     if settings_path_env is not None:
         print(f"FLOWCEPT_SETTINGS_PATH environment variable is set to {settings_path_env}.")
@@ -71,14 +158,21 @@ def init_settings(full: bool = False):
         dest_path = Path(os.path.join(configs._SETTINGS_DIR, "settings.yaml"))
 
     if dest_path.exists():
-        overwrite = input(f"{dest_path} already exists. Overwrite? (y/N): ").strip().lower()
-        if overwrite != "y":
-            print("Operation aborted.")
-            return
+        if add_adapters:
+            print(f"{dest_path} already exists. Reusing it to add adapter settings.")
+        elif yes:
+            print(f"{dest_path} already exists. Overwriting (--yes flag set).")
+        else:
+            overwrite = input(f"{dest_path} already exists. Overwrite? (y/N): ").strip().lower()
+            if overwrite != "y":
+                print("Operation aborted.")
+                return
 
     os.makedirs(configs._SETTINGS_DIR, exist_ok=True)
 
-    if full:
+    if dest_path.exists() and add_adapters:
+        pass
+    elif full:
         print("Going to generate full settings.yaml.")
         sample_settings_path = str(resources.files("resources").joinpath("sample_settings.yaml"))
         with open(sample_settings_path, "rb") as src_file, open(dest_path, "wb") as dst_file:
@@ -90,6 +184,112 @@ def init_settings(full: bool = False):
         cfg = OmegaConf.create(configs.DEFAULT_SETTINGS)
         OmegaConf.save(cfg, dest_path)
         print(f"Generated default settings under {dest_path}.")
+
+    if dask:
+        from flowcept.flowceptor.adapters.dask.dask_dataclasses import DaskSettings
+
+        DaskSettings().save_settings()
+        print("Added adapters.dask settings.")
+
+    if mlflow:
+        from flowcept.flowceptor.adapters.mlflow.mlflow_dataclasses import MLFlowSettings
+
+        MLFlowSettings().save_settings()
+        print("Added adapters.mlflow settings.")
+
+    if tensorboard:
+        from flowcept.flowceptor.adapters.tensorboard.tensorboard_dataclasses import TensorboardSettings
+
+        TensorboardSettings().save_settings()
+        print("Added adapters.tensorboard settings.")
+
+
+def _resolve_user_settings_path() -> Path:
+    """Resolve writable user settings path honoring FLOWCEPT_SETTINGS_PATH."""
+    settings_path_env = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
+    if settings_path_env is not None:
+        return Path(settings_path_env)
+    return Path(os.path.join(configs._SETTINGS_DIR, "settings.yaml"))
+
+
+def _fmt_value(value) -> str:
+    """Format scalar/dict/list values for CLI output."""
+    if value == "<missing>":
+        return "<missing>"
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _compute_profile_changes(cfg, profile_name: str):
+    """Compute old/new setting changes for a configuration profile."""
+    from omegaconf import OmegaConf
+
+    profile_map = CONFIG_PROFILES[profile_name]
+    changes = []
+    for key, new_value in profile_map.items():
+        old = OmegaConf.select(cfg, key, default="<missing>")
+        if old != new_value:
+            changes.append((key, old, new_value))
+    return changes
+
+
+def apply_config_profile(config_profile: str, yes: bool = False):
+    """
+    Apply a settings profile overlay to the user settings file.
+
+    Parameters
+    ----------
+    config_profile : str
+        Profile name. Supported values: full-online, full-telemetry, mq-only,
+        full-offline, mq-only-no-flush.
+    yes : bool, optional
+        If true, skip confirmation prompt and apply changes immediately.
+
+    Notes
+    -----
+    Profiles modify the existing file in place. They do not create a separate profile
+    file and they do not bypass runtime environment-variable overrides.
+    """
+    from omegaconf import OmegaConf
+
+    if config_profile not in CONFIG_PROFILES:
+        print(f"Unsupported profile '{config_profile}'. Supported: {sorted(CONFIG_PROFILES.keys())}")
+        return
+
+    settings_path = _resolve_user_settings_path()
+    if settings_path.exists():
+        cfg = OmegaConf.load(settings_path)
+    else:
+        cfg = OmegaConf.create(configs.DEFAULT_SETTINGS)
+
+    changes = _compute_profile_changes(cfg, config_profile)
+    print(f"Settings file: {settings_path}")
+    print(f"Requested profile: {config_profile}")
+
+    if not changes:
+        print("No changes needed. Settings already match this profile.")
+        return
+
+    print("Proposed changes:")
+    for key, old, new in changes:
+        print(f"- {key}: {_fmt_value(old)} -> {_fmt_value(new)}")
+
+    if not yes:
+        confirmation = input("Apply these changes? (y/N): ").strip().lower()
+        if confirmation != "y":
+            print("Operation aborted.")
+            return
+
+    for key, _, new in changes:
+        OmegaConf.update(cfg, key, new, merge=False)
+
+    settings_path.parent.mkdir(parents=True, exist_ok=True)
+    OmegaConf.save(cfg, settings_path)
+
+    print(f"Updated settings file: {settings_path}")
+    print(f"Applied profile: {config_profile}")
+    print("Changed keys:")
+    for key, old, new in changes:
+        print(f"- {key}: {_fmt_value(old)} -> {_fmt_value(new)}")
 
 
 def version():
@@ -225,9 +425,49 @@ def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: boo
 
 def stop_consumption_services():
     """
-    Stop the document inserter.
+    Stop the running consumption services process gracefully via MQ stop message.
     """
-    print("Not implemented yet.")
+    import signal as _signal
+    import time
+
+    import psutil
+
+    consumer_proc = None
+    for proc in psutil.process_iter(["pid", "cmdline", "status"]):
+        if proc.info["status"] in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
+            continue
+        cmdline = " ".join(proc.info["cmdline"] or [])
+        if "start-consumption-services" in cmdline and proc.pid != os.getpid():
+            consumer_proc = proc
+            break
+
+    if consumer_proc is None:
+        print("No running consumer found.")
+        return
+
+    # Graceful stop: send MQ stop message so the consumer flushes and closes LMDB cleanly.
+    try:
+        from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
+
+        mq = MQDao.build()
+        mq.send_document_inserter_stop()
+        print(f"Sent MQ stop to consumer (pid={consumer_proc.pid}). Waiting for exit...")
+    except Exception as e:
+        print(f"Could not send MQ stop ({e}). Falling back to SIGTERM.")
+        consumer_proc.send_signal(_signal.SIGTERM)
+        return
+
+    deadline = time.time() + 15
+    while time.time() < deadline:
+        try:
+            consumer_proc.status()
+        except psutil.NoSuchProcess:
+            print(f"Consumer (pid={consumer_proc.pid}) exited cleanly.")
+            return
+        time.sleep(0.5)
+
+    print("Consumer did not exit in time. Sending SIGTERM.")
+    consumer_proc.send_signal(_signal.SIGTERM)
 
 
 def start_services(with_mongo: bool = False):
@@ -607,7 +847,7 @@ def start_redis() -> None:
     settings = getattr(configs, "settings", {}) or {}
     mq = settings.get("mq") or {}
 
-    if mq.get("type", None) != "redis":
+    if mq.get("type", "redis") != "redis":
         print("Your settings file needs to specify redis as the MQ type. Please fix it.")
         return
 
@@ -631,13 +871,112 @@ def start_redis() -> None:
         print(f"Failed to start Redis: {e}")
 
 
+def stop_redis() -> None:
+    """
+    Stop the running Redis server via redis-cli shutdown.
+    """
+    from flowcept.configs import MQ_HOST, MQ_PORT
+
+    settings = getattr(configs, "settings", {}) or {}
+    bin_path = (settings.get("mq") or {}).get("bin", "")
+    redis_cli = str(bin_path).replace("redis-server", "redis-cli")
+
+    cmd = f"{shlex.quote(redis_cli)} -h {MQ_HOST} -p {MQ_PORT} shutdown nosave"
+    try:
+        subprocess.run(cmd, shell=True)
+        print("Redis stopped.")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to stop Redis: {e}")
+
+
+def start_webservice(webservice_host: str = "127.0.0.1", webservice_port: str = "8008"):
+    """
+    Start the Flowcept FastAPI webservice locally.
+
+    Parameters
+    ----------
+    webservice_host : str, optional
+        Host interface to bind (default: 127.0.0.1).
+    webservice_port : int, optional
+        Port to bind (default: 8008).
+    """
+    host = webservice_host
+    port = webservice_port
+    print(f"Starting Flowcept webservice on http://{host}:{port}")
+    print(f"Swagger UI:   http://{host}:{port}/docs")
+    print(f"ReDoc:        http://{host}:{port}/redoc")
+    print(f"OpenAPI JSON: http://{host}:{port}/openapi.json")
+    try:
+        import uvicorn
+    except Exception as e:
+        print("Could not import uvicorn. Install webservice dependencies: pip install -e '.[webservice]'")
+        print(e)
+        return
+
+    from flowcept.webservice.main import app
+
+    uvicorn.run(app, host=host, port=int(port))
+
+
+def generate_report(
+    format: str = "markdown",
+    output_path: str = None,
+    input_path: str = None,
+    workflow_id: str = None,
+):
+    """
+    Generate a provenance report from a JSONL buffer file or a workflow ID.
+
+    Parameters
+    ----------
+    format : str, optional
+        Output format: markdown (default) or pdf.
+    output_path : str, optional
+        Output report path. If omitted, defaults to PROVENANCE_CARD.md for markdown
+        and PROVENANCE_REPORT.pdf for pdf.
+    input_path : str, optional
+        Path to the Flowcept JSONL buffer file.
+    workflow_id : str, optional
+        Workflow ID to query from the configured database (MongoDB first, then LMDB).
+    """
+    from flowcept import Flowcept
+
+    if not input_path and not workflow_id:
+        print("Provide either --input-path or --workflow-id.")
+        return
+    if input_path and workflow_id:
+        print("Provide either --input-path or --workflow-id, not both.")
+        return
+
+    report_format = (format or "markdown").strip().lower()
+    if report_format not in {"markdown", "pdf"}:
+        print("Unsupported format. Use 'markdown' or 'pdf'.")
+        return
+
+    report_type = "provenance_card" if report_format == "markdown" else "provenance_report"
+    resolved_output_path = output_path
+    if not resolved_output_path:
+        resolved_output_path = "PROVENANCE_CARD.md" if report_format == "markdown" else "PROVENANCE_REPORT.pdf"
+
+    stats = Flowcept.generate_report(
+        report_type=report_type,
+        input_jsonl_path=input_path,
+        workflow_id=workflow_id,
+        format=report_format,
+        output_path=resolved_output_path,
+    )
+    print(json.dumps(stats, indent=2, default=str))
+    print(f"Report generated at: {Path(resolved_output_path).resolve()}")
+
+
 COMMAND_GROUPS = [
     ("Basic Commands", [version, check_services, show_settings, init_settings, start_services, stop_services]),
     ("Web Service Commands", [start_webservice]),
     ("Consumption Commands", [start_consumption_services, stop_consumption_services, stream_messages]),
     ("Database Commands", [workflow_count, query, get_task]),
+    ("Report Commands", [generate_report]),
     ("Agent Commands", [start_agent, agent_client, start_agent_gui]),
-    ("External Services", [start_mongo, start_redis]),
+    ("External Services", [start_mongo, start_redis, stop_redis, start_webservice]),
 ]
 
 COMMANDS = set(f for _, fs in COMMAND_GROUPS for f in fs)
@@ -705,8 +1044,20 @@ def main():  # noqa: D103
     parser = argparse.ArgumentParser(
         description="Flowcept CLI", formatter_class=argparse.RawTextHelpFormatter, add_help=False
     )
+    parser.add_argument(
+        "--config-profile",
+        type=str,
+        choices=sorted(CONFIG_PROFILES.keys()),
+        help="Apply a predefined settings profile: full-online, mq-only, or full-offline.",
+    )
+    parser.add_argument(
+        "-y",
+        "--yes",
+        action="store_true",
+        help="Auto-confirm profile application (used with --config-profile).",
+    )
 
-    added_args = set()
+    registered_param_args = set()
     for func in COMMANDS:
         doc = func.__doc__ or ""
         func_name = func.__name__
@@ -715,11 +1066,12 @@ def main():  # noqa: D103
         parser.add_argument(flag, action="store_true", help=short_help)
 
         for pname, param in inspect.signature(func).parameters.items():
-            arg_name = f"--{pname.replace('_', '-')}"
-            if arg_name in added_args:
-                # Parameter flags are global; commands may share names (e.g., --port).
+            if pname == "yes":  # already registered as a global -y/--yes flag
                 continue
-            added_args.add(arg_name)
+            arg_name = f"--{pname.replace('_', '-')}"
+            if arg_name in registered_param_args:
+                continue
+            registered_param_args.add(arg_name)
             params_doc = _parse_numpy_doc(doc).get(pname, {})
 
             help_text = f"{params_doc.get('type', '')} - {params_doc.get('desc', '').strip()}"
@@ -754,7 +1106,20 @@ def main():  # noqa: D103
         sys.exit(0)
 
     if len(sys.argv) == 1 or help_flag:
+        print(FLOWCEPT_BANNER)
         print("\nFlowcept CLI\n")
+        print("Profile Commands:\n")
+        print("  flowcept --config-profile full-online [-y]")
+        print("      Configure settings for fully online mode (MQ + KV + Mongo enabled).")
+        print("  flowcept --config-profile mq-only [-y]")
+        print("      Configure settings for MQ-only mode (MQ enabled; KV and DocDBs disabled).")
+        print("  flowcept --config-profile full-offline [-y]")
+        print("      Configure settings for fully offline mode (MQ + KV + Mongo disabled).")
+        print("  flowcept --config-profile mq-only-no-flush [-y]")
+        print("      MQ enabled, no persistent DBs. Tasks accumulate locally and are bulk-published")
+        print("      to MQ in a single end-of-run flush. Also dumps to local JSONL.")
+        print("      Use with Flowcept(check_safe_stops=False).")
+        print("")
         for group, funcs in COMMAND_GROUPS:
             print(f"{group}:\n")
             for func in funcs:
@@ -783,6 +1148,10 @@ def main():  # noqa: D103
         sys.exit(0)
 
     args = vars(parser.parse_args())
+
+    if args.get("config_profile") is not None:
+        apply_config_profile(config_profile=args["config_profile"], yes=bool(args.get("yes")))
+        return
 
     for func in COMMANDS:
         flag = f"--{func.__name__.replace('_', '-')}"

@@ -70,7 +70,6 @@ def create_app() -> FastAPI:
 
         app.include_router(chat_router, prefix="/api/v1")
     except Exception as e:
-        # Chat requires the llm_agent extra; the rest of the webservice works without it.
         FlowceptLogger().warning(f"Chat endpoint not available: {e}")
     app.include_router(query_router, prefix="/api/v1")
 
@@ -116,6 +115,7 @@ def _mount_ui(app: FastAPI) -> None:
         if full_path and candidate.is_file() and candidate.resolve().is_relative_to(ui_dir.resolve()):
             return FileResponse(candidate)
         return FileResponse(index_html)
+
 
 
 app = create_app()

@@ -1,6 +1,6 @@
 """Tensorboard dataclasses module."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 
 from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
@@ -12,11 +12,12 @@ from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
 class TensorboardSettings(BaseSettings):
     """Tensorboard settings."""
 
-    file_path: str
-    log_tags: List[str]
-    log_metrics: List[str]
-    watch_interval_sec: int
-    kind = "tensorboard"
+    key: str = "tensorboard"
+    kind: str = "tensorboard"
+    file_path: str = "tensorboard_events"
+    log_tags: List[str] = field(default_factory=lambda: ["scalars", "hparams", "tensors"])
+    log_metrics: List[str] = field(default_factory=lambda: ["accuracy"])
+    watch_interval_sec: int = 5
 
     def __post_init__(self):
         """Set attributes after init."""

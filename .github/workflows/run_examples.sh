@@ -28,8 +28,11 @@ run_test() {
   test_path="${EXAMPLES_DIR}/${1}"
   test_type="$1"
   with_mongo="$2"
+  settings_slug="$(echo "$test_type" | tr '/.' '__')"
+  export FLOWCEPT_SETTINGS_PATH="${RUNNER_TEMP:-/tmp}/flowcept_${settings_slug}_settings.yaml"
   echo "Test type=${test_type}"
   echo "Starting $test_path"
+  echo "With Mongo? $with_mongo"
 
   pip uninstall flowcept -y > /dev/null 2>&1 || true  # Ignore errors during uninstall
 
@@ -42,22 +45,33 @@ run_test() {
     pip install .[mongo] > /dev/null 2>&1
   fi
 
+  flowcept --init-settings -y
+  flowcept --config-profile full-online -y
+  cat "$FLOWCEPT_SETTINGS_PATH"
+
   if [[ "$test_type" =~ "mlflow" ]]; then
     echo "Installing mlflow"
     pip install .[mlflow] > /dev/null 2>&1
+    flowcept --init-settings --mlflow -y
   elif [[ "$test_type" =~ "dask" ]]; then
     echo "Installing dask"
     pip install .[dask] > /dev/null 2>&1
+    flowcept --init-settings --dask -y
   elif [[ "$test_type" =~ "tensorboard" ]]; then
     echo "Installing tensorboard"
     pip install .[tensorboard] > /dev/null 2>&1
+    flowcept --init-settings --tensorboard -y
   elif [[ "$test_type" =~ "single_layer_perceptron" ]]; then
     echo "Installing ml_dev dependencies"
     pip install .[ml_dev] > /dev/null 2>&1
+    flowcept --init-settings --full -y
+    flowcept --config-profile full-online -y
   elif [[ "$test_type" =~ "llm_complex" ]]; then
     echo "Installing ml_dev dependencies"
     pip install .[dask] > /dev/null 2>&1
     pip install .[ml_dev]
+    flowcept --init-settings --full -y
+    flowcept --config-profile full-online -y
     echo "Defining python path for llm_complex..."
   elif [[ "$test_type" == "unmanaged/simple_task2.py" ]]; then
     export FLOWCEPT_USE_DEFAULT=true
@@ -67,6 +81,7 @@ run_test() {
   echo "Running $test_path ..."
   python "$test_path" | tee output.log
   unset FLOWCEPT_USE_DEFAULT
+  unset FLOWCEPT_SETTINGS_PATH
   echo "Ok, ran $test_path."
 
   if grep -iq "error" output.log; then

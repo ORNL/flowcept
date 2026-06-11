@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 from typing import Any, Dict, List
 
-from flowcept.report.aggregations import group_transformations, summarize_objects
+from flowcept.report.aggregations import group_activities, summarize_objects
 from flowcept.report.loaders import load_records_from_db, read_jsonl, split_records
-from flowcept.report.renderers.provenance_card_markdown import render_provenance_card_markdown
+from flowcept.report.renderers.provenance_campaign_card_markdown import render_provenance_campaign_card_markdown
+from flowcept.report.renderers.provenance_card_markdown import (
+    render_markdown_file_into_rich_terminal,
+    render_provenance_card_markdown,
+)
+from flowcept.report.renderers.provenance_report_pdf import render_provenance_report_pdf
 
 
 def _resolve_input_mode(
@@ -92,6 +98,7 @@ def build_provenance_card(
 def generate_report(
     report_type: str = "provenance_card",
     format: str = "markdown",
+    print_markdown: bool = False,
     output_path: str | None = None,
     input_jsonl_path: str | None = None,
     records: List[Dict[str, Any]] | None = None,
@@ -106,6 +113,9 @@ def generate_report(
         Report identifier. Default is ``"provenance_card"``.
     format : str, optional
         Output format. Default is ``"markdown"``.
+    print_markdown : bool, optional
+        If True and the output format is markdown, print the rendered markdown
+        to terminal after generation using Rich.
     output_path : str, optional
         Output file path. If omitted, defaults to ``PROVENANCE_CARD.md``.
     input_jsonl_path : str, optional
@@ -122,32 +132,81 @@ def generate_report(
     dict
         Report generation statistics and output path.
     """
-    if report_type != "provenance_card":
-        raise ValueError(f"Unsupported report_type: {report_type}")
-    if format != "markdown":
-        raise ValueError(f"Unsupported format: {format}")
-
-    if output_path is None:
-        output_path = "PROVENANCE_CARD.md"
-    output = Path(output_path)
-
-    card = build_provenance_card(
+    mode = _resolve_input_mode(
         input_jsonl_path=input_jsonl_path,
         records=records,
         workflow_id=workflow_id,
         campaign_id=campaign_id,
     )
-    render_stats = render_provenance_card_markdown(
-        dataset=card["dataset"],
-        transformations=card["transformations"],
-        object_summary=card["object_summary"],
-        output_path=output,
-    )
+
+    if report_type not in {"provenance_card", "provenance_report"}:
+        raise ValueError(f"Unsupported report_type: {report_type}")
+    if format not in {"markdown", "pdf"}:
+        raise ValueError(f"Unsupported format: {format}")
+    if report_type == "provenance_card" and format != "markdown":
+        raise ValueError("provenance_card supports only markdown format.")
+    if report_type == "provenance_report" and format != "pdf":
+        raise ValueError("provenance_report supports only pdf format.")
+
+    skipped_lines = 0
+    if mode == "jsonl":
+        jsonl_path = Path(input_jsonl_path)  # type: ignore[arg-type]
+        if not jsonl_path.exists():
+            raise FileNotFoundError(f"Input JSONL not found: {jsonl_path}")
+        parsed_records, skipped_lines = read_jsonl(jsonl_path)
+        dataset = split_records(parsed_records)
+    elif mode == "records":
+        dataset = split_records(records or [])
+    else:
+        dataset = load_records_from_db(workflow_id=workflow_id, campaign_id=campaign_id)
+
+    is_campaign = "workflows" in dataset
+
+    if output_path is None and format == "pdf":
+        output_path = "PROVENANCE_REPORT.pdf"
+    output = Path(output_path) if output_path is not None else None
+
+    if is_campaign:
+        render_stats = render_provenance_campaign_card_markdown(
+            dataset=dataset,
+            output_path=output,
+        )
+    else:
+        activities = group_activities(dataset.get("tasks", []))
+        object_summary = summarize_objects(dataset.get("objects", []))
+        if format == "markdown":
+            render_stats = render_provenance_card_markdown(
+                dataset=dataset,
+                activities=activities,
+                object_summary=object_summary,
+                output_path=output,
+            )
+        else:
+            render_stats = render_provenance_report_pdf(
+                dataset=dataset,
+                activities=activities,
+                object_summary=object_summary,
+                output_path=output,
+            )
+
+    if format == "markdown" and print_markdown:
+        if importlib.util.find_spec("rich") is None:
+            raise ModuleNotFoundError(
+                'Markdown terminal rendering requires Rich. Install with: pip install flowcept["extras"]'
+            )
+        if output is not None:
+            render_markdown_file_into_rich_terminal(output)
+        else:
+            from rich.console import Console
+            from rich.markdown import Markdown
+
+            Console().print(Markdown(render_stats["markdown"]))
+
     return {
         "report_type": report_type,
         "format": format,
-        "output": str(output),
-        "input_mode": card["input_mode"],
-        "skipped_lines": card["skipped_lines"],
+        "output": str(output) if output is not None else None,
+        "input_mode": mode,
+        "skipped_lines": skipped_lines,
         **render_stats,
     }

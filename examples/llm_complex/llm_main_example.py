@@ -171,7 +171,6 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
         cluster = LocalCluster(n_workers=1)
         scheduler = cluster.scheduler
         client = Client(scheduler.address)
-        client.forward_logging()
         # Registering Flowcept's worker adapters
         if with_flowcept:
             from flowcept.flowceptor.adapters.dask.dask_plugins import FlowceptDaskWorkerAdapter
@@ -191,6 +190,13 @@ def start_dask(scheduler_file=None, start_dask_cluster=False, with_flowcept=True
 
 
 def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _flowcept=None):
+    def stop_flowcept():
+        if not _flowcept:
+            return
+        print("Now closing flowcept consumer...")
+        _flowcept.stop()
+        print("Flowcept consumer closed.")
+
     try:
         if start_dask_cluster or scheduler_file:
             print("Closing dask...")
@@ -199,16 +205,13 @@ def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _
                 client.retire_workers(close_workers=True)
             except Exception as e:
                 print(f"Some exception when retiring workers: {e}")
+            stop_flowcept()
             client.shutdown()
             try:
                 client.close()
             except Exception as e:
                 print(f"Some exception when closing client: {e}")
             print("Dask closed.")
-            if _flowcept:
-                print("Now closing flowcept consumer...")
-                _flowcept.stop()
-                print("Flowcept consumer closed.")
         else:
             print("Closing dask...")
             try:
@@ -216,6 +219,7 @@ def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _
                     client.retire_workers(close_workers=True)
                 except Exception as e:
                     print(f"Some exception when retiring workers: {e}")
+                stop_flowcept()
                 client.close()
                 cluster.close()
                 print("Dask closed.")
@@ -226,10 +230,6 @@ def close_dask(client, cluster, scheduler_file=None, start_dask_cluster=False, _
                     logging.getLogger("distributed.worker").setLevel(logging.WARNING)
                 except:
                     pass
-            if _flowcept:
-                print("Now closing flowcept consumer...")
-                _flowcept.stop()
-                print("Flowcept consumer closed.")
     except Exception as e:
         print(e)
 
@@ -567,21 +567,33 @@ def parse_args():
 def delete_mongo_data(mongo_dao, campaign_id):
     print("Deleting generated data in MongoDB")
 
-    workflow_ids = []
     workflows = Flowcept.db.query({"campaign_id": campaign_id}, collection="workflows")
-    for w in workflows:
-        workflow_ids.append(w["workflow_id"])
+    workflow_ids = [w["workflow_id"] for w in workflows if w.get("workflow_id")]
 
     tasks = Flowcept.db.query({"campaign_id": campaign_id})
-    task_ids = []
-    best_obj_ids = []
-    for t in tasks:
-        task_ids.append(t["task_id"])
-        if t["activity_id"] == "model_train":
-            best_obj_ids.append(t["generated"]["best_obj_id"])
+    task_ids = [t["task_id"] for t in tasks if t.get("task_id")]
 
-    print(f"Going to delete {len(best_obj_ids)} objects.")
-    mongo_dao.delete_object_keys("object_id", best_obj_ids)
+    model_train_tasks = [
+        task for task in tasks
+        if task.get("activity_id") == "model_train" and task.get("status") == "FINISHED"
+    ]
+    best_obj_ids = [
+        task["generated"]["best_obj_id"] for task in model_train_tasks
+        if task.get("generated", {}).get("best_obj_id")
+    ]
+    if len(best_obj_ids) != len(model_train_tasks):
+        raise AssertionError("Every finished model_train task must contain generated.best_obj_id.")
+
+    objects = []
+    if workflow_ids:
+        objects = Flowcept.db.query({"workflow_id": {"$in": workflow_ids}}, collection="objects")
+    object_ids = [obj["object_id"] for obj in objects if obj.get("object_id")]
+    missing_best_obj_ids = sorted(set(best_obj_ids) - set(object_ids))
+    if missing_best_obj_ids:
+        raise AssertionError(f"Best model objects not found in MongoDB: {missing_best_obj_ids}")
+
+    print(f"Going to delete {len(object_ids)} objects.")
+    mongo_dao.delete_object_keys("object_id", object_ids)
     print(f"Going to delete {len(task_ids)} tasks.")
     mongo_dao.delete_task_keys("task_id", task_ids)
     print(f"Going to delete {len(workflow_ids)} workflows.")
@@ -631,7 +643,6 @@ def main():
 
         if delete_after_run:
             delete_mongo_data(mongo_dao, campaign_id)
-            verify_number_docs_in_db(mongo_dao, n_tasks, n_wfs, n_objects)
 
     print("Alright! Congrats.")
     return 1

@@ -110,6 +110,23 @@ class FlowceptAPITest(unittest.TestCase):
             o2 = mult_two(o1)
             print(o2)
 
+    def test_workflow_subtype(self):
+        workflow_subtype = "ml_workflow"
+        with Flowcept(workflow_name="test_workflow_subtype", workflow_subtype=workflow_subtype):
+            sum_one(1)
+
+        assert assert_by_querying_tasks_until(
+            {"workflow_id": Flowcept.current_workflow_id},
+            condition_to_evaluate=lambda docs: len(docs) == 1,
+        )
+
+        docs = Flowcept.db.query(
+            collection="workflows",
+            filter={"workflow_id": Flowcept.current_workflow_id},
+        )
+        assert len(docs) == 1
+        assert docs[0].get("subtype") == workflow_subtype
+
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_runtime_query(self):
         N = 5
@@ -120,4 +137,3 @@ class FlowceptAPITest(unittest.TestCase):
                 tasks = Flowcept.db.get_tasks_from_current_workflow()
                 assert len(tasks) == (i+1)
         assert len(Flowcept.db.get_tasks_from_current_workflow()) == N
-

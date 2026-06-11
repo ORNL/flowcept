@@ -28,6 +28,7 @@ html_title = "Flowcept"
 # Keep using your existing 'img' folder as the static path so you don't have to move files.
 # Sphinx will treat everything inside 'img/' as static assets.
 html_static_path = ["img"]
+html_extra_path = ["openapi"]
 
 # Furo supports automatic dark/light logo switching.
 # IMPORTANT: Paths below are relative to the *root* of each static path ('img' here),

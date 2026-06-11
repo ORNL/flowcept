@@ -4,6 +4,13 @@ import unittest
 import json
 import random
 from threading import Thread
+import pytest
+
+pytest.skip(
+    "Deprecated legacy webserver tests (flowcept_webserver/TaskQueryAPI with_webserver). "
+    "Covered by new FastAPI tests under tests/webservice.",
+    allow_module_level=True,
+)
 
 import requests
 import inspect

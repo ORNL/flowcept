@@ -20,7 +20,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install ruff
-          pip install .[docs]
+          pip install .[docs,webservice,extras]
 
       - name: Run linter and formatter checks using ruff
         run: make checks
@@ -32,4 +32,3 @@ jobs:
         run: |
           make clean
           find /home/runner/runners/ -type f -name "*.log" -exec sh -c 'echo {}; >"{}"' \; || true
-

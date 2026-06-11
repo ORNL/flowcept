@@ -52,6 +52,8 @@ class FlowceptAppContext(BaseAppContext):
         Reset the agent's context to a clean state, initializing a new QA setup.
         """
         self.tasks = []
+        self.workflow_msg_obj = {}
+        self.objects = []
         self.task_summaries = []
         self.critical_tasks = []
         self.df = pd.DataFrame()
@@ -59,6 +61,9 @@ class FlowceptAppContext(BaseAppContext):
         self.value_examples = {}
         self.custom_guidance = []
         self.tracker_config = {}
+        self.objects_df = pd.DataFrame()
+        self.objects_schema = {}
+        self.objects_value_examples = {}
 
         if AGENT_DEBUG:
             from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -101,6 +106,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         self.context = FlowceptAppContext()
         self.tracker_config = dict(max_examples=3, max_str_len=50)
         self.schema_tracker = DynamicSchemaTracker(**self.tracker_config)
+        self.objects_schema_tracker = DynamicSchemaTracker(**self.tracker_config)
         self.msgs_counter = 0
         self.context_chunk_size = 1  # Should be in the settings
         super().__init__(allow_mq_disabled=True)
@@ -120,6 +126,19 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             True if the message was handled successfully.
         """
         msg_type = msg_obj.get("type", None)
+        if msg_type == "workflow":
+            # Preserve an explicitly loaded workflow when the agent registers its own runtime workflow.
+            if msg_obj.get("name") == "flowcept_agent_workflow" and self.context.workflow_msg_obj:
+                self.logger.info("Ignoring agent runtime workflow; keeping loaded workflow context.")
+                return True
+            self.context.workflow_msg_obj = msg_obj
+            return True
+
+        if msg_type == "object":
+            self.context.objects.append(msg_obj)
+            self.update_objects_schema_and_add_to_df(objects=[msg_obj])
+            return True
+
         if msg_type == "task":
             task_msg = TaskObject.from_dict(msg_obj)
             if task_msg.subtype == "llm_task" and task_msg.agent_id == self.agent_id:
@@ -222,8 +241,25 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         self.context.tasks_schema = self.schema_tracker.get_schema()
         self.context.value_examples = self.schema_tracker.get_example_values()
 
-        _df = pd.json_normalize(tasks)
-        self.context.df = pd.concat([self.context.df, pd.DataFrame(_df)], ignore_index=True)
+        _df = self._to_context_df(tasks)
+        self.context.df = pd.concat([self.context.df, _df], ignore_index=True)
+
+    def update_objects_schema_and_add_to_df(self, objects: List[Dict]):
+        """Update the object schema and add to the object DataFrame context."""
+        self.objects_schema_tracker.update_with_tasks(objects)
+        self.context.objects_schema = self.objects_schema_tracker.get_schema()
+        self.context.objects_value_examples = self.objects_schema_tracker.get_example_values()
+
+        _df = self._to_context_df(objects)
+        self.context.objects_df = pd.concat([self.context.objects_df, _df], ignore_index=True)
+
+    @staticmethod
+    def _to_context_df(records: List[Dict]):
+        _df = pd.json_normalize(records)
+        for col in _df.columns:
+            if _df[col].apply(lambda v: isinstance(v, list)).any():
+                _df[col] = _df[col].apply(lambda v: tuple(v) if isinstance(v, list) else v)
+        return pd.DataFrame(_df)
 
     def monitor_chunk(self):
         """
@@ -248,4 +284,44 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 
 # Exporting the ctx_manager and the mcp_flowcept
 ctx_manager = FlowceptAgentContextManager()
-mcp_flowcept = FastMCP("FlowceptAgent", lifespan=ctx_manager.lifespan, stateless_http=True)
+
+agent_transport_security = None
+if "allowed_hosts" in AGENT:
+    from mcp.server.transport_security import TransportSecuritySettings
+
+    agent_transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=AGENT.get("allowed_hosts"),
+    )
+
+mcp_flowcept = FastMCP(
+    "FlowceptAgent",
+    lifespan=ctx_manager.lifespan,
+    stateless_http=True,
+    transport_security=agent_transport_security if agent_transport_security else None,
+)
+
+EMPTY_DF_MESSAGE = "Current df is empty or null."
+
+
+def get_df_context(context_kind="tasks"):
+    """
+    Return active agent DataFrame context objects.
+
+    Returns
+    -------
+    tuple
+        ``(df, schema, value_examples, custom_user_guidance)`` from lifespan context.
+    """
+    ctx = mcp_flowcept.get_context()
+    lifespan_context = ctx.request_context.lifespan_context
+    if context_kind == "objects":
+        df = lifespan_context.objects_df
+        schema = lifespan_context.objects_schema
+        value_examples = lifespan_context.objects_value_examples
+    else:
+        df = lifespan_context.df
+        schema = lifespan_context.tasks_schema
+        value_examples = lifespan_context.value_examples
+    custom_user_guidance = lifespan_context.custom_guidance
+    return df, schema, value_examples, custom_user_guidance

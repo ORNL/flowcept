@@ -1,6 +1,7 @@
 """DB API module."""
 
 import uuid
+from datetime import datetime
 from typing import List, Dict
 
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
@@ -21,6 +22,45 @@ class DBAPI(object):
     # TODO: consider making all methods static
     def __init__(self):
         self.logger = FlowceptLogger()
+
+    @staticmethod
+    def _to_message_value(value):
+        """Convert object metadata values to MQ-safe values."""
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, bytes):
+            return None
+        if isinstance(value, dict):
+            return {str(k): DBAPI._to_message_value(v) for k, v in value.items() if k not in {"data", "_id"}}
+        if isinstance(value, list):
+            return [DBAPI._to_message_value(v) for v in value]
+        if isinstance(value, tuple):
+            return [DBAPI._to_message_value(v) for v in value]
+        if value is None or isinstance(value, (str, int, float, bool)):
+            return value
+        return str(value)
+
+    def _emit_object_metadata_message(self, object_id):
+        """Emit metadata-only object provenance to the active Flowcept buffer."""
+        try:
+            dao = DBAPI._dao()
+            if hasattr(dao, "get_blob_object_metadata_doc"):
+                doc = dao.get_blob_object_metadata_doc(object_id=object_id)
+            else:
+                doc = self.get_blob_object(object_id=object_id).to_dict()
+            if "data" in doc:
+                doc["storage_type"] = "in_object"
+            elif "grid_fs_file_id" in doc:
+                doc["storage_type"] = "gridfs"
+            msg = DBAPI._to_message_value(doc)
+            msg.pop("_id", None)
+            msg.pop("data", None)
+            msg["type"] = "object"
+            from flowcept.flowcept_api.flowcept_controller import Flowcept
+
+            Flowcept.emit_message(msg)
+        except Exception as e:
+            self.logger.error(f"Could not emit object metadata message for object_id={object_id}: {e}")
 
     @classmethod
     def _dao(cls) -> DocumentDBDAO:
@@ -312,6 +352,89 @@ class DBAPI(object):
         """Backward-compatible alias to ``get_object_history``."""
         return self.get_object_history(object_id)
 
+    def get_blob_fingerprint(self, object_id, version=None) -> Dict:
+        """Get a lightweight blob fingerprint for equality checks.
+
+        Parameters
+        ----------
+        object_id : str
+            Object identifier.
+        version : int or None, optional
+            ``None`` for latest version, integer for an exact version.
+
+        Returns
+        -------
+        dict
+            Metadata-only fingerprint with hash and size fields.
+        """
+        dao = DBAPI._dao()
+        if hasattr(dao, "get_blob_object_metadata_doc"):
+            doc = dao.get_blob_object_metadata_doc(object_id=object_id, version=version)
+        else:
+            # Fallback for backends without dedicated metadata retrieval.
+            doc = self.get_blob_object(object_id=object_id, version=version).to_dict()
+            doc.pop("data", None)
+
+        return {
+            "object_id": doc.get("object_id"),
+            "version": int(doc.get("version", 0)),
+            "object_size_bytes": doc.get("object_size_bytes"),
+            "data_sha256": doc.get("data_sha256"),
+            "data_hash_algo": doc.get("data_hash_algo"),
+            "storage_type": "in_object" if "grid_fs_file_id" not in doc else "gridfs",
+        }
+
+    def blob_objects_equal(
+        self,
+        object_id_a,
+        object_id_b,
+        version_a=None,
+        version_b=None,
+        fallback_to_payload=False,
+    ) -> bool:
+        """Compare two blob objects by persisted payload identity metadata.
+
+        Parameters
+        ----------
+        object_id_a : str
+            First object identifier.
+        object_id_b : str
+            Second object identifier.
+        version_a : int or None, optional
+            Version of the first object. ``None`` means latest.
+        version_b : int or None, optional
+            Version of the second object. ``None`` means latest.
+        fallback_to_payload : bool, optional
+            If ``True`` and hash metadata is unavailable, compare loaded payload bytes.
+
+        Returns
+        -------
+        bool
+            ``True`` when objects are equivalent under the selected strategy, else ``False``.
+        """
+        fp_a = self.get_blob_fingerprint(object_id=object_id_a, version=version_a)
+        fp_b = self.get_blob_fingerprint(object_id=object_id_b, version=version_b)
+
+        hash_a = fp_a.get("data_sha256")
+        hash_b = fp_b.get("data_sha256")
+        algo_a = fp_a.get("data_hash_algo")
+        algo_b = fp_b.get("data_hash_algo")
+
+        if hash_a and hash_b and algo_a == algo_b:
+            return hash_a == hash_b
+
+        size_a = fp_a.get("object_size_bytes")
+        size_b = fp_b.get("object_size_bytes")
+        if size_a is not None and size_b is not None and size_a != size_b:
+            return False
+
+        if not fallback_to_payload:
+            return False
+
+        data_a = getattr(self.get_blob_object(object_id_a, version=version_a), "data", None)
+        data_b = getattr(self.get_blob_object(object_id_b, version=version_b), "data", None)
+        return data_a == data_b
+
     def get_tasks_recursive(self, workflow_id, max_depth=999, mapping=None):
         """
         Retrieve all tasks recursively for a given workflow ID.
@@ -435,11 +558,12 @@ class DBAPI(object):
         object_id=None,
         task_id=None,
         workflow_id=None,
-        type=None,
+        object_type=None,
         custom_metadata=None,
         save_data_in_collection=False,
         pickle=False,
         control_version=False,
+        tags=None,
     ):
         """Save or update a blob object.
 
@@ -453,7 +577,7 @@ class DBAPI(object):
             Associated task identifier.
         workflow_id : str, optional
             Associated workflow identifier. Defaults to current workflow when available.
-        type : str, optional
+        object_type : str, optional
             User-defined object category.
         custom_metadata : dict, optional
             Arbitrary metadata attached to the object.
@@ -464,6 +588,8 @@ class DBAPI(object):
             If ``True``, pickle ``object`` before persistence.
         control_version : bool, optional
             If ``True``, enable append-only history semantics via ``object_history``.
+        tags : list of str, optional
+            Labels to associate with the object.
 
         Returns
         -------
@@ -477,17 +603,66 @@ class DBAPI(object):
                 workflow_id = Flowcept.current_workflow_id
             except Exception:
                 workflow_id = None
-        return DBAPI._dao().save_or_update_object(
+        object_id = DBAPI._dao().save_or_update_object(
             object,
             object_id,
             task_id,
             workflow_id,
-            type,
+            object_type,
             custom_metadata,
             save_data_in_collection=save_data_in_collection,
             pickle_=pickle,
             control_version=control_version,
+            tags=tags,
         )
+        self._emit_object_metadata_message(object_id)
+        return object_id
+
+    def update_object_metadata(
+        self,
+        object_id,
+        custom_metadata=None,
+        tags=None,
+        object_type=None,
+        task_id=None,
+        workflow_id=None,
+        control_version=True,
+    ):
+        """Update object metadata without rewriting object payload bytes.
+
+        Parameters
+        ----------
+        object_id : str
+            Logical object identifier to update.
+        custom_metadata : dict, optional
+            Metadata dictionary to set.
+        tags : list of str, optional
+            Tags to set.
+        object_type : str, optional
+            Object type/category to set.
+        task_id : str, optional
+            Task identifier to set.
+        workflow_id : str, optional
+            Workflow identifier to set.
+        control_version : bool, optional
+            If ``True`` (default), append history and increment version.
+
+        Returns
+        -------
+        str
+            Updated object identifier.
+        """
+        updated_object_id = DBAPI._dao().update_object_metadata(
+            object_id=object_id,
+            custom_metadata=custom_metadata,
+            tags=tags,
+            object_type=object_type,
+            task_id=task_id,
+            workflow_id=workflow_id,
+            control_version=control_version,
+        )
+        self._emit_object_metadata_message(updated_object_id)
+        return updated_object_id
 
     def to_df(self, collection="tasks", filter=None):
         """Query a collection and return a pandas DataFrame.
@@ -548,11 +723,12 @@ class DBAPI(object):
         object_id=None,
         task_id=None,
         workflow_id=None,
-        type="ml_model",
+        object_type="ml_model",
         custom_metadata=None,
         save_data_in_collection=False,
         pickle=False,
         control_version=False,
+        tags=None,
     ):
         """Alias to save or update ML model blobs.
 
@@ -566,7 +742,7 @@ class DBAPI(object):
             Associated task identifier.
         workflow_id : str, optional
             Associated workflow identifier.
-        type : str, optional
+        object_type : str, optional
             Category label. Defaults to ``"ml_model"``.
         custom_metadata : dict, optional
             Custom metadata.
@@ -576,6 +752,8 @@ class DBAPI(object):
             Pickle before storage.
         control_version : bool, optional
             Enable append-only history semantics.
+        tags : list of str, optional
+            Labels to associate with the object.
 
         Returns
         -------
@@ -587,11 +765,12 @@ class DBAPI(object):
             object_id=object_id,
             task_id=task_id,
             workflow_id=workflow_id,
-            type=type,
+            object_type=object_type,
             custom_metadata=custom_metadata,
             save_data_in_collection=save_data_in_collection,
             pickle=pickle,
             control_version=control_version,
+            tags=tags,
         )
 
     def save_or_update_dataset(
@@ -600,11 +779,12 @@ class DBAPI(object):
         object_id=None,
         task_id=None,
         workflow_id=None,
-        type="dataset",
+        object_type="dataset",
         custom_metadata=None,
         save_data_in_collection=False,
         pickle=False,
         control_version=False,
+        tags=None,
     ) -> str:
         """Alias to save or update dataset blobs.
 
@@ -618,7 +798,7 @@ class DBAPI(object):
             Associated task identifier.
         workflow_id : str, optional
             Associated workflow identifier.
-        type : str, optional
+        object_type : str, optional
             Category label. Defaults to ``"dataset"``.
         custom_metadata : dict, optional
             Custom metadata.
@@ -628,6 +808,8 @@ class DBAPI(object):
             Pickle before storage.
         control_version : bool, optional
             Enable append-only history semantics.
+        tags : list of str, optional
+            Labels to associate with the object.
 
         Returns
         -------
@@ -639,11 +821,12 @@ class DBAPI(object):
             object_id=object_id,
             task_id=task_id,
             workflow_id=workflow_id,
-            type=type,
+            object_type=object_type,
             custom_metadata=custom_metadata,
             save_data_in_collection=save_data_in_collection,
             pickle=pickle,
             control_version=control_version,
+            tags=tags,
         )
 
     def save_or_update_torch_model(
@@ -655,6 +838,7 @@ class DBAPI(object):
         custom_metadata=None,
         control_version=False,
         save_profile=True,
+        tags=None,
     ) -> str:
         """Save a PyTorch model state dictionary as an object blob.
 
@@ -676,6 +860,8 @@ class DBAPI(object):
         save_profile : bool, optional
             If ``True`` (default), adds ``model_profile`` to
             ``custom_metadata`` using Flowcept PyTorch profiling.
+        tags : list of str, optional
+            Labels to associate with the object.
 
         Returns
         -------
@@ -705,11 +891,12 @@ class DBAPI(object):
         obj_id = self.save_or_update_object(
             object=binary_data,
             object_id=object_id,
-            type="ml_model",
+            object_type="ml_model",
             task_id=task_id,
             workflow_id=workflow_id,
             custom_metadata=cm,
             control_version=control_version,
+            tags=tags,
         )
 
         return obj_id

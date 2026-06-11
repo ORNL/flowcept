@@ -180,10 +180,10 @@ def replace_non_serializable(obj):
         else:
             return obj
     else:
-        if hasattr(obj, "to_flowcept_dict"):
-            return obj.to_flowcept_dict()
-        elif hasattr(obj, "to_dict"):
-            return obj.to_dict()
+        cls_dict = type(obj).__dict__
+        m = cls_dict.get("to_flowcept_dict") or cls_dict.get("to_dict")
+        if m is not None:
+            return m(obj)
         elif isinstance(obj, __DICT__CLASSES):
             return obj.__dict__
         else:
@@ -316,6 +316,30 @@ class GenericJSONDecoder(json.JSONDecoder):
         else:
             inst = dct
         return inst
+
+
+def get_array_summary(array: np.ndarray) -> dict:
+    """Return a compact summary of a NumPy array.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Input array to summarize.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the minimum value, maximum value, median value,
+        and shape of the input array. The returned keys are:
+        ``"min"``, ``"max"``, ``"med"``, and ``"shape"``.
+    """
+    summary = {
+        "min": array.min().item(),
+        "max": array.max().item(),
+        "med": np.median(array).item(),
+        "shape": array.shape,
+    }
+    return summary
 
 
 def get_git_info(path: str = "."):

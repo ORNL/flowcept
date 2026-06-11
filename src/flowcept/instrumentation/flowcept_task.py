@@ -163,7 +163,11 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.used = handled_args
             task_obj.tags = tags
             task_obj.started_at = time()
-            task_obj.custom_metadata = custom_metadata
+            task_obj.custom_metadata = (
+                replace_non_serializable(custom_metadata)
+                if (REPLACE_NON_JSON_SERIALIZABLE and custom_metadata is not None)
+                else custom_metadata
+            )
             task_obj.hostname = HOSTNAME
             task_obj.task_id = str(task_obj.started_at)
             _thread_local._flowcept_current_context_task_id = task_obj.task_id

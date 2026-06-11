@@ -1,10 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List
 import copy
 from collections import defaultdict
 from typing import Any
-
-import pytz
 
 
 def summarize_telemetry(task: Dict, logger) -> Dict:
@@ -159,7 +157,7 @@ def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
         for time_key in time_keys:
             timestamp = _safe_get(task, time_key)
             if timestamp is not None:
-                task_summary[time_key] = datetime.fromtimestamp(timestamp, pytz.utc)
+                task_summary[time_key] = datetime.fromtimestamp(timestamp, timezone.utc)
     except Exception as e:
         if logger:
             logger.exception(f"Error {e} converting timestamp for task {task.get('task_id', 'unknown')}")

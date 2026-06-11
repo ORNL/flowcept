@@ -1,11 +1,13 @@
 """Zambeze interceptor module."""
 
+import json
 import uuid
 from threading import Thread
 from time import sleep
-import paho.mqtt.client as mqtt
-import json
 from typing import Dict
+
+import paho.mqtt.client as mqtt
+
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.base_interceptor import (
@@ -73,9 +75,9 @@ class MQTTBrokerInterceptor(BaseInterceptor):
         """Handle disconnections and attempt reconnection."""
         self.logger.warning("MQTT Observer Client Disconnected.")
 
-    def start(self, bundle_exec_id) -> "MQTTBrokerInterceptor":
+    def start(self, bundle_exec_id, check_safe_stops: bool = True) -> "MQTTBrokerInterceptor":
         """Start it."""
-        super().start(bundle_exec_id)
+        super().start(bundle_exec_id, check_safe_stops=check_safe_stops)
         self._observer_thread = Thread(target=self.observe, daemon=True)
         self._observer_thread.start()
         return self
@@ -118,10 +120,10 @@ class MQTTBrokerInterceptor(BaseInterceptor):
         print(task_obj)
         return task_obj
 
-    def stop(self) -> bool:
+    def stop(self, check_safe_stops: bool = True) -> bool:
         """Stop it."""
         self.logger.debug("Interceptor stopping...")
-        super().stop()
+        super().stop(check_safe_stops=check_safe_stops)
         try:
             self._client.disconnect()
         except Exception as e:

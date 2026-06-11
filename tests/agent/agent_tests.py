@@ -3,6 +3,9 @@ import os
 import tempfile
 from time import sleep
 import unittest
+from unittest.mock import patch
+
+import pandas as pd
 
 from flowcept.agents import ToolResult
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -97,6 +100,83 @@ class TestAgent(unittest.TestCase):
             agent.stop()
             if DocumentDBDAO._instance is not None:
                 DocumentDBDAO._instance.close()
+
+
+class TestAgentInMemoryQueryTools(unittest.TestCase):
+    class _DummyContext:
+        def __init__(self, df, schema, value_examples, custom_user_guidance):
+            self.request_context = type("ReqCtx", (), {})()
+            self.request_context.lifespan_context = type("LifeCtx", (), {})()
+            self.request_context.lifespan_context.df = df
+            self.request_context.lifespan_context.tasks_schema = schema
+            self.request_context.lifespan_context.value_examples = value_examples
+            self.request_context.lifespan_context.custom_guidance = custom_user_guidance
+
+    def test_build_df_query_prompt_returns_prompt_payload(self):
+        from flowcept.agents.prompts import in_memory_query_prompts as t
+
+        df = pd.DataFrame({"activity_id": ["a", "b"], "used.x": [1, 2]})
+        schema = {"activity_a": {"i": ["used.x"], "o": []}}
+        value_examples = {"x": {"t": "int", "v": [1, 2]}}
+        guidance = ["prefer concise outputs"]
+        dummy_ctx = self._DummyContext(
+            df=df,
+            schema=schema,
+            value_examples=value_examples,
+            custom_user_guidance=guidance,
+        )
+
+        with patch.object(t.mcp_flowcept, "get_context", return_value=dummy_ctx):
+            prompt_text = t.build_df_query_prompt(query="count tasks by activity")
+
+        self.assertIsInstance(prompt_text, str)
+        self.assertIn("ALLOWED_FIELDS", prompt_text)
+        self.assertIn("activity_id", prompt_text)
+        self.assertIn("count tasks by activity", prompt_text)
+
+    def test_build_df_query_prompt_returns_404_when_df_missing(self):
+        from flowcept.agents.prompts import in_memory_query_prompts as t
+
+        dummy_ctx = self._DummyContext(df=pd.DataFrame(), schema={}, value_examples={}, custom_user_guidance=[])
+        with patch.object(t.mcp_flowcept, "get_context", return_value=dummy_ctx):
+            prompt_text = t.build_df_query_prompt(query="anything")
+
+        self.assertEqual(prompt_text, "Current df is empty or null.")
+
+    def test_execute_generated_df_code_runs_against_current_df(self):
+        from flowcept.agents.tools.in_memory_queries import in_memory_queries_tools as t
+
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [10, 20, 30]})
+        dummy_ctx = self._DummyContext(df=df, schema={}, value_examples={}, custom_user_guidance=[])
+
+        with patch.object(t.mcp_flowcept, "get_context", return_value=dummy_ctx):
+            tool_result = t.execute_generated_df_code(user_code="result = df[['a']].head(2)")
+
+        self.assertEqual(tool_result.code, 301)
+        self.assertIn("result_df", tool_result.result)
+        self.assertIn("a", tool_result.result["result_df"])
+        self.assertIn("1", tool_result.result["result_df"])
+        self.assertIn("2", tool_result.result["result_df"])
+
+    def test_generate_workflow_provenance_card_tool(self):
+        from flowcept.agents.tools import general_tools as g
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as tmp:
+            tmp.write("# Workflow Provenance Card: Demo\n\nBody")
+            tmp_path = tmp.name
+        expected_stats = {"output": tmp_path}
+
+        with patch.object(Flowcept, "generate_report", return_value=expected_stats) as mocked:
+            tool_result = g.generate_workflow_provenance_card(workflow_id="wf-1", output_path=tmp_path)
+
+        self.assertEqual(tool_result.code, 201)
+        self.assertEqual(tool_result.result["format"], "markdown")
+        self.assertEqual(tool_result.result["workflow_id"], "wf-1")
+        self.assertIn("markdown", tool_result.result)
+        self.assertIn("Workflow Provenance Card", tool_result.result["markdown"])
+        mocked.assert_called_once()
+        os.remove(tmp_path)
+
 
     def test_llm_query_over_buffer(self):
         if not AGENT.get("api_key"):

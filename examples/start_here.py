@@ -15,8 +15,6 @@ For more complex features, such as online provenance analysis, HPC requirements,
 Note:
 - Adding output_names is not required, but they will make the generated provenance look nicer (and more semantic).
 """
-import json
-
 from flowcept import Flowcept, flowcept_task
 from flowcept.instrumentation.flowcept_decorator import flowcept
 
@@ -46,6 +44,12 @@ if __name__ == "__main__":
 
     main()
 
+    # Reporting and verifications:
     prov_buffer = Flowcept.read_buffer_file()
     assert len(prov_buffer) == 2
-    print(json.dumps(prov_buffer, indent=2))
+    provenance_card_path = "PROVENANCE_CARD.md"
+    report_stats = Flowcept.generate_report(
+        records=prov_buffer,
+        output_path=provenance_card_path,
+    )
+    print(f"{provenance_card_path} generated!")

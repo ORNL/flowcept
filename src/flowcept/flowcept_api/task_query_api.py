@@ -4,6 +4,7 @@ from collections import OrderedDict
 from typing import List, Dict, Tuple
 from datetime import timedelta
 import json
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -25,8 +26,6 @@ from flowcept.commons.query_utils import (
     calculate_telemetry_diff_for_docs,
 )
 from flowcept.configs import WEBSERVER_HOST, WEBSERVER_PORT, ANALYTICS
-from flowcept.flowcept_webserver.app import BASE_ROUTE
-from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
 
 
 class TaskQueryAPI(object):
@@ -57,6 +56,16 @@ class TaskQueryAPI(object):
             self.logger = FlowceptLogger()
             self._with_webserver = with_webserver
             if self._with_webserver:
+                warnings.warn(
+                    "TaskQueryAPI(with_webserver=True) relies on deprecated legacy "
+                    "package flowcept.flowcept_webserver. Use flowcept.webservice "
+                    "(FastAPI) instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                from flowcept.flowcept_webserver.app import BASE_ROUTE
+                from flowcept.flowcept_webserver.resources.query_rsrc import TaskQuery
+
                 self._host = host
                 self._port = port
                 _base_url = f"http://{self._host}:{self._port}"

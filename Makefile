@@ -20,6 +20,7 @@ help:
 	@printf "\033[32mtests-notebooks\033[0m           test the notebooks using pytest\n"
 	@printf "\033[32mclean\033[0m                     remove cache directories and Sphinx build output\n"
 	@printf "\033[32mdocs\033[0m                      build HTML documentation using Sphinx\n"
+	@printf "\033[32mwebservice\033[0m                run the Flowcept webservice locally (FastAPI)\n"
 	@printf "\033[32mchecks\033[0m                    run ruff linter and formatter checks\n"
 	@printf "\033[32mreformat\033[0m                  run ruff linter and formatter\n"
 	@printf "\033[32mui-install\033[0m                install web UI dependencies (npm ci)\n"
@@ -73,8 +74,13 @@ clean:
 # Build the HTML documentation using Sphinx
 .PHONY: docs
 docs:
+	PYTHONPATH=src python docs/openapi/scripts/generate_openapi.py
 	sphinx-build -M html docs docs/_build
 	@echo "Docs built: open docs/_build/html/index.html"
+
+.PHONY: webservice
+webservice:
+	PYTHONPATH=src python -m flowcept.cli --start-webservice --webservice-host 127.0.0.1 --webservice-port 8008
 
 # Run services using Docker
 services:
@@ -100,13 +106,13 @@ run:
 	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_HOST=flowcept_mongo --network flowcept_default -it flowcept
 
 tests-in-container-mongo:
-	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_HOST=flowcept_mongo -e MONGO_ENABLED=true -e LMDB_ENABLED=false --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest tests --ignore=tests/instrumentation_tests/ml_tests
+	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_HOST=flowcept_mongo -e MONGO_ENABLED=true -e LMDB_ENABLED=false --network flowcept_default flowcept /bin/bash -lc '/opt/conda/envs/flowcept/bin/flowcept --init-settings --full -y && /opt/conda/envs/flowcept/bin/flowcept --config-profile full-online -y && /opt/conda/envs/flowcept/bin/pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/instrumentation_tests/ml_tests --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"'
 
 tests-in-container:
-	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_ENABLED=false -e LMDB_ENABLED=true --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest tests --ignore=tests/instrumentation_tests/ml_tests
+	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_redis -e MONGO_ENABLED=false -e LMDB_ENABLED=true --network flowcept_default flowcept /bin/bash -lc '/opt/conda/envs/flowcept/bin/flowcept --init-settings --full -y && /opt/conda/envs/flowcept/bin/flowcept --config-profile full-online -y && /opt/conda/envs/flowcept/bin/pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/instrumentation_tests/ml_tests --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"'
 
 tests-in-container-kafka:
-	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=kafka -e MONGO_HOST=flowcept_mongo  -e MQ_PORT=29092 -e MQ_TYPE=kafka -e MONGO_ENABLED=true -e LMDB_ENABLED=false --network flowcept_default flowcept /opt/conda/envs/flowcept/bin/pytest tests --ignore=tests/instrumentation_tests/ml_tests
+	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=kafka -e MONGO_HOST=flowcept_mongo  -e MQ_PORT=29092 -e MQ_TYPE=kafka -e MONGO_ENABLED=true -e LMDB_ENABLED=false --network flowcept_default flowcept /bin/bash -lc '/opt/conda/envs/flowcept/bin/flowcept --init-settings --full -y && /opt/conda/envs/flowcept/bin/flowcept --config-profile full-online -y && /opt/conda/envs/flowcept/bin/pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/instrumentation_tests/ml_tests --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"'
 
 # This command can be removed once we have our CLI
 liveness:

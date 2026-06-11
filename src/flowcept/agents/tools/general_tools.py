@@ -1,11 +1,20 @@
 import json
 from typing import List
 
+from flowcept import Flowcept
 from flowcept.agents.agents_utils import build_llm_model, ToolResult, normalize_message
 from flowcept.agents.flowcept_ctx_manager import mcp_flowcept
 from flowcept.agents.prompts.general_prompts import ROUTING_PROMPT, SMALL_TALK_PROMPT
 
 from flowcept.agents.tools.in_memory_queries.in_memory_queries_tools import run_df_query
+from flowcept.agents.tools.workflow_query_tools import run_workflow_query
+
+
+def _external_llm_enabled() -> bool:
+    """Return True when agent is configured to use an external LLM orchestrator."""
+    from flowcept.configs import AGENT
+
+    return bool(AGENT.get("external_llm", False))
 
 
 @mcp_flowcept.tool()
@@ -119,6 +128,55 @@ def reset_context() -> ToolResult:
 
 
 @mcp_flowcept.tool()
+def generate_provenance_card(
+    workflow_id: str | None = None,
+    campaign_id: str | None = None,
+    input_jsonl_path: str | None = None,
+) -> ToolResult:
+    """
+    Generate and return a markdown provenance card as text.
+
+    Exactly one of ``workflow_id``, ``campaign_id``, or ``input_jsonl_path`` must be provided.
+
+    Parameters
+    ----------
+    workflow_id : str | None
+        Query by workflow identifier.
+    campaign_id : str | None
+        Query by campaign identifier (produces a campaign-level card).
+    input_jsonl_path : str | None
+        Path to a Flowcept JSONL buffer file used as input instead of the DB.
+
+    Returns
+    -------
+    ToolResult
+        ``code=301`` with markdown text in ``result["markdown"]`` on success,
+        or an error payload on failure.
+    """
+    try:
+        if not any([workflow_id, campaign_id, input_jsonl_path]):
+            return ToolResult(code=400, result="One of workflow_id, campaign_id, or input_jsonl_path is required.")
+
+        stats = Flowcept.generate_report(
+            report_type="provenance_card",
+            format="markdown",
+            workflow_id=workflow_id,
+            campaign_id=campaign_id,
+            input_jsonl_path=input_jsonl_path,
+        )
+        return ToolResult(
+            code=301,
+            result={
+                "workflow_id": workflow_id,
+                "campaign_id": campaign_id,
+                "markdown": stats["markdown"],
+            },
+        )
+    except Exception as e:
+        return ToolResult(code=499, result=str(e))
+
+
+@mcp_flowcept.tool()
 def prompt_handler(message: str) -> ToolResult:
     """
     Routes a user message using an LLM to classify its intent.
@@ -133,10 +191,24 @@ def prompt_handler(message: str) -> ToolResult:
     TextContent
         The AI response or routing feedback.
     """
+    workflow_query_prefix = "w:"
+    task_query_prefix = "t:"
+    object_query_prefix = "o:"
+    normalized_message = message.strip().lower()
+    if message.strip().lower().startswith(workflow_query_prefix):
+        query = message.split(":", 1)[1].strip()
+        return run_workflow_query(query=query)
+    if normalized_message.startswith(task_query_prefix):
+        query = message.split(":", 1)[1].strip()
+        return run_df_query(query=query, llm=None, plot=False, context_kind="tasks")
+    if normalized_message.startswith(object_query_prefix):
+        query = message.split(":", 1)[1].strip()
+        return run_df_query(query=query, llm=None, plot=False, context_kind="objects")
+
     df_key_words = ["df", "save", "result = df"]
     for key in df_key_words:
         if key in message:
-            return run_df_query(llm=None, query=message, plot=False)
+            return run_df_query(query=message, llm=None, plot=False)
 
     if "reset context" in message:
         return reset_context()
@@ -146,6 +218,17 @@ def prompt_handler(message: str) -> ToolResult:
         return show_records()
     if "@reset records" in message:
         return reset_records()
+
+    if _external_llm_enabled():
+        return ToolResult(
+            code=201,
+            result=(
+                "external_llm mode is enabled. Internal LLM routing is disabled. "
+                "Use explicit commands such as 'save', 'result = df ...', "
+                "'t: <task question>', 'o: <object question>', 'w: <workflow question>', "
+                "'reset context', '@record', '@show records', or '@reset records'."
+            ),
+        )
 
     llm = build_llm_model()
 
@@ -159,9 +242,9 @@ def prompt_handler(message: str) -> ToolResult:
         response = llm.invoke(prompt)
         return ToolResult(code=201, result=response)
     elif route == "in_context_query":
-        return run_df_query(llm, message, plot=False)
+        return run_df_query(message, llm=llm, plot=False)
     elif route == "plot":
-        return run_df_query(llm, message, plot=True)
+        return run_df_query(message, llm=llm, plot=True)
     elif route == "historical_prov_query":
         return ToolResult(code=201, result="We need to query the Provenance Database. Feature coming soon.")
     elif route == "in_chat_query":

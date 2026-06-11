@@ -4,11 +4,14 @@ import pytest
 
 pytest.importorskip("torch")
 
-from flowcept import TaskQueryAPI, Flowcept
+from fastapi.testclient import TestClient
+
+from flowcept import Flowcept
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import evaluate_until
 from flowcept.configs import MONGO_ENABLED
+from flowcept.webservice.main import create_app
 
 from tests.adapters.dask_test_utils import (
     start_local_dask_cluster,
@@ -26,7 +29,7 @@ class MLDecoratorDaskTests(unittest.TestCase):
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_model_trains_with_dask(self):
         # wf_id = f"{uuid4()}"
-        client, cluster, flowcept = start_local_dask_cluster(
+        dask_client, cluster, flowcept = start_local_dask_cluster(
             n_workers=1,
             # exec_bundle=wf_id,
             start_persistence=True
@@ -49,15 +52,32 @@ class MLDecoratorDaskTests(unittest.TestCase):
 
         outputs = []
         for conf in confs[:1]:
-            outputs.append(client.submit(ModelTrainer.model_fit, **conf))
+            outputs.append(dask_client.submit(ModelTrainer.model_fit, **conf))
         for o in outputs:
             r = o.result()
             print(r)
 
-        stop_local_dask_cluster(client, cluster, flowcept)
+        stop_local_dask_cluster(dask_client, cluster, flowcept)
+
+        ws_client = TestClient(create_app())
+
+        def _has_subworkflow_tasks() -> bool:
+            wf_resp = ws_client.get("/api/v1/workflows", params={"parent_workflow_id": wf_id, "limit": 1000})
+            if wf_resp.status_code != 200:
+                return False
+            sub_wfs = wf_resp.json().get("items", [])
+            if not sub_wfs:
+                return False
+
+            for sub_wf in sub_wfs:
+                sub_wf_id = sub_wf.get("workflow_id")
+                if not sub_wf_id:
+                    continue
+                task_resp = ws_client.get(f"/api/v1/tasks/by_workflow/{sub_wf_id}", params={"limit": 1000})
+                if task_resp.status_code == 200 and task_resp.json().get("count", 0) > 0:
+                    return True
+            return False
 
         # We are creating one "sub-workflow" for every Model.fit,
         # which requires forwarding on multiple layers
-        assert evaluate_until(
-            lambda: len(TaskQueryAPI().get_subworkflows_tasks_from_a_parent_workflow(wf_id)) > 0
-        )
+        assert evaluate_until(_has_subworkflow_tasks)

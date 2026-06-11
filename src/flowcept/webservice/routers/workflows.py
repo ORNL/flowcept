@@ -103,6 +103,7 @@ def get_workflow_provenance_card(
     return provenance_card_response(format=format, workflow_id=workflow_id)
 
 
+
 @router.post("/{workflow_id}/reports/provenance-card/download")
 def download_workflow_provenance_card(workflow_id: str, db: DBAPI = Depends(get_db_api)) -> Response:
     """Generate and download a workflow provenance card markdown file."""

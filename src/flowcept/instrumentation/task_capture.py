@@ -8,9 +8,10 @@ from flowcept.commons.flowcept_dataclasses.task_object import (
     TaskObject,
 )
 from flowcept.commons.vocabulary import Status
-from flowcept.configs import INSTRUMENTATION_ENABLED, TELEMETRY_ENABLED
+from flowcept.configs import INSTRUMENTATION_ENABLED, REPLACE_NON_JSON_SERIALIZABLE, TELEMETRY_ENABLED, HOSTNAME
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
+from flowcept.commons.utils import replace_non_serializable
 
 
 class FlowceptTask(object):
@@ -49,6 +50,7 @@ class FlowceptTask(object):
         used: Dict = None,
         data: Any = None,
         subtype: str = None,
+        hostname: str = None,
         tags: List[str] = None,
         adapter_id: str = None,
         custom_metadata: Dict = None,
@@ -115,6 +117,10 @@ class FlowceptTask(object):
         self._task.workflow_id = workflow_id or Flowcept.current_workflow_id
         self._task.campaign_id = campaign_id or Flowcept.campaign_id
         self._task.parent_task_id = parent_task_id
+
+        if REPLACE_NON_JSON_SERIALIZABLE:
+            used = replace_non_serializable(used)
+
         self._task.used = used
         self._task.data = data
         self._task.tags = tags
@@ -122,7 +128,12 @@ class FlowceptTask(object):
         self._task.adapter_id = adapter_id
         self._task.agent_id = agent_id
         self._task.source_agent_id = source_agent_id
-        self._task.custom_metadata = custom_metadata
+        self._task.hostname = hostname or HOSTNAME
+        self._task.custom_metadata = (
+            replace_non_serializable(custom_metadata)
+            if (REPLACE_NON_JSON_SERIALIZABLE and custom_metadata is not None)
+            else custom_metadata
+        )
 
         self._ended = False
 
@@ -135,6 +146,46 @@ class FlowceptTask(object):
                 stderr=stderr,
                 status=status or Status.FINISHED,
             )
+
+    def get_id(self):
+        """Return the task identifier.
+
+        Returns
+        -------
+        Any
+            Identifier associated with the current task.
+        """
+        return self._task.task_id
+
+    def get_workflow_id(self):
+        """Return the workflow identifier.
+
+        Returns
+        -------
+        Any
+            Identifier of the workflow associated with the current task.
+        """
+        return self._task.workflow_id
+
+    def get_campaign_id(self):
+        """Return the campaign identifier.
+
+        Returns
+        -------
+        Any
+            Identifier of the campaign associated with the current task.
+        """
+        return self._task.campaign_id
+
+    def get_agent_id(self):
+        """Return the agent_id identifier.
+
+        Returns
+        -------
+        Any
+            Identifier of the campaign associated with the current task.
+        """
+        return self._task.agent_id
 
     def __enter__(self):
         return self
@@ -157,7 +208,7 @@ class FlowceptTask(object):
         stderr: str = None,
         data: Any = None,
         custom_metadata: Dict = None,
-        status: Status = Status.FINISHED,
+        status: Status | None = None,
     ):
         """
         Finalizes the task by capturing its end state, telemetry, and status.
@@ -195,12 +246,23 @@ class FlowceptTask(object):
             self._task.telemetry_at_end = tel
         if data:
             self._task.data = data
-        if custom_metadata:
-            self._task.custom_metadata = custom_metadata
+
+        if custom_metadata is not None:
+            sanitized_custom_metadata = (
+                replace_non_serializable(custom_metadata) if REPLACE_NON_JSON_SERIALIZABLE else custom_metadata
+            )
+
+            if self._task.custom_metadata:
+                self._task.custom_metadata.update(sanitized_custom_metadata)
+            else:
+                self._task.custom_metadata = sanitized_custom_metadata
+
         self._task.ended_at = ended_at or time()
-        self._task.status = status
+        self._task.status = status or (Status.ERROR if stderr else Status.FINISHED)
         self._task.stderr = stderr
         self._task.stdout = stdout
+        if REPLACE_NON_JSON_SERIALIZABLE:
+            generated = replace_non_serializable(generated)
         self._task.generated = generated
         if self._interceptor._mq_dao.buffer is None:
             raise Exception("Did you start Flowcept?")
@@ -218,6 +280,7 @@ class FlowceptTask(object):
         if not self._ended:
             if self._interceptor._mq_dao.buffer is None:
                 raise Exception("Did you start Flowcept?")
+            self._task.status = Status.FINISHED
             self._task.ended_at = self._task.started_at  # message sents are not going to be analyzed for task duration
             self._interceptor.intercept(self._task.to_dict())
             self._ended = True

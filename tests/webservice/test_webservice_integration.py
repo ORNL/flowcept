@@ -49,7 +49,7 @@ def test_webservice_end_to_end_with_flowcept_and_blob_apis():
 
         generic_obj_id = Flowcept.db.save_or_update_object(
             object=b"generic-blob-payload",
-            type="artifact",
+            object_type="artifact",
             save_data_in_collection=True,
             custom_metadata={"kind": "generic"},
         )
@@ -132,7 +132,7 @@ def test_webservice_end_to_end_with_flowcept_and_blob_apis():
 
     rs = client.get(f"/api/v1/datasets/{dataset_obj_id}")
     assert rs.status_code == 200
-    assert rs.json()["type"] == "dataset"
+    assert rs.json()["object_type"] == "dataset"
 
     rs = client.post("/api/v1/datasets/query", json={"filter": {"workflow_id": workflow_id}, "limit": 20})
     assert rs.status_code == 200
@@ -149,7 +149,7 @@ def test_webservice_end_to_end_with_flowcept_and_blob_apis():
 
     rs = client.get(f"/api/v1/models/{model_obj_id}")
     assert rs.status_code == 200
-    assert rs.json()["type"] == "ml_model"
+    assert rs.json()["object_type"] == "ml_model"
 
     rs = client.post("/api/v1/models/query", json={"filter": {"workflow_id": workflow_id}, "limit": 20})
     assert rs.status_code == 200
@@ -295,7 +295,7 @@ def test_webservice_object_versioning_and_unified_query():
             Flowcept.db.save_or_update_object(
                 object=f"payload-v{version}".encode(),
                 object_id=obj_id,
-                type="ml_model",
+                object_type="ml_model",
                 save_data_in_collection=True,
                 custom_metadata={"v": version},
                 control_version=True,
@@ -328,7 +328,7 @@ def test_webservice_object_versioning_and_unified_query():
     # Models scope sees the versioned object; include_data exposes payload.
     rs = client.get(f"/api/v1/models/{obj_id}", params={"include_data": "true"})
     assert rs.status_code == 200
-    assert rs.json()["type"] == "ml_model"
+    assert rs.json()["object_type"] == "ml_model"
     assert rs.json().get("data")
 
     # Unified scoped query: operators, sort, projection, limit.
@@ -347,7 +347,7 @@ def test_webservice_object_versioning_and_unified_query():
 
     rs = client.post("/api/v1/query/models", json={"filter": {"object_id": obj_id}, "limit": 5})
     assert rs.status_code == 200
-    assert all(item["type"] == "ml_model" for item in rs.json()["items"])
+    assert all(item["object_type"] == "ml_model" for item in rs.json()["items"])
 
     # Disallowed operator is rejected.
     rs = client.post("/api/v1/query/tasks", json={"filter": {"$where": "1"}, "limit": 5})

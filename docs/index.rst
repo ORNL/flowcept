@@ -49,11 +49,17 @@ Flowcept
      MCP agents provenance, telemetry, extensible adapters, and flexible storage.
    </p>
 
+.. important::
+
+   Start here: :doc:`default_user_guide` (recommended first read for workflow developers).
+   Full markdown version in repo: `docs/README.md <https://github.com/ORNL/flowcept/blob/main/docs/README.md>`_.
+
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   default_user_guide
    quick_start
    architecture
    setup
@@ -62,9 +68,10 @@ Flowcept
    telemetry_capture
    prov_storage
    blob_data
-   blob_multilayer_perceptron_example
+   blob_versioned_single_layer_perceptron_example
    reporting
    prov_query
+   rest_api
    schemas
    contributing
    cli-reference

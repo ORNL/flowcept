@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Dict, List
 from uuid import uuid4
 
+from flowcept.configs import AGENT
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.flowceptor.consumers.base_consumer import BaseConsumer
 
@@ -25,6 +26,8 @@ class BaseAppContext:
         Method to reset the variables in the context.
         """
         self.tasks = []
+        self.workflow_msg_obj = {}
+        self.objects = []
 
 
 class BaseAgentContextManager(BaseConsumer):
@@ -51,7 +54,8 @@ class BaseAgentContextManager(BaseConsumer):
         """
         self._started = False
         super().__init__(allow_mq_disabled=allow_mq_disabled)
-        # self.context = BaseAppContext(tasks=[])
+        if not hasattr(self, "context"):
+            self.context: BaseAppContext = None
         self.agent_id = BaseAgentContextManager.agent_id
 
     def message_handler(self, msg_obj: Dict) -> bool:
@@ -79,6 +83,8 @@ class BaseAgentContextManager(BaseConsumer):
             self.logger.debug("Received task msg!")
             if msg_subtype not in {"llm_query"}:
                 self.context.tasks.append(msg_obj)
+        elif msg_type == "object":
+            self.context.objects.append(msg_obj)
 
         return True
 
@@ -104,16 +110,18 @@ class BaseAgentContextManager(BaseConsumer):
             self.logger.info(f"Starting lifespan for agent {BaseAgentContextManager.agent_id}.")
             self._started = True
 
-            f = Flowcept(
-                start_persistence=False,
+            start_persistence = AGENT.get("start_persistence", False)
+
+            self.flowcept_instance = Flowcept(
+                start_persistence=start_persistence,
                 save_workflow=True,
                 check_safe_stops=False,
-                workflow_name="agent_workflow",
-                workflow_args={"agent_id": self.agent_id},
+                workflow_name="flowcept_agent_workflow",
+                agent_id=self.agent_id,
             )
-            self.agent_workflow_id = f.current_workflow_id
-            f.start()
-            f.logger.info(
+            self.agent_workflow_id = self.flowcept_instance.current_workflow_id
+            self.flowcept_instance.start()
+            self.flowcept_instance.logger.info(
                 f"This section's workflow_id={Flowcept.current_workflow_id}, campaign_id={Flowcept.campaign_id}"
             )
             # Daemon consumer: the agent has no flush-on-stop obligations (persistence is off),
@@ -124,3 +132,6 @@ class BaseAgentContextManager(BaseConsumer):
             yield self.context
         finally:
             self.stop_consumption()
+            if getattr(self, "flowcept_instance", None) is not None:
+                self.flowcept_instance.stop()
+                self.flowcept_instance = None

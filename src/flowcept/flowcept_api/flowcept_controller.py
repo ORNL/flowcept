@@ -41,6 +41,8 @@ class Flowcept(object):
     current_workflow_id = None
     campaign_id = None
     buffer = None
+    is_started = False
+    current_instance = None
 
     @ClassProperty
     def db(cls):
@@ -58,7 +60,11 @@ class Flowcept(object):
         campaign_id: str = None,
         workflow_id: str = None,
         workflow_name: str = None,
+        workflow_description: str = None,
+        workflow_subtype: str = None,
         workflow_args: Dict = None,
+        agent_id: str = None,
+        parent_workflow_id: str = None,
         start_persistence=True,
         check_safe_stops=True,  # TODO add to docstring
         save_workflow=True,
@@ -92,6 +98,19 @@ class Flowcept(object):
         workflow_name : str, optional
             A descriptive name for the workflow.
 
+        workflow_description : str, optional
+            Human-readable description of what the workflow is about.
+
+        agent_id: str, optional
+            Use it if there is an agent responsible for executing this workflow.
+
+        parent_workflow_id: str, optional
+            Use it if this is a subworkflow.
+
+        workflow_subtype : str, optional
+            Optional subtype for workflow categorization
+            (e.g., ``ml_workflow``, ``data_prep_workflow``).
+
         workflow_args : str, optional
             Additional arguments related to the workflow.
 
@@ -111,6 +130,18 @@ class Flowcept(object):
         """
         self.logger = FlowceptLogger()
         self.logger.debug(f"Using settings file: {SETTINGS_PATH}")
+        from flowcept.configs import validate_config
+
+        validate_config()
+        if MQ_ENABLED and check_safe_stops and not KVDB_ENABLED:
+            raise ValueError(
+                "Invalid runtime configuration: check_safe_stops=True requires kv_db.enabled=True when mq.enabled=True."
+                "\n"
+                "Quick fix with profiles:\n"
+                "  flowcept --config-profile full-online -y\n"
+                "  flowcept --config-profile mq-only -y  # and instantiate Flowcept(check_safe_stops=False)\n"
+                "  flowcept --config-profile mq-only-no-flush -y  # end-of-run bulk flush, check_safe_stops=False"
+            )
         self._enable_persistence = start_persistence
         self._db_inserters: List = []
         self.buffer = None
@@ -144,14 +175,18 @@ class Flowcept(object):
             self.bundle_exec_id = str(bundle_exec_id)
 
         self.workflow_name = workflow_name
+        self.workflow_description = workflow_description
+        self.workflow_subtype = workflow_subtype
         self.workflow_args = workflow_args
+        self.parent_workflow_id = parent_workflow_id
+        self.agent_id = agent_id
         should_delete_buffer_file = (
             flowcept.configs.DELETE_BUFFER_FILE if delete_buffer_file is None else delete_buffer_file
         )
         if should_delete_buffer_file:
             Flowcept.delete_buffer_file()
 
-    def start(self):
+    def start(self) -> "Flowcept":
         """Start Flowcept Controller."""
         if self.is_started or not self.enabled:
             self.logger.warning("DB inserter may be already started or instrumentation is not set")
@@ -188,9 +223,20 @@ class Flowcept(object):
 
         else:
             Flowcept.current_workflow_id = None
-        self.is_started = True
+        Flowcept.current_instance = self
+        Flowcept.is_started = self.is_started = True
         self.logger.debug("Flowcept started successfully.")
         return self
+
+    @staticmethod
+    def emit_message(message: Dict):
+        """Append a message to the active interceptor buffer."""
+        if Flowcept.current_instance is None:
+            return
+        interceptors = Flowcept.current_instance._interceptor_instances or []
+        if not interceptors:
+            return
+        interceptors[0].intercept(message)
 
     def get_buffer(self, return_df: bool = False):
         """
@@ -385,22 +431,58 @@ class Flowcept(object):
     def generate_report(
         report_type: str = "provenance_card",
         format: str = "markdown",
+        print_markdown: bool = False,
         output_path: str | None = None,
         input_jsonl_path: str | None = None,
         records: List[Dict[str, Any]] | None = None,
         workflow_id: str | None = None,
         campaign_id: str | None = None,
     ) -> Dict[str, Any]:
-        """Generate a report from JSONL, records, or DB data.
+        """Generate a Flowcept report from JSONL, records, or DB data.
 
-        This method is a lightweight facade that delegates implementation to
-        ``flowcept.report.service.generate_report``.
+        Parameters
+        ----------
+        report_type : str, optional
+            Report identifier. Supported values are ``"provenance_card"`` and
+            ``"provenance_report"``. Default is ``"provenance_card"``.
+        format : str, optional
+            Output format. ``"provenance_card"`` supports only ``"markdown"``,
+            and ``"provenance_report"`` supports only ``"pdf"``.
+            Default is ``"markdown"``.
+        print_markdown : bool, optional
+            When ``True`` and ``format="markdown"``, render the generated
+            markdown report to the terminal using Rich (install it with pip install flowcept[extras])
+        output_path : str, optional
+            Destination path for the generated report file.
+        input_jsonl_path : str, optional
+            Path to a Flowcept JSONL buffer file used as report input.
+        records : list of dict, optional
+            In-memory workflow/task/object records used as report input.
+        workflow_id : str, optional
+            Workflow identifier for DB query mode.
+        campaign_id : str, optional
+            Campaign identifier for DB query mode.
+
+        Returns
+        -------
+        dict
+            Report generation metadata including output path and input mode.
+
+        Raises
+        ------
+        ValueError
+            If input-mode selection or report type/format is invalid.
+        FileNotFoundError
+            If ``input_jsonl_path`` is selected but the file does not exist.
+        ModuleNotFoundError
+            If ``print_markdown=True`` without Rich installed.
         """
         from flowcept.report.service import generate_report
 
         return generate_report(
             report_type=report_type,
             format=format,
+            print_markdown=print_markdown,
             output_path=output_path,
             input_jsonl_path=input_jsonl_path,
             records=records,
@@ -533,9 +615,14 @@ class Flowcept(object):
         wf_obj = WorkflowObject()
         wf_obj.workflow_id = Flowcept.current_workflow_id
         wf_obj.campaign_id = Flowcept.campaign_id
-
+        wf_obj.parent_workflow_id = self.parent_workflow_id
+        wf_obj.agent_id = self.agent_id
         if self.workflow_name:
             wf_obj.name = self.workflow_name
+        if self.workflow_description:
+            wf_obj.workflow_description = self.workflow_description
+        if self.workflow_subtype:
+            wf_obj.subtype = self.workflow_subtype
         if self.workflow_args:
             wf_obj.used = self.workflow_args
 
@@ -594,7 +681,8 @@ class Flowcept(object):
             pass
 
         Flowcept.buffer = self.buffer = None
-        self.is_started = False
+        Flowcept.current_instance = None
+        Flowcept.is_started = self.is_started = False
         self.logger.debug("All stopped!")
 
     def __enter__(self):

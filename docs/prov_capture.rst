@@ -129,6 +129,7 @@ When creating a ``Flowcept`` instance (with or without a context manager), you c
 - **campaign_id**: unique identifier for the campaign. Defaults to a generated UUID.
 - **workflow_id**: unique identifier for the workflow. Defaults to a generated UUID.
 - **workflow_name**: descriptive name for the workflow.
+- **workflow_subtype**: optional workflow subtype/category (e.g., ``ml_workflow``).
 - **workflow_args**: dictionary of workflow-level arguments, stored in provenance.
 - **start_persistence (bool)**: default ``True``. Enables message persistence into DBs.
 - **check_safe_stops (bool)**: default ``True``. Controls safe shutdown of consumers.
@@ -142,6 +143,7 @@ Example with Custom Args
 
    with Flowcept(
        workflow_name="training_workflow",
+       workflow_subtype="ml_workflow",
        campaign_id="experiment_42",
        start_persistence=True,
        interceptors=["instrumentation", "dask"],

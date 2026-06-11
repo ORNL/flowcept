@@ -21,6 +21,14 @@ First, install Flowcept and initialize a settings file:
 
 This creates a minimal settings file at ``~/.flowcept/settings.yaml``.
 
+Use this for the simplest offline path.
+
+If you need the full config structure instead, use:
+
+.. code-block:: bash
+
+   flowcept --init-settings --full
+
 Run a Minimal Example
 ---------------------
 
@@ -95,6 +103,7 @@ You should see two tasks:
 Next Steps
 ----------
 
+- :doc:`default_user_guide` (recommended end-to-end path for software developers)
 - `Advanced provenance capture methods <prov_query.html>`_
 - `Provenance querying <prov_query.html>`_
 - `Telemetry capture <telemetry_capture.html>`_
@@ -103,5 +112,3 @@ Examples:
 
 - `Examples directory <https://github.com/ORNL/flowcept/tree/main/examples>`_
 - `Jupyter Notebooks <https://github.com/ORNL/flowcept/tree/main/notebooks>`_
-
-

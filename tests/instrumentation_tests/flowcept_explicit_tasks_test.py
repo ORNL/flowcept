@@ -33,6 +33,18 @@ class ExplicitTaskTest(unittest.TestCase):
         assert task["status"] == Status.FINISHED.value
         assert "generated" not in task
 
+    def test_explicit_task_custom_metadata_non_serializable_is_sanitized(self):
+        with Flowcept():
+            with FlowceptTask(used={"a": 1}, custom_metadata={"non_serializable_obj": object()}) as task_ctx:
+                task_ctx.end(generated={"b": 2})
+
+            tasks = [msg for msg in Flowcept.buffer if isinstance(msg, dict) and msg.get("type") == "task"]
+            assert tasks
+            task = tasks[-1]
+        value = task["custom_metadata"]["non_serializable_obj"]
+        assert isinstance(value, str)
+        assert value.startswith("object_instance_id_")
+
     @pytest.mark.safeoffline
     def test_custom_tasks(self):
         if not configs.DUMP_BUFFER_ENABLED:

@@ -31,7 +31,7 @@ class FakeDB:
                 "object_id": "o1",
                 "workflow_id": "wf-1",
                 "task_id": "t1",
-                "type": "dataset",
+                "object_type": "dataset",
                 "version": 1,
                 "custom_metadata": {"k": "v1"},
                 "data": b"payload-1",
@@ -41,7 +41,7 @@ class FakeDB:
                 "object_id": "o2",
                 "workflow_id": "wf-2",
                 "task_id": "t3",
-                "type": "ml_model",
+                "object_type": "ml_model",
                 "version": 2,
                 "custom_metadata": {"k": "v2", "loss": 0.42},
                 "data": b"payload-2",
@@ -51,7 +51,7 @@ class FakeDB:
                 "object_id": "o3",
                 "workflow_id": "wf-1",
                 "task_id": "t2",
-                "type": "ml_model",
+                "object_type": "ml_model",
                 "version": 3,
                 "custom_metadata": {"k": "v3", "loss": 0.11},
                 "data": b"payload-2",
@@ -430,11 +430,11 @@ def test_datasets_routes():
     rs = client.get("/api/v1/datasets")
     assert rs.status_code == 200
     assert rs.json()["count"] == 1
-    assert rs.json()["items"][0]["type"] == "dataset"
+    assert rs.json()["items"][0]["object_type"] == "dataset"
 
     rs = client.get("/api/v1/datasets/o1")
     assert rs.status_code == 200
-    assert rs.json()["type"] == "dataset"
+    assert rs.json()["object_type"] == "dataset"
 
     rs = client.get("/api/v1/datasets/o1/versions/1")
     assert rs.status_code == 200
@@ -447,7 +447,7 @@ def test_datasets_routes():
     rs = client.post("/api/v1/datasets/query", json={"filter": {}, "limit": 10})
     assert rs.status_code == 200
     assert rs.json()["count"] == 1
-    assert rs.json()["items"][0]["type"] == "dataset"
+    assert rs.json()["items"][0]["object_type"] == "dataset"
 
     rs = client.get("/api/v1/datasets/o2")
     assert rs.status_code == 404
@@ -459,11 +459,11 @@ def test_models_routes():
     rs = client.get("/api/v1/models")
     assert rs.status_code == 200
     assert rs.json()["count"] == 2
-    assert rs.json()["items"][0]["type"] == "ml_model"
+    assert rs.json()["items"][0]["object_type"] == "ml_model"
 
     rs = client.get("/api/v1/models/o2")
     assert rs.status_code == 200
-    assert rs.json()["type"] == "ml_model"
+    assert rs.json()["object_type"] == "ml_model"
 
     rs = client.get("/api/v1/models/o2/versions/2")
     assert rs.status_code == 200
@@ -476,7 +476,7 @@ def test_models_routes():
     rs = client.post("/api/v1/models/query", json={"filter": {}, "limit": 10})
     assert rs.status_code == 200
     assert rs.json()["count"] == 2
-    assert rs.json()["items"][0]["type"] == "ml_model"
+    assert rs.json()["items"][0]["object_type"] == "ml_model"
 
     rs = client.get("/api/v1/models/o1")
     assert rs.status_code == 404
@@ -493,7 +493,7 @@ def test_unified_scoped_query_models_supports_exists_and_nested_sort():
                 "custom_metadata.loss": {"$exists": True},
             },
             "sort": [{"field": "custom_metadata.loss", "order": 1}],
-            "projection": ["object_id", "type", "custom_metadata"],
+            "projection": ["object_id", "object_type", "custom_metadata"],
             "limit": 1,
         },
     )
@@ -501,7 +501,7 @@ def test_unified_scoped_query_models_supports_exists_and_nested_sort():
     body = rs.json()
     assert body["count"] == 1
     assert body["items"][0]["object_id"] == "o3"
-    assert body["items"][0]["type"] == "ml_model"
+    assert body["items"][0]["object_type"] == "ml_model"
     assert body["items"][0]["custom_metadata"]["loss"] == 0.11
 
 
@@ -543,8 +543,8 @@ def test_unified_scoped_query_objects_scope():
     rs = client.post(
         "/api/v1/query/objects",
         json={
-            "filter": {"type": "dataset"},
-            "projection": ["object_id", "type"],
+            "filter": {"object_type": "dataset"},
+            "projection": ["object_id", "object_type"],
             "limit": 10,
         },
     )
@@ -552,7 +552,7 @@ def test_unified_scoped_query_objects_scope():
     body = rs.json()
     assert body["count"] == 1
     assert body["items"][0]["object_id"] == "o1"
-    assert body["items"][0]["type"] == "dataset"
+    assert body["items"][0]["object_type"] == "dataset"
 
 
 def test_unified_scoped_query_datasets_scope_enforces_type():
@@ -560,7 +560,7 @@ def test_unified_scoped_query_datasets_scope_enforces_type():
     rs = client.post(
         "/api/v1/query/datasets",
         json={
-            "filter": {"type": "ml_model"},
+            "filter": {"object_type": "ml_model"},
             "limit": 10,
         },
     )

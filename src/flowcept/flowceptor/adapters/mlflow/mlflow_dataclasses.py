@@ -1,6 +1,6 @@
 """Dataclasses module."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 
 from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
@@ -12,11 +12,12 @@ from flowcept.commons.flowcept_dataclasses.base_settings_dataclasses import (
 class MLFlowSettings(BaseSettings):
     """MLFlow settings."""
 
-    file_path: str
-    log_params: List[str]
-    log_metrics: List[str]
-    watch_interval_sec: int
-    kind = "mlflow"
+    key: str = "mlflow"
+    kind: str = "mlflow"
+    file_path: str = "mlflow.db"
+    log_params: List[str] = field(default_factory=lambda: ["*"])
+    log_metrics: List[str] = field(default_factory=lambda: ["*"])
+    watch_interval_sec: int = 1
 
     def __post_init__(self):
         """Set attributes after init."""

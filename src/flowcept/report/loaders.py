@@ -30,23 +30,41 @@ def read_jsonl(path: Path) -> Tuple[List[Dict[str, Any]], int]:
 
 
 def split_records(records: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Split records into workflow/task/object lists and pick a representative workflow."""
+    """Split records into workflow/task/object lists.
+
+    Returns a single-workflow dataset when all records share one ``workflow_id``,
+    or a campaign dataset when multiple ``workflow_id`` values are present.
+    """
     workflow_records = [r for r in records if r.get("type") == "workflow"]
     task_records = [r for r in records if r.get("type") == "task"]
     object_records = [r for r in records if r.get("object_id") is not None]
 
-    if workflow_records:
-        workflow = workflow_records[-1]
-    else:
-        workflow = {}
+    workflow_ids = {w.get("workflow_id") for w in workflow_records if w.get("workflow_id")}
 
-    workflow_id = workflow.get("workflow_id")
-    if workflow_id:
-        task_records = [t for t in task_records if t.get("workflow_id") == workflow_id]
-        object_records = [o for o in object_records if o.get("workflow_id") == workflow_id]
+    if len(workflow_ids) <= 1:
+        workflow = workflow_records[-1] if workflow_records else {}
+        workflow_id = workflow.get("workflow_id")
+        if workflow_id:
+            task_records = [t for t in task_records if t.get("workflow_id") == workflow_id]
+            object_records = [o for o in object_records if o.get("workflow_id") == workflow_id]
+        return {
+            "workflow": sanitize_json_like(workflow),
+            "tasks": [sanitize_json_like(t) for t in task_records],
+            "objects": [sanitize_json_like(strip_blob_data(o)) for o in object_records],
+        }
 
+    # Campaign: multiple workflow runs in the buffer
+    campaign_id = next(
+        (w.get("campaign_id") for w in workflow_records if w.get("campaign_id")),
+        None,
+    )
+    sorted_workflows = sorted(
+        workflow_records,
+        key=lambda w: w.get("utc_timestamp") or 0,
+    )
     return {
-        "workflow": sanitize_json_like(workflow),
+        "campaign_id": campaign_id,
+        "workflows": [sanitize_json_like(w) for w in sorted_workflows],
         "tasks": [sanitize_json_like(t) for t in task_records],
         "objects": [sanitize_json_like(strip_blob_data(o)) for o in object_records],
     }
@@ -76,6 +94,20 @@ def load_records_from_db(workflow_id: str | None = None, campaign_id: str | None
     workflows = Flowcept.db.query(filter=filter_obj, collection="workflows") or []
     tasks = Flowcept.db.query(filter=filter_obj, collection="tasks") or []
     objects = Flowcept.db.query(filter=filter_obj, collection="objects") or []
+
+    workflow_ids = {w.get("workflow_id") for w in workflows if isinstance(w, dict) and w.get("workflow_id")}
+
+    if campaign_id and len(workflow_ids) > 1:
+        sorted_workflows = sorted(
+            [w for w in workflows if isinstance(w, dict)],
+            key=lambda w: w.get("utc_timestamp") or 0,
+        )
+        return {
+            "campaign_id": campaign_id,
+            "workflows": [sanitize_json_like(w) for w in sorted_workflows],
+            "tasks": [sanitize_json_like(t) for t in tasks if isinstance(t, dict)],
+            "objects": [sanitize_json_like(strip_blob_data(o)) for o in objects if isinstance(o, dict)],
+        }
 
     workflow = workflows[-1] if workflows else {}
     return {

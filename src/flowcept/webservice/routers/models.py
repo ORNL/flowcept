@@ -1,4 +1,4 @@
-"""ML model object endpoints (type=ml_model)."""
+"""ML model object endpoints (object_type=ml_model)."""
 
 import json
 from typing import Any, Dict
@@ -49,7 +49,7 @@ def list_models(
 ) -> ListResponse:
     """List ML model objects with optional filters."""
     query_filter = _json_filter(filter_json)
-    query_filter["type"] = "ml_model"
+    query_filter["object_type"] = "ml_model"
     if workflow_id is not None:
         query_filter["workflow_id"] = workflow_id
     if task_id is not None:
@@ -75,7 +75,7 @@ def get_model(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    if blob is None or getattr(blob, "type", None) != "ml_model":
+    if blob is None or getattr(blob, "object_type", None) != "ml_model":
         raise HTTPException(status_code=404, detail=f"Model not found: {object_id}")
 
     return normalize_docs([blob.to_dict()], include_data=include_data)[0]
@@ -104,7 +104,7 @@ def download_model(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    if blob is None or getattr(blob, "type", None) != "ml_model":
+    if blob is None or getattr(blob, "object_type", None) != "ml_model":
         raise HTTPException(status_code=404, detail=f"Model not found: {object_id}")
 
     doc = blob.to_dict()
@@ -121,7 +121,7 @@ def download_model(
 def query_models(payload: ObjectQueryRequest, db: DBAPI = Depends(get_db_api)):
     """Run an advanced read-only query for ML model objects."""
     query_filter = dict(payload.filter)
-    query_filter["type"] = "ml_model"
+    query_filter["object_type"] = "ml_model"
     docs = db.query(
         collection="objects",
         filter=query_filter,

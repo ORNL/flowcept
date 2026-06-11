@@ -1,6 +1,7 @@
 """Document DB interaction module."""
 
 import os
+import hashlib
 from typing import List, Dict, Tuple, Any
 import io
 import json
@@ -122,6 +123,8 @@ class MongoDBDAO(DocumentDBDAO):
             self._obj_collection.create_index(TaskObject.task_id_field(), unique=False)
         if "campaign_id" not in existing_indices:
             self._obj_collection.create_index("campaign_id")
+        if "data_sha256" not in existing_indices:
+            self._obj_collection.create_index("data_sha256", unique=False)
 
         # Creating object_history collection indices:
         existing_history_indices = [list(x["key"].keys()) for x in self._obj_history_collection.list_indexes()]
@@ -473,6 +476,27 @@ class MongoDBDAO(DocumentDBDAO):
         """Get timezone-aware UTC timestamp."""
         return datetime.now(timezone.utc)
 
+    @staticmethod
+    def _payload_to_bytes(payload):
+        """Convert supported payload types to bytes for hashing/size metadata."""
+        if isinstance(payload, bytes):
+            return payload
+        if isinstance(payload, bytearray):
+            return bytes(payload)
+        if isinstance(payload, memoryview):
+            return payload.tobytes()
+        return None
+
+    @staticmethod
+    def _build_payload_hash_metadata(payload_bytes):
+        """Return hash metadata for a bytes payload."""
+        if payload_bytes is None:
+            return {}
+        return {
+            "data_sha256": hashlib.sha256(payload_bytes).hexdigest(),
+            "data_hash_algo": "sha256",
+        }
+
     def _build_blob_storage_doc(self, object_payload, save_data_in_collection=False, pickle_=False):
         """Build the storage-specific blob document fields."""
         obj_doc = {}
@@ -482,6 +506,7 @@ class MongoDBDAO(DocumentDBDAO):
                 blob = pickle.dumps(object_payload)
                 obj_doc["pickle"] = True
             obj_doc["data"] = blob
+            obj_doc.update(MongoDBDAO._build_payload_hash_metadata(MongoDBDAO._payload_to_bytes(blob)))
             try:
                 obj_doc["object_size_bytes"] = int(len(blob))
             except Exception:
@@ -493,6 +518,8 @@ class MongoDBDAO(DocumentDBDAO):
             fs = GridFS(self._db)
             file_id = fs.put(object_payload)
             obj_doc["grid_fs_file_id"] = file_id
+            payload_bytes = MongoDBDAO._payload_to_bytes(object_payload)
+            obj_doc.update(MongoDBDAO._build_payload_hash_metadata(payload_bytes))
             size_bytes = None
             try:
                 size_bytes = int(len(object_payload))
@@ -522,9 +549,12 @@ class MongoDBDAO(DocumentDBDAO):
             "prev_version": doc.get("prev_version"),
             "task_id": doc.get("task_id"),
             "workflow_id": doc.get("workflow_id"),
-            "type": doc.get("type"),
+            "object_type": doc.get("object_type"),
             "custom_metadata": doc.get("custom_metadata"),
+            "tags": doc.get("tags"),
             "object_size_bytes": doc.get("object_size_bytes"),
+            "data_sha256": doc.get("data_sha256"),
+            "data_hash_algo": doc.get("data_hash_algo"),
             "storage_type": storage_type,
             "pickle": bool(doc.get("pickle", False)),
         }
@@ -542,9 +572,12 @@ class MongoDBDAO(DocumentDBDAO):
             "source": "objects_snapshot",
             "task_id": latest_doc.get("task_id"),
             "workflow_id": latest_doc.get("workflow_id"),
-            "type": latest_doc.get("type"),
+            "object_type": latest_doc.get("object_type"),
             "custom_metadata": latest_doc.get("custom_metadata"),
+            "tags": latest_doc.get("tags"),
             "object_size_bytes": latest_doc.get("object_size_bytes"),
+            "data_sha256": latest_doc.get("data_sha256"),
+            "data_hash_algo": latest_doc.get("data_hash_algo"),
         }
         if "data" in latest_doc:
             history_doc["data"] = latest_doc["data"]
@@ -721,11 +754,12 @@ class MongoDBDAO(DocumentDBDAO):
         object_id=None,
         task_id=None,
         workflow_id=None,
-        type=None,
+        object_type=None,
         custom_metadata=None,
         save_data_in_collection=False,
         pickle_=False,
         control_version=False,
+        tags=None,
     ):
         """Save an object."""
         if object_id is None:
@@ -748,10 +782,12 @@ class MongoDBDAO(DocumentDBDAO):
             obj_doc["task_id"] = task_id
         if workflow_id is not None:
             obj_doc["workflow_id"] = workflow_id
-        if type is not None:
-            obj_doc["type"] = type
+        if object_type is not None:
+            obj_doc["object_type"] = object_type
         if custom_metadata is not None:
             obj_doc["custom_metadata"] = custom_metadata
+        if tags is not None:
+            obj_doc["tags"] = list(tags)
 
         if not control_version:
             update_query = [
@@ -821,6 +857,80 @@ class MongoDBDAO(DocumentDBDAO):
 
         raise ValueError(f"Could not update object_id={object_id} due to repeated concurrent CAS failures.")
 
+    def update_object_metadata(
+        self,
+        object_id,
+        custom_metadata=None,
+        tags=None,
+        object_type=None,
+        task_id=None,
+        workflow_id=None,
+        control_version=True,
+    ):
+        """Update object metadata without rewriting payload data."""
+        if object_id is None:
+            raise ValueError("object_id must not be None.")
+
+        from flowcept.configs import FLOWCEPT_USER
+
+        actor = FLOWCEPT_USER
+        now = MongoDBDAO._utc_now()
+        set_fields = {}
+
+        if custom_metadata is not None:
+            set_fields["custom_metadata"] = custom_metadata
+        if tags is not None:
+            set_fields["tags"] = list(tags)
+        if object_type is not None:
+            set_fields["object_type"] = object_type
+        if task_id is not None:
+            set_fields["task_id"] = task_id
+        if workflow_id is not None:
+            set_fields["workflow_id"] = workflow_id
+
+        if not set_fields:
+            return object_id
+
+        if not control_version:
+            set_fields["updated_at"] = now
+            set_fields["updated_by"] = actor
+            result = self._obj_collection.update_one(
+                {"object_id": object_id},
+                {"$set": set_fields, "$inc": {"version": 1}},
+                upsert=False,
+            )
+            if result.matched_count != 1:
+                raise ValueError(f"Object not found for object_id={object_id}.")
+            return object_id
+
+        max_attempts = 5
+        for attempt in range(max_attempts):
+            latest_doc = self._obj_collection.find_one({"object_id": object_id})
+            if latest_doc is None:
+                raise ValueError(f"Object not found for object_id={object_id}.")
+
+            expected_version = int(latest_doc.get("version", 0))
+            update_doc = dict(latest_doc)
+            update_doc.pop("_id", None)
+            update_doc.update(set_fields)
+            update_doc["version"] = expected_version + 1
+            update_doc["prev_version"] = expected_version
+            update_doc["created_at"] = latest_doc.get("created_at", now)
+            update_doc["created_by"] = latest_doc.get("created_by", actor)
+            update_doc["updated_at"] = now
+            update_doc["updated_by"] = actor
+            matched_count = self._update_with_optional_transaction(
+                object_id=object_id,
+                expected_version=expected_version,
+                latest_doc=latest_doc,
+                update_doc=update_doc,
+            )
+            if matched_count == 1:
+                return object_id
+            sleep(0.02 * (attempt + 1))
+
+        raise ValueError(f"Could not update object_id={object_id} due to repeated concurrent CAS failures.")
+
     def get_file_data(self, file_id):
         """Get a file in the GridFS."""
         from gridfs import GridFS, NoFile
@@ -868,6 +978,27 @@ class MongoDBDAO(DocumentDBDAO):
                 raise ValueError(f"Object payload not found in GridFS for object_id={object_id}, version={version}.")
             doc["data"] = data
         return doc
+
+    def get_blob_object_metadata_doc(self, object_id, version=None):
+        """Get blob metadata by object id and optional version without loading payload bytes."""
+        latest_doc = self._obj_collection.find_one({"object_id": object_id})
+        if latest_doc is None:
+            raise ValueError(f"Object not found for object_id={object_id}.")
+
+        if version is None:
+            doc = latest_doc
+        else:
+            version = int(version)
+            if int(latest_doc.get("version", -1)) == version:
+                doc = latest_doc
+            else:
+                doc = self._obj_history_collection.find_one({"object_id": object_id, "version": version})
+            if doc is None:
+                raise ValueError(f"Object not found for object_id={object_id}, version={version}.")
+
+        metadata_doc = dict(doc)
+        metadata_doc.pop("data", None)
+        return metadata_doc
 
     def get_object_history(self, object_id) -> List[Dict]:
         """Get metadata for all versions of an object (latest first)."""
@@ -936,7 +1067,7 @@ class MongoDBDAO(DocumentDBDAO):
         elif collection == "workflows":
             return self.workflow_query(filter, projection, limit, sort, remove_json_unserializables)
         elif collection == "objects":
-            return self.object_query(filter)
+            return self.object_query(filter, projection, limit, sort)
         elif collection == "object_history":
             return list(self._obj_history_collection.find(filter))
         else:
@@ -1213,10 +1344,15 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return None
 
-    def object_query(self, filter) -> List[dict]:
-        """Get objects."""
+    def object_query(self, filter=None, projection=None, limit=0, sort=None) -> List[dict]:
+        """Get objects with optional projection, sort, and limit."""
         try:
-            documents = self._obj_collection.find(filter)
+            find_filter = filter if isinstance(filter, dict) else {}
+            documents = self._obj_collection.find(find_filter, projection)
+            if sort:
+                documents = documents.sort(sort)
+            if isinstance(limit, int) and limit > 0:
+                documents = documents.limit(limit)
             return list(documents)
         except Exception as e:
             self.logger.exception(e)

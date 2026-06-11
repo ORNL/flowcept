@@ -55,3 +55,12 @@ class MimeType(Enum):
     JSON = "application/json"
     CSV = "text/csv"
     JSONL = "application/x-ndjson"  # standard for JSON Lines
+
+
+class ML_Types(str, Enum):
+    """Common subtype values for ML workflows and tasks."""
+
+    WORKFLOW = "ml_workflow"
+    DATA_PREP = "dataprep"
+    LEARNING = "learning"
+    MODEL_SELECTION = "model_selection"
