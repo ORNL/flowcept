@@ -13,19 +13,20 @@ report/
 ├── service.py                  # Entry point: orchestrates loading, aggregation, and rendering
 ├── loaders.py                  # Data loading from JSONL files, in-memory records, or DB
 ├── aggregations.py             # Activity grouping, timing statistics, hostname extraction
-├── sanitization.py             # Redacts sensitive fields before rendering
 └── renderers/
-    ├── provenance_card_markdown.py          # Single-workflow markdown report
-    ├── provenance_campaign_card_markdown.py # Multi-workflow campaign markdown report
+    ├── workflow_card_markdown.py          # Single-workflow markdown report
+    ├── campaign_workflow_card_markdown.py # Multi-workflow campaign markdown report
     └── provenance_report_pdf.py             # Single-workflow PDF report (requires matplotlib + reportlab)
 ```
 
+Sensitive-field redaction is shared from `flowcept.commons.sanitization`.
+
 ## Report Types
 
-### Single-workflow provenance card (markdown)
-Generated when the input data contains a single `workflow_id`. Covers workflow overview, activity timing, resource telemetry, per-activity detail, and object artifact summary. The markdown layout follows the upstream Workflow Provenance Card template: https://github.com/data-cards/workflow-provenance-card.
+### Single workflow card (markdown)
+Generated when the input data contains a single `workflow_id`. Covers workflow overview, activity timing, resource telemetry, per-activity detail, and object artifact summary. The markdown layout follows the upstream Workflow Card template: https://github.com/data-cards/workflow-provenance-card.
 
-### Campaign provenance card (markdown)
+### Campaign workflow card (markdown)
 Generated automatically when the input data contains multiple `workflow_id` values sharing a `campaign_id`. Two sub-types are handled:
 
 - **Replicated runs** — multiple runs of the same abstract workflow (same `workflow_name`). Focuses on cross-run comparison: timing trends, per-activity breakdown across runs, and execution host distribution.

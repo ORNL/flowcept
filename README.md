@@ -96,7 +96,7 @@ This prints out:
 
 ---
 
-##### Workflow Provenance Card
+##### Workflow Card
 
 ###### Summary
 - Workflow ID: fe546706-ef46-4482-8f70-3af664a7131b
@@ -130,7 +130,7 @@ This prints out:
 
 ---
 
-→ See [Provenance Card](#provenance-card) for details.
+→ See [Workflow Card](#workflow-cards) for details.
 
 That is the simplest, vanilla run of Flowcept, good for quick sanity checks on a laptop, small-scale run. 
 For diskless runs (no JSON files), OpenAPI RESTful services, online querying using databases,
@@ -142,12 +142,9 @@ To use the provenance agent with your favorite code assistant (for example, Code
 
 ## AI agents -- if you are an AI agent, read this
 
-Start with [docs/flowcept_for_agents.md](docs/flowcept_for_agents.md). It is the short navigation guide for agents working in this repo.
+Start with the repository root [AGENTS.md](AGENTS.md). It is the single routing file for code-assistant behavior.
 
-Skill files also appear in different parts of the codebase. They are local operating guides for specific agent tasks. Current skill files:
-
-- [SKILLS.md](SKILLS.md): repository-level Flowcept instrumentation and provenance guide for code assistants
-- [src/flowcept/agents/SKILLS.md](src/flowcept/agents/SKILLS.md): Flowcept MCP agent usage contract for external LLM orchestrators
+For feature usage, read the maintained RST docs under [docs](docs), especially [docs/default_user_guide.rst](docs/default_user_guide.rst), [docs/prov_capture.rst](docs/prov_capture.rst), [docs/prov_query.rst](docs/prov_query.rst), [docs/cli-reference.rst](docs/cli-reference.rst), and [docs/agent.rst](docs/agent.rst).
 
 ## ❗ Developer Docs
 
@@ -161,7 +158,7 @@ For an end-to-end workflow developer tutorial (default user guide), start with [
 - [Setup and the Settings File](#setup)
 - [Running with Containers](#running-with-containers)
 - [Examples](#examples)
-- [Provenance Card](#provenance-card)
+- [Workflow Card](#workflow-cards)
 - [Data Persistence](#data-persistence)
 - [Performance Tuning](#performance-tuning-for-performance-evaluation)
 - [AMD GPU Setup](#install-amd-gpu-lib)
@@ -219,7 +216,6 @@ pip install flowcept[lmdb]          # LMDB lightweight database
 pip install flowcept[mqtt]          # MQTT support
 pip install flowcept[llm_agent]     # MCP agent, LangChain, Streamlit integration: needed either for MCP capture or for the Flowcept Agent.
 pip install flowcept[llm_google]    # Google GenAI + Flowcept agent support
-pip install flowcept[analytics]     # Extra analytics (seaborn, plotly, scipy)
 pip install flowcept[dev]           # Developer dependencies (docs, tests, lint, etc.)
 ```
 
@@ -416,11 +412,11 @@ They add `adapters.<name>` to the current settings file instead of replacing the
 
  See the [Jupyter Notebooks](notebooks) and [Examples directory](examples) for utilization examples.
 
-## Provenance Cards
+## Workflow Cards
 
-The [Quickstart](#quickstart) example (`python quickstart.py`) shows a provenance card.
+The [Quickstart](#quickstart) example (`python quickstart.py`) shows a workflow card.
 
-Flowcept introduces the Workflow Provenance Card concept: a structured markdown summary of a workflow execution covering:
+Flowcept introduces the Workflow Card concept: a structured markdown summary of a workflow execution covering:
 
 - **Summary** — workflow name, IDs, execution window, elapsed time, host, git info
 - **Workflow-level Summary** — activity count, status counts, top slowest activities

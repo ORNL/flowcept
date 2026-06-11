@@ -92,9 +92,7 @@ class DashboardConfig(BaseModel):
     """
 
     dashboard_id: Optional[str] = None
-    dashboard_type: Literal[
-        "common_workflow", "common_campaign", "custom_workflow", "custom_campaign"
-    ]
+    dashboard_type: Literal["common_workflow", "common_campaign", "custom_workflow", "custom_campaign"]
     target: Optional[str] = None
     name: str = ""
     charts: List[DashboardChart] = Field(default_factory=list)

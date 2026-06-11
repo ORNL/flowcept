@@ -8,10 +8,10 @@ from typing import Any, Dict, List
 
 from flowcept.report.aggregations import group_activities, group_transformations, summarize_objects
 from flowcept.report.loaders import load_records_from_db, read_jsonl, split_records
-from flowcept.report.renderers.provenance_campaign_card_markdown import render_provenance_campaign_card_markdown
-from flowcept.report.renderers.provenance_card_markdown import (
+from flowcept.report.renderers.campaign_workflow_card_markdown import render_campaign_workflow_card_markdown
+from flowcept.report.renderers.workflow_card_markdown import (
     render_markdown_file_into_rich_terminal,
-    render_provenance_card_markdown,
+    render_workflow_card_markdown,
 )
 from flowcept.report.renderers.provenance_report_pdf import render_provenance_report_pdf
 
@@ -39,13 +39,13 @@ def _resolve_input_mode(
     return "db"
 
 
-def build_provenance_card(
+def build_workflow_card(
     input_jsonl_path: str | None = None,
     records: List[Dict[str, Any]] | None = None,
     workflow_id: str | None = None,
     campaign_id: str | None = None,
 ) -> Dict[str, Any]:
-    """Build the structured provenance-card content without rendering it.
+    """Build the structured workflow-card content without rendering it.
 
     Accepts exactly one input mode (JSONL path, pre-loaded records, or DB query
     by workflow/campaign id) and returns the aggregated structures consumed by
@@ -96,7 +96,7 @@ def build_provenance_card(
 
 
 def generate_report(
-    report_type: str = "provenance_card",
+    report_type: str = "workflow_card",
     format: str = "markdown",
     print_markdown: bool = False,
     output_path: str | None = None,
@@ -110,14 +110,14 @@ def generate_report(
     Parameters
     ----------
     report_type : str, optional
-        Report identifier. Default is ``"provenance_card"``.
+        Report identifier. Default is ``"workflow_card"``.
     format : str, optional
         Output format. Default is ``"markdown"``.
     print_markdown : bool, optional
         If True and the output format is markdown, print the rendered markdown
         to terminal after generation using Rich.
     output_path : str, optional
-        Output file path. If omitted, defaults to ``PROVENANCE_CARD.md``.
+        Output file path. If omitted, defaults to ``WORKFLOW_CARD.md``.
     input_jsonl_path : str, optional
         Path to a Flowcept JSONL buffer file.
     records : list of dict, optional
@@ -139,12 +139,12 @@ def generate_report(
         campaign_id=campaign_id,
     )
 
-    if report_type not in {"provenance_card", "provenance_report"}:
+    if report_type not in {"workflow_card", "provenance_report"}:
         raise ValueError(f"Unsupported report_type: {report_type}")
     if format not in {"markdown", "pdf"}:
         raise ValueError(f"Unsupported format: {format}")
-    if report_type == "provenance_card" and format != "markdown":
-        raise ValueError("provenance_card supports only markdown format.")
+    if report_type == "workflow_card" and format != "markdown":
+        raise ValueError("workflow_card supports only markdown format.")
     if report_type == "provenance_report" and format != "pdf":
         raise ValueError("provenance_report supports only pdf format.")
 
@@ -167,7 +167,7 @@ def generate_report(
     output = Path(output_path) if output_path is not None else None
 
     if is_campaign:
-        render_stats = render_provenance_campaign_card_markdown(
+        render_stats = render_campaign_workflow_card_markdown(
             dataset=dataset,
             output_path=output,
         )
@@ -175,7 +175,7 @@ def generate_report(
         activities = group_activities(dataset.get("tasks", []))
         object_summary = summarize_objects(dataset.get("objects", []))
         if format == "markdown":
-            render_stats = render_provenance_card_markdown(
+            render_stats = render_workflow_card_markdown(
                 dataset=dataset,
                 activities=activities,
                 object_summary=object_summary,

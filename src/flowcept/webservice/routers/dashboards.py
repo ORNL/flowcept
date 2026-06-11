@@ -92,9 +92,7 @@ def get_dashboard(dashboard_id: str, store=Depends(get_dashboard_store)) -> Dict
 
 
 @router.put("/{dashboard_id}", response_model=Dict[str, Any])
-def update_dashboard(
-    dashboard_id: str, config: DashboardConfig, store=Depends(get_dashboard_store)
-) -> Dict[str, Any]:
+def update_dashboard(dashboard_id: str, config: DashboardConfig, store=Depends(get_dashboard_store)) -> Dict[str, Any]:
     """Replace a dashboard config, preserving its id and creation time."""
     existing = store.get(dashboard_id)
     if existing is None:

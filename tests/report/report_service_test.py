@@ -173,7 +173,7 @@ class ReportServiceTests(unittest.TestCase):
         ]
 
         with tempfile.TemporaryDirectory() as td:
-            output = Path(td) / "PROVENANCE_CARD.md"
+            output = Path(td) / "WORKFLOW_CARD.md"
             Flowcept.generate_report(records=records, output_path=str(output))
             content = output.read_text(encoding="utf-8")
             section = content.split("## Per-activity Resource Usage", 1)[1]
@@ -213,7 +213,7 @@ class ReportServiceTests(unittest.TestCase):
             },
         ]
         with tempfile.TemporaryDirectory() as td:
-            output = Path(td) / "PROVENANCE_CARD.md"
+            output = Path(td) / "WORKFLOW_CARD.md"
             Flowcept.generate_report(records=records, output_path=str(output))
             content = output.read_text(encoding="utf-8")
             assert "  - Tag: `important`" in content
@@ -238,11 +238,11 @@ class ReportServiceTests(unittest.TestCase):
             },
         ]
         with tempfile.TemporaryDirectory() as td:
-            output = Path(td) / "PROVENANCE_CARD.md"
+            output = Path(td) / "WORKFLOW_CARD.md"
             Flowcept.generate_report(records=records, output_path=str(output))
             content = output.read_text(encoding="utf-8")
-            assert "# Workflow Provenance Card\n" in content
-            assert "# Workflow Provenance Card:" not in content
+            assert "# Workflow Card\n" in content
+            assert "# Workflow Card:" not in content
             assert "- **Workflow Name:** `unknown`" not in content
 
     def test_generate_report_hides_empty_workflow_name_in_title(self):
@@ -265,16 +265,16 @@ class ReportServiceTests(unittest.TestCase):
             },
         ]
         with tempfile.TemporaryDirectory() as td:
-            output = Path(td) / "PROVENANCE_CARD.md"
+            output = Path(td) / "WORKFLOW_CARD.md"
             Flowcept.generate_report(records=records, output_path=str(output))
             content = output.read_text(encoding="utf-8")
-            assert "# Workflow Provenance Card\n" in content
-            assert "# Workflow Provenance Card:" not in content
+            assert "# Workflow Card\n" in content
+            assert "# Workflow Card:" not in content
             assert "- **Workflow Name:** `unknown`" not in content
 
     def test_generate_report_from_records(self):
         with tempfile.TemporaryDirectory() as td:
-            output = Path(td) / "PROVENANCE_CARD.md"
+            output = Path(td) / "WORKFLOW_CARD.md"
             stats = Flowcept.generate_report(records=_sample_records(), output_path=str(output))
             assert output.exists()
             assert stats["input_mode"] == "records"
@@ -320,7 +320,7 @@ class ReportServiceTests(unittest.TestCase):
             },
         ]
         with tempfile.TemporaryDirectory() as td:
-            output = Path(td) / "PROVENANCE_CARD.md"
+            output = Path(td) / "WORKFLOW_CARD.md"
             Flowcept.generate_report(records=records, output_path=str(output))
             content = output.read_text(encoding="utf-8")
             assert "## Workflow-level Resource Usage" not in content
@@ -349,7 +349,7 @@ class ReportServiceTests(unittest.TestCase):
             },
         ]
         with tempfile.TemporaryDirectory() as td:
-            output = Path(td) / "PROVENANCE_CARD.md"
+            output = Path(td) / "WORKFLOW_CARD.md"
             Flowcept.generate_report(records=records, output_path=str(output))
             content = output.read_text(encoding="utf-8")
             assert "## Workflow-level Resource Usage" not in content
@@ -392,7 +392,7 @@ class ReportServiceTests(unittest.TestCase):
 
     def test_generate_report_contains_insights_sections(self):
         with tempfile.TemporaryDirectory() as td:
-            output = Path(td) / "PROVENANCE_CARD.md"
+            output = Path(td) / "WORKFLOW_CARD.md"
             stats = Flowcept.generate_report(records=_sample_records_with_telemetry_and_io(), output_path=str(output))
             assert output.exists()
             assert stats["input_mode"] == "records"
@@ -435,7 +435,7 @@ class ReportServiceTests(unittest.TestCase):
     def test_generate_report_rejects_mismatched_card_pdf(self):
         with self.assertRaises(ValueError):
             Flowcept.generate_report(
-                report_type="provenance_card",
+                report_type="workflow_card",
                 format="pdf",
                 records=_sample_records(),
             )
@@ -481,7 +481,7 @@ class ReportServiceTests(unittest.TestCase):
             )
 
         with tempfile.TemporaryDirectory() as td:
-            output = Path(td) / "PROVENANCE_CARD.md"
+            output = Path(td) / "WORKFLOW_CARD.md"
             stats = Flowcept.generate_report(records=records, output_path=str(output))
             assert output.exists()
             assert stats["input_mode"] == "records"
@@ -524,10 +524,10 @@ class ReportServiceTests(unittest.TestCase):
         records[2]["generated"]["val_accuracy"] = 0.9
 
         with tempfile.TemporaryDirectory() as td:
-            output = Path(td) / "PROVENANCE_CARD.md"
+            output = Path(td) / "WORKFLOW_CARD.md"
             Flowcept.generate_report(records=records, output_path=str(output))
             content = output.read_text(encoding="utf-8")
-            assert "# Workflow Provenance Card: telemetry_demo" in content
+            assert "# Workflow Card: telemetry_demo" in content
             assert "## ML Workflow Insights" not in content
             assert "- **Workflow Subtype:** `ml_workflow`" in content
             assert "- **LoadData** (subtype=`dataprep`)" in content
@@ -535,7 +535,7 @@ class ReportServiceTests(unittest.TestCase):
 
     def test_generate_report_print_markdown_renders_when_rich_available(self):
         with tempfile.TemporaryDirectory() as td:
-            output = Path(td) / "PROVENANCE_CARD.md"
+            output = Path(td) / "WORKFLOW_CARD.md"
             with (
                 patch("flowcept.report.service.importlib.util.find_spec", return_value=object()),
                 patch("flowcept.report.service.render_markdown_file_into_rich_terminal") as mocked_render,
@@ -549,7 +549,7 @@ class ReportServiceTests(unittest.TestCase):
 
     def test_generate_report_print_markdown_raises_when_rich_missing(self):
         with tempfile.TemporaryDirectory() as td:
-            output = Path(td) / "PROVENANCE_CARD.md"
+            output = Path(td) / "WORKFLOW_CARD.md"
             with patch("flowcept.report.service.importlib.util.find_spec", return_value=None):
                 with self.assertRaises(ModuleNotFoundError) as ctx:
                     Flowcept.generate_report(

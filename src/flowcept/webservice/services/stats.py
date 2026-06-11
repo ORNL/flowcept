@@ -23,6 +23,7 @@ def _to_epoch(value) -> Optional[float]:
         return value / 1000.0 if value > 1e12 else float(value)
     if isinstance(value, str):
         from datetime import datetime, timezone
+
         try:
             dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
             return dt.replace(tzinfo=timezone.utc).timestamp() if dt.tzinfo is None else dt.timestamp()
@@ -31,6 +32,7 @@ def _to_epoch(value) -> Optional[float]:
     # pymongo returns datetime objects for BSON Date fields (e.g. from $min/$max aggregations)
     try:
         from datetime import datetime, timezone
+
         if isinstance(value, datetime):
             return value.replace(tzinfo=timezone.utc).timestamp() if value.tzinfo is None else value.timestamp()
     except Exception:
@@ -594,9 +596,12 @@ def _resolve_grouped(db: DBAPI, data: "ChartData", query_filter: Dict[str, Any])
                 def _elapsed(d: Dict[str, Any]) -> Optional[float]:
                     s, e = _to_epoch(d.get("started_at")), _to_epoch(d.get("ended_at"))
                     return (e - s) if s is not None and e is not None else None
+
                 values = [v for v in (_elapsed(d) for d in docs_in_group) if v is not None]
             else:
-                values = [v for v in (get_nested(d, metric.field) for d in docs_in_group) if isinstance(v, (int, float))]
+                values = [
+                    v for v in (get_nested(d, metric.field) for d in docs_in_group) if isinstance(v, (int, float))
+                ]
             if metric.agg == "count":
                 record[_metric_key(metric)] = len(docs_in_group)
             elif not values:

@@ -165,7 +165,7 @@ def test_webservice_end_to_end_with_flowcept_and_blob_apis():
 
 
 def test_webservice_campaigns_agents_stats_and_prov_card():
-    """End-to-end test for derived campaigns/agents, stats endpoints, and provenance cards."""
+    """End-to-end test for derived campaigns/agents, stats endpoints, and workflow cards."""
     if not Flowcept.services_alive():
         pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
 
@@ -257,21 +257,21 @@ def test_webservice_campaigns_agents_stats_and_prov_card():
     assert rs.status_code == 400
 
     # Provenance card: JSON and markdown content.
-    rs = client.get(f"/api/v1/workflows/{workflow_id}/provenance_card", params={"format": "json"})
+    rs = client.get(f"/api/v1/workflows/{workflow_id}/workflow_card", params={"format": "json"})
     assert rs.status_code == 200
     card = rs.json()
     assert card["input_mode"] == "db"
     assert "transformations" in card and "dataset" in card
 
-    rs = client.get(f"/api/v1/workflows/{workflow_id}/provenance_card", params={"format": "markdown"})
+    rs = client.get(f"/api/v1/workflows/{workflow_id}/workflow_card", params={"format": "markdown"})
     assert rs.status_code == 200
     assert rs.headers["content-type"].startswith("text/markdown")
     assert workflow_name in rs.text or workflow_id in rs.text
 
-    rs = client.get(f"/api/v1/campaigns/{campaign_id}/provenance_card", params={"format": "markdown"})
+    rs = client.get(f"/api/v1/campaigns/{campaign_id}/workflow_card", params={"format": "markdown"})
     assert rs.status_code == 200
 
-    rs = client.get(f"/api/v1/workflows/{workflow_id}/provenance_card", params={"format": "pdf"})
+    rs = client.get(f"/api/v1/workflows/{workflow_id}/workflow_card", params={"format": "pdf"})
     assert rs.status_code == 400
 
     # Cleanup singleton client handles for test isolation.
@@ -362,8 +362,7 @@ def test_webservice_object_versioning_and_unified_query():
     assert rs.status_code == 200
     assert rs.json()["count"] >= 1
 
-    # Legacy provenance-card download endpoint still works.
-    rs = client.post(f"/api/v1/workflows/{workflow_id}/reports/provenance-card/download")
+    rs = client.post(f"/api/v1/workflows/{workflow_id}/reports/workflow-card/download")
     assert rs.status_code == 200
     assert rs.headers["content-type"].startswith("text/markdown")
 

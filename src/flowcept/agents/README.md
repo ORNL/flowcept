@@ -1,133 +1,168 @@
-# Flowcept Agents: External LLM Usage (Step by Step)
+# Flowcept Agent
 
-This guide explains how to use Flowcept Agents with an external LLM orchestrator
-(for example, Codex), using `SKILLS.md` as the operating contract.
+This package contains the Flowcept MCP server, client helpers, tools, prompts,
+context manager, and optional UI pieces.
 
-## 1) Enable external mode
+For code-assistant behavior, use the repository root `AGENTS.md`. Do not
+duplicate agent rules here. Runtime usage docs live in `docs/agent.rst`.
 
-Set in your Flowcept settings:
+## One Agent, Two Orchestrators
+
+Flowcept Agent has one shared backend and two orchestration paths.
+
+Both paths use the same MCP server, in-memory context, tools, prompts, and
+execution functions. The only intended difference is who does routing and LLM
+reasoning:
+
+- **Internal LLM mode:** Flowcept builds the configured LLM and orchestrates.
+- **External LLM mode:** Codex, Claude, LibreChat, Cursor, or another assistant
+  orchestrates and calls Flowcept MCP prompts/tools.
+
+## Shared Backend
+
+- `flowcept_agent.py` starts the MCP server.
+- `flowcept_ctx_manager.py` owns the live task/object/workflow context.
+- `tools/general_tools.py` exposes `prompt_handler` and shared commands.
+- `tools/in_memory_queries/` queries task/object DataFrames.
+- `tools/workflow_query_tools.py` queries the active workflow message object.
+- `prompts/` builds prompts for internal and external LLM generation.
+- `agents_utils.py` builds the configured internal LLM when Flowcept owns
+  orchestration.
+
+## Internal LLM Mode
+
+Use this when Flowcept should route free-text messages itself.
+
+```yaml
+agent:
+  external_llm: false
+```
+
+Typical path:
+
+1. A client calls `prompt_handler(message)`.
+2. Flowcept builds the configured model with `build_llm_model()`.
+3. Flowcept classifies the message with the routing prompt.
+4. Flowcept calls the same MCP tools used by the external path.
+5. Tool results are returned to the client.
+
+This mode supports natural-language routing through `prompt_handler`, including
+task/object DataFrame questions, plots, small talk, records, context reset, and
+direct DataFrame code execution.
+
+## External LLM Mode
+
+Use this when an outside assistant should own reasoning and planning.
 
 ```yaml
 agent:
   external_llm: true
 ```
 
-This disables internal LLM routing/code generation paths used by agent tools.
+Typical path:
 
-## 2) Start the Flowcept agent (MCP server)
+1. The outside assistant calls a Flowcept MCP prompt builder.
+2. The outside assistant sends that prompt to its own LLM.
+3. The outside assistant calls the matching Flowcept execution tool.
+4. Flowcept executes against the same live in-memory context.
 
-Run:
+In this mode, arbitrary free-text messages sent to `prompt_handler` are not
+internally routed. This prevents Flowcept from silently becoming the planner
+when the outside assistant is supposed to plan.
 
-```bash
-python -m flowcept.agents.flowcept_agent
-```
+## Equivalent Tool Paths
 
-or, preferably, via Flowcept CLI:
+| Capability | Internal orchestration | External orchestration |
+|---|---|---|
+| Task DataFrame question | `prompt_handler("...")` -> `run_df_query(...)` | `build_df_query_prompt(...)` -> external LLM -> `execute_generated_df_code(...)` |
+| Object DataFrame question | `prompt_handler("o: ...")` -> `run_df_query(context_kind="objects")` | `build_df_query_prompt(context_kind="objects")` -> external LLM -> `execute_generated_df_code(context_kind="objects")` |
+| Workflow metadata question | `prompt_handler("w: ...")` -> `run_workflow_query(...)` | `build_workflow_query_prompt(...)` -> external LLM -> `execute_generated_workflow_query(...)` |
+| Direct DataFrame code | `prompt_handler("result = df ...")` | `execute_generated_df_code("result = df ...")` |
+| Context reset and records | `prompt_handler("reset context")`, `@record`, `@show records`, `@reset records` | Same tools/commands |
+| Provenance reports | Flowcept report tools | Same report tools called explicitly |
+
+## Prefix Shortcuts
+
+These shortcuts are accepted by `prompt_handler` in both modes:
+
+- `t: <question>` queries the task DataFrame.
+- `o: <question>` queries the object DataFrame.
+- `w: <question>` queries the workflow message object.
+- `result = df ...` executes explicit pandas code.
+- `save` saves the current DataFrame context.
+- `reset context`, `@record`, `@show records`, and `@reset records` manage
+  context and guidance.
+
+Important nuance: prefix shortcuts are convenience paths. If a shortcut needs
+LLM generation, the current implementation may build Flowcept's configured LLM.
+For strict external orchestration, use prompt-builder tools plus execution tools.
+
+## Start The MCP Server
+
+Prefer the CLI:
 
 ```bash
 flowcept --start-agent
 ```
 
-Important:
-- Run this command from a Python environment where Flowcept is installed.
-- In this repository, prefer the project conda env that contains the Flowcept package.
-- If needed, call the env-specific binary directly, e.g.:
-  `/path/to/env/bin/flowcept --start-agent`
+Equivalent module form:
 
-## 2.1) Transport choice (important)
-
-- Client transport is HTTP (`streamable-http`) and requires reachable
-  `http://<host>:<port>/mcp`.
-
-## 3) Load the skills contract
-
-Before orchestrating tools, read:
-
-```text
-src/flowcept/agents/SKILLS.md
+```bash
+python -m flowcept.agents.flowcept_agent
 ```
 
-That file defines allowed patterns, routing constraints, and safety behavior.
+Run from a Python environment where Flowcept is installed.
 
-## 4) Use explicit tool commands only
+## Internal Prompt Handler Example
 
-In `external_llm=true` mode, prefer explicit deterministic commands:
+```python
+from flowcept.agents.agent_client import run_tool
 
-- `check_liveness`
-- `get_latest`
-- `@record ...`
-- `@show records`
-- `@reset records`
-- `reset context`
-- `result = df ...`
-- `save`
-- `generate_workflow_provenance_card` (markdown report for a workflow id)
+result = run_tool(
+    "prompt_handler",
+    kwargs={"message": "What are the top 5 slowest activities?"},
+)
+```
 
-## 5) Avoid implicit internal routing
-
-Do **not** rely on free-form natural-language routing inside `prompt_handler`
-when `external_llm=true`.
-
-## 6) DataFrame querying flow
-
-Two supported paths:
-
-Internal LLM path:
-1. Use `run_df_query` with natural language (internal model required).
-2. Agent generates pandas code internally and executes it.
-
-External LLM path (expected in `external_llm=true`):
-1. Prompt call (MCP prompt): `build_df_query_prompt`.
-2. External LLM reads that prompt and generates explicit pandas code (`result = df ...`).
-3. Execute tool call: `execute_generated_df_code(user_code=...)`.
-
-This is the expected external sequence:
-- the prompt will instruct you how to generate a dataframe query
-- you get the prompt, read it, and generate the query code
-- you call the tool that executes the query code
-
-## 7) Recover from context drift
-
-If context is stale/noisy:
-
-1. `reset_context`
-2. Re-run explicit commands
-3. Continue from deterministic state
-
-## 8) Keep orchestration external
-
-In this mode, treat Flowcept Agent as:
-- context + tools backend,
-- not the planner.
-
-Use your external LLM orchestrator for reasoning/planning, and Flowcept tools for execution/state.
-
-## 9) Example: External Prompt -> Execute
+## External DataFrame Query Example
 
 ```python
 from flowcept.agents.agent_client import run_prompt, run_tool
 
-# 1) Prompt call
-prompt_payload = run_prompt(
+prompt = run_prompt(
     "build_df_query_prompt",
-    args={"query": "What are the top 5 slowest activities?"},
-    host="127.0.0.1",
-    port=8000,
+    args={"query": "What are the top 5 slowest activities?", "context_kind": "tasks"},
 )
 
-# 2) External LLM generates explicit code from prompt
+# The external assistant sends `prompt` to its own LLM and gets pandas code.
 generated_code = (
-    "result = df.assign(elapsed_sec=(df['ended_at'] - df['started_at']))"
-    ".groupby('activity_id', dropna=False)['elapsed_sec']"
+    "result = df.assign(duration=(df['ended_at'] - df['started_at']))"
+    ".groupby('activity_id', dropna=False)['duration']"
     ".mean().sort_values(ascending=False).head(5)"
-    ".reset_index(name='avg_elapsed_sec')"
+    ".reset_index(name='avg_duration')"
 )
 
-# 3) Execute generated code in agent context
 result = run_tool(
     "execute_generated_df_code",
-    kwargs={"user_code": generated_code},
-    host="127.0.0.1",
-    port=8000,
+    kwargs={"user_code": generated_code, "context_kind": "tasks"},
+)
+```
+
+## External Workflow Query Example
+
+```python
+from flowcept.agents.agent_client import run_prompt, run_tool
+
+prompt = run_prompt(
+    "build_workflow_query_prompt",
+    args={"query": "What settings path was used?"},
+)
+
+# The external assistant sends `prompt` to its own LLM and gets a JSON spec.
+query_spec = {"field_paths": ["conf.settings_path"], "missing": [], "answer_style": "short"}
+
+result = run_tool(
+    "execute_generated_workflow_query",
+    kwargs={"query_spec": query_spec},
 )
 ```

@@ -12,7 +12,7 @@ from flowcept import Flowcept
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.schemas.common import ListResponse, QueryRequest
-from flowcept.webservice.services.reports import provenance_card_response
+from flowcept.webservice.services.reports import workflow_card_response
 from flowcept.webservice.services.serializers import normalize_docs
 from flowcept.webservice.services.sorting import sort_docs_by_first_date_field
 
@@ -99,32 +99,31 @@ def query_workflows(payload: QueryRequest, db: DBAPI = Depends(get_db_api)) -> L
     return ListResponse(items=normalized, count=len(normalized), limit=payload.limit)
 
 
-@router.get("/{workflow_id}/provenance_card")
-def get_workflow_provenance_card(
+@router.get("/{workflow_id}/workflow_card")
+def get_workflow_card(
     workflow_id: str,
     format: str = Query(default="json"),
     db: DBAPI = Depends(get_db_api),
 ) -> Response:
-    """Get a workflow provenance card as structured JSON or rendered markdown."""
+    """Get a workflow card as structured JSON or rendered markdown."""
     wf_obj = db.get_workflow_object(workflow_id)
     if wf_obj is None:
         raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
-    return provenance_card_response(format=format, workflow_id=workflow_id)
+    return workflow_card_response(format=format, workflow_id=workflow_id)
 
 
-
-@router.post("/{workflow_id}/reports/provenance-card/download")
-def download_workflow_provenance_card(workflow_id: str, db: DBAPI = Depends(get_db_api)) -> Response:
-    """Generate and download a workflow provenance card markdown file."""
+@router.post("/{workflow_id}/reports/workflow-card/download")
+def download_workflow_card(workflow_id: str, db: DBAPI = Depends(get_db_api)) -> Response:
+    """Generate and download a workflow card markdown file."""
     wf_obj = db.get_workflow_object(workflow_id)
     if wf_obj is None:
         raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
 
-    fd, output_path = tempfile.mkstemp(prefix=f"provenance_card_{workflow_id}_", suffix=".md")
+    fd, output_path = tempfile.mkstemp(prefix=f"workflow_card_{workflow_id}_", suffix=".md")
     os.close(fd)
     try:
         Flowcept.generate_report(
-            report_type="provenance_card",
+            report_type="workflow_card",
             format="markdown",
             output_path=output_path,
             workflow_id=workflow_id,
@@ -134,14 +133,14 @@ def download_workflow_provenance_card(workflow_id: str, db: DBAPI = Depends(get_
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Could not generate provenance card: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"Could not generate workflow card: {exc}") from exc
     finally:
         try:
             os.remove(output_path)
         except Exception:
             pass
 
-    filename = f"provenance_card_{workflow_id}.md"
+    filename = f"workflow_card_{workflow_id}.md"
     return Response(
         content=payload,
         media_type="text/markdown; charset=utf-8",

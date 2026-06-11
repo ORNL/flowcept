@@ -1,0 +1,235 @@
+# Flowcept Code Assistant Instructions
+
+This file is the single source of truth for code-assistant behavior in this repository.
+
+Do not duplicate these rules in `CLAUDE.md`, `.cursor/rules`, `GEMINI.md`, `SKILL.md`, or other agent files.
+If a tool requires its own file, make that file (which should immediately go to .gitignore) a thin pointer to this one.
+
+## 1. First Principles
+
+- Be surgical. Prefer small, reviewable changes.
+- Reuse above all. Avoid duplication and one-off fixes.
+- Do not overengineer.
+- Prefer visible failures over fallback code that hides contract mismatches.
+- Prefer `settings.yaml` over hardcoded behavior.
+- Avoid dependency pins unless there is a proven direct reason and no better practical fix.
+- Do not commit personal absolute paths.
+- Do not commit secrets or keys.
+- Do not `pip install`; report missing packages and the command the user can run. Consider adding them to pyproject.toml.
+- Do not auto-commit. Test first, then ask the user to confirm before discussing a commit.
+
+## 2. Interaction Rules
+
+- Keep responses under 50 words unless the user asks for detail.
+- Do not dump large code or long explanations unless explicitly asked.
+- Before long-running operations, warn the user and ask permission.
+- During approved long operations, provide brief status updates about every minute.
+- The human user is the owner and responsible for all actions in this code. Explain tradeoffs clearly, then follow decisions.
+
+## 3. Editing Rules
+
+- Read relevant code and tests before editing.
+- Before editing Python files, explain the intended change and keep it narrow.
+- After editing Python files, run:
+
+```bash
+conda run -n flowcept make reformat
+```
+
+- Use existing tests when possible. Add a new test file only when no existing file is a good home.
+- Public functions/classes under `src/` need concise docstrings.
+- Use `FlowceptLogger` for Flowcept warnings/errors, not `print`.
+- Prefer `pathlib.Path` over `os.path`.
+- Avoid local imports unless clearly necessary.
+- Call static methods through the class name.
+
+## 4. Git Rules
+
+- Stage files explicitly:
+
+```bash
+git add path/to/file1 path/to/file2
+```
+
+- Never use `git add -A` or `git add .`.
+- Never stage personal local instruction files.
+- Never amend commits unless the user explicitly asks.
+- Never revert user changes without explicit approval.
+
+## 5. Paths And Scratch Work
+
+- `agent_sandbox/` is the assistant scratch area.
+- Put plans and handoffs under `agent_sandbox/plans/`.
+- Do not create scratch scripts in source, tests, docs, or `/tmp` when `agent_sandbox/` is appropriate.
+- Do not run full test suites against `agent_sandbox/`, `tmp_tests/`, generated workflow cards, caches, or local data artifacts.
+- Deployment templates under `deployment/*.yaml` must use `${DATA_DIR}` placeholders for data paths.
+- Personal absolute paths belong only in untracked local settings files.
+
+## 6. Source Map
+
+- `src/flowcept/cli.py`: CLI commands and settings/profile entry points.
+- `src/flowcept/configs.py`: settings loading, env overrides, runtime constants.
+- `src/flowcept/flowcept_api/`: main `Flowcept` controller and DB API.
+- `src/flowcept/instrumentation/`: decorators, tasks, loops, PyTorch hooks.
+- `src/flowcept/flowceptor/`: adapters, interceptors, telemetry, consumers.
+- `src/flowcept/commons/`: dataclasses, DAOs, buffers, logging, shared utilities.
+- `src/flowcept/agents/`: MCP agent server, client, tools, prompts, LLM wrappers.
+- `src/flowcept/report/`: workflow card/report generation.
+- `src/flowcept/webservice/`: FastAPI REST API.
+- `resources/sample_settings.yaml`: canonical full settings template.
+- `.github/workflows/`: CI truth.
+- `Makefile`: local service/test/check commands.
+- `tests/`: behavior truth.
+- `examples/` and `notebooks/`: user-facing runnable usage.
+
+## 7. Documentation Routing
+
+Use the RST docs as the maintained user documentation. Do not recreate these guides in agent files.
+
+- `docs/index.rst`: documentation table of contents.
+- `docs/default_user_guide.rst`: recommended first read for workflow developers.
+- `docs/quick_start.rst`: minimal offline start.
+- `docs/setup.rst`: installation and optional dependency strategy.
+- `docs/cli-reference.rst`: CLI commands, config profiles, adapter flags.
+- `docs/prov_capture.rst`: capture APIs and instrumentation patterns.
+- `docs/prov_query.rst`: Python API, CLI, buffer, and DB querying.
+- `docs/prov_storage.rst`: MQ, MongoDB, LMDB, JSONL buffer behavior.
+- `docs/telemetry_capture.rst`: telemetry configuration and captured fields.
+- `docs/agent.rst`: Flowcept MCP agent usage.
+- `docs/reporting.rst`: workflow cards and reports.
+- `docs/rest_api.rst`: REST API usage.
+- `docs/architecture.rst`: system architecture.
+- `docs/task_schema.rst`: task record schema.
+- `docs/workflow_schema.rst`: workflow record schema.
+- `docs/blob_data.rst` and `docs/blob_schema.rst`: object/blob persistence.
+- `docs/api-reference.rst`: public API reference.
+- `docs/contributing.rst` and `CONTRIBUTING.md`: contributor workflow.
+
+When a user asks how to use Flowcept, read the relevant RST first and answer from it.
+When a user or code assistant needs to learn or use a Flowcept feature, read the relevant RST first.
+
+## 8. Flowcept Usage Rules
+
+- Use `FLOWCEPT_SETTINGS_PATH` to isolate settings for tests or experiments.
+- `flowcept --init-settings` creates settings.
+- `flowcept --init-settings --full -y` creates the full template.
+- `flowcept --config-profile <profile> -y` changes runtime mode.
+- Adapter flags are additive, for example:
+
+```bash
+flowcept --init-settings --full --dask --mlflow -y
+```
+
+- Config behavior precedence is:
+  1. Environment variables.
+  2. Settings files.
+  3. Hardcoded defaults in `src/flowcept/configs.py`.
+- All config defaults and env-var reads must be centralized in `src/flowcept/configs.py`.
+- Never hardcode config values in other parts of the codebase.
+- For profile/CLI behavior, verify `src/flowcept/cli.py`, `resources/sample_settings.yaml`, `docs/cli-reference.rst`, and `.github/workflows/*.yml`.
+
+## 9. Instrumentation Guidance
+
+- Capture the minimum provenance needed to answer the user’s questions.
+- Prefer coarse instrumentation in hot paths.
+- Use `@flowcept_task` for simple function capture.
+- Use `@flowcept` for a top-level workflow function.
+- Use `with Flowcept():` for multi-step workflow contexts.
+- Use `FlowceptTask` only when decorators cannot express the needed fields.
+- Use `FlowceptLoop` for loop provenance.
+- Use adapters for Dask, MLflow, TensorBoard, and other supported frameworks.
+- For details, read `docs/prov_capture.rst` before writing instrumentation examples.
+
+## 10. Testing And Services
+
+Use the `flowcept` conda environment.
+
+Common commands:
+
+```bash
+conda run -n flowcept make checks
+conda run -n flowcept make reformat
+conda run -n flowcept make docs
+conda run -n flowcept make tests
+conda run -n flowcept make tests-offline
+conda run -n flowcept make tests-notebooks
+```
+
+Service commands:
+
+```bash
+make services
+make services-mongo
+make services-kafka
+make services-stop
+make services-stop-mongo
+make services-stop-kafka
+```
+
+Before starting services, check whether containers are already running.
+
+Do not run tests from scratch/sandbox directories. Target `tests/` explicitly.
+
+- Prefer real tests over mocks. Use real services, real data, and real LLMs when feasible.
+- Avoid mock-heavy tests unless there is no practical alternative.
+
+## 11. CI And Dependency Drift
+
+Before changing config profiles, MQ/DB behavior, Dask shutdown, examples, or dependencies, inspect `.github/workflows/*.yml`.
+
+Important CI surfaces:
+
+- `checks.yml`: lint and docs.
+- `run-tests.yml`: broad Redis and Kafka path on push/schedule.
+- `run-tests-simple.yml`: Redis without Mongo.
+- `run-tests-offline.yml`: full offline profile.
+- `run-tests-kafka.yml`: Kafka + Mongo.
+- `run-tests-all-dbs.yml`: Mongo and LMDB coverage.
+- `run-tests-in-container.yml`: Docker image tests.
+- `run-tests-py313.yml`: Python 3.13 subset.
+- `run-llm-tests.yml`: LLM/Dask examples.
+- `create-release-n-publish.yml`: release only; do not treat as normal test workflow.
+
+Important CI constraints:
+
+- PRs fan out across Redis, Kafka, Mongo, LMDB, offline, container, Python-version, notebook, and LLM paths.
+- Container tests may need explicit `/opt/conda/envs/flowcept/bin/flowcept` and `/opt/conda/envs/flowcept/bin/pytest`.
+- Redis/Mongo Docker images and unpinned Python packages can drift without code changes.
+- Dask/Flowcept shutdown or message flushing changes must be checked against both Redis and Kafka paths.
+- Cleanup code should use stable ownership fields such as workflow IDs and object metadata, not optional task payload fields.
+
+When CI starts failing without relevant code changes:
+
+- Identify the last passing and first failing scheduled run.
+- Trace the failing test to the exact runtime path.
+- Check unpinned Python packages on that path.
+- Check Docker images in `deployment/*.yml`.
+- Check GitHub runner changes only after package/service changes.
+- Confirm with the smallest dependency-only change before rewriting Flowcept logic.
+- If local and CI format checks disagree, compare Ruff versions first.
+
+## 12. Assistant-Specific Configuration
+
+The repository must not maintain multiple duplicated assistant instruction files.
+
+- `AGENTS.md`: canonical file.
+- `CLAUDE.md`: do not recreate it unless a tool strictly requires it; if required, it must only point to `AGENTS.md`.
+- Cursor: do not duplicate rules in `.cursor/rules`. If Cursor requires a rule, make it a thin instruction to read `AGENTS.md`.
+- Gemini/other assistants: configure them to read `AGENTS.md`; do not create duplicate `GEMINI.md` content.
+- `SKILL.md`/`SKILLS.md`: do not use for Flowcept repo rules. If a future repeated workflow is too large for this file, first prefer RST docs or existing source/tests. Add a skill only after the user approves.
+- We deliberately avoid Flowcept-specific skill files because they create another documentation surface to keep in sync. The maintained source of feature knowledge is the RST docs; this file only routes agents to the right docs and code.
+- `docs/flowcept_for_agents.md`: should not duplicate this file. Prefer deleting it or reducing it to a pointer to `AGENTS.md` and the RST docs.
+
+## 13. Staleness Rules
+
+If docs and code disagree, verify in this order:
+
+1. Source code and tests.
+2. `resources/sample_settings.yaml`.
+3. `.github/workflows/*.yml` and `Makefile`.
+4. RST docs.
+5. Markdown docs.
+
+When you find stale documentation, fix the smallest maintained document instead of adding another note elsewhere.
+
+Periodically offer to read the relevant RST and Markdown files to check for stale or duplicated documentation, especially after code, CLI, config, CI, or public API changes.

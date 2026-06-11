@@ -1,4 +1,4 @@
-"""Markdown renderer for provenance-card reports."""
+"""Markdown renderer for workflow-card reports."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from flowcept import __version__
 from flowcept.report.aggregations import as_float, elapsed_seconds, fmt_timestamp_utc
-from flowcept.report.sanitization import sanitize_json_like
+from flowcept.commons.sanitization import sanitize_json_like
 
 
 def render_markdown_file_into_rich_terminal(markdown_path: str | Path, *, stream=None) -> None:
@@ -1105,7 +1105,7 @@ def _timing_insights(activities: List[Dict[str, Any]]) -> List[str]:
     return lines
 
 
-def render_provenance_card_markdown(
+def render_workflow_card_markdown(
     dataset: Dict[str, Any],
     activities: List[Dict[str, Any]],
     object_summary: Dict[str, Any],
@@ -1328,9 +1328,9 @@ def render_provenance_card_markdown(
     # ------------------------------------------------------------------ #
     lines: List[str] = []
     if workflow_title is None:
-        lines.append("# Workflow Provenance Card")
+        lines.append("# Workflow Card")
     else:
-        lines.append(f"# Workflow Provenance Card: {workflow_title}")
+        lines.append(f"# Workflow Card: {workflow_title}")
     lines.append("")
 
     # --- Section 1: Workflow ---
@@ -1377,7 +1377,11 @@ def render_provenance_card_markdown(
     _append_summary_line(infra_lines, "runtime_environment", _to_str(workflow.get("environment_id"), default="~"))
     _append_summary_line(infra_lines, "resource_manager", _to_str(workflow.get("resource_manager"), default="~"))
     _append_summary_line(infra_lines, "primary_software", _to_str(workflow.get("primary_software"), default="~"))
-    _append_summary_line(infra_lines, "environment_snapshot", _to_str(workflow.get("environment_snapshot"), default="~"))
+    _append_summary_line(
+        infra_lines,
+        "environment_snapshot",
+        _to_str(workflow.get("environment_snapshot"), default="~"),
+    )
     if infra_lines:
         lines.append("## 3. Infrastructure")
         lines.append("")

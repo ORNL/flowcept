@@ -45,7 +45,7 @@ Then inspect `flowcept_buffer.jsonl`.
     - [Internal-LLM mode](#internal-llm-mode)
   - [Grafana monitoring](#grafana-monitoring)
 - [4) Provenance reports](#4-provenance-reports)
-  - [Provenance cards (markdown)](#provenance-cards-markdown)
+  - [Workflow cards (markdown)](#workflow-cards-markdown)
   - [Full reports (pdf)](#full-reports-pdf)
 - [5) Architecture](#5-architecture)
 
@@ -267,7 +267,7 @@ Agentic provenance / MCP:
 
 - docs: https://flowcept.readthedocs.io/en/latest/agent.html
 - agent readme: `src/flowcept/agents/README.md`
-- skills contract: `src/flowcept/agents/SKILLS.md`
+- code-assistant routing: `AGENTS.md`
 - agent tests: `tests/agent/agent_tests.py`
 - PROV-AGENT paper: https://arxiv.org/abs/2508.02866
 
@@ -441,11 +441,7 @@ agent:
   mcp_port: 8000
 ```
 
-3. In your assistant session, load:
-
-- `src/flowcept/agents/SKILLS.md`
-
-Recommended flow: clone this repo and ask your assistant to read that file.
+3. In your assistant session, read `AGENTS.md`, then follow `docs/agent.rst` and `src/flowcept/agents/README.md`.
 
 #### Internal-LLM mode
 
@@ -487,14 +483,14 @@ Telemetry docs:
 
 ## 4) Provenance reports
 
-### Provenance cards (markdown)
+### Workflow cards (markdown)
 
 Default report mode:
 
-- `report_type="provenance_card"`
+- `report_type="workflow_card"`
 - `format="markdown"`
 
-The rendered workflow card follows the upstream Workflow Provenance Card template:
+The rendered workflow card follows the upstream Workflow Card template:
 https://github.com/data-cards/workflow-provenance-card.
 
 Python API:
@@ -503,10 +499,10 @@ Python API:
 from flowcept import Flowcept
 
 Flowcept.generate_report(
-    report_type="provenance_card",
+    report_type="workflow_card",
     format="markdown",
     workflow_id="<workflow_id>",
-    output_path="PROVENANCE_CARD.md",
+    output_path="WORKFLOW_CARD.md",
 )
 ```
 
@@ -514,7 +510,7 @@ REST download:
 
 ```bash
 curl -s -X POST \
-  http://127.0.0.1:8008/api/v1/workflows/<workflow_id>/reports/provenance-card/download
+  http://127.0.0.1:8008/api/v1/workflows/<workflow_id>/reports/workflow-card/download
 ```
 
 Docs:
@@ -579,7 +575,7 @@ Read more:
   - Fix:
     - start server: `flowcept --start-agent`
     - confirm `agent.mcp_host`/`agent.mcp_port` in settings
-    - in external assistant mode, load `src/flowcept/agents/SKILLS.md`
+    - in external assistant mode, follow `AGENTS.md` and `docs/agent.rst`
 - Symptom: PDF report generation fails
   - Fix: install report deps: `pip install flowcept[report_pdf]`
 
@@ -621,12 +617,12 @@ from flowcept import Flowcept
 docs = Flowcept.read_buffer_file("flowcept_buffer.jsonl")
 df = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=True)
 
-# Generate markdown provenance card
+# Generate markdown workflow card
 Flowcept.generate_report(
-    report_type="provenance_card",
+    report_type="workflow_card",
     format="markdown",
     workflow_id="<workflow_id>",
-    output_path="PROVENANCE_CARD.md",
+    output_path="WORKFLOW_CARD.md",
 )
 
 # Generate PDF provenance report

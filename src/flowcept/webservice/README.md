@@ -50,7 +50,7 @@ All API routes are mounted under:
 - `GET /api/v1/workflows`
 - `GET /api/v1/workflows/{workflow_id}`
 - `POST /api/v1/workflows/query`
-- `POST /api/v1/workflows/{workflow_id}/reports/provenance-card/download`
+- `POST /api/v1/workflows/{workflow_id}/reports/workflow-card/download`
 
 ### Tasks
 
@@ -95,7 +95,7 @@ All API routes are mounted under:
 
 - `GET /api/v1/campaigns` — campaign summaries derived by grouping workflows/tasks by `campaign_id`
 - `GET /api/v1/campaigns/{campaign_id}` — summary + workflows + task summary
-- `GET /api/v1/campaigns/{campaign_id}/provenance_card?format=json|markdown`
+- `GET /api/v1/campaigns/{campaign_id}/workflow_card?format=json|markdown`
 
 ### Agents (derived)
 
@@ -116,7 +116,7 @@ All API routes are mounted under:
 
 ### Provenance cards
 
-- `GET /api/v1/workflows/{workflow_id}/provenance_card?format=json|markdown`
+- `GET /api/v1/workflows/{workflow_id}/workflow_card?format=json|markdown`
 
 ### Live streams (SSE)
 

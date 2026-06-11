@@ -568,7 +568,6 @@ def start_agent():  # TODO: start with gui
     main()
 
 
-
 def start_agent_gui(port: int = None):
     """Start Flowcept agent GUI service.
 
@@ -881,6 +880,7 @@ def _kill_port(port: int) -> None:
             subprocess.run(["kill", pid.strip()], capture_output=True)
         if result.stdout.strip():
             import time
+
             time.sleep(1)
     except Exception:
         pass
@@ -989,7 +989,7 @@ def generate_report(
     format : str, optional
         Output format: markdown (default) or pdf.
     output_path : str, optional
-        Output report path. If omitted, defaults to PROVENANCE_CARD.md for markdown
+        Output report path. If omitted, defaults to WORKFLOW_CARD.md for markdown
         and PROVENANCE_REPORT.pdf for pdf.
     input_path : str, optional
         Path to the Flowcept JSONL buffer file.
@@ -1010,10 +1010,10 @@ def generate_report(
         print("Unsupported format. Use 'markdown' or 'pdf'.")
         return
 
-    report_type = "provenance_card" if report_format == "markdown" else "provenance_report"
+    report_type = "workflow_card" if report_format == "markdown" else "provenance_report"
     resolved_output_path = output_path
     if not resolved_output_path:
-        resolved_output_path = "PROVENANCE_CARD.md" if report_format == "markdown" else "PROVENANCE_REPORT.pdf"
+        resolved_output_path = "WORKFLOW_CARD.md" if report_format == "markdown" else "PROVENANCE_REPORT.pdf"
 
     stats = Flowcept.generate_report(
         report_type=report_type,

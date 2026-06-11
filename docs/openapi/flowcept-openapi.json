@@ -212,14 +212,14 @@
         }
       }
     },
-    "/api/v1/campaigns/{campaign_id}/provenance_card": {
+    "/api/v1/campaigns/{campaign_id}/workflow_card": {
       "get": {
         "tags": [
           "campaigns"
         ],
-        "summary": "Get Campaign Provenance Card",
-        "description": "Get a campaign provenance card as structured JSON or rendered markdown.",
-        "operationId": "get_campaign_provenance_card_api_v1_campaigns__campaign_id__provenance_card_get",
+        "summary": "Get Campaign Workflow Card",
+        "description": "Get a campaign workflow card as structured JSON or rendered markdown.",
+        "operationId": "get_campaign_workflow_card_api_v1_campaigns__campaign_id__workflow_card_get",
         "parameters": [
           {
             "name": "campaign_id",
@@ -519,14 +519,14 @@
         }
       }
     },
-    "/api/v1/workflows/{workflow_id}/provenance_card": {
+    "/api/v1/workflows/{workflow_id}/workflow_card": {
       "get": {
         "tags": [
           "workflows"
         ],
-        "summary": "Get Workflow Provenance Card",
-        "description": "Get a workflow provenance card as structured JSON or rendered markdown.",
-        "operationId": "get_workflow_provenance_card_api_v1_workflows__workflow_id__provenance_card_get",
+        "summary": "Get Workflow Card",
+        "description": "Get a workflow card as structured JSON or rendered markdown.",
+        "operationId": "get_workflow_card_api_v1_workflows__workflow_id__workflow_card_get",
         "parameters": [
           {
             "name": "workflow_id",
@@ -570,14 +570,14 @@
         }
       }
     },
-    "/api/v1/workflows/{workflow_id}/reports/provenance-card/download": {
+    "/api/v1/workflows/{workflow_id}/reports/workflow-card/download": {
       "post": {
         "tags": [
           "workflows"
         ],
-        "summary": "Download Workflow Provenance Card",
-        "description": "Generate and download a workflow provenance card markdown file.",
-        "operationId": "download_workflow_provenance_card_api_v1_workflows__workflow_id__reports_provenance_card_download_post",
+        "summary": "Download Workflow Card",
+        "description": "Generate and download a workflow card markdown file.",
+        "operationId": "download_workflow_card_api_v1_workflows__workflow_id__reports_workflow_card_download_post",
         "parameters": [
           {
             "name": "workflow_id",
@@ -2352,19 +2352,19 @@
         }
       }
     },
-    "/api/v1/stats/card_data": {
+    "/api/v1/stats/chart_data": {
       "post": {
         "tags": [
           "stats"
         ],
-        "summary": "Post Card Data",
-        "description": "Resolve a declarative dashboard card data binding into rows.",
-        "operationId": "post_card_data_api_v1_stats_card_data_post",
+        "summary": "Post Chart Data",
+        "description": "Resolve a declarative dashboard chart data binding into rows.",
+        "operationId": "post_chart_data_api_v1_stats_chart_data_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CardDataRequest"
+                "$ref": "#/components/schemas/ChartDataRequest"
               }
             }
           },
@@ -2378,7 +2378,78 @@
                 "schema": {
                   "additionalProperties": true,
                   "type": "object",
-                  "title": "Response Post Card Data Api V1 Stats Card Data Post"
+                  "title": "Response Post Chart Data Api V1 Stats Chart Data Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dashboards/resolve": {
+      "get": {
+        "tags": [
+          "dashboards"
+        ],
+        "summary": "Resolve Dashboard",
+        "description": "Return merged charts for a workflow or campaign.\n\nFor a workflow: returns charts from all ``common_workflow`` configs merged\nwith charts from any ``custom_workflow`` config whose ``target`` matches\n``workflow_name``.\n\nFor a campaign: returns charts from all ``common_campaign`` configs merged\nwith charts from any ``custom_campaign`` config whose ``target`` matches\n``campaign_id``.",
+        "operationId": "resolve_dashboard_api_v1_dashboards_resolve_get",
+        "parameters": [
+          {
+            "name": "workflow_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workflow Name"
+            }
+          },
+          {
+            "name": "campaign_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Campaign Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response Resolve Dashboard Api V1 Dashboards Resolve Get"
                 }
               }
             }
@@ -2402,8 +2473,26 @@
           "dashboards"
         ],
         "summary": "List Dashboards",
-        "description": "List all stored dashboards.",
+        "description": "List all dashboard configs, optionally filtered by ``dashboard_type``.",
         "operationId": "list_dashboards_api_v1_dashboards_get",
+        "parameters": [
+          {
+            "name": "dashboard_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dashboard Type"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2411,6 +2500,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -2422,17 +2521,17 @@
           "dashboards"
         ],
         "summary": "Create Dashboard",
-        "description": "Create a dashboard; the server assigns its id and timestamps.",
+        "description": "Create a dashboard config; the server assigns its id and timestamps.",
         "operationId": "create_dashboard_api_v1_dashboards_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DashboardSpec"
+                "$ref": "#/components/schemas/DashboardConfig"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -2440,8 +2539,8 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
                   "type": "object",
+                  "additionalProperties": true,
                   "title": "Response Create Dashboard Api V1 Dashboards Post"
                 }
               }
@@ -2466,7 +2565,7 @@
           "dashboards"
         ],
         "summary": "Get Dashboard",
-        "description": "Get a dashboard by id.",
+        "description": "Get a dashboard config by id.",
         "operationId": "get_dashboard_api_v1_dashboards__dashboard_id__get",
         "parameters": [
           {
@@ -2509,7 +2608,7 @@
           "dashboards"
         ],
         "summary": "Update Dashboard",
-        "description": "Replace a dashboard spec, preserving its id and creation time.",
+        "description": "Replace a dashboard config, preserving its id and creation time.",
         "operationId": "update_dashboard_api_v1_dashboards__dashboard_id__put",
         "parameters": [
           {
@@ -2527,7 +2626,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DashboardSpec"
+                "$ref": "#/components/schemas/DashboardConfig"
               }
             }
           }
@@ -2562,7 +2661,7 @@
           "dashboards"
         ],
         "summary": "Delete Dashboard",
-        "description": "Delete a dashboard by id.",
+        "description": "Delete a dashboard config by id.",
         "operationId": "delete_dashboard_api_v1_dashboards__dashboard_id__delete",
         "parameters": [
           {
@@ -2884,6 +2983,29 @@
           }
         }
       }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Root",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Root  Get"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2914,107 +3036,7 @@
         "title": "AggregationSpec",
         "description": "Aggregation operator and source field."
       },
-      "Card": {
-        "properties": {
-          "card_id": {
-            "type": "string",
-            "title": "Card Id"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "chart",
-              "metric",
-              "table",
-              "markdown",
-              "prov_card"
-            ],
-            "title": "Type"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title",
-            "default": ""
-          },
-          "live": {
-            "type": "boolean",
-            "title": "Live",
-            "default": false
-          },
-          "refresh_interval_sec": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refresh Interval Sec"
-          },
-          "data": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CardData"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "viz": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/VizSpec"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content"
-          },
-          "workflow_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Workflow Id"
-          },
-          "campaign_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Campaign Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "card_id",
-          "type"
-        ],
-        "title": "Card",
-        "description": "One dashboard card. Content fields depend on ``type``."
-      },
-      "CardData": {
+      "ChartData": {
         "properties": {
           "source": {
             "type": "string",
@@ -3104,13 +3126,13 @@
           }
         },
         "type": "object",
-        "title": "CardData",
-        "description": "Declarative data binding for a card: what to query and how to shape it."
+        "title": "ChartData",
+        "description": "Declarative data binding for a chart: what to query and how to shape it."
       },
-      "CardDataRequest": {
+      "ChartDataRequest": {
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/CardData"
+            "$ref": "#/components/schemas/ChartData"
           },
           "context": {
             "anyOf": [
@@ -3129,8 +3151,8 @@
         "required": [
           "data"
         ],
-        "title": "CardDataRequest",
-        "description": "Request body for the declarative card-data resolver."
+        "title": "ChartDataRequest",
+        "description": "Request body for the declarative chart-data resolver."
       },
       "ChatMessage": {
         "properties": {
@@ -3191,7 +3213,84 @@
         "title": "ChatRequest",
         "description": "Chat request: client-passed history plus UI context."
       },
-      "DashboardSpec": {
+      "DashboardChart": {
+        "properties": {
+          "chart_id": {
+            "type": "string",
+            "title": "Chart Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "chart",
+              "metric",
+              "table",
+              "markdown"
+            ],
+            "title": "Type"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          },
+          "live": {
+            "type": "boolean",
+            "title": "Live",
+            "default": false
+          },
+          "refresh_interval_sec": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Interval Sec"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChartData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "viz": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VizSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chart_id",
+          "type"
+        ],
+        "title": "DashboardChart",
+        "description": "One chart inside a dashboard."
+      },
+      "DashboardConfig": {
         "properties": {
           "dashboard_id": {
             "anyOf": [
@@ -3204,33 +3303,38 @@
             ],
             "title": "Dashboard Id"
           },
+          "dashboard_type": {
+            "type": "string",
+            "enum": [
+              "common_workflow",
+              "common_campaign",
+              "custom_workflow",
+              "custom_campaign"
+            ],
+            "title": "Dashboard Type"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
           "name": {
             "type": "string",
-            "title": "Name"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
+            "title": "Name",
             "default": ""
           },
-          "context": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Context"
-          },
-          "cards": {
+          "charts": {
             "items": {
-              "$ref": "#/components/schemas/Card"
+              "$ref": "#/components/schemas/DashboardChart"
             },
             "type": "array",
-            "title": "Cards"
-          },
-          "layout": {
-            "items": {
-              "$ref": "#/components/schemas/LayoutItem"
-            },
-            "type": "array",
-            "title": "Layout"
+            "title": "Charts"
           },
           "created_at": {
             "anyOf": [
@@ -3257,10 +3361,10 @@
         },
         "type": "object",
         "required": [
-          "name"
+          "dashboard_type"
         ],
-        "title": "DashboardSpec",
-        "description": "A complete dashboard: context filter, cards, and layout."
+        "title": "DashboardConfig",
+        "description": "A dashboard configuration: one of four types (common/custom \u00d7 workflow/campaign).\n\n``target`` is required for custom types:\n- ``custom_workflow``: the workflow **name** (not id) this config applies to.\n- ``custom_campaign``: the ``campaign_id`` this config applies to.\nCommon types leave ``target`` null and apply to every workflow or campaign."
       },
       "HTTPValidationError": {
         "properties": {
@@ -3274,46 +3378,6 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
-      },
-      "LayoutItem": {
-        "properties": {
-          "card_id": {
-            "type": "string",
-            "title": "Card Id"
-          },
-          "x": {
-            "type": "integer",
-            "maximum": 11.0,
-            "minimum": 0.0,
-            "title": "X"
-          },
-          "y": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Y"
-          },
-          "w": {
-            "type": "integer",
-            "maximum": 12.0,
-            "minimum": 1.0,
-            "title": "W"
-          },
-          "h": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "H"
-          }
-        },
-        "type": "object",
-        "required": [
-          "card_id",
-          "x",
-          "y",
-          "w",
-          "h"
-        ],
-        "title": "LayoutItem",
-        "description": "Grid placement of a card in a 12-column layout."
       },
       "ListResponse": {
         "properties": {
@@ -3620,7 +3684,7 @@
         },
         "type": "object",
         "title": "VizSpec",
-        "description": "How a chart card renders its rows."
+        "description": "How a chart renders its rows."
       }
     }
   }

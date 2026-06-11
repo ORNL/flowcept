@@ -39,7 +39,6 @@ Good practice is to cherry-pick the extras relevant to your workflow instead of 
    pip install flowcept[llm_agent]       # MCP agent, LangChain, Streamlit integration
    pip install flowcept[llm_google]      # Google GenAI + Flowcept agent support
    pip install flowcept[llm_agent_audio] # MCP agent with audio enabled (tts).
-   pip install flowcept[analytics]       # Extra analytics (seaborn, plotly, scipy)
    pip install flowcept[dev]             # Developer dependencies (docs, tests, lint, etc.)
 
 Installing with Common Runtime Bundle

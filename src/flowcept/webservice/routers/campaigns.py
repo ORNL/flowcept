@@ -12,7 +12,7 @@ from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.schemas.common import ListResponse
 from flowcept.webservice.services import stats
-from flowcept.webservice.services.reports import provenance_card_response
+from flowcept.webservice.services.reports import workflow_card_response
 from flowcept.webservice.services.serializers import normalize_docs
 from flowcept.webservice.services.sorting import sort_docs_by_first_date_field
 
@@ -63,14 +63,14 @@ def delete_campaign(campaign_id: str, db: DBAPI = Depends(get_db_api)) -> Dict[s
     return {"deleted": counts}
 
 
-@router.get("/{campaign_id}/provenance_card")
-def get_campaign_provenance_card(
+@router.get("/{campaign_id}/workflow_card")
+def get_campaign_workflow_card(
     campaign_id: str,
     format: str = Query(default="json"),
     db: DBAPI = Depends(get_db_api),
 ) -> Response:
-    """Get a campaign provenance card as structured JSON or rendered markdown."""
+    """Get a campaign workflow card as structured JSON or rendered markdown."""
     workflows = db.workflow_query(filter={"campaign_id": campaign_id}) or []
     if not workflows:
         raise HTTPException(status_code=404, detail=f"Campaign not found: {campaign_id}")
-    return provenance_card_response(format=format, campaign_id=campaign_id)
+    return workflow_card_response(format=format, campaign_id=campaign_id)

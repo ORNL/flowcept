@@ -23,7 +23,7 @@ What this guide covers
 - capture APIs from simplest to advanced (loops, torch, adapters, agents)
 - querying via Python API, REST API, MQ consumers, and offline files
 - agentic interaction with external or internal LLM modes
-- provenance cards (markdown) and full PDF provenance reports
+- workflow cards (markdown) and full PDF provenance reports
 - architecture links for deeper internals
 
 For software developers, this is the recommended first read before drilling into detailed pages.

@@ -1,4 +1,4 @@
-"""Provenance-card content helpers shared by workflow and campaign routers."""
+"""Workflow-card content helpers shared by workflow and campaign routers."""
 
 from __future__ import annotations
 
@@ -9,16 +9,16 @@ from typing import Any, Dict, Optional
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse, Response
 
-from flowcept.report.service import build_provenance_card, generate_report
+from flowcept.report.service import build_workflow_card, generate_report
 from flowcept.webservice.services.serializers import normalize_docs
 
 
-def provenance_card_response(
+def workflow_card_response(
     format: str,
     workflow_id: Optional[str] = None,
     campaign_id: Optional[str] = None,
 ) -> Response:
-    """Build a provenance card as a JSON or markdown HTTP response.
+    """Build a workflow card as a JSON or markdown HTTP response.
 
     Parameters
     ----------
@@ -40,7 +40,7 @@ def provenance_card_response(
     scope = workflow_id or campaign_id
     try:
         if format == "json":
-            card = build_provenance_card(workflow_id=workflow_id, campaign_id=campaign_id)
+            card = build_workflow_card(workflow_id=workflow_id, campaign_id=campaign_id)
             content: Dict[str, Any] = normalize_docs(
                 [
                     {
@@ -53,11 +53,11 @@ def provenance_card_response(
             )[0]
             return JSONResponse(content=content)
 
-        fd, output_path = tempfile.mkstemp(prefix=f"provenance_card_{scope}_", suffix=".md")
+        fd, output_path = tempfile.mkstemp(prefix=f"workflow_card_{scope}_", suffix=".md")
         os.close(fd)
         try:
             generate_report(
-                report_type="provenance_card",
+                report_type="workflow_card",
                 format="markdown",
                 output_path=output_path,
                 workflow_id=workflow_id,
@@ -74,4 +74,4 @@ def provenance_card_response(
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Could not generate provenance card: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"Could not generate workflow card: {exc}") from exc

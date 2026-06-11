@@ -21,7 +21,6 @@ DEFAULT_SETTINGS = {
     "web_server": {},
     "sys_metadata": {},
     "extra_metadata": {},
-    "analytics": {},
     "db_buffer": {},
     "databases": {"mongodb": {"enabled": False}, "lmdb": {"enabled": False}},
     "adapters": {},
@@ -261,12 +260,6 @@ WEBSERVER_SSE_MAX_BATCH = int(_webserver_settings.get("sse_max_batch", 500))
 WEBSERVER_DASHBOARDS_DIR = os.path.expanduser(
     _webserver_settings.get("dashboards_dir", f"~/.{PROJECT_NAME}/dashboards")
 )
-
-######################
-#    ANALYTICS      #
-######################
-
-ANALYTICS = settings.get("analytics", None)
 
 ####################
 # INSTRUMENTATION  #

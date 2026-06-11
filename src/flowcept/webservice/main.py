@@ -118,5 +118,4 @@ def _mount_ui(app: FastAPI) -> None:
         return FileResponse(index_html)
 
 
-
 app = create_app()

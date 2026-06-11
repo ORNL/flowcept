@@ -36,9 +36,9 @@ Returns one workflow or `404`.
 
 Request body: shared query model.
 
-### POST /api/v1/workflows/{workflow_id}/reports/provenance-card/download
+### POST /api/v1/workflows/{workflow_id}/reports/workflow-card/download
 
-Generates a provenance card markdown report for the workflow and downloads it as an attachment.
+Generates a workflow card markdown report for the workflow and downloads it as an attachment.
 
 ### GET /api/v1/tasks
 
@@ -133,7 +133,7 @@ Unified scoped read-only query endpoint.
 
 - `GET /api/v1/campaigns` — grouped from workflows/tasks by `campaign_id`
 - `GET /api/v1/campaigns/{campaign_id}` — `{campaign, workflows, task_summary}`; 404 when nothing matches
-- `GET /api/v1/campaigns/{campaign_id}/provenance_card?format=json|markdown`
+- `GET /api/v1/campaigns/{campaign_id}/workflow_card?format=json|markdown`
 
 ### Agents (derived from task `agent_id`/`source_agent_id`)
 
@@ -157,7 +157,7 @@ Unified scoped read-only query endpoint.
 
 ### Provenance cards
 
-- `GET /api/v1/workflows/{workflow_id}/provenance_card?format=json|markdown`
+- `GET /api/v1/workflows/{workflow_id}/workflow_card?format=json|markdown`
 - `format=json` returns `{dataset, transformations, object_summary, input_mode}`
 
 ### Live streams (SSE)

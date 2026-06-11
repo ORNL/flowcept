@@ -82,11 +82,6 @@ sys_metadata:
 extra_metadata: # We use this to store any extra metadata you want to keep track of during an experiment.
   place_holder: ""
 
-analytics:
-  sort_orders:
-    generated.loss: minimum_first
-    generated.accuracy: maximum_first
-
 db_buffer:
   insertion_buffer_time_secs: 5   # Time interval (in seconds) to buffer incoming records before flushing to the database
   buffer_size: 50    # Maximum number of records to hold in the buffer before forcing a flush
