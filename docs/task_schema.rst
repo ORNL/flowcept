@@ -1,7 +1,8 @@
 Task Data Schema
 ================
 
-This document describes the schema of a task record used to capture metadata, telemetry, and provenance in a workflow. 
+This document describes the schema of a task record used to capture metadata, telemetry, and provenance in a workflow.
+It is represented in code by :class:`flowcept.commons.flowcept_dataclasses.task_object.TaskObject`.
 A task represents one unit of work, including inputs, outputs, execution context, system telemetry, and runtime provenance.
 
 Each task record may include fields for identifiers, timing, telemetry, user and system context, dependencies, and custom metadata.
@@ -81,3 +82,6 @@ Notes
 
 Telemetry values vary depending on system capabilities, GPU vendor APIs, 
 and what is enabled in the configuration.
+
+``TaskObject.to_dict()`` omits fields whose value is ``None`` and emits ``type="task"``.
+``TaskObject.enrich()`` and ``TaskObject.enrich_task_dict()`` add host and user metadata when available.

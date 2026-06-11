@@ -89,7 +89,7 @@ All API routes are mounted under:
 
 - `POST /api/v1/query/{scope}`
 - Supported `scope`: `workflows | tasks | objects | models | datasets`
-- `models` and `datasets` enforce fixed base filters (`type=ml_model` and `type=dataset`)
+- `models` and `datasets` enforce fixed base filters (`object_type=ml_model` and `object_type=dataset`)
 
 ## Query model
 

@@ -46,7 +46,7 @@ def test_webservice_end_to_end_with_flowcept_and_blob_apis():
 
         generic_obj_id = Flowcept.db.save_or_update_object(
             object=b"generic-blob-payload",
-            type="artifact",
+            object_type="artifact",
             save_data_in_collection=True,
             custom_metadata={"kind": "generic"},
         )
@@ -129,7 +129,7 @@ def test_webservice_end_to_end_with_flowcept_and_blob_apis():
 
     rs = client.get(f"/api/v1/datasets/{dataset_obj_id}")
     assert rs.status_code == 200
-    assert rs.json()["type"] == "dataset"
+    assert rs.json()["object_type"] == "dataset"
 
     rs = client.post("/api/v1/datasets/query", json={"filter": {"workflow_id": workflow_id}, "limit": 20})
     assert rs.status_code == 200
@@ -146,7 +146,7 @@ def test_webservice_end_to_end_with_flowcept_and_blob_apis():
 
     rs = client.get(f"/api/v1/models/{model_obj_id}")
     assert rs.status_code == 200
-    assert rs.json()["type"] == "ml_model"
+    assert rs.json()["object_type"] == "ml_model"
 
     rs = client.post("/api/v1/models/query", json={"filter": {"workflow_id": workflow_id}, "limit": 20})
     assert rs.status_code == 200
