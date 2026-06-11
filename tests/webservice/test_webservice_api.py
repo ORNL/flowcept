@@ -212,6 +212,15 @@ def build_client() -> tuple[TestClient, FakeDB]:
     return TestClient(app), fake_db
 
 
+def test_info_endpoint():
+    from flowcept.version import __version__
+
+    client, _ = build_client()
+    rs = client.get("/api/v1/info")
+    assert rs.status_code == 200
+    assert rs.json() == {"service": "flowcept", "version": __version__}
+
+
 def test_root_and_openapi_endpoints():
     client, _ = build_client()
 

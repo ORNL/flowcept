@@ -2,8 +2,8 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
-import { useWorkflows } from "../api/queries";
-import { fmtTs, shortId } from "../lib/format";
+import { useWorkflows, useWorkflowsWithTasks } from "../api/queries";
+import { fmtTs, shortId, toEpochSec } from "../lib/format";
 
 export const Route = createFileRoute("/workflows/")({
   component: WorkflowsPage,
@@ -13,6 +13,7 @@ export const Route = createFileRoute("/workflows/")({
 function WorkflowsPage() {
   const { campaign_id } = Route.useSearch();
   const { data, isLoading, error } = useWorkflows({ campaign_id });
+  const workflowsWithTasks = useWorkflowsWithTasks();
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-6">
@@ -28,8 +29,9 @@ function WorkflowsPage() {
       {error && <div className="text-err text-xs">{String(error)}</div>}
       <div className="card divide-y divide-border/50">
         {(data?.items ?? [])
-          .slice()
-          .reverse()
+          .filter((w) => w.name && (toEpochSec(w.utc_timestamp) ?? 0) > 0)
+          .filter((w) => !workflowsWithTasks.data || workflowsWithTasks.data.has(w.workflow_id))
+          .sort((a, b) => (toEpochSec(b.utc_timestamp) ?? 0) - (toEpochSec(a.utc_timestamp) ?? 0))
           .map((w) => (
             <Link
               key={w.workflow_id}

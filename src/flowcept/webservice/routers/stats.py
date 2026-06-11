@@ -1,4 +1,4 @@
-"""Stats endpoints: task summaries, telemetry timeseries, and the dashboard card-data resolver."""
+"""Stats endpoints: task summaries, telemetry timeseries, and the dashboard chart-data resolver."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.routers.query import _validate_filter_shape
-from flowcept.webservice.schemas.dashboards import CardData
+from flowcept.webservice.schemas.dashboards import ChartData
 from flowcept.webservice.services import stats
 from flowcept.webservice.services.serializers import normalize_docs
 
@@ -27,10 +27,10 @@ class TimeseriesRequest(BaseModel):
     limit: int = Field(default=1000, ge=1, le=5000)
 
 
-class CardDataRequest(BaseModel):
-    """Request body for the declarative card-data resolver."""
+class ChartDataRequest(BaseModel):
+    """Request body for the declarative chart-data resolver."""
 
-    data: CardData
+    data: ChartData
     context: Optional[Dict[str, Any]] = None
 
 
@@ -78,12 +78,12 @@ def post_timeseries(payload: TimeseriesRequest, db: DBAPI = Depends(get_db_api))
     return {"rows": rows, "count": len(rows)}
 
 
-@router.post("/card_data", response_model=Dict[str, Any])
-def post_card_data(payload: CardDataRequest, db: DBAPI = Depends(get_db_api)) -> Dict[str, Any]:
-    """Resolve a declarative dashboard card data binding into rows."""
+@router.post("/chart_data", response_model=Dict[str, Any])
+def post_chart_data(payload: ChartDataRequest, db: DBAPI = Depends(get_db_api)) -> Dict[str, Any]:
+    """Resolve a declarative dashboard chart data binding into rows."""
     _validate_filter_shape(payload.data.filter)
     if payload.context:
         _validate_filter_shape(payload.context)
-    result = stats.resolve_card_data(db, payload.data, context=payload.context)
+    result = stats.resolve_chart_data(db, payload.data, context=payload.context)
     result["rows"] = normalize_docs(result["rows"])
     return result

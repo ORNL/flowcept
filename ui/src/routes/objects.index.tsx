@@ -44,7 +44,7 @@ function ObjectsPage() {
             <span className="min-w-0">
               <span className="font-mono">{shortId(o.object_id, 16)}</span>
               <span className="text-accent ml-2 rounded bg-accent-soft px-1.5 py-0.5 text-[10px]">
-                {o.type ?? "object"}
+                {o.object_type ?? "object"}
               </span>
               {o.version !== undefined && <span className="text-fg-muted ml-2">v{o.version}</span>}
             </span>

@@ -2,14 +2,14 @@
 
 import type { EChartsCoreOption } from "echarts/core";
 import { toEpochSec, type TimeValue } from "../../lib/format";
-import { metricKey, type Card } from "./spec";
+import { metricKey, type Chart } from "./spec";
 
 const AXIS_STYLE = {
   axisLine: { lineStyle: { color: "#232a3b" } },
   splitLine: { lineStyle: { color: "#181d2a" } },
 };
 
-export function specToOption(card: Card, rows: Record<string, unknown>[]): EChartsCoreOption {
+export function specToOption(card: Chart, rows: Record<string, unknown>[]): EChartsCoreOption {
   const viz = card.viz ?? { kind: "bar", stacked: false };
   const data = card.data;
 

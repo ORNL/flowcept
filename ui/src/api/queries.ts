@@ -13,6 +13,20 @@ import type {
   Workflow,
 } from "./types";
 
+export function useInfo() {
+  return useQuery({
+    queryKey: ["info"],
+    queryFn: () =>
+      apiGet<{
+        service: string;
+        version: string;
+        workflow_dashboard: Record<string, unknown>[];
+        campaign_dashboard: Record<string, unknown>[];
+      }>("/info"),
+    staleTime: Infinity,
+  });
+}
+
 export function useCampaigns() {
   return useQuery({
     queryKey: ["campaigns"],
@@ -90,6 +104,25 @@ export function useAgents() {
   return useQuery({
     queryKey: ["agents"],
     queryFn: () => apiGet<ListResponse<AgentSummary>>("/agents"),
+  });
+}
+
+export function useWorkflowsWithTasks() {
+  return useQuery({
+    queryKey: ["workflowsWithTasks"],
+    queryFn: async () => {
+      const result = await apiPost<{ rows: Record<string, unknown>[]; count: number }>("/stats/chart_data", {
+        data: {
+          source: "tasks",
+          group_by: "workflow_id",
+          filter: { started_at: { $gt: 0 } },
+          metrics: [{ field: "task_id", agg: "count" }],
+          limit: 5000,
+        },
+      });
+      return new Set(result.rows.map((r) => r["workflow_id"] as string));
+    },
+    staleTime: 30_000,
   });
 }
 

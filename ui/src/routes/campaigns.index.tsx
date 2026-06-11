@@ -15,7 +15,10 @@ function CampaignsPage() {
       {isLoading && <div className="text-fg-muted text-xs">Loading…</div>}
       {error && <div className="text-err text-xs">{String(error)}</div>}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {(data?.items ?? []).map((c) => (
+        {(data?.items ?? [])
+          .filter((c) => c.task_count > 0)
+          .sort((a, b) => (b.last_ts ?? 0) - (a.last_ts ?? 0))
+          .map((c) => (
           <Link
             key={c.campaign_id}
             to="/campaigns/$campaignId"

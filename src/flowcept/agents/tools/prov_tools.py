@@ -16,7 +16,7 @@ from flowcept.agents.agents_utils import ToolResult
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import AGENT_CHAT_MAX_QUERY_LIMIT
 from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.webservice.schemas.dashboards import Card, DashboardSpec
+from flowcept.webservice.schemas.dashboards import DashboardChart, DashboardSpec
 from flowcept.webservice.services import stats
 from flowcept.webservice.services.dashboard_store import get_dashboard_store
 from flowcept.webservice.services.serializers import normalize_docs
@@ -197,23 +197,23 @@ def make_chart(card_spec: Dict[str, Any], context: Optional[Dict[str, Any]] = No
     Parameters
     ----------
     card_spec : dict
-        A dashboard ``Card`` spec (type chart/metric/table with a ``data`` binding).
+        A dashboard ``DashboardChart`` spec (type chart/metric/table with a ``data`` binding).
     context : dict, optional
-        Extra filter ANDed into the card data filter (e.g., ``{"workflow_id": "..."}``).
+        Extra filter ANDed into the chart data filter (e.g., ``{"workflow_id": "..."}``).
 
     Returns
     -------
     ToolResult
-        ``result`` holds ``{"card": <validated spec>, "rows": [...], "count": int}``.
+        ``result`` holds ``{"chart": <validated spec>, "rows": [...], "count": int}``.
     """
-    card = Card(**card_spec)
+    card = DashboardChart(**card_spec)
     if card.data is None:
-        return ToolResult(code=400, result="Card spec must include a data binding.", tool_name="make_chart")
+        return ToolResult(code=400, result="Chart spec must include a data binding.", tool_name="make_chart")
     validate_filter(card.data.filter)
     if context:
         validate_filter(context)
-    resolved = stats.resolve_card_data(DBAPI(), card.data, context=context)
-    result = {"card": card.model_dump(), "rows": _normalize(resolved["rows"]), "count": resolved["count"]}
+    resolved = stats.resolve_chart_data(DBAPI(), card.data, context=context)
+    result = {"chart": card.model_dump(), "rows": _normalize(resolved["rows"]), "count": resolved["count"]}
     return ToolResult(code=301, result=result, tool_name="make_chart")
 
 

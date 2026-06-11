@@ -16,6 +16,7 @@ export interface Workflow {
   flowcept_version?: string;
   sys_name?: string;
   environment_id?: string;
+  workflow_description?: string;
   code_repository?: Record<string, unknown>;
   used?: Record<string, unknown>;
   generated?: Record<string, unknown>;
@@ -52,7 +53,7 @@ export interface BlobObjectDoc {
   object_id: string;
   workflow_id?: string;
   task_id?: string;
-  type?: string;
+  object_type?: string;
   version?: number;
   custom_metadata?: Record<string, unknown>;
   created_at?: string;
@@ -103,7 +104,7 @@ export interface QueryRequest {
   sort?: { field: string; order: 1 | -1 }[];
 }
 
-export interface CardDataResult {
+export interface ChartDataResult {
   rows: Record<string, unknown>[];
   count: number;
 }

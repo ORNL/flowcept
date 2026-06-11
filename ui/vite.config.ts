@@ -5,7 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 
 const API_HOST = process.env.VITE_API_HOST ?? "localhost";
-const API_PORT = process.env.VITE_API_PORT ?? "5000";
+const API_PORT = process.env.VITE_API_PORT ?? "8008";
 const DEV_PORT = parseInt(process.env.VITE_DEV_PORT ?? "5173", 10);
 
 // Build output goes straight into the Python package so wheels ship the UI
@@ -24,6 +24,8 @@ export default defineConfig({
         manualChunks: {
           echarts: ["echarts"],
           markdown: ["react-markdown", "remark-gfm"],
+          xyflow: ["@xyflow/react"],
+          panels: ["react-resizable-panels"],
         },
       },
     },

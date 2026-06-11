@@ -1,35 +1,34 @@
-/** Renders one dashboard card by type; chart/metric/table cards resolve data via /stats/card_data. */
+/** Renders one dashboard chart by type; chart/metric/table charts resolve data via /stats/chart_data. */
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiPost } from "../../api/client";
-import type { CardDataResult } from "../../api/types";
-import { useProvenanceCard } from "../../api/queries";
+import type { ChartDataResult } from "../../api/types";
 import { EChart } from "../charts/EChart";
 import { Markdown } from "../markdown/Markdown";
-import { metricKey, type Card, type DashboardSpec } from "./spec";
+import { metricKey, type Chart, type DashboardSpec } from "./spec";
 import { specToOption } from "./specToOption";
 
-function useCardData(card: Card, context: Record<string, unknown>, live: boolean) {
+function useChartData(chart: Chart, context: Record<string, unknown>, live: boolean) {
   return useQuery({
-    queryKey: ["cardData", card.data, context],
-    queryFn: () => apiPost<CardDataResult>("/stats/card_data", { data: card.data, context }),
-    enabled: card.data != null,
-    refetchInterval: live ? (card.refresh_interval_sec ?? 5) * 1000 : false,
+    queryKey: ["chartData", chart.data, context],
+    queryFn: () => apiPost<ChartDataResult>("/stats/chart_data", { data: chart.data, context }),
+    enabled: chart.data != null,
+    refetchInterval: live ? (chart.refresh_interval_sec ?? 5) * 1000 : false,
   });
 }
 
-function DataCard({ card, context }: { card: Card; context: Record<string, unknown> }) {
-  const { data, isLoading, error } = useCardData(card, context, card.live);
+function DataChart({ chart, context }: { chart: Chart; context: Record<string, unknown> }) {
+  const { data, isLoading, error } = useChartData(chart, context, chart.live);
 
-  const option = useMemo(() => specToOption(card, data?.rows ?? []), [card, data]);
+  const option = useMemo(() => specToOption(chart, data?.rows ?? []), [chart, data]);
 
   if (isLoading) return <div className="text-fg-muted p-4 text-xs">Loading…</div>;
   if (error) return <div className="text-err p-4 text-xs">{String(error)}</div>;
   const rows = data?.rows ?? [];
 
-  if (card.type === "metric") {
-    const metric = card.data?.metrics?.[0];
+  if (chart.type === "metric") {
+    const metric = chart.data?.metrics?.[0];
     const value = metric ? rows[0]?.[metricKey(metric)] : rows.length;
     const display = typeof value === "number" ? (Number.isInteger(value) ? value : value.toFixed(3)) : String(value ?? "—");
     return (
@@ -40,7 +39,7 @@ function DataCard({ card, context }: { card: Card; context: Record<string, unkno
     );
   }
 
-  if (card.type === "table") {
+  if (chart.type === "table") {
     const cols = rows.length ? Object.keys(rows[0]) : [];
     return (
       <div className="h-full overflow-auto px-2 pb-2">
@@ -73,28 +72,13 @@ function DataCard({ card, context }: { card: Card; context: Record<string, unkno
   return <EChart option={option} height="100%" />;
 }
 
-function ProvCardCard({ card }: { card: Card }) {
-  const scope = card.workflow_id ? ("workflows" as const) : ("campaigns" as const);
-  const id = card.workflow_id ?? card.campaign_id ?? "";
-  const cardQuery = useProvenanceCard(scope, id, Boolean(id));
-  if (!id) return <div className="text-fg-muted p-4 text-xs">Set workflow_id or campaign_id on this card.</div>;
-  if (cardQuery.isLoading) return <div className="text-fg-muted p-4 text-xs">Generating…</div>;
-  if (cardQuery.error) return <div className="text-err p-4 text-xs">{String(cardQuery.error)}</div>;
-  return (
-    <div className="h-full overflow-auto p-3">
-      <Markdown>{cardQuery.data ?? ""}</Markdown>
-    </div>
-  );
-}
-
-export function CardRenderer({ card, spec }: { card: Card; spec: DashboardSpec }) {
-  if (card.type === "markdown") {
+export function ChartRenderer({ chart, spec }: { chart: Chart; spec: DashboardSpec }) {
+  if (chart.type === "markdown") {
     return (
       <div className="h-full overflow-auto p-3">
-        <Markdown>{card.content ?? ""}</Markdown>
+        <Markdown>{chart.content ?? ""}</Markdown>
       </div>
     );
   }
-  if (card.type === "prov_card") return <ProvCardCard card={card} />;
-  return <DataCard card={card} context={spec.context} />;
+  return <DataChart chart={chart} context={spec.context} />;
 }

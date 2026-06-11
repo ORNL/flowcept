@@ -54,6 +54,30 @@
         }
       }
     },
+    "/api/v1/info": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Info",
+        "description": "Service name and installed version.",
+        "operationId": "info_api_v1_info_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Info Api V1 Info Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/campaigns": {
       "get": {
         "tags": [
@@ -128,6 +152,49 @@
                   "type": "object",
                   "additionalProperties": true,
                   "title": "Response Get Campaign Api V1 Campaigns  Campaign Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "campaigns"
+        ],
+        "summary": "Delete Campaign",
+        "description": "Recursively delete a campaign and all its workflows, tasks, and objects.",
+        "operationId": "delete_campaign_api_v1_campaigns__campaign_id__delete",
+        "parameters": [
+          {
+            "name": "campaign_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Campaign Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Campaign Api V1 Campaigns  Campaign Id  Delete"
                 }
               }
             }
@@ -350,6 +417,49 @@
                   "type": "object",
                   "additionalProperties": true,
                   "title": "Response Get Workflow Api V1 Workflows  Workflow Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Delete Workflow",
+        "description": "Recursively delete a workflow and all its tasks and objects.",
+        "operationId": "delete_workflow_api_v1_workflows__workflow_id__delete",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Workflow Api V1 Workflows  Workflow Id  Delete"
                 }
               }
             }
@@ -855,7 +965,7 @@
             }
           },
           {
-            "name": "type",
+            "name": "object_type",
             "in": "query",
             "required": false,
             "schema": {
@@ -867,7 +977,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Type"
+              "title": "Object Type"
             }
           },
           {

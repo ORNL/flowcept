@@ -903,6 +903,7 @@ def start_webservice(webservice_host: str = "127.0.0.1", webservice_port: str = 
     host = webservice_host
     port = webservice_port
     print(f"Starting Flowcept webservice on http://{host}:{port}")
+    print(f"Web UI:       http://{host}:{port}/")
     print(f"Swagger UI:   http://{host}:{port}/docs")
     print(f"ReDoc:        http://{host}:{port}/redoc")
     print(f"OpenAPI JSON: http://{host}:{port}/openapi.json")
@@ -916,6 +917,56 @@ def start_webservice(webservice_host: str = "127.0.0.1", webservice_port: str = 
     from flowcept.webservice.main import app
 
     uvicorn.run(app, host=host, port=int(port))
+
+
+def start_ui(
+    webservice_host: str = "127.0.0.1",
+    webservice_port: str = "8008",
+    ui_dir: str = "ui",
+):
+    """
+    Start the Flowcept webservice and the UI dev server together.
+
+    Kills any previously-running webservice or Vite processes first, then
+    launches the webservice in the background and the Vite dev server in the
+    foreground (Ctrl+C stops both).
+
+    Parameters
+    ----------
+    webservice_host : str, optional
+        Host interface for the webservice (default: 127.0.0.1).
+    webservice_port : str, optional
+        Port for the webservice (default: 8008).
+    ui_dir : str, optional
+        Path to the UI directory containing package.json (default: ui).
+    """
+    import sys
+
+    subprocess.run(["pkill", "-f", "flowcept.*start-webservice"], capture_output=True)
+    subprocess.run(["pkill", "-f", "vite"], capture_output=True)
+    import time
+
+    time.sleep(1)
+
+    ws_proc = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "flowcept.cli",
+            "--start-webservice",
+            "--webservice-host",
+            webservice_host,
+            "--webservice-port",
+            webservice_port,
+        ]
+    )
+    print(f"Webservice started (pid {ws_proc.pid}) on http://{webservice_host}:{webservice_port}")
+    print(f"UI dev server starting at http://localhost:5173 (proxies /api → :{webservice_port})")
+    try:
+        subprocess.run(["npm", "run", "dev", "--prefix", ui_dir], check=False)
+    finally:
+        ws_proc.terminate()
+        ws_proc.wait()
 
 
 def generate_report(
@@ -971,12 +1022,12 @@ def generate_report(
 
 COMMAND_GROUPS = [
     ("Basic Commands", [version, check_services, show_settings, init_settings, start_services, stop_services]),
-    ("Web Service Commands", [start_webservice]),
+    ("Web Service Commands", [start_webservice, start_ui]),
     ("Consumption Commands", [start_consumption_services, stop_consumption_services, stream_messages]),
     ("Database Commands", [workflow_count, query, get_task]),
     ("Report Commands", [generate_report]),
     ("Agent Commands", [start_agent, agent_client, start_agent_gui]),
-    ("External Services", [start_mongo, start_redis, stop_redis, start_webservice]),
+    ("External Services", [start_mongo, start_redis, stop_redis]),
 ]
 
 COMMANDS = set(f for _, fs in COMMAND_GROUPS for f in fs)

@@ -124,7 +124,7 @@ def _is_empty_metric(value: Any) -> bool:
     if value is None:
         return True
     if isinstance(value, str):
-        return value.strip() in {"-", "unknown", "", "- / -", "-/-"}
+        return value.strip() in {"-", "unknown", "", "- / -", "-/-", "~"}
     return False
 
 
@@ -1346,37 +1346,43 @@ def render_provenance_card_markdown(
     lines.append("")
 
     # --- Section 2: Summary ---
-    lines.append("## 2. Summary")
-    lines.append("")
-    lines.append(f"- **execution_id:** `{_to_str(workflow.get('workflow_id'), default='~')}`")
+    summary_lines: List[str] = []
+    _append_summary_line(summary_lines, "execution_id", _to_str(workflow.get("workflow_id"), default="~"))
     if workflow.get("campaign_id") is not None:
-        lines.append(f"- **campaign_id:** `{_to_str(workflow.get('campaign_id'))}`")
-    lines.append(f"- **version:** `{_to_str(workflow.get('version'), default='~')}`")
-    lines.append(f"- **started_at (UTC):** `{fmt_timestamp_utc(min_start) or '~'}`")
-    lines.append(f"- **ended_at (UTC):** `{fmt_timestamp_utc(max_end) or '~'}`")
-    lines.append(f"- **duration:** `{_fmt_seconds(total_elapsed)}`")
-    lines.append(f"- **status:** `{_to_str(workflow.get('status'), default='~')}`")
-    lines.append(f"- **location:** `{_to_str(workflow.get('sys_name'), default='~')}`")
-    lines.append(f"- **user:** `{_to_str(workflow.get('user'), default='~')}`")
+        _append_summary_line(summary_lines, "campaign_id", _to_str(workflow.get("campaign_id")))
+    _append_summary_line(summary_lines, "version", _to_str(workflow.get("version"), default="~"))
+    _append_summary_line(summary_lines, "started_at (UTC)", fmt_timestamp_utc(min_start) or "~")
+    _append_summary_line(summary_lines, "ended_at (UTC)", fmt_timestamp_utc(max_end) or "~")
+    _append_summary_line(summary_lines, "duration", _fmt_seconds(total_elapsed))
+    _append_summary_line(summary_lines, "status", _to_str(workflow.get("status"), default="~"))
+    _append_summary_line(summary_lines, "location", _to_str(workflow.get("sys_name"), default="~"))
+    _append_summary_line(summary_lines, "user", _to_str(workflow.get("user"), default="~"))
     if workflow.get("subtype") is not None:
-        lines.append(f"- **Workflow Subtype:** `{_to_str(workflow.get('subtype'))}`")
-    lines.append(f"- **entrypoint.repository:** `{_to_str(code_repo.get('remote'), default='~')}`")
-    lines.append(f"- **entrypoint.branch:** `{_to_str(code_repo.get('branch'), default='~')}`")
-    lines.append(f"- **entrypoint.short_sha:** `{_to_str(code_repo.get('short_sha'), default='~')}`")
+        _append_summary_line(summary_lines, "Workflow Subtype", _to_str(workflow.get("subtype")))
+    _append_summary_line(summary_lines, "entrypoint.repository", _to_str(code_repo.get("remote"), default="~"))
+    _append_summary_line(summary_lines, "entrypoint.branch", _to_str(code_repo.get("branch"), default="~"))
+    _append_summary_line(summary_lines, "entrypoint.short_sha", _to_str(code_repo.get("short_sha"), default="~"))
     if code_repo.get("dirty") is not None:
-        lines.append(f"- **entrypoint.dirty:** `{_to_str(code_repo.get('dirty'))}`")
-    lines.append("")
+        _append_summary_line(summary_lines, "entrypoint.dirty", _to_str(code_repo.get("dirty")))
+    if summary_lines:
+        lines.append("## 2. Summary")
+        lines.append("")
+        lines.extend(summary_lines)
+        lines.append("")
 
     # --- Section 3: Infrastructure ---
-    lines.append("## 3. Infrastructure")
-    lines.append("")
-    lines.append(f"- **host_os:** `{_to_str(workflow.get('host_os'), default='~')}`")
-    lines.append(f"- **compute_hardware:** `{_to_str(workflow.get('compute_hardware'), default='~')}`")
-    lines.append(f"- **runtime_environment:** `{_to_str(workflow.get('environment_id'), default='~')}`")
-    lines.append(f"- **resource_manager:** `{_to_str(workflow.get('resource_manager'), default='~')}`")
-    lines.append(f"- **primary_software:** `{_to_str(workflow.get('primary_software'), default='~')}`")
-    lines.append(f"- **environment_snapshot:** `{_to_str(workflow.get('environment_snapshot'), default='~')}`")
-    lines.append("")
+    infra_lines: List[str] = []
+    _append_summary_line(infra_lines, "host_os", _to_str(workflow.get("host_os"), default="~"))
+    _append_summary_line(infra_lines, "compute_hardware", _to_str(workflow.get("compute_hardware"), default="~"))
+    _append_summary_line(infra_lines, "runtime_environment", _to_str(workflow.get("environment_id"), default="~"))
+    _append_summary_line(infra_lines, "resource_manager", _to_str(workflow.get("resource_manager"), default="~"))
+    _append_summary_line(infra_lines, "primary_software", _to_str(workflow.get("primary_software"), default="~"))
+    _append_summary_line(infra_lines, "environment_snapshot", _to_str(workflow.get("environment_snapshot"), default="~"))
+    if infra_lines:
+        lines.append("## 3. Infrastructure")
+        lines.append("")
+        lines.extend(infra_lines)
+        lines.append("")
 
     # --- Section 4: Workflow Overview ---
     lines.append("## 4. Workflow Overview")

@@ -22,9 +22,9 @@ def _now() -> str:
 
 def _validate_spec_filters(spec: DashboardSpec) -> None:
     _validate_filter_shape(spec.context)
-    for card in spec.cards:
-        if card.data is not None:
-            _validate_filter_shape(card.data.filter)
+    for chart in spec.charts:
+        if chart.data is not None:
+            _validate_filter_shape(chart.data.filter)
 
 
 @router.get("", response_model=ListResponse)

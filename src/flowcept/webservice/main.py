@@ -16,7 +16,7 @@ from flowcept.webservice.routers.agents import router as agents_router
 from flowcept.webservice.routers.campaigns import router as campaigns_router
 from flowcept.webservice.routers.dashboards import router as dashboards_router
 from flowcept.webservice.routers.datasets import router as datasets_router
-from flowcept.webservice.routers.health import router as health_router
+from flowcept.webservice.routers.health import info_router, router as health_router
 from flowcept.webservice.routers.models import router as models_router
 from flowcept.webservice.routers.objects import router as objects_router
 from flowcept.webservice.routers.query import router as query_router
@@ -55,6 +55,7 @@ def create_app() -> FastAPI:
         )
 
     app.include_router(health_router, prefix="/api/v1")
+    app.include_router(info_router, prefix="/api/v1")
     app.include_router(campaigns_router, prefix="/api/v1")
     app.include_router(workflows_router, prefix="/api/v1")
     app.include_router(tasks_router, prefix="/api/v1")

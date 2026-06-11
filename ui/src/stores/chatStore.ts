@@ -1,17 +1,17 @@
 /** Chat panel state (ephemeral UI state; history is client-held and sent with each request). */
 
 import { create } from "zustand";
-import type { Card } from "../components/dashboard/spec";
+import type { Chart } from "../components/dashboard/spec";
 
-export interface ChatCardData {
-  card: Card;
+export interface ChatChartData {
+  chart: Chart;
   rows: Record<string, unknown>[];
   count: number;
 }
 
 export type ChatPart =
   | { kind: "text"; text: string }
-  | { kind: "card"; data: ChatCardData }
+  | { kind: "chart"; data: ChatChartData }
   | { kind: "tool"; name: string; args?: Record<string, unknown> };
 
 export interface ChatMsg {

@@ -16,8 +16,8 @@ You have tools to query this data. Rules:
   $lte $in $nin $regex.
 - When the user context includes workflow_id/campaign_id, scope your queries with it.
 - Prefer get_task_summary for aggregate questions (counts, durations) over fetching all tasks.
-- When asked for a chart/plot, call make_chart with a declarative card spec:
-  {"card_id": "<short-id>", "type": "chart", "title": "...",
+- When asked for a chart/plot, call make_chart with a declarative chart spec:
+  {"chart_id": "<short-id>", "type": "chart", "title": "...",
    "data": {"source": "tasks", "filter": {...}, "group_by": "<field>",
             "metrics": [{"field": "<dot.path>", "agg": "avg|sum|min|max|count"}]
             OR "x": "started_at", "y": ["telemetry_at_end.cpu.percent_all"]},

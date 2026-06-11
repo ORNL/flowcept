@@ -1,14 +1,25 @@
 /** Overview: recent campaigns and workflows at a glance. */
 
+import { useMemo } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCampaigns, useWorkflows } from "../api/queries";
-import { fmtTs, shortId } from "../lib/format";
+import { useCampaigns, useWorkflows, useWorkflowsWithTasks } from "../api/queries";
+import { fmtTs, shortId, toEpochSec } from "../lib/format";
 
 export const Route = createFileRoute("/")({ component: Overview });
 
 function Overview() {
   const campaigns = useCampaigns();
   const workflows = useWorkflows();
+  const workflowsWithTasks = useWorkflowsWithTasks();
+
+  const latestTs = useMemo(() => {
+    const items = workflows.data?.items ?? [];
+    if (!items.length) return undefined;
+    return items.reduce<typeof items[0] | undefined>((best, w) => {
+      if (!best) return w;
+      return (toEpochSec(w.utc_timestamp) ?? 0) > (toEpochSec(best.utc_timestamp) ?? 0) ? w : best;
+    }, undefined)?.utc_timestamp;
+  }, [workflows.data]);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
@@ -20,28 +31,28 @@ function Overview() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Stat label="Campaigns" value={campaigns.data?.count} />
         <Stat label="Workflows" value={workflows.data?.count} />
-        <Stat
-          label="Latest activity"
-          value={workflows.data?.items?.length ? fmtTs(workflows.data.items.at(-1)?.utc_timestamp) : "—"}
-        />
+        <Stat label="Latest activity" value={fmtTs(latestTs)} />
       </div>
 
       <section className="card">
         <h2 className="border-b border-border px-4 py-3 text-sm font-medium">Recent campaigns</h2>
         <div className="divide-y divide-border/50">
-          {(campaigns.data?.items ?? []).slice(0, 8).map((c) => (
-            <Link
-              key={c.campaign_id}
-              to="/campaigns/$campaignId"
-              params={{ campaignId: c.campaign_id }}
-              className="hover:bg-surface-2 flex items-center justify-between px-4 py-2.5 text-xs"
-            >
-              <span className="font-mono">{shortId(c.campaign_id, 24)}</span>
-              <span className="text-fg-muted">
-                {c.workflow_count} workflows · {c.task_count} tasks · {fmtTs(c.last_ts)}
-              </span>
-            </Link>
-          ))}
+          {(campaigns.data?.items ?? [])
+            .filter((c) => c.workflow_count > 0 && c.task_count > 0)
+            .slice(0, 8)
+            .map((c) => (
+              <Link
+                key={c.campaign_id}
+                to="/campaigns/$campaignId"
+                params={{ campaignId: c.campaign_id }}
+                className="hover:bg-surface-2 flex items-center justify-between px-4 py-2.5 text-xs"
+              >
+                <span className="font-mono">{shortId(c.campaign_id, 24)}</span>
+                <span className="text-fg-muted">
+                  {c.workflow_count} workflows · {c.task_count} tasks · {fmtTs(c.last_ts)}
+                </span>
+              </Link>
+            ))}
           {campaigns.data && campaigns.data.count === 0 && (
             <div className="text-fg-muted px-4 py-6 text-center text-xs">No campaigns recorded yet.</div>
           )}
@@ -52,8 +63,10 @@ function Overview() {
         <h2 className="border-b border-border px-4 py-3 text-sm font-medium">Recent workflows</h2>
         <div className="divide-y divide-border/50">
           {(workflows.data?.items ?? [])
-            .slice(-8)
-            .reverse()
+            .filter((w) => w.name && (toEpochSec(w.utc_timestamp) ?? 0) > 0)
+            .filter((w) => !workflowsWithTasks.data || workflowsWithTasks.data.has(w.workflow_id))
+            .sort((a, b) => (toEpochSec(b.utc_timestamp) ?? 0) - (toEpochSec(a.utc_timestamp) ?? 0))
+            .slice(0, 8)
             .map((w) => (
               <Link
                 key={w.workflow_id}

@@ -1,7 +1,12 @@
-"""Pydantic schemas for dashboard specs and declarative card data bindings.
+"""Pydantic schemas for dashboard specs and declarative chart-data bindings.
 
-The spec is deliberately declarative (not raw chart configs) so that LLM tools can
-reliably generate/modify it and the frontend can validate and render it.
+The spec is deliberately declarative so that LLM tools can reliably generate/modify
+it and the frontend can validate and render it.
+
+Data model:
+- A Dashboard has a type (workflow | campaign) and contains multiple Charts.
+- Each Chart has a data binding (ChartData) describing what to query.
+- VizSpec describes how to render the query result (bar, pie, line, …).
 """
 
 from __future__ import annotations
@@ -20,8 +25,8 @@ class MetricSpec(BaseModel):
     agg: Literal["avg", "sum", "min", "max", "count"]
 
 
-class CardData(BaseModel):
-    """Declarative data binding for a card: what to query and how to shape it."""
+class ChartData(BaseModel):
+    """Declarative data binding for a chart: what to query and how to shape it."""
 
     source: Literal["tasks", "workflows", "objects"] = "tasks"
     filter: Dict[str, Any] = Field(default_factory=dict)
@@ -34,31 +39,29 @@ class CardData(BaseModel):
 
 
 class VizSpec(BaseModel):
-    """How a chart card renders its rows."""
+    """How a chart renders its rows."""
 
     kind: Literal["line", "bar", "pie", "scatter", "area", "heatmap"] = "line"
     stacked: bool = False
 
 
-class Card(BaseModel):
-    """One dashboard card. Content fields depend on ``type``."""
+class DashboardChart(BaseModel):
+    """One chart inside a dashboard."""
 
-    card_id: str
-    type: Literal["chart", "metric", "table", "markdown", "prov_card"]
+    chart_id: str
+    type: Literal["chart", "metric", "table", "markdown"]
     title: str = ""
     live: bool = False
     refresh_interval_sec: Optional[float] = None
-    data: Optional[CardData] = None
+    data: Optional[ChartData] = None
     viz: Optional[VizSpec] = None
     content: Optional[str] = None
-    workflow_id: Optional[str] = None
-    campaign_id: Optional[str] = None
 
 
 class LayoutItem(BaseModel):
-    """Grid placement of a card in a 12-column layout."""
+    """Grid placement of a chart in a 12-column layout."""
 
-    card_id: str
+    chart_id: str
     x: int = Field(ge=0, le=11)
     y: int = Field(ge=0)
     w: int = Field(ge=1, le=12)
@@ -66,13 +69,14 @@ class LayoutItem(BaseModel):
 
 
 class DashboardSpec(BaseModel):
-    """A complete dashboard: context filter, cards, and layout."""
+    """A complete dashboard: type, context filter, charts, and layout."""
 
     dashboard_id: Optional[str] = None
+    type: Literal["workflow", "campaign"] = "workflow"
     name: str
     description: str = ""
     context: Dict[str, Any] = Field(default_factory=dict)
-    cards: List[Card] = Field(default_factory=list)
+    charts: List[DashboardChart] = Field(default_factory=list)
     layout: List[LayoutItem] = Field(default_factory=list)
     created_at: Optional[str] = None
     updated_at: Optional[str] = None

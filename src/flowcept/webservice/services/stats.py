@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.webservice.schemas.dashboards import CardData, MetricSpec
+from flowcept.webservice.schemas.dashboards import ChartData, MetricSpec
 
 
 def _mongo_dao_or_none() -> Optional[DocumentDBDAO]:
@@ -467,7 +467,7 @@ def _merge_context_filter(card_filter: Dict[str, Any], context: Optional[Dict[st
     return {"$and": [context, card_filter]}
 
 
-def resolve_card_data(db: DBAPI, data: "CardData", context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def resolve_chart_data(db: DBAPI, data: "ChartData", context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Resolve a declarative card data binding into plottable rows.
 
     This is the single data contract shared by dashboard cards, the stats router,
@@ -477,7 +477,7 @@ def resolve_card_data(db: DBAPI, data: "CardData", context: Optional[Dict[str, A
     ----------
     db : DBAPI
         DB API facade.
-    data : CardData
+    data : ChartData
         Declarative binding (source, filter, group_by/metrics or x/y, sort, limit).
     context : dict, optional
         Dashboard-level filter ANDed into the card filter (e.g., ``{"campaign_id": ...}``).
@@ -508,7 +508,7 @@ def resolve_card_data(db: DBAPI, data: "CardData", context: Optional[Dict[str, A
     return {"rows": rows, "count": len(rows)}
 
 
-def _resolve_grouped(db: DBAPI, data: "CardData", query_filter: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _resolve_grouped(db: DBAPI, data: "ChartData", query_filter: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Group/aggregate rows for a card, using Mongo pipelines when available."""
     metrics = data.metrics or [MetricSpec(field="", agg="count")]
     dao = _mongo_dao_or_none()

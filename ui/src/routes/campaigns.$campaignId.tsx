@@ -1,23 +1,44 @@
-/** Campaign detail: summary, workflows, task summary, provenance card. */
+/** Campaign detail: summary, workflows, task summary, provenance card, dashboard. */
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
-import { useCampaign, useProvenanceCard } from "../api/queries";
+import { Trash2 } from "lucide-react";
+import { useCampaign, useInfo, useProvenanceCard } from "../api/queries";
+import { apiDelete } from "../api/client";
+import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
+import { ChartRenderer } from "../components/dashboard/ChartRenderer";
+import { chart as chartSchema, dashboardSpec, type DashboardSpec } from "../components/dashboard/spec";
 import { StatusStrip } from "../components/charts/StatusStrip";
 import { Markdown } from "../components/markdown/Markdown";
 import { fmtTs, shortId } from "../lib/format";
 
 export const Route = createFileRoute("/campaigns/$campaignId")({
   component: CampaignDetail,
-  validateSearch: z.object({ tab: z.enum(["workflows", "card"]).default("workflows") }),
+  validateSearch: z.object({ tab: z.enum(["workflows", "card", "dashboard"]).default("workflows") }),
 });
 
 function CampaignDetail() {
   const { campaignId } = Route.useParams();
   const { tab } = Route.useSearch();
   const navigate = Route.useNavigate();
+  const router = useRouter();
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { data, isLoading, error } = useCampaign(campaignId);
-  const card = useProvenanceCard("campaigns", campaignId, tab === "card");
+  const provCard = useProvenanceCard("campaigns", campaignId, tab === "card");
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await apiDelete(`/campaigns/${campaignId}`);
+      void router.invalidate();
+      await navigate({ to: "/campaigns" });
+    } finally {
+      setDeleting(false);
+      setShowDelete(false);
+    }
+  }
 
   if (isLoading) return <div className="text-fg-muted p-6 text-xs">Loading…</div>;
   if (error) return <div className="text-err p-6 text-xs">{String(error)}</div>;
@@ -27,7 +48,16 @@ function CampaignDetail() {
     <div className="mx-auto max-w-6xl space-y-4 p-6">
       <header>
         <div className="text-fg-muted text-xs">Campaign</div>
-        <h1 className="font-mono text-lg font-semibold">{campaignId}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="font-mono text-lg font-semibold">{campaignId}</h1>
+          <button
+            onClick={() => setShowDelete(true)}
+            className="ml-auto text-fg-muted hover:text-err"
+            title="Delete campaign"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
         <div className="text-fg-muted mt-1 text-xs">
           {data.campaign.workflow_count} workflows · {data.campaign.task_count} tasks · last activity{" "}
           {fmtTs(data.campaign.last_ts)}
@@ -39,13 +69,13 @@ function CampaignDetail() {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(["workflows", "card"] as const).map((t) => (
+        {(["workflows", "dashboard", "card"] as const).map((t) => (
           <button
             key={t}
             onClick={() => navigate({ search: { tab: t } })}
-            className={`px-3 py-2 text-xs ${tab === t ? "border-accent text-fg border-b-2" : "text-fg-muted hover:text-fg"}`}
+            className={`px-3 py-2 text-xs capitalize ${tab === t ? "border-accent text-fg border-b-2" : "text-fg-muted hover:text-fg"}`}
           >
-            {t === "workflows" ? "Workflows" : "Provenance card"}
+            {t === "card" ? "Provenance card" : t}
           </button>
         ))}
       </div>
@@ -71,17 +101,64 @@ function CampaignDetail() {
         </div>
       )}
 
+      {tab === "dashboard" && <CampaignDashboardTab campaignId={campaignId} />}
+
       {tab === "card" && (
         <div className="card p-5">
-          {card.isLoading ? (
+          {provCard.isLoading ? (
             <div className="text-fg-muted text-xs">Generating provenance card…</div>
-          ) : card.error ? (
-            <div className="text-err text-xs">{String(card.error)}</div>
+          ) : provCard.error ? (
+            <div className="text-err text-xs">{String(provCard.error)}</div>
           ) : (
-            <Markdown>{card.data ?? ""}</Markdown>
+            <Markdown>{provCard.data ?? ""}</Markdown>
           )}
         </div>
       )}
+
+      {showDelete && (
+        <DeleteConfirmModal
+          title="Delete campaign"
+          description={`This will permanently delete campaign ${shortId(campaignId, 16)} and all its workflows, tasks, and artifacts. This cannot be undone.`}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDelete(false)}
+          loading={deleting}
+        />
+      )}
+    </div>
+  );
+}
+
+function CampaignDashboardTab({ campaignId }: { campaignId: string }) {
+  const { data: info } = useInfo();
+  const rawCharts = info?.campaign_dashboard ?? [];
+  const charts = rawCharts.map((raw) => chartSchema.parse({ ...raw, data: { filter: {}, ...(raw.data as object) } }));
+  const spec: DashboardSpec = dashboardSpec.parse({
+    type: "campaign",
+    name: "Campaign Dashboard",
+    context: { campaign_id: campaignId },
+    charts,
+    layout: [],
+  });
+
+  if (!charts.length) {
+    return (
+      <p className="text-fg-muted text-sm">
+        No charts configured. Add <code>campaign_dashboard</code> under <code>web_server</code> in{" "}
+        <code>settings.yaml</code>.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      {charts.map((c) => (
+        <div key={c.chart_id} className="card p-3" style={{ height: 280 }}>
+          <div className="text-fg-muted mb-2 text-xs font-medium">{c.title}</div>
+          <div className="h-[calc(100%-1.5rem)]">
+            <ChartRenderer chart={c} spec={spec} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

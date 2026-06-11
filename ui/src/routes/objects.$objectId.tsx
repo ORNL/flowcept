@@ -22,7 +22,7 @@ function ObjectPage() {
     <div className="mx-auto max-w-4xl space-y-4 p-6">
       <header className="flex items-start justify-between">
         <div>
-          <div className="text-fg-muted text-xs">Artifact · {obj.type ?? "object"}</div>
+          <div className="text-fg-muted text-xs">Artifact · {obj.object_type ?? "object"}</div>
           <h1 className="font-mono text-lg font-semibold">{objectId}</h1>
           {obj.workflow_id && (
             <Link

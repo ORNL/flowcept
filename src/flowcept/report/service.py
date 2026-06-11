@@ -6,7 +6,7 @@ import importlib.util
 from pathlib import Path
 from typing import Any, Dict, List
 
-from flowcept.report.aggregations import group_activities, summarize_objects
+from flowcept.report.aggregations import group_activities, group_transformations, summarize_objects
 from flowcept.report.loaders import load_records_from_db, read_jsonl, split_records
 from flowcept.report.renderers.provenance_campaign_card_markdown import render_provenance_campaign_card_markdown
 from flowcept.report.renderers.provenance_card_markdown import (

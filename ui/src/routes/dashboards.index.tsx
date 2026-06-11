@@ -15,6 +15,7 @@ interface DashboardDoc {
   description?: string;
   cards?: unknown[];
   updated_at?: string;
+  context?: Record<string, string>;
 }
 
 function DashboardsPage() {
@@ -40,6 +41,40 @@ function DashboardsPage() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["dashboards"] }),
   });
 
+  const all = data?.items ?? [];
+  const workflowDashboards = all.filter((d) => d.context?.workflow_id != null);
+  const campaignDashboards = all.filter((d) => d.context?.campaign_id != null && d.context?.workflow_id == null);
+  const generalDashboards = all.filter((d) => d.context?.workflow_id == null && d.context?.campaign_id == null);
+
+  function DashboardCard({ d }: { d: DashboardDoc }) {
+    return (
+      <div className="card hover:border-accent/60 relative p-4">
+        <Link to="/dashboards/$dashboardId" params={{ dashboardId: d.dashboard_id }} className="block">
+          <div className="flex items-center gap-2">
+            <LayoutDashboard size={15} className="text-accent" />
+            <span className="text-sm font-medium">{d.name}</span>
+          </div>
+          <div className="text-fg-muted mt-2 text-xs">
+            {d.description || "No description."} · {(d.cards ?? []).length} cards
+          </div>
+          {d.context?.workflow_id && (
+            <div className="text-fg-muted text-[10px] font-mono mt-0.5">wf: {d.context.workflow_id.slice(0, 12)}…</div>
+          )}
+          {d.context?.campaign_id && (
+            <div className="text-fg-muted text-[10px] font-mono mt-0.5">camp: {d.context.campaign_id.slice(0, 12)}…</div>
+          )}
+        </Link>
+        <button
+          onClick={() => remove.mutate(d.dashboard_id)}
+          className="text-fg-muted hover:text-err absolute right-3 top-3"
+          title="Delete dashboard"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-6">
       <header className="flex items-center justify-between">
@@ -61,28 +96,34 @@ function DashboardsPage() {
       </header>
       {isLoading && <div className="text-fg-muted text-xs">Loading…</div>}
       {error && <div className="text-err text-xs">{String(error)}</div>}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {(data?.items ?? []).map((d) => (
-          <div key={d.dashboard_id} className="card hover:border-accent/60 relative p-4">
-            <Link to="/dashboards/$dashboardId" params={{ dashboardId: d.dashboard_id }} className="block">
-              <div className="flex items-center gap-2">
-                <LayoutDashboard size={15} className="text-accent" />
-                <span className="text-sm font-medium">{d.name}</span>
-              </div>
-              <div className="text-fg-muted mt-2 text-xs">
-                {d.description || "No description."} · {(d.cards ?? []).length} cards
-              </div>
-            </Link>
-            <button
-              onClick={() => remove.mutate(d.dashboard_id)}
-              className="text-fg-muted hover:text-err absolute right-3 top-3"
-              title="Delete dashboard"
-            >
-              <Trash2 size={13} />
-            </button>
+
+      {workflowDashboards.length > 0 && (
+        <>
+          <h2 className="text-xs font-medium text-fg-muted uppercase tracking-wider mt-4 mb-2">Workflow Dashboards</h2>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {workflowDashboards.map((d) => <DashboardCard key={d.dashboard_id} d={d} />)}
           </div>
-        ))}
-      </div>
+        </>
+      )}
+
+      {campaignDashboards.length > 0 && (
+        <>
+          <h2 className="text-xs font-medium text-fg-muted uppercase tracking-wider mt-4 mb-2">Campaign Dashboards</h2>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {campaignDashboards.map((d) => <DashboardCard key={d.dashboard_id} d={d} />)}
+          </div>
+        </>
+      )}
+
+      {generalDashboards.length > 0 && (
+        <>
+          <h2 className="text-xs font-medium text-fg-muted uppercase tracking-wider mt-4 mb-2">General Dashboards</h2>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {generalDashboards.map((d) => <DashboardCard key={d.dashboard_id} d={d} />)}
+          </div>
+        </>
+      )}
+
       {data && data.count === 0 && (
         <div className="text-fg-muted text-xs">No dashboards yet — create one above.</div>
       )}

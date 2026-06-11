@@ -50,3 +50,5 @@ ui/node_modules/
 ui/dist/
 ui/.vite/
 src/flowcept/webservice/ui_build/
+ui/src/routeTree.gen.ts
+ui/docs/

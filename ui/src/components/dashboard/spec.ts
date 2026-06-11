@@ -1,4 +1,9 @@
-/** Dashboard spec types (mirror of webservice schemas/dashboards.py) + zod validation. */
+/** Dashboard spec types (mirror of webservice schemas/dashboards.py) + zod validation.
+ *
+ * Data model:
+ *   Dashboard (type: workflow | campaign)
+ *     └── Chart[]  — each chart has a data binding + viz spec
+ */
 
 import { z } from "zod";
 
@@ -7,7 +12,7 @@ export const metricSpec = z.object({
   agg: z.enum(["avg", "sum", "min", "max", "count"]),
 });
 
-export const cardData = z.object({
+export const chartData = z.object({
   source: z.enum(["tasks", "workflows", "objects"]).default("tasks"),
   filter: z.record(z.unknown()).default({}),
   group_by: z.string().nullish(),
@@ -23,21 +28,19 @@ export const vizSpec = z.object({
   stacked: z.boolean().default(false),
 });
 
-export const card = z.object({
-  card_id: z.string(),
-  type: z.enum(["chart", "metric", "table", "markdown", "prov_card"]),
+export const chart = z.object({
+  chart_id: z.string(),
+  type: z.enum(["chart", "metric", "table", "markdown"]),
   title: z.string().default(""),
   live: z.boolean().default(false),
   refresh_interval_sec: z.number().nullish(),
-  data: cardData.nullish(),
+  data: chartData.nullish(),
   viz: vizSpec.nullish(),
   content: z.string().nullish(),
-  workflow_id: z.string().nullish(),
-  campaign_id: z.string().nullish(),
 });
 
 export const layoutItem = z.object({
-  card_id: z.string(),
+  chart_id: z.string(),
   x: z.number(),
   y: z.number(),
   w: z.number(),
@@ -46,19 +49,20 @@ export const layoutItem = z.object({
 
 export const dashboardSpec = z.object({
   dashboard_id: z.string().nullish(),
+  type: z.enum(["workflow", "campaign"]).default("workflow"),
   name: z.string(),
   description: z.string().default(""),
   context: z.record(z.unknown()).default({}),
-  cards: z.array(card).default([]),
+  charts: z.array(chart).default([]),
   layout: z.array(layoutItem).default([]),
   created_at: z.string().nullish(),
   updated_at: z.string().nullish(),
 });
 
 export type MetricSpec = z.infer<typeof metricSpec>;
-export type CardData = z.infer<typeof cardData>;
+export type ChartData = z.infer<typeof chartData>;
 export type VizSpec = z.infer<typeof vizSpec>;
-export type Card = z.infer<typeof card>;
+export type Chart = z.infer<typeof chart>;
 export type LayoutItem = z.infer<typeof layoutItem>;
 export type DashboardSpec = z.infer<typeof dashboardSpec>;
 

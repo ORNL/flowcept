@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
-import { Eraser, Send, Wrench, X } from "lucide-react";
+import { ChevronDown, Eraser, Send, Wrench } from "lucide-react";
+import type { PanelImperativeHandle } from "react-resizable-panels";
 import { API_BASE } from "../../api/client";
 import { useChatStore, type ChatMsg } from "../../stores/chatStore";
 import { EChart } from "../charts/EChart";
@@ -20,8 +21,12 @@ function routeContext(pathname: string): Record<string, string> {
   return {};
 }
 
-export function ChatPanel() {
-  const { open, busy, messages, toggle, setBusy, push, appendPart, reset } = useChatStore();
+interface ChatPanelProps {
+  panelHandle?: PanelImperativeHandle | null;
+}
+
+export function ChatPanel({ panelHandle }: ChatPanelProps) {
+  const { busy, messages, setBusy, push, appendPart, reset } = useChatStore();
   const [input, setInput] = useState("");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -29,8 +34,6 @@ export function ChatPanel() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages]);
-
-  if (!open) return null;
 
   const send = async () => {
     const text = input.trim();
@@ -64,7 +67,7 @@ export function ChatPanel() {
           const data = msg.data ? JSON.parse(msg.data) : null;
           if (msg.event === "token" && data) appendPart({ kind: "text", text: String(data) });
           if (msg.event === "tool_call" && data) appendPart({ kind: "tool", name: data.name, args: data.args });
-          if (msg.event === "card" && data?.card) appendPart({ kind: "card", data });
+          if (msg.event === "card" && data?.chart) appendPart({ kind: "chart", data });
           if (msg.event === "error" && data) appendPart({ kind: "text", text: `⚠️ ${data}` });
         },
         onerror(err) {
@@ -80,15 +83,19 @@ export function ChatPanel() {
   };
 
   return (
-    <aside className="flex w-[420px] shrink-0 flex-col border-l border-border bg-surface">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <span className="text-sm font-medium">Provenance chat</span>
+    <div className="flex h-full flex-col border-t border-border bg-surface">
+      <div className="flex items-center justify-between border-b border-border px-4 py-2">
+        <span className="text-sm font-medium">Flowcept chat</span>
         <div className="flex items-center gap-2">
           <button onClick={reset} title="Clear conversation" className="text-fg-muted hover:text-fg">
             <Eraser size={14} />
           </button>
-          <button onClick={toggle} className="text-fg-muted hover:text-fg">
-            <X size={15} />
+          <button
+            onClick={() => panelHandle?.collapse()}
+            title="Minimize chat"
+            className="text-fg-muted hover:text-fg"
+          >
+            <ChevronDown size={15} />
           </button>
         </div>
       </div>
@@ -96,8 +103,8 @@ export function ChatPanel() {
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-3">
         {messages.length === 0 && (
           <div className="text-fg-muted px-2 py-8 text-center text-xs">
-            Ask about your provenance data — e.g. “how many tasks failed?”, “plot task durations per
-            activity”. Queries are scoped to the page you're viewing.
+            Ask about your provenance data — e.g. "how many tasks failed?", "plot task durations per
+            activity". Queries are scoped to the page you're viewing.
           </div>
         )}
         {messages.map((msg, i) => (
@@ -124,8 +131,8 @@ export function ChatPanel() {
                   );
                 return (
                   <div key={j} className="card p-2">
-                    <div className="text-fg-muted mb-1 text-[11px]">{part.data.card.title || "chart"}</div>
-                    <EChart option={specToOption(part.data.card, part.data.rows)} height={200} />
+                    <div className="text-fg-muted mb-1 text-[11px]">{part.data.chart.title || "chart"}</div>
+                    <EChart option={specToOption(part.data.chart, part.data.rows)} height={200} />
                   </div>
                 );
               })}
@@ -159,6 +166,6 @@ export function ChatPanel() {
           </button>
         </div>
       </div>
-    </aside>
+    </div>
   );
 }

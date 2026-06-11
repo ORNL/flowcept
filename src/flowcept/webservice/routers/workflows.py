@@ -72,6 +72,15 @@ def get_workflow(workflow_id: str, db: DBAPI = Depends(get_db_api)) -> Dict[str,
     return normalized[0]
 
 
+@router.delete("/{workflow_id}", response_model=Dict[str, Any])
+def delete_workflow(workflow_id: str, db: DBAPI = Depends(get_db_api)) -> Dict[str, Any]:
+    """Recursively delete a workflow and all its tasks and objects."""
+    if db.get_workflow_object(workflow_id) is None:
+        raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
+    counts = DBAPI._dao().delete_workflow_data(workflow_id)
+    return {"deleted": counts}
+
+
 @router.post("/query", response_model=ListResponse)
 def query_workflows(payload: QueryRequest, db: DBAPI = Depends(get_db_api)) -> ListResponse:
     """Run an advanced read-only workflows query."""

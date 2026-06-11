@@ -53,6 +53,16 @@ def get_campaign(campaign_id: str, db: DBAPI = Depends(get_db_api)) -> Dict[str,
     }
 
 
+@router.delete("/{campaign_id}", response_model=Dict[str, Any])
+def delete_campaign(campaign_id: str, db: DBAPI = Depends(get_db_api)) -> Dict[str, Any]:
+    """Recursively delete a campaign and all its workflows, tasks, and objects."""
+    workflows = db.workflow_query(filter={"campaign_id": campaign_id}) or []
+    if not workflows:
+        raise HTTPException(status_code=404, detail=f"Campaign not found: {campaign_id}")
+    counts = DBAPI._dao().delete_campaign_data(campaign_id)
+    return {"deleted": counts}
+
+
 @router.get("/{campaign_id}/provenance_card")
 def get_campaign_provenance_card(
     campaign_id: str,

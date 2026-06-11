@@ -61,9 +61,9 @@ else:
         SETTINGS_PATH = str(resources.files("resources").joinpath("sample_settings.yaml"))
 
         with open(SETTINGS_PATH) as f:
-            settings = OmegaConf.load(f)
+            settings = OmegaConf.to_container(OmegaConf.load(f), resolve=True)
     else:
-        settings = OmegaConf.load(SETTINGS_PATH)
+        settings = OmegaConf.to_container(OmegaConf.load(SETTINGS_PATH), resolve=True)
 
 # Making sure all settings are in place.
 keys = DEFAULT_SETTINGS.keys() - settings.keys()
@@ -261,6 +261,9 @@ WEBSERVER_SSE_MAX_BATCH = int(_webserver_settings.get("sse_max_batch", 500))
 WEBSERVER_DASHBOARDS_DIR = os.path.expanduser(
     _webserver_settings.get("dashboards_dir", f"~/.{PROJECT_NAME}/dashboards")
 )
+
+WEBSERVER_WORKFLOW_DASHBOARD = _webserver_settings.get("workflow_dashboard", [])
+WEBSERVER_CAMPAIGN_DASHBOARD = _webserver_settings.get("campaign_dashboard", [])
 
 ######################
 #    ANALYTICS      #

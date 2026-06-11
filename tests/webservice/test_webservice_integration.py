@@ -751,6 +751,67 @@ def test_chat_endpoint_real_llm_tool_roundtrip():
         DocumentDBDAO._instance.close()
 
 
+def test_recursive_delete_workflow_and_campaign():
+    if not Flowcept.services_alive():
+        pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
+
+    campaign_id = f"del-camp-{uuid4()}"
+
+    # Seed two workflows, one task and one object each.
+    wf1_id = None
+    wf2_id = None
+    with Flowcept(campaign_id=campaign_id, workflow_name=f"del-wf1-{uuid4()}"):
+        with FlowceptTask(activity_id="del_task", used={"x": 1}) as t1:
+            t1.end(generated={"y": 1})
+        Flowcept.db.save_or_update_object(object=b"blob1", object_type="artifact", save_data_in_collection=True)
+        wf1_id = Flowcept.current_workflow_id
+
+    with Flowcept(campaign_id=campaign_id, workflow_name=f"del-wf2-{uuid4()}"):
+        with FlowceptTask(activity_id="del_task", used={"x": 2}) as t2:
+            t2.end(generated={"y": 2})
+        Flowcept.db.save_or_update_object(object=b"blob2", object_type="artifact", save_data_in_collection=True)
+        wf2_id = Flowcept.current_workflow_id
+
+    assert wf1_id and wf2_id
+
+    ok = _wait_for(lambda: len(Flowcept.db.task_query(filter={"workflow_id": wf1_id}) or []) >= 1)
+    assert ok, "Timed out waiting for wf1 tasks."
+    ok = _wait_for(lambda: len(Flowcept.db.task_query(filter={"workflow_id": wf2_id}) or []) >= 1)
+    assert ok, "Timed out waiting for wf2 tasks."
+
+    app = create_app()
+    client = TestClient(app)
+
+    # Delete wf1 only.
+    rs = client.delete(f"/api/v1/workflows/{wf1_id}")
+    assert rs.status_code == 200, rs.text
+    body = rs.json()
+    assert body["deleted"]["workflows"] >= 1
+    assert body["deleted"]["tasks"] >= 1
+
+    # wf1 tasks gone; wf2 intact.
+    assert not Flowcept.db.task_query(filter={"workflow_id": wf1_id})
+    assert Flowcept.db.task_query(filter={"workflow_id": wf2_id})
+
+    # 404 on nonexistent workflow.
+    rs = client.delete("/api/v1/workflows/nonexistent-workflow-id")
+    assert rs.status_code == 404, rs.text
+
+    # Delete entire campaign.
+    rs = client.delete(f"/api/v1/campaigns/{campaign_id}")
+    assert rs.status_code == 200, rs.text
+    body = rs.json()
+    assert body["deleted"]["workflows"] >= 1
+    assert body["deleted"]["tasks"] >= 1
+
+    # wf2 gone.
+    assert not Flowcept.db.task_query(filter={"workflow_id": wf2_id})
+
+    # 404 on repeat.
+    rs = client.delete(f"/api/v1/campaigns/{campaign_id}")
+    assert rs.status_code == 404, rs.text
+
+
 def test_file_dashboard_store_roundtrip(tmp_path):
     """FileDashboardStore (non-Mongo fallback) persists real JSON files."""
     from flowcept.webservice.services.dashboard_store import FileDashboardStore

@@ -471,6 +471,54 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return -1
 
+    def delete_workflow_data(self, workflow_id: str) -> dict:
+        """Delete all data for one workflow: tasks, objects, and the workflow doc.
+
+        Parameters
+        ----------
+        workflow_id : str
+            The workflow identifier whose data should be deleted.
+
+        Returns
+        -------
+        dict
+            Per-collection deleted counts: ``{"workflows": x, "tasks": y, "objects": z}``.
+        """
+        tasks_result = self._tasks_collection.delete_many({"workflow_id": workflow_id})
+        objects_result = self._obj_collection.delete_many({"workflow_id": workflow_id})
+        wfs_result = self._wfs_collection.delete_many({"workflow_id": workflow_id})
+        return {
+            "workflows": wfs_result.deleted_count,
+            "tasks": tasks_result.deleted_count,
+            "objects": objects_result.deleted_count,
+        }
+
+    def delete_campaign_data(self, campaign_id: str) -> dict:
+        """Delete all data for one campaign: tasks, objects, and workflow docs.
+
+        Parameters
+        ----------
+        campaign_id : str
+            The campaign identifier whose data should be deleted.
+
+        Returns
+        -------
+        dict
+            Per-collection deleted counts: ``{"workflows": x, "tasks": y, "objects": z}``.
+        """
+        wf_cursor = self._wfs_collection.find({"campaign_id": campaign_id}, {"workflow_id": 1})
+        wf_ids = [doc["workflow_id"] for doc in wf_cursor if "workflow_id" in doc]
+        if not wf_ids:
+            return {"workflows": 0, "tasks": 0, "objects": 0}
+        tasks_result = self._tasks_collection.delete_many({"workflow_id": {"$in": wf_ids}})
+        objects_result = self._obj_collection.delete_many({"workflow_id": {"$in": wf_ids}})
+        wfs_result = self._wfs_collection.delete_many({"campaign_id": campaign_id})
+        return {
+            "workflows": wfs_result.deleted_count,
+            "tasks": tasks_result.deleted_count,
+            "objects": objects_result.deleted_count,
+        }
+
     @staticmethod
     def _utc_now():
         """Get timezone-aware UTC timestamp."""
