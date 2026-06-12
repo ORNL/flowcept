@@ -155,7 +155,7 @@ Unified scoped read-only query endpoint.
 - Specs validated against `schemas/dashboards.py::DashboardSpec`; card/context filters use the
   same operator allowlist as `/query`
 
-### Provenance cards
+### Workflow cards
 
 - `GET /api/v1/workflows/{workflow_id}/workflow_card?format=json|markdown`
 - `format=json` returns `{dataset, transformations, object_summary, input_mode}`

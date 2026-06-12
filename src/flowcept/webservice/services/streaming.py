@@ -15,7 +15,7 @@ from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.flowcept_api.db_api import DBAPI
 
 TASK_CURSOR_FIELDS = ("registered_at", "started_at", "ended_at", "utc_timestamp")
-WORKFLOW_CURSOR_FIELDS = ("utc_timestamp",)
+WORKFLOW_CURSOR_FIELDS = ("utc_timestamp", "created_at", "updated_at", "started_at", "ended_at")
 
 
 def _supports_operators() -> bool:

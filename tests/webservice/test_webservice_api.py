@@ -11,6 +11,7 @@ from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
 from flowcept.commons.flowcept_dataclasses.workflow_object import WorkflowObject
 from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.main import create_app
+from flowcept.webservice.services.dashboard_store import get_dashboard_store
 
 
 class FakeDB:
@@ -210,6 +211,29 @@ def build_client() -> tuple[TestClient, FakeDB]:
     fake_db = FakeDB()
     app.dependency_overrides[get_db_api] = lambda: fake_db
     return TestClient(app), fake_db
+
+
+class FakeDashboardStore:
+    """Small in-memory dashboard store for route contract tests."""
+
+    def __init__(self):
+        self.docs = {}
+
+    def save(self, dashboard):
+        self.docs[dashboard["dashboard_id"]] = dashboard
+        return True
+
+    def get(self, dashboard_id):
+        return self.docs.get(dashboard_id)
+
+    def list(self):
+        return list(self.docs.values())
+
+    def list_by_type(self, dashboard_type):
+        return [doc for doc in self.docs.values() if doc.get("dashboard_type") == dashboard_type]
+
+    def delete(self, dashboard_id):
+        return self.docs.pop(dashboard_id, None) is not None
 
 
 def test_info_endpoint():
@@ -588,3 +612,29 @@ def test_unified_scoped_query_rejects_unsupported_operator():
     )
     assert rs.status_code == 400
     assert "Unsupported filter operator" in rs.json()["detail"]
+
+
+def test_dashboard_routes_accept_cards_contract():
+    app = create_app()
+    store = FakeDashboardStore()
+    app.dependency_overrides[get_dashboard_store] = lambda: store
+    client = TestClient(app)
+
+    spec = {
+        "name": "dashboard",
+        "context": {"workflow_id": "wf-1"},
+        "cards": [
+            {
+                "card_id": "c1",
+                "type": "chart",
+                "data": {"source": "tasks", "filter": {"workflow_id": "wf-1"}},
+            }
+        ],
+        "layout": [{"card_id": "c1", "x": 0, "y": 0, "w": 6, "h": 4}],
+    }
+
+    rs = client.post("/api/v1/dashboards", json=spec)
+    assert rs.status_code == 201
+    body = rs.json()
+    assert body["cards"][0]["card_id"] == "c1"
+    assert body["layout"][0]["card_id"] == "c1"

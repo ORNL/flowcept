@@ -2004,9 +2004,9 @@ components:
       description: 'Chat request: client-passed history plus UI context.'
     DashboardChart:
       properties:
-        chart_id:
+        card_id:
           type: string
-          title: Chart Id
+          title: Card Id
         type:
           type: string
           enum:
@@ -2043,10 +2043,10 @@ components:
           title: Content
       type: object
       required:
-      - chart_id
+      - card_id
       - type
       title: DashboardChart
-      description: One chart inside a dashboard.
+      description: One card inside a dashboard.
     DashboardConfig:
       properties:
         dashboard_id:
@@ -2062,6 +2062,7 @@ components:
           - custom_workflow
           - custom_campaign
           title: Dashboard Type
+          default: common_workflow
         target:
           anyOf:
           - type: string
@@ -2071,11 +2072,24 @@ components:
           type: string
           title: Name
           default: ''
-        charts:
+        description:
+          type: string
+          title: Description
+          default: ''
+        context:
+          additionalProperties: true
+          type: object
+          title: Context
+        cards:
           items:
             $ref: '#/components/schemas/DashboardChart'
           type: array
-          title: Charts
+          title: Cards
+        layout:
+          items:
+            $ref: '#/components/schemas/LayoutItem'
+          type: array
+          title: Layout
         created_at:
           anyOf:
           - type: string
@@ -2087,8 +2101,6 @@ components:
           - type: 'null'
           title: Updated At
       type: object
-      required:
-      - dashboard_type
       title: DashboardConfig
       description: "A dashboard configuration: one of four types (common/custom \xD7\
         \ workflow/campaign).\n\n``target`` is required for custom types:\n- ``custom_workflow``:\
@@ -2104,6 +2116,38 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
+    LayoutItem:
+      properties:
+        card_id:
+          type: string
+          title: Card Id
+        x:
+          type: integer
+          maximum: 11.0
+          minimum: 0.0
+          title: X
+        y:
+          type: integer
+          minimum: 0.0
+          title: Y
+        w:
+          type: integer
+          maximum: 12.0
+          minimum: 1.0
+          title: W
+        h:
+          type: integer
+          minimum: 1.0
+          title: H
+      type: object
+      required:
+      - card_id
+      - x
+      - y
+      - w
+      - h
+      title: LayoutItem
+      description: Grid placement of a card in a 12-column layout.
     ListResponse:
       properties:
         items:

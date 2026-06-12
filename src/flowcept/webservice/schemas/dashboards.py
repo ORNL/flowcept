@@ -4,9 +4,9 @@ The spec is deliberately declarative so that LLM tools can reliably generate/mod
 it and the frontend can validate and render it.
 
 Data model:
-- A Dashboard has a type (workflow | campaign) and contains multiple Charts.
-- Each Chart has a data binding (ChartData) describing what to query.
-- VizSpec describes how to render the query result (bar, pie, line, …).
+- A Dashboard has a type (workflow | campaign) and contains multiple cards.
+- Each card can have a data binding (ChartData) describing what to query.
+- VizSpec describes how to render the query result (bar, pie, line, ...).
 """
 
 from __future__ import annotations
@@ -46,9 +46,9 @@ class VizSpec(BaseModel):
 
 
 class DashboardChart(BaseModel):
-    """One chart inside a dashboard."""
+    """One card inside a dashboard."""
 
-    chart_id: str
+    card_id: str
     type: Literal["chart", "metric", "table", "markdown"]
     title: str = ""
     live: bool = False
@@ -59,9 +59,9 @@ class DashboardChart(BaseModel):
 
 
 class LayoutItem(BaseModel):
-    """Grid placement of a chart in a 12-column layout."""
+    """Grid placement of a card in a 12-column layout."""
 
-    chart_id: str
+    card_id: str
     x: int = Field(ge=0, le=11)
     y: int = Field(ge=0)
     w: int = Field(ge=1, le=12)
@@ -69,14 +69,14 @@ class LayoutItem(BaseModel):
 
 
 class DashboardSpec(BaseModel):
-    """A complete dashboard: type, context filter, charts, and layout."""
+    """A complete dashboard: type, context filter, cards, and layout."""
 
     dashboard_id: Optional[str] = None
     type: Literal["workflow", "campaign"] = "workflow"
     name: str
     description: str = ""
     context: Dict[str, Any] = Field(default_factory=dict)
-    charts: List[DashboardChart] = Field(default_factory=list)
+    cards: List[DashboardChart] = Field(default_factory=list)
     layout: List[LayoutItem] = Field(default_factory=list)
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
@@ -92,9 +92,14 @@ class DashboardConfig(BaseModel):
     """
 
     dashboard_id: Optional[str] = None
-    dashboard_type: Literal["common_workflow", "common_campaign", "custom_workflow", "custom_campaign"]
+    dashboard_type: Literal["common_workflow", "common_campaign", "custom_workflow", "custom_campaign"] = (
+        "common_workflow"
+    )
     target: Optional[str] = None
     name: str = ""
-    charts: List[DashboardChart] = Field(default_factory=list)
+    description: str = ""
+    context: Dict[str, Any] = Field(default_factory=dict)
+    cards: List[DashboardChart] = Field(default_factory=list)
+    layout: List[LayoutItem] = Field(default_factory=list)
     created_at: Optional[str] = None
     updated_at: Optional[str] = None

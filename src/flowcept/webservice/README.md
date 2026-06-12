@@ -114,7 +114,7 @@ All API routes are mounted under:
 - Specs are validated (`schemas/dashboards.py`); stored in the `dashboards` Mongo collection,
   or JSON files under `web_server.dashboards_dir` when MongoDB is disabled
 
-### Provenance cards
+### Workflow cards
 
 - `GET /api/v1/workflows/{workflow_id}/workflow_card?format=json|markdown`
 

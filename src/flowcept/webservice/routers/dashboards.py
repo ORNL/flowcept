@@ -21,9 +21,10 @@ def _now() -> str:
 
 
 def _validate_config_filters(config: DashboardConfig) -> None:
-    for chart in config.charts:
-        if chart.data is not None:
-            _validate_filter_shape(chart.data.filter)
+    _validate_filter_shape(config.context)
+    for card in config.cards:
+        if card.data is not None:
+            _validate_filter_shape(card.data.filter)
 
 
 @router.get("/resolve", response_model=List[Dict[str, Any]])
@@ -51,10 +52,10 @@ def resolve_dashboard(
     else:
         raise HTTPException(status_code=400, detail="Provide workflow_name or campaign_id.")
 
-    charts: List[Dict[str, Any]] = []
+    cards: List[Dict[str, Any]] = []
     for cfg in common + custom:
-        charts.extend(cfg.get("charts", []))
-    return charts
+        cards.extend(cfg.get("cards", []))
+    return cards
 
 
 @router.get("", response_model=ListResponse)
