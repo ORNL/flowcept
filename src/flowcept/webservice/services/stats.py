@@ -496,6 +496,32 @@ def _merge_context_filter(card_filter: Dict[str, Any], context: Optional[Dict[st
     return {"$and": [context, card_filter]}
 
 
+def _resolve_collection_sizes(query_filter: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return per-collection BSON byte totals for the given filter (e.g. workflow_id).
+
+    Uses MongoDB ``$bsonSize`` on each of the three provenance collections.
+    Returns an empty list when Mongo is unavailable.
+    """
+    dao = _mongo_dao_or_none()
+    if dao is None:
+        return []
+    rows = []
+    for collection in ("tasks", "objects", "workflows"):
+        try:
+            result = dao.raw_pipeline(
+                [
+                    {"$match": query_filter},
+                    {"$group": {"_id": None, "bytes": {"$sum": {"$bsonSize": "$$ROOT"}}}},
+                ],
+                collection=collection,
+            )
+            bytes_val = result[0]["bytes"] if result else 0
+        except Exception:
+            bytes_val = 0
+        rows.append({"collection": collection, "sum_bytes": bytes_val})
+    return rows
+
+
 def resolve_chart_data(db: DBAPI, data: "ChartData", context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Resolve a declarative card data binding into plottable rows.
 
@@ -517,6 +543,10 @@ def resolve_chart_data(db: DBAPI, data: "ChartData", context: Optional[Dict[str,
         ``{"rows": [...], "count": int}``.
     """
     query_filter = _merge_context_filter(data.filter, context)
+
+    if data.source == "collection_sizes":
+        rows = _resolve_collection_sizes(query_filter)
+        return {"rows": rows, "count": len(rows)}
 
     if data.group_by or data.metrics:
         rows = _resolve_grouped(db, data, query_filter)

@@ -235,3 +235,34 @@ If docs and code disagree, verify in this order:
 When you find stale documentation, fix the smallest maintained document instead of adding another note elsewhere.
 
 Periodically offer to read the relevant RST and Markdown files to check for stale or duplicated documentation, especially after code, CLI, config, CI, or public API changes.
+
+## 14. Web UI — Workflow / Campaign List Ordering
+
+**Rule: list endpoints must return newest-first so that `docs[:limit]` yields the most recent items.**
+
+The single source of truth is `src/flowcept/webservice/services/sorting.py` → `sort_docs_by_first_date_field`. It must sort **descending** (`reverse=True`) and use `float("-inf")` as the fallback key for docs without a date field (so undated docs sort last, not first).
+
+All list routers — `workflows.py`, `tasks.py`, `objects.py`, `agents.py`, `campaigns.py` — call this function before slicing. If you change the sort direction or add a new list endpoint, make sure it also sorts descending before the limit slice.
+
+The frontend `useVisibleWorkflows` hook re-sorts the received items by `utc_timestamp` descending as well. Both layers must agree on newest-first; if either is flipped, recent runs disappear from the UI.
+
+## 15. Default Dashboard Configs — Two Locations Must Stay in Sync
+
+The default dashboard chart configs live in two places that **must always match**:
+
+1. `ui/public/default_dashboard_configs.json` — source of truth; served by the Vite dev server; edited here when adding/changing default charts.
+2. `src/flowcept/webservice/ui_build/default_dashboard_configs.json` — built copy; this is what `dashboard_store.py` seeds into Mongo on first run (`_SEED_FILE` constant).
+
+After editing `ui/public/default_dashboard_configs.json`, always copy it to the `ui_build` location:
+```
+cp ui/public/default_dashboard_configs.json src/flowcept/webservice/ui_build/default_dashboard_configs.json
+```
+
+**Mongo is seeded once (when the `dashboards` collection is empty).** If the collection already has documents, changing the seed file has no effect. To push updates to a running instance, update the Mongo records directly:
+```python
+import json
+from flowcept.webservice.services.dashboard_store import get_dashboard_store
+store = get_dashboard_store()
+for doc in json.load(open("src/flowcept/webservice/ui_build/default_dashboard_configs.json")):
+    store.save(doc)
+```

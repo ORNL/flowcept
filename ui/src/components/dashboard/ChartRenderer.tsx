@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiPost } from "../../api/client";
 import type { ChartDataResult } from "../../api/types";
+import { useInspectorStore } from "../../stores/inspectorStore";
 import { EChart } from "../charts/EChart";
 import { Markdown } from "../markdown/Markdown";
 import { metricKey, type Chart, type DashboardSpec } from "./spec";
@@ -20,19 +21,24 @@ function useChartData(chart: Chart, context: Record<string, unknown>, live: bool
 
 function DataChart({ chart, context }: { chart: Chart; context: Record<string, unknown> }) {
   const { data, isLoading, error } = useChartData(chart, context, chart.live);
+  const setInspector = useInspectorStore((s) => s.set);
 
   const option = useMemo(() => specToOption(chart, data?.rows ?? []), [chart, data]);
+  const rows = data?.rows ?? [];
+
+  function openInspector() {
+    if (rows.length > 0) setInspector({ kind: "chart", title: chart.title || chart.chart_id, rows });
+  }
 
   if (isLoading) return <div className="text-fg-muted p-4 text-xs">Loading…</div>;
   if (error) return <div className="text-err p-4 text-xs">{String(error)}</div>;
-  const rows = data?.rows ?? [];
 
   if (chart.type === "metric") {
     const metric = chart.data?.metrics?.[0];
     const value = metric ? rows[0]?.[metricKey(metric)] : rows.length;
     const display = typeof value === "number" ? (Number.isInteger(value) ? value : value.toFixed(3)) : String(value ?? "—");
     return (
-      <div className="flex h-full flex-col items-center justify-center">
+      <div className="flex h-full flex-col items-center justify-center cursor-pointer" onClick={openInspector}>
         <div className="text-3xl font-semibold">{display}</div>
         {metric && <div className="text-fg-muted mt-1 text-xs">{metricKey(metric)}</div>}
       </div>
@@ -69,7 +75,7 @@ function DataChart({ chart, context }: { chart: Chart; context: Record<string, u
     );
   }
 
-  return <EChart option={option} height="100%" />;
+  return <div className="h-full cursor-pointer" onClick={openInspector}><EChart option={option} height="100%" /></div>;
 }
 
 export function ChartRenderer({ chart, spec }: { chart: Chart; spec: DashboardSpec }) {

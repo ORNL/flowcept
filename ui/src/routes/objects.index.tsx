@@ -1,9 +1,12 @@
 /** Artifacts browser with type filter pills. */
 
-import { useMemo } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { Trash2 } from "lucide-react";
 import { z } from "zod";
 import { useObjects } from "../api/queries";
+import { apiDelete } from "../api/client";
+import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import { fmtBytes, shortId } from "../lib/format";
 
 export const Route = createFileRoute("/objects/")({
@@ -14,7 +17,22 @@ export const Route = createFileRoute("/objects/")({
 function ObjectsPage() {
   const { type } = Route.useSearch();
   const navigate = Route.useNavigate();
+  const router = useRouter();
   const { data, isLoading, error } = useObjects(type === "all" ? {} : { type });
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      await apiDelete(`/objects/${deleteId}`);
+      void router.invalidate();
+    } finally {
+      setDeleting(false);
+      setDeleteId(null);
+    }
+  }
 
   const sizeByType = useMemo(() => {
     const items = data?.items ?? [];
@@ -57,32 +75,49 @@ function ObjectsPage() {
       )}
       <div className="card divide-y divide-border/50">
         {(data?.items ?? []).map((o) => (
-          <Link
-            key={o.object_id}
-            to="/objects/$objectId"
-            params={{ objectId: o.object_id }}
-            className="hover:bg-surface-2 flex items-center justify-between px-4 py-2.5 text-xs"
-          >
-            <span className="min-w-0">
+          <div key={o.object_id} className="group flex items-center justify-between hover:bg-surface-2 px-4 py-2.5 text-xs">
+            <Link
+              to="/objects/$objectId"
+              params={{ objectId: o.object_id }}
+              className="flex flex-1 items-center gap-2 min-w-0"
+            >
               <span className="font-mono">{shortId(o.object_id, 16)}</span>
-              <span className="text-accent ml-2 rounded bg-accent-soft px-1.5 py-0.5 text-[10px]">
+              <span className="text-accent rounded bg-accent-soft px-1.5 py-0.5 text-[10px]">
                 {o.object_type ?? "object"}
               </span>
-              {o.version !== undefined && <span className="text-fg-muted ml-2">v{o.version}</span>}
-            </span>
-            <span className="text-fg-muted flex shrink-0 items-center gap-3 pl-4">
-              {o.object_size_bytes !== undefined && (
-                <span className="font-medium">{fmtBytes(o.object_size_bytes)}</span>
-              )}
-              <span className="truncate">
-                {o.workflow_id ? `wf ${shortId(o.workflow_id, 10)}` : ""}
-                {o.custom_metadata ? ` · ${JSON.stringify(o.custom_metadata).slice(0, 80)}` : ""}
+              {o.version !== undefined && <span className="text-fg-muted">v{o.version}</span>}
+            </Link>
+            <div className="flex shrink-0 items-center gap-3 pl-4">
+              <span className="text-fg-muted flex items-center gap-3">
+                {o.object_size_bytes !== undefined && (
+                  <span className="font-medium">{fmtBytes(o.object_size_bytes)}</span>
+                )}
+                <span className="truncate">
+                  {o.workflow_id ? `wf ${shortId(o.workflow_id, 10)}` : ""}
+                  {o.custom_metadata ? ` · ${JSON.stringify(o.custom_metadata).slice(0, 80)}` : ""}
+                </span>
               </span>
-            </span>
-          </Link>
+              <button
+                onClick={() => setDeleteId(o.object_id)}
+                className="text-fg-muted opacity-0 group-hover:opacity-100 hover:text-err ml-1"
+                title="Delete artifact"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          </div>
         ))}
       </div>
       {data && data.count === 0 && <div className="text-fg-muted text-xs">No artifacts recorded yet.</div>}
+      {deleteId && (
+        <DeleteConfirmModal
+          title="Delete artifact"
+          description={`This will permanently delete artifact ${shortId(deleteId, 16)} and all its versions. This cannot be undone.`}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteId(null)}
+          loading={deleting}
+        />
+      )}
     </div>
   );
 }

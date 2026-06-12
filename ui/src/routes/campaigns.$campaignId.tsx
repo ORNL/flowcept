@@ -1,11 +1,13 @@
 /** Campaign detail: summary, workflows, task summary, workflow card, dashboard. */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
 import { Eye, EyeOff, Trash2 } from "lucide-react";
+import { useQueries } from "@tanstack/react-query";
 import { useCampaign, useProvenanceCard, useResolveDashboard, useWorkflowsWithTasks } from "../api/queries";
-import { apiDelete } from "../api/client";
+import { apiDelete, apiPost } from "../api/client";
+import type { ChartDataResult } from "../api/types";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import { ChartRenderer } from "../components/dashboard/ChartRenderer";
 import { chart as chartSchema, dashboardSpec, type DashboardSpec } from "../components/dashboard/spec";
@@ -133,26 +135,47 @@ function CampaignDetail() {
 }
 
 function CampaignDashboardTab({ campaignId }: { campaignId: string }) {
-  const [hiddenChartIds, setHiddenChartIds] = useState<Set<string>>(() => new Set());
   const resolved = useResolveDashboard({ campaign_id: campaignId });
   const rawCharts = resolved.data ?? [];
   const charts = rawCharts.map((raw) => chartSchema.parse({ ...raw, data: { filter: {}, ...(raw.data as object) } }));
+  const context = useMemo(() => ({ campaign_id: campaignId }), [campaignId]);
+
+  const prefetch = useQueries({
+    queries: charts.map((c) => ({
+      queryKey: ["chartData", c.data, context],
+      queryFn: () => apiPost<ChartDataResult>("/stats/chart_data", { data: c.data, context }),
+      enabled: c.data != null,
+    })),
+  });
+
+  const [userToggles, setUserToggles] = useState<Map<string, boolean>>(() => new Map());
+
+  const allLoaded = charts.length > 0 && prefetch.every((r) => !r.isLoading);
+
+  const hiddenChartIds: Set<string> = (() => {
+    if (!allLoaded) return new Set();
+    const result = new Set<string>();
+    charts.forEach((c, i) => {
+      const hasData = (prefetch[i]?.data?.rows?.length ?? 0) > 0;
+      const override = userToggles.get(c.chart_id);
+      const hidden = override !== undefined ? !override : !hasData;
+      if (hidden) result.add(c.chart_id);
+    });
+    return result;
+  })();
+
   const visibleCharts = charts.filter((c) => !hiddenChartIds.has(c.chart_id));
   const spec: DashboardSpec = dashboardSpec.parse({
     type: "campaign",
     name: "Campaign Dashboard",
-    context: { campaign_id: campaignId },
+    context,
     charts: visibleCharts,
     layout: [],
   });
 
   function toggleChart(chartId: string) {
-    setHiddenChartIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(chartId)) next.delete(chartId);
-      else next.add(chartId);
-      return next;
-    });
+    const willBeVisible = hiddenChartIds.has(chartId);
+    setUserToggles((prev) => new Map(prev).set(chartId, willBeVisible));
   }
 
   if (resolved.isLoading) return <div className="text-fg-muted text-xs">Loading…</div>;

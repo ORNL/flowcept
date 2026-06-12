@@ -153,6 +153,18 @@ def get_object_history(
     return ListResponse(items=normalized, count=len(normalized), limit=limit)
 
 
+@router.delete("/{object_id}", response_model=Dict[str, Any])
+def delete_object(object_id: str, db: DBAPI = Depends(get_db_api)) -> Dict[str, Any]:
+    """Delete an object and all its versions by object_id."""
+    dao = DBAPI._dao()
+    if not hasattr(dao, "delete_object_keys"):
+        raise HTTPException(status_code=501, detail="Delete not supported by this DB backend.")
+    deleted = dao.delete_object_keys("object_id", [object_id])
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Object not found or could not be deleted: {object_id}")
+    return {"deleted": True, "object_id": object_id}
+
+
 @router.post("/query", response_model=ListResponse)
 def query_objects(payload: ObjectQueryRequest, db: DBAPI = Depends(get_db_api)) -> ListResponse:
     """Run an advanced read-only object query."""

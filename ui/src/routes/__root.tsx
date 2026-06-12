@@ -317,6 +317,8 @@ function AppShell() {
                 ? "Task"
                 : inspectorEntity.kind === "activity"
                 ? "Activity"
+                : inspectorEntity.kind === "chart"
+                ? inspectorEntity.title
                 : "Dataflow"}
             </div>
             {inspectorEntity.kind === "object" && (
@@ -328,7 +330,36 @@ function AppShell() {
                   ))}
               </div>
             )}
-            {inspectorEntity.kind !== "object" && (
+            {inspectorEntity.kind === "chart" && (() => {
+              const cols = inspectorEntity.rows.length ? Object.keys(inspectorEntity.rows[0]) : [];
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[11px]">
+                    <thead>
+                      <tr className="text-fg-muted text-left">
+                        {cols.map((c) => (
+                          <th key={c} className="border-b border-border px-2 py-1.5 font-medium whitespace-nowrap">{c}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inspectorEntity.rows.map((r, i) => (
+                        <tr key={i} className="border-b border-border/40">
+                          {cols.map((c) => {
+                            const v = r[c];
+                            const display = v === null || v === undefined ? "—"
+                              : typeof v === "number" ? (Number.isInteger(v) ? String(v) : v.toFixed(4))
+                              : String(v);
+                            return <td key={c} className="px-2 py-1 whitespace-nowrap">{display}</td>;
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+            {inspectorEntity.kind !== "object" && inspectorEntity.kind !== "chart" && (
               <GraphInspector kind={inspectorEntity.kind} data={inspectorEntity.data} />
             )}
           </div>

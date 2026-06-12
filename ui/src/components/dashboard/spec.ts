@@ -13,7 +13,7 @@ export const metricSpec = z.object({
 });
 
 export const chartData = z.object({
-  source: z.enum(["tasks", "workflows", "objects"]).default("tasks"),
+  source: z.enum(["tasks", "workflows", "objects", "collection_sizes"]).default("tasks"),
   filter: z.record(z.unknown()).default({}),
   group_by: z.string().nullish(),
   metrics: z.array(metricSpec).nullish(),

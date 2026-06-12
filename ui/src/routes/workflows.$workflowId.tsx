@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Eye, EyeOff, Radio, Trash2 } from "lucide-react";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useObjects, useProvenanceCard, useResolveDashboard, useTask, useTasksQuery, useTaskSummary, useWorkflow } from "../api/queries";
 import { useEventStream } from "../api/sse";
-import type { BlobObjectDoc, ListResponse, Task } from "../api/types";
+import type { BlobObjectDoc, ChartDataResult, ListResponse, Task } from "../api/types";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import { DagView } from "../components/charts/DagView";
 import { DataflowView } from "../components/charts/DataflowView";
@@ -19,7 +19,7 @@ import { JsonTree } from "../components/JsonTree";
 import { Markdown } from "../components/markdown/Markdown";
 import { DataTable } from "../components/tables/DataTable";
 import { TaskDrawer } from "../components/tasks/TaskDrawer";
-import { apiDelete } from "../api/client";
+import { apiDelete, apiPost } from "../api/client";
 import { fmtDuration, fmtTs, shortId, statusColor, taskDuration, toEpochSec, type TimeValue } from "../lib/format";
 import { ChartRenderer } from "../components/dashboard/ChartRenderer";
 import { chart, dashboardSpec, type DashboardSpec } from "../components/dashboard/spec";
@@ -453,26 +453,48 @@ function GraphTab({ tasks, workflowId }: { tasks: Task[]; workflowId: string }) 
 }
 
 function WorkflowDashboardTab({ workflowId, workflowName }: { workflowId: string; workflowName?: string | null }) {
-  const [hiddenChartIds, setHiddenChartIds] = useState<Set<string>>(() => new Set());
   const resolved = useResolveDashboard({ workflow_name: workflowName ?? undefined });
   const rawCharts = resolved.data ?? [];
   const charts = rawCharts.map((raw) => chart.parse({ ...raw, data: { filter: {}, ...(raw.data as object) } }));
+  const context = useMemo(() => ({ workflow_id: workflowId }), [workflowId]);
+
+  const prefetch = useQueries({
+    queries: charts.map((c) => ({
+      queryKey: ["chartData", c.data, context],
+      queryFn: () => apiPost<ChartDataResult>("/stats/chart_data", { data: c.data, context }),
+      enabled: c.data != null,
+    })),
+  });
+
+  // user-explicit toggles: true = force visible, false = force hidden
+  const [userToggles, setUserToggles] = useState<Map<string, boolean>>(() => new Map());
+
+  const allLoaded = charts.length > 0 && prefetch.every((r) => !r.isLoading);
+
+  const hiddenChartIds: Set<string> = (() => {
+    if (!allLoaded) return new Set();
+    const result = new Set<string>();
+    charts.forEach((c, i) => {
+      const hasData = (prefetch[i]?.data?.rows?.length ?? 0) > 0;
+      const override = userToggles.get(c.chart_id);
+      const hidden = override !== undefined ? !override : !hasData;
+      if (hidden) result.add(c.chart_id);
+    });
+    return result;
+  })();
+
   const visibleCharts = charts.filter((c) => !hiddenChartIds.has(c.chart_id));
   const spec: DashboardSpec = dashboardSpec.parse({
     type: "workflow",
     name: "Workflow Dashboard",
-    context: { workflow_id: workflowId },
+    context,
     charts: visibleCharts,
     layout: [],
   });
 
   function toggleChart(chartId: string) {
-    setHiddenChartIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(chartId)) next.delete(chartId);
-      else next.add(chartId);
-      return next;
-    });
+    const willBeVisible = hiddenChartIds.has(chartId);
+    setUserToggles((prev) => new Map(prev).set(chartId, willBeVisible));
   }
 
   if (resolved.isLoading) return <div className="text-fg-muted text-xs">Loading…</div>;

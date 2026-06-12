@@ -28,7 +28,7 @@ class MetricSpec(BaseModel):
 class ChartData(BaseModel):
     """Declarative data binding for a chart: what to query and how to shape it."""
 
-    source: Literal["tasks", "workflows", "objects"] = "tasks"
+    source: Literal["tasks", "workflows", "objects", "collection_sizes"] = "tasks"
     filter: Dict[str, Any] = Field(default_factory=dict)
     group_by: Optional[str] = None
     metrics: Optional[List[MetricSpec]] = None

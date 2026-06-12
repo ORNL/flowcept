@@ -63,6 +63,7 @@ Flowcept
    quick_start
    architecture
    setup
+   web_ui
    agent
    prov_capture
    telemetry_capture

@@ -1,188 +1,209 @@
 # Flowcept Web UI
 
-React single-page app for browsing and analyzing Flowcept provenance data: campaigns,
-workflows, tasks, artifacts (datasets/ML models), and agents — with live (SSE) updates,
-user-defined dashboards, and an embedded LLM chat that queries the provenance database
-and renders charts.
+React single-page application for browsing and analyzing Flowcept provenance data:
+campaigns, workflows, tasks, artifacts (datasets/ML models), and agents — with live (SSE)
+updates, per-workflow/campaign dashboards, and an embedded LLM chat that queries the
+provenance database and renders charts.
 
-The UI is served by the Flowcept webservice (FastAPI, `src/flowcept/webservice/`). The built
+The UI is served by the Flowcept webservice (FastAPI, `src/flowcept/webservice/`). Built
 assets are emitted into the Python package (`src/flowcept/webservice/ui_build/`) so released
 wheels ship the UI; end users need no Node toolchain.
 
+**Quick start:**
+```bash
+make ui-install && make ui-build
+flowcept --start-ui        # webservice + Vite dev server; open http://localhost:8008
+```
+
+---
+
 ## Dashboard data model
 
-A **dashboard** has a `type` (`workflow` or `campaign`) and contains one or more **charts**.
+Chart configurations are stored server-side in the MongoDB `dashboards` collection (or as
+JSON files when Mongo is unavailable). They are managed via `GET/POST/PUT/DELETE /api/v1/dashboards`.
+
+There are four schema types:
+
+| Type | Applies to | Matched by |
+|---|---|---|
+| `common_workflow` | every workflow's Dashboard tab | — |
+| `common_campaign` | every campaign's Dashboard tab | — |
+| `custom_workflow` | a specific workflow (by name) | `target == workflow.name` |
+| `custom_campaign` | a specific campaign | `target == campaign_id` |
+
+Default schemas are seeded from `src/flowcept/webservice/ui_build/default_dashboard_configs.json`
+on first run. **When you edit `ui/public/default_dashboard_configs.json` you must also copy it
+to `src/flowcept/webservice/ui_build/` and push the update to MongoDB:**
+```bash
+cp ui/public/default_dashboard_configs.json src/flowcept/webservice/ui_build/default_dashboard_configs.json
+python -c "
+import json
+from flowcept.webservice.services.dashboard_store import get_dashboard_store
+store = get_dashboard_store()
+for doc in json.load(open('src/flowcept/webservice/ui_build/default_dashboard_configs.json')):
+    store.save(doc)
+"
+```
+
+### Schema types
 
 ```
-Dashboard
-  type: "workflow" | "campaign"
-  name: string
-  context: { workflow_id? | campaign_id? }    # default filter injected into every chart query
-  charts: Chart[]                             # ordered list of charts
-  layout: LayoutItem[]                        # react-grid-layout positions (x,y,w,h per chart_id)
+DashboardConfig
+  dashboard_id   : string (uuid, server-assigned)
+  dashboard_type : "common_workflow" | "common_campaign" | "custom_workflow" | "custom_campaign"
+  target         : string | null   # workflow name or campaign_id for custom types
+  name           : string
+  charts         : Chart[]
 
 Chart
-  chart_id: string
-  type: "chart" | "metric" | "table" | "markdown"
-  title: string
-  live?: bool                                 # auto-refresh via SSE
-  data?: ChartData                            # declarative data binding (not used for markdown)
-  viz?: { kind: "bar"|"line"|"pie"|"scatter"|"area", stacked?: bool }
-  content?: string                            # markdown body (markdown type only)
+  chart_id  : string
+  type      : "chart" | "metric" | "table" | "markdown"
+  title     : string
+  live      : bool           # auto-refresh
+  data      : ChartData      # not used for markdown
+  viz       : { kind: "bar" | "line" | "pie" | "scatter" | "area", stacked?: bool }
+  content   : string         # markdown body (markdown type only)
 
 ChartData
-  source: "tasks" | "workflows" | "objects"
-  filter: {}                                  # Mongo-style filter; merged with dashboard context
-  group_by?: string                           # dot-path field name
-  metrics?: [{ field: string, agg: "count"|"avg"|"sum"|"min"|"max" }]
-  x?: string                                  # for time-series charts
-  y?: string[]
-  sort?: [{ field: string, order: 1 | -1 }]
-  limit: 1–5000
+  source    : "tasks" | "workflows" | "objects" | "collection_sizes"
+  filter    : {}             # Mongo-style filter; ANDed with the dashboard context
+  group_by  : string         # dot-path field (e.g. "activity_id")
+  metrics   : [{ field: string, agg: "count"|"avg"|"sum"|"min"|"max" }]
+  x / y     : string / string[]   # for scatter/line charts
+  limit     : 1–5000
 ```
 
-**Workflow dashboard** charts are scoped to a single workflow via `context.workflow_id`.
-**Campaign dashboard** charts are scoped to a campaign via `context.campaign_id`.
+**Context:** each chart's filter is automatically scoped to the current workflow or campaign
+via `context.workflow_id` / `context.campaign_id`.
 
-Chart specs are configured under `web_server` in `settings.yaml`:
+**`collection_sizes` source:** a virtual source that returns BSON byte totals across the
+`tasks`, `objects`, and `workflows` collections for the given context — used for the
+"Data per collection" chart.
 
-```yaml
-web_server:
-  workflow_dashboard:
-    - chart_id: wf-tasks-by-activity
-      type: chart
-      title: Tasks by activity
-      data: { source: tasks, group_by: activity_id, metrics: [{field: "", agg: count}] }
-      viz: { kind: bar }
-  campaign_dashboard:
-    - chart_id: camp-status-dist
-      type: chart
-      title: Status distribution
-      data: { source: tasks, group_by: status, metrics: [{field: "", agg: count}] }
-      viz: { kind: pie }
-```
+**Auto-hide:** charts that return zero rows are hidden by default. Toggle pills above the
+grid let users show/hide any chart.
 
-See `agent_sandbox/settings.yaml` for a full working example.
+**Inspector:** clicking a chart pushes its raw data rows to the right-panel Inspector as a
+formatted table.
 
-> **Note:** "Workflow Card" and "Campaign Card" are separate Flowcept concepts — they are
-> provenance markdown reports generated by `src/flowcept/report/service.py`. They have
-> nothing to do with dashboard charts.
+---
 
 ## Stack
 
 | Concern | Library |
 |---|---|
-| Build/dev server | Vite + TypeScript (strict) |
+| Build / dev server | Vite + TypeScript strict |
 | UI framework | React 18 |
 | Styling | Tailwind CSS 4 (dark theme via CSS variables in `src/index.css`) |
-| Routing | TanStack Router (file-based routes, typed search params — all view state is in the URL) |
-| Server state | TanStack Query |
+| Routing | TanStack Router (file-based, typed search params — all view state in the URL) |
+| Server state | TanStack Query v5 |
 | Tables | TanStack Table + Virtual (virtualized task tables) |
-| Charts | Apache ECharts (`echarts/core`, tree-shaken; thin wrapper in `components/charts/EChart.tsx`) |
+| Charts | Apache ECharts (`echarts/core`, tree-shaken; `components/charts/EChart.tsx` wrapper) |
 | Dashboards grid | react-grid-layout v2 (drag/resize) |
-| Markdown | react-markdown + remark-gfm (provenance cards, chat) |
-| SSE | @microsoft/fetch-event-source (supports POST bodies for chat) |
-| Validation | zod (dashboard specs, search params) |
-| Ephemeral state | zustand (chat panel) |
+| Markdown | react-markdown + remark-gfm + rehype-raw (provenance cards, chat) |
+| SSE | @microsoft/fetch-event-source (supports POST for chat streaming) |
+| Validation | zod (dashboard specs, route search params) |
+| Ephemeral state | zustand (chat panel, inspector panel) |
+
+---
 
 ## Code layout
 
 ```
 ui/
-  vite.config.ts          # dev proxy (/api → :5000), build.outDir → ../src/flowcept/webservice/ui_build
+  vite.config.ts          # dev proxy (/api → :8008), build.outDir → ../src/flowcept/webservice/ui_build
+  public/
+    default_dashboard_configs.json   # source of truth for default chart schemas
+    flowcept-logo.png
   src/
     main.tsx              # router + query client setup
     index.css             # Tailwind theme tokens (colors, card/prose utility classes)
     api/
       client.ts           # fetch wrapper for /api/v1 (apiGet/apiPost/apiPut/apiDelete)
-      types.ts            # hand-maintained API types (regenerate: npm run gen-api-types)
+      types.ts            # hand-maintained API types
       queries.ts          # TanStack Query hooks (useCampaigns, useWorkflow, useTasksQuery, ...)
-      sse.ts              # useEventStream: SSE hook w/ cursor resume, backoff, tab-pause
-    lib/format.ts         # toEpochSec/fmtTs/fmtDuration/statusColor (handles float AND ISO times)
-    stores/chatStore.ts   # chat transcript + panel state
+      sse.ts              # useEventStream: cursor resume, backoff, tab-pause
+    lib/
+      format.ts           # toEpochSec / fmtTs / fmtDuration / fmtBytes / statusColor
+    stores/
+      inspectorStore.ts   # right-panel inspector state (task / artifact / chart data)
+      chatStore.ts        # chat transcript + panel visibility
     components/
-      charts/             # EChart wrapper, GanttChart (custom series), StatusStrip, TelemetryChart
-      tables/DataTable.tsx# virtualized generic table
-      markdown/, JsonTree.tsx, tasks/TaskDrawer.tsx
+      charts/             # EChart wrapper, GanttChart, DagView, DataflowView, StatusStrip, TelemetryChart
+      tables/DataTable.tsx# virtualized generic table (TanStack Table + Virtual)
+      markdown/           # Markdown renderer (rehype-raw for HTML in prov cards)
+      JsonTree.tsx        # collapsible JSON tree
+      DeleteConfirmModal.tsx
       dashboard/
-        spec.ts           # zod mirror of webservice schemas/dashboards.py (DashboardSpec/Card/CardData)
-        specToOption.ts   # declarative card spec + rows → ECharts option
-        CardRenderer.tsx  # per-type card rendering; data via POST /api/v1/stats/card_data
-      chat/ChatPanel.tsx  # streams POST /api/v1/chat SSE events into rich message parts
-    routes/               # file-based pages: __root (shell+sidebar+chat), index (overview),
-                          # campaigns, workflows.$workflowId (tasks/timeline/telemetry/card/raw tabs),
-                          # tasks.$taskId, objects, agents, dashboards.$dashboardId (grid editor)
+        spec.ts           # zod mirror of webservice schemas/dashboards.py
+        specToOption.ts   # ChartData + rows → ECharts option
+        ChartRenderer.tsx # per-type chart rendering; data via POST /api/v1/stats/chart_data
+    routes/
+      __root.tsx          # app shell: sidebar + resizable panels + inspector + chat slot
+      index.tsx           # overview page
+      campaigns.index.tsx / campaigns.$campaignId.tsx
+      workflows.index.tsx / workflows.$workflowId.tsx
+      tasks.$taskId.tsx
+      objects.index.tsx / objects.$objectId.tsx
+      agents.index.tsx
+      dashboards.index.tsx / dashboards.$dashboardId.tsx
 ```
 
-Data-flow summary:
-
-- Pages call REST endpoints under `/api/v1` (see `src/flowcept/webservice/docs/API_CONTRACT.md`).
-- Live mode (the `LIVE` toggle on a workflow page, or `live: true` dashboard cards) uses
-  `GET /api/v1/stream/tasks` — SSE backed by incremental DB polling; the `cursor` in each event
-  resumes the stream after reconnects.
-- Dashboards are JSON specs stored server-side (`/api/v1/dashboards`); each card declares a
-  data binding (`CardData`) resolved by `POST /api/v1/stats/card_data` and mapped to ECharts.
-- Chat (`POST /api/v1/chat`) streams `tool_call`, `tool_result`, `card`, and `token` events;
-  `card` events render as inline ECharts. Queries are scoped to the page being viewed
-  (workflow/campaign/dashboard id is sent as context).
+---
 
 ## Running
 
 ### Prerequisites
 
-- Flowcept installed with the webservice extra (e.g., `pip install -e .[webservice]`, plus
-  `[llm_agent]` for chat/agent and your DB extras such as `[mongo]`).
-- Services up (e.g., `make services-mongo` for Redis + MongoDB).
-- Node 22+ and npm only if you build or develop the UI yourself.
+- Flowcept installed with `[webservice]` extra.
+- Redis + MongoDB running (`make services-mongo`).
+- Node 22+ and npm for development/build only.
 
-### Production-style (single server)
+### Production-style (bundled)
 
 ```bash
-make ui-install   # once: npm ci
-make ui-build     # builds into src/flowcept/webservice/ui_build
-flowcept --start-webservice            # serves UI + API on web_server.host:port (default :5000)
-# open http://localhost:5000           (REST docs at /docs)
+make ui-install   # once: npm ci --prefix ui
+make ui-build     # emits assets into src/flowcept/webservice/ui_build/
+flowcept --start-webservice   # serves UI + API on :8008
+# open http://localhost:8008
 ```
-
-If the built assets are missing, the webservice logs a warning and serves the API only.
 
 ### Development (hot reload)
 
 ```bash
-# terminal 1 — API:
-uvicorn flowcept.webservice.main:app --port 5000 --reload
-# terminal 2 — UI dev server (proxies /api to :5000):
-make ui-dev        # http://localhost:5173
+make ui    # kills old processes, starts webservice in background + Vite dev server in foreground
+           # UI:  http://localhost:5173  (proxies /api → :8008)
+           # API: http://localhost:8008
 ```
 
-Dev-server ports are configurable via env vars (override defaults without editing files):
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `WEBSERVER_HOST` | `0.0.0.0` | FastAPI bind host (Python, also honoured by `flowcept --start-webservice`) |
-| `WEBSERVER_PORT` | `5000` | FastAPI bind port |
-| `VITE_API_HOST` | `localhost` | API host the Vite proxy forwards `/api` requests to |
-| `VITE_API_PORT` | `5000` | API port the Vite proxy forwards to |
-| `VITE_DEV_PORT` | `5173` | Vite dev server listen port |
-
-Example — API on a non-default port:
+Or manually:
 ```bash
-WEBSERVER_PORT=8080 uvicorn flowcept.webservice.main:app --port 8080 --reload
-VITE_API_PORT=8080 make ui-dev
+# terminal 1 — API:
+PYTHONPATH=src FLOWCEPT_SETTINGS_PATH=agent_sandbox/settings.yaml \
+  python -m flowcept.cli --start-webservice
+
+# terminal 2 — UI dev server:
+npm run dev --prefix ui
 ```
 
-Type-check/build verification: `make ui-checks` / `make ui-build`.
+### Configurable ports
+
+| Environment variable | Default | Purpose |
+|---|---|---|
+| `WEBSERVER_HOST` | `0.0.0.0` | FastAPI bind host |
+| `WEBSERVER_PORT` | `8008` | FastAPI bind port |
+| `VITE_API_HOST` | `localhost` | API host the Vite proxy forwards to |
+| `VITE_API_PORT` | `8008` | API port the Vite proxy forwards to |
+| `VITE_DEV_PORT` | `5173` | Vite dev server listen port |
 
 ### Enabling the chat (LLM)
 
-The chat endpoint reuses the `agent` section of your Flowcept settings (`~/.flowcept/settings.yaml`
-or `FLOWCEPT_SETTINGS_PATH`):
-
 ```yaml
+# ~/.flowcept/settings.yaml
 agent:
   enabled: true
   service_provider: openai   # sambanova | azure | openai | google
-  llm_server_url: <your endpoint, for openai-compatible servers>
+  llm_server_url: <endpoint>
   api_key: <key>
   model: <model name>
 web_server:
@@ -193,25 +214,16 @@ web_server:
 ```
 
 Without this, `POST /api/v1/chat` returns 503 and the rest of the UI works normally.
-The LLM answers with real DB-backed tools (query tasks/workflows, task summaries, campaigns,
-agents, chart building) — the same shared tool core used by the MCP agent
-(`src/flowcept/agents/tools/prov_tools.py`).
 
-### Running the MCP agent alongside
-
-The MCP agent is a separate server for external agent clients (Claude Code, Codex, etc.) and
-live in-memory analysis. It now also exposes the DB-backed provenance tools
-(`query_provenance_tasks`, `list_provenance_campaigns`, ...):
-
-```bash
-flowcept --start-agent     # MCP (streamable HTTP) on agent.mcp_host:mcp_port (default :8000)
-```
-
-The web UI does not require the agent; the chat panel talks to the webservice directly.
+---
 
 ## Tests
 
-End-to-end integration tests (real services, no mocks) live in
-`tests/webservice/test_webservice_integration.py` (REST, SSE, dashboards, prov cards, chat —
-the LLM round-trip runs when `agent.api_key` is configured) and
-`tests/agent/agent_tests.py` (MCP tools against a running agent).
+Integration tests (real services, no mocks) are in
+`tests/webservice/test_webservice_integration.py`.
+
+Run with live services:
+```bash
+PYTHONPATH=src FLOWCEPT_SETTINGS_PATH=agent_sandbox/settings.yaml \
+  conda run -n flowcept python -m pytest tests/webservice/
+```

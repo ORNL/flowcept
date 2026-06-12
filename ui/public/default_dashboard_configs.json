@@ -70,8 +70,15 @@
       {
         "chart_id": "wf-data-sizes-by-type",
         "type": "chart",
-        "title": "Data sizes by type (bytes)",
+        "title": "Artifacts size by type",
         "data": { "source": "objects", "group_by": "object_type", "metrics": [{ "field": "object_size_bytes", "agg": "sum" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-collection-sizes",
+        "type": "chart",
+        "title": "Data per collection",
+        "data": { "source": "collection_sizes", "group_by": "collection", "metrics": [{ "field": "bytes", "agg": "sum" }], "limit": 10 },
         "viz": { "kind": "bar", "stacked": false }
       }
     ],
@@ -133,7 +140,7 @@
         "type": "chart",
         "title": "Loss vs epochs",
         "data": { "source": "tasks", "x": "used.epochs", "y": ["generated.val_loss"], "limit": 200 },
-        "viz": { "kind": "scatter", "stacked": false }
+        "viz": { "kind": "line", "stacked": false }
       },
       {
         "chart_id": "wf-accuracy-vs-loss",
