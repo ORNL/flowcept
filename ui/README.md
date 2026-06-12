@@ -179,8 +179,7 @@ make ui    # kills old processes, starts webservice in background + Vite dev ser
 Or manually:
 ```bash
 # terminal 1 — API:
-PYTHONPATH=src FLOWCEPT_SETTINGS_PATH=agent_sandbox/settings.yaml \
-  python -m flowcept.cli --start-webservice
+PYTHONPATH=src python -m flowcept.cli --start-webservice
 
 # terminal 2 — UI dev server:
 npm run dev --prefix ui
@@ -224,6 +223,5 @@ Integration tests (real services, no mocks) are in
 
 Run with live services:
 ```bash
-PYTHONPATH=src FLOWCEPT_SETTINGS_PATH=agent_sandbox/settings.yaml \
-  conda run -n flowcept python -m pytest tests/webservice/
+PYTHONPATH=src conda run -n flowcept python -m pytest tests/webservice/
 ```

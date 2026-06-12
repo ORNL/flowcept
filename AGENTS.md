@@ -1,6 +1,7 @@
 # Flowcept Code Assistant Instructions
 
 This file is the single source of truth for code-assistant behavior in this repository.
+Each major module and the UI also has its own `README.md` (under `src/flowcept/*/`, `ui/`, `tests/`, `deployment/`, `examples/`) with deeper subsystem context; read the relevant one before working in that area.
 
 Do not duplicate these rules in `CLAUDE.md`, `.cursor/rules`, `GEMINI.md`, `SKILL.md`, or other agent files.
 If a tool requires its own file, make that file (which should immediately go to .gitignore) a thin pointer to this one.
