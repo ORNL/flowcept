@@ -38,6 +38,7 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json",
         docs_url="/docs",
         redoc_url="/redoc",
+        redirect_slashes=False,
     )
 
     @app.exception_handler(ValueError)

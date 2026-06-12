@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
-import { Bot, ChevronDown, Eraser, Send, Wrench } from "lucide-react";
+import { Bot, ChevronDown, Eraser, Maximize2, Minimize2, Send, Wrench } from "lucide-react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { API_BASE } from "../../api/client";
 import { useChatStore, type ChatMsg } from "../../stores/chatStore";
@@ -37,8 +37,18 @@ interface ChatPanelProps {
 export function ChatPanel({ panelHandle }: ChatPanelProps) {
   const { busy, messages, setBusy, push, appendPart, reset } = useChatStore();
   const [input, setInput] = useState("");
+  const [isMaximized, setIsMaximized] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isMaximized) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsMaximized(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMaximized]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -85,7 +95,7 @@ export function ChatPanel({ panelHandle }: ChatPanelProps) {
         },
         onerror(err) {
           appendPart({ kind: "text", text: `⚠️ Chat request failed: ${err}` });
-          throw err; // stop retrying
+          throw err;
         },
       });
     } catch {
@@ -95,106 +105,129 @@ export function ChatPanel({ panelHandle }: ChatPanelProps) {
     }
   };
 
-  return (
-    <div className="flex h-full flex-col border-t border-border bg-surface">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <span className="flex items-center gap-1.5 text-sm font-medium"><Bot size={15} /> Flowcept Agent</span>
-        <div className="flex items-center gap-2">
-          <button onClick={reset} title="Clear conversation" className="text-fg-muted hover:text-fg">
-            <Eraser size={14} />
-          </button>
-          <button
-            onClick={() => panelHandle?.collapse()}
-            title="Minimize chat"
-            className="text-fg-muted hover:text-fg"
-          >
-            <ChevronDown size={15} />
-          </button>
-        </div>
-      </div>
+  const containerClasses = isMaximized
+    ? "fixed inset-6 z-50 flex flex-col bg-surface/95 backdrop-blur-md border border-border/80 rounded-xl shadow-2xl overflow-hidden"
+    : "flex h-full flex-col border-t border-border bg-surface";
 
-      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-3">
-        {messages.length === 0 && (
-          <div className="text-fg-muted px-2 py-8 text-center text-xs">
-            Ask about your provenance data — e.g. "how many tasks failed?", "plot task durations per
-            activity". {contextHint(pathname)}
-          </div>
-        )}
-        {messages.map((msg, i) => (
-          <div key={i} className={msg.role === "user" ? "flex justify-end" : ""}>
-            <div
-              className={
-                msg.role === "user"
-                  ? "bg-accent-soft max-w-[85%] rounded-lg px-3 py-2 text-xs"
-                  : "max-w-full space-y-2 text-xs"
-              }
+  return (
+    <>
+      {isMaximized && (
+        <div
+          className="fixed inset-0 z-40 bg-bg/85 backdrop-blur-sm transition-opacity"
+          onClick={() => setIsMaximized(false)}
+        />
+      )}
+      <div className={containerClasses}>
+        <div className="flex items-center justify-between border-b border-border px-4 py-2">
+          <span className="flex items-center gap-1.5 text-sm font-medium">
+            <Bot size={15} /> Flowcept Agent
+          </span>
+          <div className="flex items-center gap-2">
+            <button onClick={reset} title="Clear conversation" className="text-fg-muted hover:text-fg">
+              <Eraser size={14} />
+            </button>
+            <button
+              onClick={() => setIsMaximized(!isMaximized)}
+              title={isMaximized ? "Minimize window" : "Maximize window"}
+              className="text-fg-muted hover:text-fg"
             >
-              {msg.parts.map((part, j) => {
-                if (part.kind === "text") return <Markdown key={j}>{part.text}</Markdown>;
-                if (part.kind === "ui_highlight")
+              {isMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
+            {!isMaximized && (
+              <button
+                onClick={() => panelHandle?.collapse()}
+                title="Collapse panel"
+                className="text-fg-muted hover:text-fg"
+              >
+                <ChevronDown size={15} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-3">
+          {messages.length === 0 && (
+            <div className="text-fg-muted px-2 py-8 text-center text-xs">
+              Ask about your provenance data — e.g. "how many tasks failed?", "plot task durations per
+              activity". {contextHint(pathname)}
+            </div>
+          )}
+          {messages.map((msg, i) => (
+            <div key={i} className={msg.role === "user" ? "flex justify-end" : ""}>
+              <div
+                className={
+                  msg.role === "user"
+                    ? "bg-accent-soft max-w-[85%] rounded-lg px-3 py-2 text-xs"
+                    : "max-w-full space-y-2 text-xs"
+                }
+              >
+                {msg.parts.map((part, j) => {
+                  if (part.kind === "text") return <Markdown key={j}>{part.text}</Markdown>;
+                  if (part.kind === "ui_highlight")
+                    return (
+                      <div key={j} className="border-accent/40 text-accent bg-accent-soft flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-[11px]">
+                        <span>↗</span>
+                        <span>
+                          Highlighted {part.task_ids.length} task{part.task_ids.length !== 1 ? "s" : ""} in the Dataflow graph.
+                          {" "}
+                          <button
+                            onClick={() => useHighlightStore.getState().clearHighlight()}
+                            className="underline opacity-70 hover:opacity-100"
+                          >
+                            Clear
+                          </button>
+                        </span>
+                      </div>
+                    );
+                  if (part.kind === "tool")
+                    return (
+                      <details key={j} className="text-fg-muted">
+                        <summary className="flex cursor-pointer items-center gap-1.5 text-[11px]">
+                          <Wrench size={11} /> ran {part.name}
+                        </summary>
+                        <pre className="card mt-1 overflow-x-auto p-2 text-[10px]">
+                          {JSON.stringify(part.args, null, 2)}
+                        </pre>
+                      </details>
+                    );
                   return (
-                    <div key={j} className="border-accent/40 text-accent bg-accent-soft flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-[11px]">
-                      <span>↗</span>
-                      <span>
-                        Highlighted {part.task_ids.length} task{part.task_ids.length !== 1 ? "s" : ""} in the Dataflow graph.
-                        {" "}
-                        <button
-                          onClick={() => useHighlightStore.getState().clearHighlight()}
-                          className="underline opacity-70 hover:opacity-100"
-                        >
-                          Clear
-                        </button>
-                      </span>
+                    <div key={j} className="card p-2">
+                      <div className="text-fg-muted mb-1 text-[11px]">{part.data.chart.title || "chart"}</div>
+                      <EChart option={specToOption(part.data.chart, part.data.rows)} height={200} />
                     </div>
                   );
-                if (part.kind === "tool")
-                  return (
-                    <details key={j} className="text-fg-muted">
-                      <summary className="flex cursor-pointer items-center gap-1.5 text-[11px]">
-                        <Wrench size={11} /> ran {part.name}
-                      </summary>
-                      <pre className="card mt-1 overflow-x-auto p-2 text-[10px]">
-                        {JSON.stringify(part.args, null, 2)}
-                      </pre>
-                    </details>
-                  );
-                return (
-                  <div key={j} className="card p-2">
-                    <div className="text-fg-muted mb-1 text-[11px]">{part.data.chart.title || "chart"}</div>
-                    <EChart option={specToOption(part.data.chart, part.data.rows)} height={200} />
-                  </div>
-                );
-              })}
+                })}
+              </div>
             </div>
-          </div>
-        ))}
-        {busy && <div className="text-fg-muted animate-pulse px-2 text-xs">thinking…</div>}
-      </div>
+          ))}
+          {busy && <div className="text-fg-muted animate-pulse px-2 text-xs">thinking…</div>}
+        </div>
 
-      <div className="border-t border-border p-3">
-        <div className="flex items-end gap-2">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void send();
-              }
-            }}
-            rows={2}
-            placeholder="Ask about your workflows… (Enter to send)"
-            className="bg-surface-2 flex-1 resize-none rounded-md border border-border px-2.5 py-2 text-xs outline-none focus:border-accent"
-          />
-          <button
-            onClick={() => void send()}
-            disabled={busy || !input.trim()}
-            className="bg-accent-soft border-accent/40 rounded-md border p-2 disabled:opacity-40"
-          >
-            <Send size={14} />
-          </button>
+        <div className="border-t border-border p-3">
+          <div className="flex items-end gap-2">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void send();
+                }
+              }}
+              rows={2}
+              placeholder="Ask about your workflows… (Enter to send)"
+              className="bg-surface-2 flex-1 resize-none rounded-md border border-border px-2.5 py-2 text-xs outline-none focus:border-accent"
+            />
+            <button
+              onClick={() => void send()}
+              disabled={busy || !input.trim()}
+              className="bg-accent-soft border-accent/40 rounded-md border p-2 disabled:opacity-40"
+            >
+              <Send size={14} />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

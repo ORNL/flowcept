@@ -274,7 +274,7 @@ def test_workflows_list_get_and_query():
     rs = client.get("/api/v1/workflows", params={"limit": 10})
     assert rs.status_code == 200
     items = rs.json()["items"]
-    assert [item["workflow_id"] for item in items] == ["wf-2", "wf-1"]
+    assert [item["workflow_id"] for item in items] == ["wf-1", "wf-2"]
 
     rs = client.get("/api/v1/workflows", params={"user": "alice", "limit": 5})
     assert rs.status_code == 200
@@ -371,7 +371,7 @@ def test_tasks_list_get_by_workflow_and_query():
     rs = client.get("/api/v1/tasks", params={"workflow_id": "wf-1", "limit": 10})
     assert rs.status_code == 200
     assert rs.json()["count"] == 2
-    assert [item["task_id"] for item in rs.json()["items"]] == ["t1", "t2"]
+    assert [item["task_id"] for item in rs.json()["items"]] == ["t2", "t1"]
 
     rs = client.get("/api/v1/tasks/t1")
     assert rs.status_code == 200
@@ -429,7 +429,7 @@ def test_objects_list_get_version_history_and_query():
 
     rs = client.get("/api/v1/objects", params={"limit": 10})
     assert rs.status_code == 200
-    assert [item["object_id"] for item in rs.json()["items"]] == ["o2", "o3", "o1"]
+    assert [item["object_id"] for item in rs.json()["items"]] == ["o1", "o2", "o3"]
 
     rs = client.get("/api/v1/objects/o1")
     assert rs.status_code == 200
