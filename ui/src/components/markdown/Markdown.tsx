@@ -7,8 +7,8 @@ import rehypeRaw from "rehype-raw";
 export function Markdown({ children, stripInlineCode = false }: { children: string; stripInlineCode?: boolean }) {
   const components = stripInlineCode
     ? {
-        code: ({ inline, children, ...props }: { inline?: boolean; children?: React.ReactNode }) =>
-          inline ? <span>{children}</span> : <code {...props}>{children}</code>,
+        code: ({ className, children, ...props }: { className?: string; children?: React.ReactNode }) =>
+          className ? <code className={className} {...props}>{children}</code> : <span>{children}</span>,
       }
     : undefined;
 

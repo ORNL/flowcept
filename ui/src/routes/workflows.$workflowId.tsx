@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { Radio, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Radio, Trash2 } from "lucide-react";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useObjects, useProvenanceCard, useResolveDashboard, useTask, useTasksQuery, useTaskSummary, useWorkflow } from "../api/queries";
 import { useEventStream } from "../api/sse";
@@ -453,16 +453,27 @@ function GraphTab({ tasks, workflowId }: { tasks: Task[]; workflowId: string }) 
 }
 
 function WorkflowDashboardTab({ workflowId, workflowName }: { workflowId: string; workflowName?: string | null }) {
+  const [hiddenChartIds, setHiddenChartIds] = useState<Set<string>>(() => new Set());
   const resolved = useResolveDashboard({ workflow_name: workflowName ?? undefined });
   const rawCharts = resolved.data ?? [];
   const charts = rawCharts.map((raw) => chart.parse({ ...raw, data: { filter: {}, ...(raw.data as object) } }));
+  const visibleCharts = charts.filter((c) => !hiddenChartIds.has(c.chart_id));
   const spec: DashboardSpec = dashboardSpec.parse({
     type: "workflow",
     name: "Workflow Dashboard",
     context: { workflow_id: workflowId },
-    charts,
+    charts: visibleCharts,
     layout: [],
   });
+
+  function toggleChart(chartId: string) {
+    setHiddenChartIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(chartId)) next.delete(chartId);
+      else next.add(chartId);
+      return next;
+    });
+  }
 
   if (resolved.isLoading) return <div className="text-fg-muted text-xs">Loading…</div>;
 
@@ -476,8 +487,28 @@ function WorkflowDashboardTab({ workflowId, workflowName }: { workflowId: string
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      {charts.map((c) => (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {charts.map((c) => {
+          const hidden = hiddenChartIds.has(c.chart_id);
+          return (
+            <button
+              key={c.chart_id}
+              onClick={() => toggleChart(c.chart_id)}
+              className={`flex items-center gap-1 rounded border px-2 py-1 text-[11px] ${
+                hidden ? "border-border text-fg-muted" : "border-accent/50 text-fg"
+              }`}
+              title={hidden ? "Show chart" : "Hide chart"}
+            >
+              {hidden ? <EyeOff size={11} /> : <Eye size={11} />}
+              {c.title || c.chart_id}
+            </button>
+          );
+        })}
+      </div>
+      {!visibleCharts.length && <p className="text-fg-muted text-sm">All dashboard charts are hidden.</p>}
+      <div className="grid grid-cols-2 gap-4">
+      {visibleCharts.map((c) => (
         <div key={c.chart_id} className="card p-3" style={{ height: 280 }}>
           <div className="text-fg-muted mb-2 text-xs font-medium">{c.title}</div>
           <div className="h-[calc(100%-1.5rem)]">
@@ -485,6 +516,7 @@ function WorkflowDashboardTab({ workflowId, workflowName }: { workflowId: string
           </div>
         </div>
       ))}
+      </div>
     </div>
   );
 }

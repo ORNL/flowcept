@@ -31,6 +31,41 @@
         "title": "Avg task duration by activity (s)",
         "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "elapsed", "agg": "avg" }], "limit": 50 },
         "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-cpu-by-activity",
+        "type": "chart",
+        "title": "CPU by activity (%)",
+        "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "telemetry_at_end.cpu.percent_all", "agg": "avg" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-memory-by-activity",
+        "type": "chart",
+        "title": "Memory by activity",
+        "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "telemetry_at_end.memory.virtual.used", "agg": "avg" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-disk-by-activity",
+        "type": "chart",
+        "title": "Disk I/O by activity",
+        "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "telemetry_at_end.disk.io_sum.read_bytes", "agg": "sum" }, { "field": "telemetry_at_end.disk.io_sum.write_bytes", "agg": "sum" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-network-by-activity",
+        "type": "chart",
+        "title": "Network I/O by activity",
+        "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "telemetry_at_end.network.netio_sum.bytes_sent", "agg": "sum" }, { "field": "telemetry_at_end.network.netio_sum.bytes_recv", "agg": "sum" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-gpu-by-activity",
+        "type": "chart",
+        "title": "GPU memory by activity",
+        "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "telemetry_at_end.gpu.gpu_0.used", "agg": "avg" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
       }
     ],
     "created_at": null,

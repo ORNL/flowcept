@@ -98,6 +98,53 @@ def _fmt_text(value: Any, default: str = "-") -> str:
     return text if text else default
 
 
+def _first_machine_info(workflow: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the first captured machine_info entry for workflow infrastructure."""
+    machine_info = workflow.get("machine_info")
+    if not isinstance(machine_info, dict):
+        return {}
+    if all(key in machine_info for key in ("platform", "cpu", "memory")):
+        return machine_info
+    for entry in machine_info.values():
+        if isinstance(entry, dict):
+            return entry
+    return {}
+
+
+def _derive_host_os(machine_info: Dict[str, Any]) -> Optional[str]:
+    platform_info = machine_info.get("platform")
+    if not isinstance(platform_info, dict):
+        return None
+    parts = [
+        platform_info.get("system"),
+        platform_info.get("release"),
+        platform_info.get("machine"),
+    ]
+    text = " ".join(str(part) for part in parts if part)
+    return text or None
+
+
+def _derive_compute_hardware(machine_info: Dict[str, Any]) -> Optional[str]:
+    parts: List[str] = []
+    cpu_info = machine_info.get("cpu")
+    if isinstance(cpu_info, dict):
+        cpu_name = cpu_info.get("brand_raw") or cpu_info.get("brand") or cpu_info.get("arch")
+        cpu_count = cpu_info.get("count")
+        if cpu_name and cpu_count:
+            parts.append(f"{cpu_count} CPU cores ({cpu_name})")
+        elif cpu_name:
+            parts.append(str(cpu_name))
+    memory_info = machine_info.get("memory")
+    if isinstance(memory_info, dict):
+        total_mem = _deep_get(memory_info, ["virtual", "total"])
+        if as_float(total_mem) is not None:
+            parts.append(f"{_fmt_bytes(as_float(total_mem))} RAM")
+    gpu_info = machine_info.get("gpu")
+    if isinstance(gpu_info, dict) and gpu_info:
+        parts.append(f"{len(gpu_info)} GPU device(s)")
+    return "; ".join(parts) if parts else None
+
+
 def _fmt_nonzero_seconds(value: Optional[float]) -> str:
     """Render seconds only when strictly positive."""
     if value is None or value <= 0:
@@ -1368,17 +1415,20 @@ def render_workflow_card_markdown(
         lines.append("")
 
     # --- Section 3: Infrastructure ---
+    machine_info = _first_machine_info(workflow)
     infra_lines: List[str] = []
-    _append_summary_line(infra_lines, "host_os", _to_str(workflow.get("host_os"), default="~"))
-    _append_summary_line(infra_lines, "compute_hardware", _to_str(workflow.get("compute_hardware"), default="~"))
-    _append_summary_line(infra_lines, "runtime_environment", _to_str(workflow.get("environment_id"), default="~"))
-    _append_summary_line(infra_lines, "resource_manager", _to_str(workflow.get("resource_manager"), default="~"))
-    _append_summary_line(infra_lines, "primary_software", _to_str(workflow.get("primary_software"), default="~"))
-    _append_summary_line(
-        infra_lines,
-        "environment_snapshot",
-        _to_str(workflow.get("environment_snapshot"), default="~"),
-    )
+    infra_values = {
+        "host_os": workflow.get("host_os") or _derive_host_os(machine_info),
+        "compute_hardware": workflow.get("compute_hardware") or _derive_compute_hardware(machine_info),
+        "runtime_environment": workflow.get("runtime_environment") or workflow.get("environment_id"),
+        "resource_manager": workflow.get("resource_manager"),
+        "primary_software": workflow.get("primary_software")
+        or f"Flowcept {workflow.get('flowcept_version') or __version__}",
+        "environment_snapshot": workflow.get("environment_snapshot"),
+    }
+    for key, value in infra_values.items():
+        if not _is_empty_metric(_to_str(value, default="~")):
+            infra_lines.append(f"- **{key}:** `{value}`")
     if infra_lines:
         lines.append("## 3. Infrastructure")
         lines.append("")

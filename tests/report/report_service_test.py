@@ -327,6 +327,42 @@ class ReportServiceTests(unittest.TestCase):
             assert "## Per-activity Resource Usage" not in content
             assert "## Aggregation Method" not in content
 
+    def test_generate_report_derives_infrastructure_from_machine_info(self):
+        records = [
+            {
+                "type": "workflow",
+                "workflow_id": "wf-machine-1",
+                "name": "machine_demo",
+                "flowcept_version": "0.10.5",
+                "machine_info": {
+                    "interceptor-1": {
+                        "platform": {"system": "Linux", "release": "6.8.0", "machine": "x86_64"},
+                        "cpu": {"brand_raw": "Test CPU", "count": 16},
+                        "memory": {"virtual": {"total": 17179869184}},
+                    }
+                },
+            },
+            {
+                "type": "task",
+                "workflow_id": "wf-machine-1",
+                "task_id": "t1",
+                "activity_id": "run",
+                "status": "FINISHED",
+                "started_at": 10.0,
+                "ended_at": 11.0,
+            },
+        ]
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td) / "WORKFLOW_CARD.md"
+            Flowcept.generate_report(records=records, output_path=str(output))
+            content = output.read_text(encoding="utf-8")
+            assert "- **host_os:** `Linux 6.8.0 x86_64`" in content
+            assert "- **compute_hardware:** `16 CPU cores (Test CPU); 16.00 GB RAM`" in content
+            assert "- **primary_software:** `Flowcept 0.10.5`" in content
+            assert "resource_manager" not in content
+            assert "environment_snapshot" not in content
+            assert "data not captured" not in content
+
     def test_generate_report_hides_resource_sections_for_empty_telemetry_snapshots(self):
         records = [
             {
