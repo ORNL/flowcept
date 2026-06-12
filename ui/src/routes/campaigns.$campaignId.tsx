@@ -1,4 +1,4 @@
-/** Campaign detail: summary, workflows, task summary, provenance card, dashboard. */
+/** Campaign detail: summary, workflows, task summary, workflow card, dashboard. */
 
 import { useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
@@ -77,7 +77,7 @@ function CampaignDetail() {
             onClick={() => navigate({ search: { tab: t } })}
             className={`px-3 py-2 text-xs capitalize ${tab === t ? "border-accent text-fg border-b-2" : "text-fg-muted hover:text-fg"}`}
           >
-            {t === "card" ? "Provenance card" : t}
+            {t === "card" ? "Workflow Card" : t}
           </button>
         ))}
       </div>
@@ -108,11 +108,11 @@ function CampaignDetail() {
       {tab === "card" && (
         <div className="card p-5">
           {provCard.isLoading ? (
-            <div className="text-fg-muted text-xs">Generating provenance card…</div>
+            <div className="text-fg-muted text-xs">Generating workflow card…</div>
           ) : provCard.error ? (
             <div className="text-err text-xs">{String(provCard.error)}</div>
           ) : (
-            <Markdown>{provCard.data ?? ""}</Markdown>
+            <Markdown stripInlineCode>{provCard.data ?? ""}</Markdown>
           )}
         </div>
       )}

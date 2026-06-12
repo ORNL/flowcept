@@ -12,6 +12,7 @@ from flowcept import Flowcept
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.schemas.common import ListResponse, QueryRequest
+from flowcept.webservice.services.dataflow import build_dataflow
 from flowcept.webservice.services.reports import workflow_card_response
 from flowcept.webservice.services.serializers import normalize_docs
 from flowcept.webservice.services.sorting import sort_docs_by_first_date_field
@@ -97,6 +98,18 @@ def query_workflows(payload: QueryRequest, db: DBAPI = Depends(get_db_api)) -> L
     docs = docs or []
     normalized = normalize_docs(docs)
     return ListResponse(items=normalized, count=len(normalized), limit=payload.limit)
+
+
+@router.get("/{workflow_id}/dataflow", response_model=Dict[str, Any])
+def get_workflow_dataflow(
+    workflow_id: str,
+    db: DBAPI = Depends(get_db_api),
+) -> Dict[str, Any]:
+    """Get the PROV-style dataflow graph derived from tasks' used/generated fields."""
+    graph = build_dataflow(db, workflow_id)
+    if graph is None:
+        raise HTTPException(status_code=404, detail=f"No dataflow data for workflow: {workflow_id}")
+    return graph
 
 
 @router.get("/{workflow_id}/workflow_card")

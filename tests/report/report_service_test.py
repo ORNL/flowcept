@@ -489,7 +489,8 @@ class ReportServiceTests(unittest.TestCase):
 
             assert "- **Models:**" in content
             assert "- **Datasets:**" in content
-            assert "`custom_metadata`:" in content
+            assert "    - custom_metadata:" in content
+            assert "<br>" not in content
             assert "model-5" in content
             assert "model-0" not in content
             assert "Latest 5" not in content

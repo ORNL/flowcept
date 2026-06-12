@@ -38,8 +38,8 @@ flowcept_code_assistants_memory.md
 uv.lock
 examples/flowcept_messages.jsonl
 agent_sandbox/
-*PROVENANCE_*md
-*PROVENANCE_*pdf
+*WORKFLOW_CARD_*md
+*PROVENANCE_REPORT_*pdf
 CLAUDE.md
 GEMINI.md
 SKILL.md

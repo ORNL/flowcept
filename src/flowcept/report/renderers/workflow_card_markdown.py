@@ -303,18 +303,15 @@ def _build_object_details_lines(objects: List[Dict[str, Any]]) -> List[str]:
                 f"storage=`{_to_str(obj.get('storage_type'), default='-')}`, "
                 f"size=`{_fmt_bytes(as_float(obj.get('object_size_bytes')))}" + "`)"
             )
-            lines.append(
-                "    <br> "
-                f"`task_id`: `{_to_str(obj.get('task_id'), default='-')}`; "
-                f"`workflow_id`: `{_to_str(obj.get('workflow_id'), default='-')}`; "
-                f"`timestamp`: `{fmt_timestamp_utc(_extract_object_timestamp(obj))}`"
-            )
-            lines.append(f"    <br> `sha256`: `{_to_str(obj.get('data_sha256'), default='-')}`")
+            lines.append(f"    - task_id: `{_to_str(obj.get('task_id'), default='-')}`")
+            lines.append(f"    - workflow_id: `{_to_str(obj.get('workflow_id'), default='-')}`")
+            lines.append(f"    - timestamp: `{fmt_timestamp_utc(_extract_object_timestamp(obj))}`")
+            lines.append(f"    - sha256: `{_to_str(obj.get('data_sha256'), default='-')}`")
             raw_tags = obj.get("tags")
             if isinstance(raw_tags, list) and raw_tags:
                 tags_text = ", ".join(str(tag) for tag in raw_tags)
-                lines.append(f"    <br> `tags`: `{tags_text}`")
-            lines.append("    <br> `custom_metadata`:")
+                lines.append(f"    - tags: `{tags_text}`")
+            lines.append("    - custom_metadata:")
             lines.append("    ```yaml")
             metadata_lines = _format_nested_metadata_lines(obj.get("custom_metadata", {}))
             for row in metadata_lines:
@@ -1910,17 +1907,7 @@ def render_workflow_card_markdown(
         )
         lines.extend(_build_object_details_lines(objects))
         lines.append("")
-        lines.append("### Output Artifacts")
-        lines.append("")
-        lines.append("*Output artifacts are captured at the activity level above.*")
-        lines.append("")
     else:
-        lines.append("### Input Artifacts")
-        lines.append("")
-        lines.append("*No object artifacts were recorded for this run.*")
-        lines.append("")
-        lines.append("### Output Artifacts")
-        lines.append("")
         lines.append("*No object artifacts were recorded for this run.*")
         lines.append("")
 

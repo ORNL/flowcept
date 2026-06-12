@@ -16,9 +16,10 @@ function Overview() {
       .map((c) => c.last_ts)
       .filter((t): t is number => t != null && t > 0);
     if (campTs.length) return Math.max(...campTs);
-    // Fall back to most recent visible workflow (items are sorted newest first).
-    const ts = workflows.items.map((w) => toEpochSec(w.utc_timestamp)).find((t) => t != null);
-    return ts ?? undefined;
+    const ts = workflows.items
+      .map((w) => toEpochSec(w.utc_timestamp))
+      .filter((t): t is number => t != null);
+    return ts.length ? Math.max(...ts) : undefined;
   }, [campaigns.data, workflows.items]);
 
   return (
@@ -65,7 +66,7 @@ function Overview() {
           {workflows.isLoading ? (
             <div className="text-fg-muted px-4 py-4 text-center text-xs">Loading…</div>
           ) : (
-            workflows.items.slice(0, 8).map((w) => (
+            workflows.items.slice(-8).map((w) => (
               <Link
                 key={w.workflow_id}
                 to="/workflows/$workflowId"

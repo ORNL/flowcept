@@ -1,21 +1,34 @@
-/** Activity-level DAG view for a workflow's tasks. */
+/** Activity- or task-level DAG view for a workflow's tasks. */
 
 import "@xyflow/react/dist/style.css";
 import { useMemo } from "react";
-import { ReactFlow, Background, Controls, type Node, type Edge } from "@xyflow/react";
+import { ReactFlow, Background, Controls, MarkerType, type Node, type Edge } from "@xyflow/react";
 import type { Task } from "../../api/types";
-import { statusColor, toEpochSec } from "../../lib/format";
+import { fmtDuration, shortId, toEpochSec } from "../../lib/format";
+import { useInspectorStore, type GraphInspectorDoc } from "../../stores/inspectorStore";
+import { TASK_NODE_STYLE } from "./graphStyles";
+
+const MAX_TASK_NODES = 150;
 
 interface Props {
   tasks: Task[];
+  /** "activity" groups tasks by activity_id (default); "task" shows one node per task. */
+  mode?: "activity" | "task";
 }
 
-export function DagView({ tasks }: Props) {
+export function DagView({ tasks: allTasks, mode = "activity" }: Props) {
+  const tasks = useMemo(() => {
+    if (mode !== "task" || allTasks.length <= MAX_TASK_NODES) return allTasks;
+    return [...allTasks]
+      .sort((a, b) => (toEpochSec(a.started_at) ?? 0) - (toEpochSec(b.started_at) ?? 0))
+      .slice(0, MAX_TASK_NODES);
+  }, [allTasks, mode]);
+
   const { nodes, edges } = useMemo(() => {
-    // Group tasks by activity_id
+    // Group tasks by node key: activity_id, or task_id in task mode.
     const byActivity = new Map<string, Task[]>();
     for (const t of tasks) {
-      const id = t.activity_id ?? "unknown";
+      const id = (mode === "task" ? t.task_id : t.activity_id) ?? "unknown";
       if (!byActivity.has(id)) byActivity.set(id, []);
       byActivity.get(id)!.push(t);
     }
@@ -25,16 +38,25 @@ export function DagView({ tasks }: Props) {
     // Derive edge connections from task dependencies, falling back to time-ordered chain
     const hasDeps = tasks.some((t) => Array.isArray((t as any).dependencies) && (t as any).dependencies.length > 0);
 
+    const nodeKey = (t: Task) => ((mode === "task" ? t.task_id : t.activity_id) ?? "unknown");
+
     const activityEdges = new Set<string>();
     if (hasDeps) {
       for (const t of tasks) {
         const deps: string[] = (t as any).dependencies ?? [];
         for (const depId of deps) {
           const depTask = tasks.find((x) => x.task_id === depId);
-          if (depTask?.activity_id && t.activity_id && depTask.activity_id !== t.activity_id) {
-            activityEdges.add(`${depTask.activity_id}__${t.activity_id}`);
+          if (depTask && nodeKey(depTask) !== nodeKey(t)) {
+            activityEdges.add(`${nodeKey(depTask)}__${nodeKey(t)}`);
           }
         }
+      }
+    }
+    if (mode === "task" && activityEdges.size === 0) {
+      // Parent links as a secondary structure source in task mode.
+      for (const t of tasks) {
+        const parent = (t as any).parent_task_id;
+        if (parent && byActivity.has(parent)) activityEdges.add(`${parent}__${t.task_id}`);
       }
     }
 
@@ -81,28 +103,75 @@ export function DagView({ tasks }: Props) {
       rankGroups.get(r)!.push(a);
     }
 
+    // Task mode without structural edges: grid columns per activity, rows per task.
+    const gridFallback = mode === "task" && activityEdges.size === 0;
+    const activityColumns = new Map<string, number>();
+    const rowWithinActivity = new Map<string, number>();
+    if (gridFallback) {
+      const perActivityCount = new Map<string, number>();
+      const sortedTasks = [...tasks].sort(
+        (a, b) => (toEpochSec(a.started_at) ?? 0) - (toEpochSec(b.started_at) ?? 0),
+      );
+      for (const t of sortedTasks) {
+        const act = t.activity_id ?? "unknown";
+        if (!activityColumns.has(act)) activityColumns.set(act, activityColumns.size);
+        const row = perActivityCount.get(act) ?? 0;
+        perActivityCount.set(act, row + 1);
+        rowWithinActivity.set(t.task_id, row);
+      }
+    }
+
     const nodes: Node[] = activities.map((activity) => {
       const actTasks = byActivity.get(activity) ?? [];
       const statuses = actTasks.map((t) => t.status ?? "");
-      const aggStatus = statuses.includes("error") || statuses.includes("failed")
-        ? "failed"
-        : statuses.some((s) => s === "started" || s === "running")
-        ? "running"
-        : "finished";
-      const rank = ranks.get(activity) ?? 0;
+      let rank = ranks.get(activity) ?? 0;
       const siblings = rankGroups.get(rank) ?? [];
-      const idx = siblings.indexOf(activity);
+      let idx = siblings.indexOf(activity);
+      const label =
+        mode === "task"
+          ? `${actTasks[0]?.activity_id ?? "task"}\n${shortId(activity, 12)}`
+          : `${activity}\n(${actTasks.length})`;
+      const start = Math.min(...actTasks.map((t) => toEpochSec(t.started_at) ?? Infinity));
+      const end = Math.max(...actTasks.map((t) => toEpochSec(t.ended_at) ?? -Infinity));
+      const duration = start !== Infinity && end !== -Infinity ? fmtDuration(end - start) : null;
+      if (gridFallback) {
+        rank = activityColumns.get(actTasks[0]?.activity_id ?? "unknown") ?? 0;
+        idx = rowWithinActivity.get(activity) ?? 0;
+      }
+      const stats: Record<string, unknown> =
+        mode === "task"
+          ? {
+              activity_id: actTasks[0]?.activity_id ?? null,
+              task_id: activity,
+              status: actTasks[0]?.status ?? null,
+              started_at: actTasks[0]?.started_at ?? null,
+              ended_at: actTasks[0]?.ended_at ?? null,
+              duration,
+              hostname: actTasks[0]?.hostname ?? null,
+              parent_task_id: actTasks[0]?.parent_task_id ?? null,
+              used: actTasks[0]?.used ?? null,
+              generated: actTasks[0]?.generated ?? null,
+            }
+          : {
+              activity_id: activity,
+              task_count: actTasks.length,
+              status_counts: statuses.reduce<Record<string, number>>((acc, status) => {
+                if (!status) return acc;
+                acc[status] = (acc[status] ?? 0) + 1;
+                return acc;
+              }, {}),
+              started_at: start === Infinity ? null : start,
+              ended_at: end === -Infinity ? null : end,
+              duration,
+              task_ids: actTasks.map((t) => t.task_id),
+            };
       return {
         id: activity,
-        position: { x: 220 * rank, y: 90 * idx },
-        data: { label: `${activity}\n(${actTasks.length})` },
+        position: { x: 220 * rank, y: (mode === "task" ? 70 : 90) * idx },
+        data: { label, stats } as GraphInspectorDoc,
         style: {
-          background: "#1e1e2e",
-          color: "#cdd6f4",
-          border: `2px solid ${statusColor(aggStatus)}`,
-          borderRadius: 6,
-          padding: "6px 12px",
-          fontSize: 12,
+          ...TASK_NODE_STYLE,
+          fontSize: mode === "task" ? 10 : 12,
           whiteSpace: "pre",
         },
       };
@@ -110,28 +179,42 @@ export function DagView({ tasks }: Props) {
 
     const edges: Edge[] = [...activityEdges].map((key) => {
       const [source, target] = key.split("__");
-      return { id: key, source, target, type: "smoothstep" };
+      return { id: key, source, target, type: "smoothstep", markerEnd: { type: MarkerType.ArrowClosed } };
     });
 
     return { nodes, edges };
-  }, [tasks]);
+  }, [tasks, mode]);
 
   if (nodes.length === 0) return null;
 
   return (
-    <div style={{ height: 320 }} className="rounded border border-border bg-surface-2">
+    <div className="space-y-1">
+      {mode === "task" && allTasks.length > MAX_TASK_NODES && (
+        <div className="text-warn text-[11px]">
+          Showing the first {MAX_TASK_NODES} of {allTasks.length} tasks.
+        </div>
+      )}
+    <div style={{ height: mode === "task" ? 420 : 320 }} className="rounded border border-border bg-surface-2">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
+        onNodeClick={(_, node) => {
+          const stats = node.data as unknown as GraphInspectorDoc;
+          useInspectorStore.getState().set({
+            kind: mode === "task" ? "task" : "activity",
+            data: stats,
+          });
+        }}
         fitView
         fitViewOptions={{ padding: 0.2 }}
       >
         <Background />
         <Controls showInteractive={false} />
       </ReactFlow>
+    </div>
     </div>
   );
 }

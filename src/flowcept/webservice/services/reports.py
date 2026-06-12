@@ -34,8 +34,8 @@ def workflow_card_response(
     Response
         ``JSONResponse`` or markdown ``Response``.
     """
-    if format not in ("json", "markdown"):
-        raise HTTPException(status_code=400, detail=f"Unsupported format: {format}. Use json or markdown.")
+    if format not in ("json", "markdown", "pdf"):
+        raise HTTPException(status_code=400, detail=f"Unsupported format: {format}. Use json, markdown, or pdf.")
 
     scope = workflow_id or campaign_id
     try:
@@ -52,6 +52,34 @@ def workflow_card_response(
                 ]
             )[0]
             return JSONResponse(content=content)
+
+        if format == "pdf":
+            if workflow_id is None or campaign_id is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="PDF workflow cards are only supported for workflow_id scope.",
+                )
+            fd, output_path = tempfile.mkstemp(prefix=f"workflow_card_{scope}_", suffix=".pdf")
+            os.close(fd)
+            try:
+                generate_report(
+                    report_type="provenance_report",
+                    format="pdf",
+                    output_path=output_path,
+                    workflow_id=workflow_id,
+                )
+                with open(output_path, "rb") as handle:
+                    payload = handle.read()
+            finally:
+                try:
+                    os.remove(output_path)
+                except Exception:
+                    pass
+            return Response(
+                content=payload,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f'attachment; filename="workflow_card_{scope}.pdf"'},
+            )
 
         fd, output_path = tempfile.mkstemp(prefix=f"workflow_card_{scope}_", suffix=".md")
         os.close(fd)

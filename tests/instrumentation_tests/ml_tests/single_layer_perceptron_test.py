@@ -202,28 +202,36 @@ def train_and_validate(
     return result
 
 
-@flowcept_task(subtype=ML_Types.MODEL_SELECTION)
-def select_best_model(workflow_id):
-    """Select the best model object for a workflow by minimal recorded loss."""
-    best_doc = Flowcept.db.query(
-        collection="objects",
-        filter={
-            "workflow_id": workflow_id,
-            "object_type": "ml_model",
-            "custom_metadata.loss": {"$exists": True},
-        },
-        sort=[("custom_metadata.loss", 1)],
-        limit=1,
-    )[0]
+def _best_gridsearch_result(results):
+    return min(results, key=lambda item: float(item["result"]["best_val_loss"]))["result"]
+
+
+def select_best_model_args_handler(results=None, **kwargs):
+    """Capture the selected training output as model-selection input."""
+    if results is None:
+        return kwargs
+    result = _best_gridsearch_result(results)
+    return {
+        "torch_model_object_id": result["torch_model_object_id"],
+        "best_val_loss": result["best_val_loss"],
+        "config_id": result["config_id"],
+    }
+
+
+@flowcept_task(subtype=ML_Types.MODEL_SELECTION, args_handler=select_best_model_args_handler)
+def select_best_model(results):
+    """Select the best model from train task outputs by minimal validation loss."""
+    result = _best_gridsearch_result(results)
+    best_model_object_id = result["torch_model_object_id"]
     Flowcept.db.update_object_metadata(
-        object_id=best_doc["object_id"],
+        object_id=best_model_object_id,
         tags=["best"],
-        control_version=True
+        control_version=True,
     )
     return {
-        "selected_model_object_id": best_doc["object_id"],
-        "selected_loss": best_doc["custom_metadata"]["loss"],
-        "selected_config_id": best_doc["custom_metadata"]["config_id"],
+        "selected_model_object_id": best_model_object_id,
+        "selected_loss": result["best_val_loss"],
+        "selected_config_id": result["config_id"],
     }
 
 
@@ -235,6 +243,54 @@ def run_training(n_samples, split_ratio, n_input_neurons, epochs):
     # Train and Validate:
     result = train_and_validate(n_input_neurons, epochs, x_train, y_train, x_val, y_val, dataset_id=dataset_id)
     return result
+
+
+def run_gridsearch_experiment(campaign_id=None):
+    """Run the Perceptron GridSearch scenario and return captured artifacts."""
+    reproducibility = _set_reproducibility(seed=42)
+    configs = [
+        {"epochs": 2, "learning_rate": 0.01, "n_input_neurons": 1},
+        {"epochs": 4, "learning_rate": 0.03, "n_input_neurons": 1},
+        {"epochs": 6, "learning_rate": 0.08, "n_input_neurons": 2},
+        {"epochs": 10, "learning_rate": 0.12, "n_input_neurons": 2},
+        {"epochs": 14, "learning_rate": 0.20, "n_input_neurons": 2},
+    ]
+    kwargs = {
+        "workflow_name": "Perceptron GridSearch",
+        "workflow_subtype": ML_Types.WORKFLOW,
+        "workflow_args": reproducibility,
+    }
+    if campaign_id is not None:
+        kwargs["campaign_id"] = campaign_id
+
+    with Flowcept(**kwargs):
+        x_train, y_train, x_val, y_val, dataset_id = get_dataset(120, 0.8)
+        results = []
+        for idx, cfg in enumerate(configs, 1):
+            result = train_and_validate(
+                n_input_neurons=cfg["n_input_neurons"],
+                epochs=cfg["epochs"],
+                learning_rate=cfg["learning_rate"],
+                x_train=x_train,
+                y_train=y_train,
+                x_val=x_val,
+                y_val=y_val,
+                dataset_id=dataset_id,
+                checkpoint_check=2,
+                config_id=f"cfg_{idx}",
+                torch_only=True,
+            )
+            results.append({"config": cfg, "result": result})
+
+        selected = select_best_model(results)
+
+    return {
+        "workflow_id": Flowcept.current_workflow_id,
+        "tasks": Flowcept.db.get_tasks_from_current_workflow(),
+        "configs": configs,
+        "results": results,
+        "selected": selected,
+    }
 
 
 def assert_single_inference_shape(model, sample):
@@ -374,47 +430,7 @@ class SingleLayerPerceptronTests(unittest.TestCase):
 
     def run_gridsearch_experiment(self):
         """Run the grid-search scenario and return collected artifacts for assertions."""
-        reproducibility = _set_reproducibility(seed=42)
-        configs = [
-            {"epochs": 2, "learning_rate": 0.01, "n_input_neurons": 1},
-            {"epochs": 4, "learning_rate": 0.03, "n_input_neurons": 1},
-            {"epochs": 6, "learning_rate": 0.08, "n_input_neurons": 2},
-            {"epochs": 10, "learning_rate": 0.12, "n_input_neurons": 2},
-            {"epochs": 14, "learning_rate": 0.20, "n_input_neurons": 2},
-        ]
-
-        with Flowcept(
-            workflow_name="Perceptron GridSearch",
-            workflow_subtype=ML_Types.WORKFLOW,
-            workflow_args=reproducibility,
-        ):
-            x_train, y_train, x_val, y_val, dataset_id = get_dataset(120, 0.8)
-            results = []
-            for idx, cfg in enumerate(configs, 1):
-                result = train_and_validate(
-                    n_input_neurons=cfg["n_input_neurons"],
-                    epochs=cfg["epochs"],
-                    learning_rate=cfg["learning_rate"],
-                    x_train=x_train,
-                    y_train=y_train,
-                    x_val=x_val,
-                    y_val=y_val,
-                    dataset_id=dataset_id,
-                    checkpoint_check=2,
-                    config_id=f"cfg_{idx}",
-                    torch_only=True,
-                )
-                results.append({"config": cfg, "result": result})
-
-            selected = select_best_model(Flowcept.current_workflow_id)
-
-        return {
-            "workflow_id": Flowcept.current_workflow_id,
-            "tasks": Flowcept.db.get_tasks_from_current_workflow(),
-            "configs": configs,
-            "results": results,
-            "selected": selected,
-        }
+        return run_gridsearch_experiment()
 
     def assert_gridsearch_experiment(self, run_data):
         """Assert all grid-search expectations from captured run data."""
@@ -434,7 +450,7 @@ class SingleLayerPerceptronTests(unittest.TestCase):
                 "- **select_best_model** (subtype=`model_selection`)",
             ],
             expected_content_lines=[
-                "`tags`: `best`",
+                "    - tags: `best`",
             ],
         )
 

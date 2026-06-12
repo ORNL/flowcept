@@ -3,7 +3,15 @@
 import { create } from "zustand";
 import type { BlobObjectDoc } from "../api/types";
 
-export type InspectorEntity = { kind: "object"; data: BlobObjectDoc } | null;
+export interface GraphInspectorDoc extends Record<string, unknown> {
+  label: string;
+  stats: Record<string, unknown>;
+}
+
+export type InspectorEntity =
+  | { kind: "object"; data: BlobObjectDoc }
+  | { kind: "task" | "activity" | "dataflow"; data: GraphInspectorDoc }
+  | null;
 
 interface InspectorState {
   entity: InspectorEntity;

@@ -311,6 +311,34 @@ def test_workflow_card_download_route():
     assert "# Workflow Card" in rs.text
 
 
+def test_workflow_card_pdf_download_route():
+    client, _ = build_client()
+
+    def _fake_generate_report(**kwargs):
+        output = kwargs["output_path"]
+        Path(output).write_bytes(b"%PDF-1.4\n%%EOF")
+        return {"output": output}
+
+    with patch("flowcept.webservice.services.reports.generate_report", side_effect=_fake_generate_report):
+        rs = client.get("/api/v1/workflows/wf-1/workflow_card", params={"format": "pdf"})
+
+    assert rs.status_code == 200
+    assert rs.headers["content-type"].startswith("application/pdf")
+    assert rs.headers["content-disposition"] == 'attachment; filename="workflow_card_wf-1.pdf"'
+    assert rs.content.startswith(b"%PDF-1.4")
+
+
+def test_workflow_card_route_is_named_workflow_card():
+    client, _ = build_client()
+
+    openapi = client.get("/openapi.json")
+    assert openapi.status_code == 200
+    schema = openapi.json()
+    paths = schema["paths"]
+    assert "/api/v1/workflows/{workflow_id}/workflow_card" in paths
+    assert "/api/v1/workflows/{workflow_id}/provenance_card" not in paths
+
+
 def test_workflows_errors():
     client, _ = build_client()
 
@@ -369,6 +397,9 @@ def test_tasks_list_get_by_workflow_and_query():
 
 def test_tasks_errors_and_validation():
     client, _ = build_client()
+
+    rs = client.get("/api/v1/tasks/")
+    assert rs.status_code == 404
 
     rs = client.get("/api/v1/tasks/missing")
     assert rs.status_code == 404
@@ -614,7 +645,7 @@ def test_unified_scoped_query_rejects_unsupported_operator():
     assert "Unsupported filter operator" in rs.json()["detail"]
 
 
-def test_dashboard_routes_accept_cards_contract():
+def test_dashboard_routes_accept_charts_contract():
     app = create_app()
     store = FakeDashboardStore()
     app.dependency_overrides[get_dashboard_store] = lambda: store
@@ -623,18 +654,18 @@ def test_dashboard_routes_accept_cards_contract():
     spec = {
         "name": "dashboard",
         "context": {"workflow_id": "wf-1"},
-        "cards": [
+        "charts": [
             {
-                "card_id": "c1",
+                "chart_id": "c1",
                 "type": "chart",
                 "data": {"source": "tasks", "filter": {"workflow_id": "wf-1"}},
             }
         ],
-        "layout": [{"card_id": "c1", "x": 0, "y": 0, "w": 6, "h": 4}],
+        "layout": [{"chart_id": "c1", "x": 0, "y": 0, "w": 6, "h": 4}],
     }
 
     rs = client.post("/api/v1/dashboards", json=spec)
     assert rs.status_code == 201
     body = rs.json()
-    assert body["cards"][0]["card_id"] == "c1"
-    assert body["layout"][0]["card_id"] == "c1"
+    assert body["charts"][0]["chart_id"] == "c1"
+    assert body["layout"][0]["chart_id"] == "c1"

@@ -79,10 +79,11 @@ export function useTasksQuery(body: QueryRequest, enabled = true) {
   });
 }
 
-export function useTask(taskId: string) {
+export function useTask(taskId: string, enabled = true) {
   return useQuery({
     queryKey: ["task", taskId],
     queryFn: () => apiGet<Task>(`/tasks/${taskId}`),
+    enabled: enabled && !!taskId,
   });
 }
 
@@ -143,17 +144,17 @@ export function useWorkflowsWithTasks() {
 
 /**
  * The single source of truth for user-facing workflow lists: only named
- * workflows that have at least one task, sorted newest first. Renders
- * nothing until both queries resolve — never falls back to unfiltered data.
+ * workflows that have at least one task and a usable timestamp, preserving server chronology.
+ * Renders nothing until both queries resolve — never falls back to unfiltered data.
  */
 export function useVisibleWorkflows(params: { campaign_id?: string } = {}) {
   const workflows = useWorkflows(params);
   const withTasks = useWorkflowsWithTasks();
   const items = useMemo(() => {
     if (!workflows.data || !withTasks.data) return [];
-    return workflows.data.items
-      .filter((w) => w.name && withTasks.data.has(w.workflow_id))
-      .sort((a, b) => (toEpochSec(b.utc_timestamp) ?? 0) - (toEpochSec(a.utc_timestamp) ?? 0));
+    return workflows.data.items.filter(
+      (w) => w.name && withTasks.data.has(w.workflow_id) && toEpochSec(w.utc_timestamp) !== null,
+    );
   }, [workflows.data, withTasks.data]);
   return {
     items,
@@ -162,10 +163,32 @@ export function useVisibleWorkflows(params: { campaign_id?: string } = {}) {
   };
 }
 
+export interface DataflowNode {
+  id: string;
+  kind: "task" | "chunk";
+  label: string;
+  stats: Record<string, unknown>;
+}
+
+export interface DataflowGraph {
+  level: "coarse";
+  nodes: DataflowNode[];
+  edges: { source: string; target: string; relation: "used" | "generated" | "derived"; key?: string }[];
+  truncated: boolean;
+}
+
+export function useDataflow(workflowId: string) {
+  return useQuery({
+    queryKey: ["dataflow", workflowId],
+    queryFn: () => apiGet<DataflowGraph>(`/workflows/${workflowId}/dataflow`),
+    staleTime: 30_000,
+  });
+}
+
 export function useProvenanceCard(scope: "workflows" | "campaigns", id: string, enabled = true) {
   return useQuery({
     queryKey: ["provCard", scope, id],
-    queryFn: () => apiGetText(`/${scope}/${id}/provenance_card`, { format: "markdown" }),
+    queryFn: () => apiGetText(`/${scope}/${id}/workflow_card`, { format: "markdown" }),
     enabled,
     staleTime: 60_000,
   });

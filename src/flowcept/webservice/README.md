@@ -106,7 +106,7 @@ All API routes are mounted under:
 
 - `GET /api/v1/stats/tasks/summary?workflow_id=&campaign_id=&agent_id=&filter_json=`
 - `POST /api/v1/stats/timeseries` — dot-notated (telemetry) fields over tasks for plotting
-- `POST /api/v1/stats/card_data` — declarative dashboard card data resolver
+- `POST /api/v1/stats/chart_data` — declarative dashboard chart data resolver
 
 ### Dashboards
 

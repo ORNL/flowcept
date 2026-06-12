@@ -4,8 +4,8 @@ The spec is deliberately declarative so that LLM tools can reliably generate/mod
 it and the frontend can validate and render it.
 
 Data model:
-- A Dashboard has a type (workflow | campaign) and contains multiple cards.
-- Each card can have a data binding (ChartData) describing what to query.
+- A Dashboard has a type (workflow | campaign) and contains multiple charts.
+- Each chart can have a data binding (ChartData) describing what to query.
 - VizSpec describes how to render the query result (bar, pie, line, ...).
 """
 
@@ -46,9 +46,9 @@ class VizSpec(BaseModel):
 
 
 class DashboardChart(BaseModel):
-    """One card inside a dashboard."""
+    """One chart inside a dashboard."""
 
-    card_id: str
+    chart_id: str
     type: Literal["chart", "metric", "table", "markdown"]
     title: str = ""
     live: bool = False
@@ -59,9 +59,9 @@ class DashboardChart(BaseModel):
 
 
 class LayoutItem(BaseModel):
-    """Grid placement of a card in a 12-column layout."""
+    """Grid placement of a chart in a 12-column layout."""
 
-    card_id: str
+    chart_id: str
     x: int = Field(ge=0, le=11)
     y: int = Field(ge=0)
     w: int = Field(ge=1, le=12)
@@ -69,14 +69,14 @@ class LayoutItem(BaseModel):
 
 
 class DashboardSpec(BaseModel):
-    """A complete dashboard: type, context filter, cards, and layout."""
+    """A complete dashboard: type, context filter, charts, and layout."""
 
     dashboard_id: Optional[str] = None
     type: Literal["workflow", "campaign"] = "workflow"
     name: str
     description: str = ""
     context: Dict[str, Any] = Field(default_factory=dict)
-    cards: List[DashboardChart] = Field(default_factory=list)
+    charts: List[DashboardChart] = Field(default_factory=list)
     layout: List[LayoutItem] = Field(default_factory=list)
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
@@ -99,7 +99,7 @@ class DashboardConfig(BaseModel):
     name: str = ""
     description: str = ""
     context: Dict[str, Any] = Field(default_factory=dict)
-    cards: List[DashboardChart] = Field(default_factory=list)
+    charts: List[DashboardChart] = Field(default_factory=list)
     layout: List[LayoutItem] = Field(default_factory=list)
     created_at: Optional[str] = None
     updated_at: Optional[str] = None

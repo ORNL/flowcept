@@ -145,8 +145,8 @@ Unified scoped read-only query endpoint.
 
 - `GET /api/v1/stats/tasks/summary` — `{count, status_counts, activity_stats, time_range}`
 - `POST /api/v1/stats/timeseries` — body `{filter, fields: [dot-paths], x, limit}` → `{rows, count}`
-- `POST /api/v1/stats/card_data` — body `{data: CardData, context}` → `{rows, count}`;
-  `CardData` is the declarative dashboard binding (`source, filter, group_by, metrics | x/y, sort, limit`)
+- `POST /api/v1/stats/chart_data` — body `{data: ChartData, context}` → `{rows, count}`;
+  `ChartData` is the declarative dashboard binding (`source, filter, group_by, metrics | x/y, sort, limit`)
 
 ### Dashboards
 

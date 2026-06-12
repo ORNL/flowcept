@@ -11,6 +11,7 @@ import { useEventStream } from "../api/sse";
 import type { BlobObjectDoc, ListResponse, Task } from "../api/types";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import { DagView } from "../components/charts/DagView";
+import { DataflowView } from "../components/charts/DataflowView";
 import { GanttChart } from "../components/charts/GanttChart";
 import { StatusStrip } from "../components/charts/StatusStrip";
 import { TelemetryChart } from "../components/charts/TelemetryChart";
@@ -80,7 +81,7 @@ function WorkflowDetail() {
     },
   });
 
-  const openTask = useTask(search.task ?? "");
+  const openTask = useTask(search.task ?? "", !!search.task);
   const taskItems = useMemo(() => tasks.data?.items ?? [], [tasks.data]);
 
   const columns = useMemo<ColumnDef<Task, any>[]>(
@@ -251,7 +252,7 @@ function WorkflowDetail() {
                 search.tab === t ? "border-accent text-fg border-b-2" : "text-fg-muted hover:text-fg"
               }`}
             >
-              {t === "card" ? "Workflow Card" : t === "dashboard" ? "Dashboard" : t === "graph" ? "Graph" : t}
+              {t === "card" ? "Workflow Card" : t === "dashboard" ? "Dashboard" : t === "graph" ? "Graphs" : t}
             </button>
           ))}
         </div>
@@ -297,7 +298,7 @@ function WorkflowDetail() {
           />
         ))}
 
-      {search.tab === "graph" && <div className="card p-4"><DagView tasks={taskItems} /></div>}
+      {search.tab === "graph" && <GraphTab tasks={taskItems} workflowId={workflowId} />}
 
       {search.tab === "timeline" && (
         <div className="card p-4">
@@ -359,21 +360,31 @@ function ProvCardTab({ workflowId }: { workflowId: string }) {
     URL.revokeObjectURL(a.href);
   }
 
+  function downloadPdf() {
+    const a = document.createElement("a");
+    a.href = `/api/v1/workflows/${workflowId}/workflow_card?format=pdf`;
+    a.download = `workflow_card_${workflowId}.pdf`;
+    a.click();
+  }
+
   return (
     <div className="card p-5 space-y-4">
       {!card.isLoading && !card.error && card.data && (
         <div className="flex gap-2 justify-end">
           <button onClick={downloadMd} className="text-xs text-fg-muted hover:text-fg border border-border rounded px-2.5 py-1">
-            Download MD
+            Download Card
+          </button>
+          <button onClick={downloadPdf} className="text-xs text-fg-muted hover:text-fg border border-border rounded px-2.5 py-1">
+            Download PDF
           </button>
         </div>
       )}
       {card.isLoading ? (
-        <div className="text-fg-muted text-xs">Generating provenance card…</div>
+        <div className="text-fg-muted text-xs">Generating workflow card…</div>
       ) : card.error ? (
         <div className="text-err text-xs">{String(card.error)}</div>
       ) : (
-        <Markdown>{card.data ?? ""}</Markdown>
+        <Markdown stripInlineCode>{card.data ?? ""}</Markdown>
       )}
     </div>
   );
@@ -400,6 +411,43 @@ function ArtifactsTab({ workflowId }: { workflowId: string }) {
   return (
     <div className="card p-4">
       <DataTable data={items} columns={OBJECT_COLS} onRowClick={(obj) => useInspectorStore.getState().set({ kind: "object", data: obj })} />
+    </div>
+  );
+}
+
+function GraphTab({ tasks, workflowId }: { tasks: Task[]; workflowId: string }) {
+  const [graphType, setGraphType] = useState<"activity" | "task" | "dataflow">("activity");
+  return (
+    <div className="card space-y-3 p-4">
+      <div className="flex items-center gap-2">
+        <div className="flex rounded border border-border text-xs">
+          {(
+            [
+              ["activity", "Activity Graph"],
+              ["task", "Task Graph"],
+              ["dataflow", "Dataflow Graph"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setGraphType(key)}
+              className={`px-3 py-1.5 ${graphType === key ? "bg-accent-soft text-fg" : "text-fg-muted hover:text-fg"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="text-fg-muted text-[11px]">
+          {graphType === "activity" && "Activities and their execution order."}
+          {graphType === "task" && "Individual task executions."}
+          {graphType === "dataflow" && "How data flows between tasks, derived from inputs and outputs."}
+        </span>
+      </div>
+      {graphType === "dataflow" ? (
+        <DataflowView workflowId={workflowId} />
+      ) : (
+        <DagView tasks={tasks} mode={graphType} />
+      )}
     </div>
   );
 }

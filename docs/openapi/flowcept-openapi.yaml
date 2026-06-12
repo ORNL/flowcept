@@ -327,6 +327,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/workflows/{workflow_id}/dataflow:
+    get:
+      tags:
+      - workflows
+      summary: Get Workflow Dataflow
+      description: Get the PROV-style dataflow graph derived from tasks' used/generated
+        fields.
+      operationId: get_workflow_dataflow_api_v1_workflows__workflow_id__dataflow_get
+      parameters:
+      - name: workflow_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workflow Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Workflow Dataflow Api V1 Workflows  Workflow Id  Dataflow
+                  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/workflows/{workflow_id}/workflow_card:
     get:
       tags:
@@ -1854,21 +1885,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /:
-    get:
-      tags:
-      - health
-      summary: Root
-      operationId: root__get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties: true
-                type: object
-                title: Response Root  Get
 components:
   schemas:
     AggregationSpec:
@@ -2004,9 +2020,9 @@ components:
       description: 'Chat request: client-passed history plus UI context.'
     DashboardChart:
       properties:
-        card_id:
+        chart_id:
           type: string
-          title: Card Id
+          title: Chart Id
         type:
           type: string
           enum:
@@ -2043,10 +2059,10 @@ components:
           title: Content
       type: object
       required:
-      - card_id
+      - chart_id
       - type
       title: DashboardChart
-      description: One card inside a dashboard.
+      description: One chart inside a dashboard.
     DashboardConfig:
       properties:
         dashboard_id:
@@ -2080,11 +2096,11 @@ components:
           additionalProperties: true
           type: object
           title: Context
-        cards:
+        charts:
           items:
             $ref: '#/components/schemas/DashboardChart'
           type: array
-          title: Cards
+          title: Charts
         layout:
           items:
             $ref: '#/components/schemas/LayoutItem'
@@ -2118,9 +2134,9 @@ components:
       title: HTTPValidationError
     LayoutItem:
       properties:
-        card_id:
+        chart_id:
           type: string
-          title: Card Id
+          title: Chart Id
         x:
           type: integer
           maximum: 11.0
@@ -2141,13 +2157,13 @@ components:
           title: H
       type: object
       required:
-      - card_id
+      - chart_id
       - x
       - y
       - w
       - h
       title: LayoutItem
-      description: Grid placement of a card in a 12-column layout.
+      description: Grid placement of a chart in a 12-column layout.
     ListResponse:
       properties:
         items:
