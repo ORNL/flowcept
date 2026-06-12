@@ -27,6 +27,8 @@ def load_saved_df(df_path: str) -> pd.DataFrame:
         "activity_id",
         "agent_id",
         "agent_name",
+        "source_agent_id",
+        "source_agent_name",
         "campaign_id",
         "hostname",
     ]

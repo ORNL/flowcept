@@ -699,6 +699,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - objects
+      summary: Delete Object
+      description: Delete an object and all its versions by object_id.
+      operationId: delete_object_api_v1_objects__object_id__delete
+      parameters:
+      - name: object_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Object Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Delete Object Api V1 Objects  Object Id  Delete
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/objects/{object_id}/versions/{version}:
     get:
       tags:
@@ -1915,6 +1943,7 @@ components:
           - tasks
           - workflows
           - objects
+          - collection_sizes
           title: Source
           default: tasks
         filter:
