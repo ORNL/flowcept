@@ -110,7 +110,9 @@ When a user or code assistant needs to learn or use a Flowcept feature, read the
 
 ## 8. Flowcept Usage Rules
 
+- Copy the sample settings file `resources/sample_settings.yaml` to `agent_sandbox/settings.yaml` and set the `FLOWCEPT_SETTINGS_PATH` environment variable to point to it during local runs and tests. Do not modify the user's settings in the home directory (`~/.flowcept/settings.yaml`).
 - Use `FLOWCEPT_SETTINGS_PATH` to isolate settings for tests or experiments.
+
 - `flowcept --init-settings` creates settings.
 - `flowcept --init-settings --full -y` creates the full template.
 - `flowcept --config-profile <profile> -y` changes runtime mode.

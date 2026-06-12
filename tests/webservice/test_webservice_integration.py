@@ -239,7 +239,7 @@ def test_webservice_campaigns_agents_stats_and_prov_card():
     assert all(row["started_at"] is not None for row in rs.json()["rows"])
 
     rs = client.post(
-        "/api/v1/stats/card_data",
+        "/api/v1/stats/chart_data",
         json={
             "data": {
                 "source": "tasks",
