@@ -203,6 +203,8 @@ def test_webservice_campaigns_agents_stats_and_prov_card(db_cleanup):
 
     ok = _wait_for(lambda: len(Flowcept.db.task_query(filter={"workflow_id": workflow_id}) or []) >= 4)
     assert ok, "Timed out waiting for persisted tasks."
+    ok = _wait_for(lambda: Flowcept.db.get_workflow_object(workflow_id) is not None)
+    assert ok, "Timed out waiting for persisted workflow."
 
     app = create_app()
     client = TestClient(app)

@@ -84,8 +84,10 @@ dev = [
     "pytest",
     "pytest-timeout",
     "ruff",
-    "pyyaml"
+    "pyyaml",
+    "httpx2"
 ]
+
 # Torch and some other ML-specific libs are only used for dev/test workflows.
 ml_dev = [
     "torch>=2.6.0",
