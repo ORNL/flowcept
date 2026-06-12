@@ -1,10 +1,10 @@
 /** Workflow detail: status strip + tabs (tasks table, timeline, telemetry, prov card, artifacts, raw). */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { Eye, EyeOff, Radio, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Maximize2, Minimize2, Radio, Trash2 } from "lucide-react";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { useObjects, useProvenanceCard, useResolveDashboard, useTask, useTasksQuery, useTaskSummary, useWorkflow } from "../api/queries";
 import { useEventStream } from "../api/sse";
@@ -417,38 +417,77 @@ function ArtifactsTab({ workflowId }: { workflowId: string }) {
 
 function GraphTab({ tasks, workflowId }: { tasks: Task[]; workflowId: string }) {
   const [graphType, setGraphType] = useState<"activity" | "task" | "dataflow">("activity");
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    if (!isMaximized) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsMaximized(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMaximized]);
+
+  const cardClasses = isMaximized
+    ? "fixed inset-6 z-50 flex flex-col space-y-3 p-6 bg-surface/95 backdrop-blur-md border border-border/80 rounded-xl shadow-2xl overflow-hidden"
+    : "card space-y-3 p-4";
+
   return (
-    <div className="card space-y-3 p-4">
-      <div className="flex items-center gap-2">
-        <div className="flex rounded border border-border text-xs">
-          {(
-            [
-              ["activity", "Activity Graph"],
-              ["task", "Task Graph"],
-              ["dataflow", "Dataflow Graph"],
-            ] as const
-          ).map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setGraphType(key)}
-              className={`px-3 py-1.5 ${graphType === key ? "bg-accent-soft text-fg" : "text-fg-muted hover:text-fg"}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <span className="text-fg-muted text-[11px]">
-          {graphType === "activity" && "Activities and their execution order."}
-          {graphType === "task" && "Individual task executions."}
-          {graphType === "dataflow" && "How data flows between tasks, derived from inputs and outputs."}
-        </span>
-      </div>
-      {graphType === "dataflow" ? (
-        <DataflowView workflowId={workflowId} />
-      ) : (
-        <DagView tasks={tasks} mode={graphType} />
+    <>
+      {isMaximized && (
+        <div
+          className="fixed inset-0 z-40 bg-bg/85 backdrop-blur-sm transition-opacity"
+          onClick={() => setIsMaximized(false)}
+        />
       )}
-    </div>
+      <div className={cardClasses}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex rounded border border-border text-xs">
+              {(
+                [
+                  ["activity", "Activity Graph"],
+                  ["task", "Task Graph"],
+                  ["dataflow", "Dataflow Graph"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setGraphType(key)}
+                  className={`px-3 py-1.5 ${graphType === key ? "bg-accent-soft text-fg" : "text-fg-muted hover:text-fg"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span className="text-fg-muted text-[11px] hidden sm:inline">
+              {graphType === "activity" && "Activities and their execution order."}
+              {graphType === "task" && "Individual task executions."}
+              {graphType === "dataflow" && "How data flows between tasks, derived from inputs and outputs."}
+            </span>
+          </div>
+
+          <button
+            onClick={() => setIsMaximized(!isMaximized)}
+            className="text-fg-muted hover:text-fg p-1.5 rounded border border-border hover:bg-surface-2 transition-colors flex items-center gap-1.5 text-xs font-medium"
+            title={isMaximized ? "Minimize" : "Maximize"}
+          >
+            {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+            {isMaximized ? "Minimize" : "Maximize"}
+          </button>
+        </div>
+
+        <div className={isMaximized ? "flex-1 min-h-0 flex flex-col" : "relative"}>
+          {graphType === "dataflow" ? (
+            <DataflowView workflowId={workflowId} height={isMaximized ? "100%" : undefined} />
+          ) : (
+            <DagView tasks={tasks} mode={graphType} height={isMaximized ? "100%" : undefined} />
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 

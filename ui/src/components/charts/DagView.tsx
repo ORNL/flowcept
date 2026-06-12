@@ -1,8 +1,8 @@
 /** Activity- or task-level DAG view for a workflow's tasks. */
 
 import "@xyflow/react/dist/style.css";
-import { useMemo } from "react";
-import { ReactFlow, Background, Controls, MarkerType, type Node, type Edge } from "@xyflow/react";
+import { useEffect, useMemo } from "react";
+import { ReactFlow, ReactFlowProvider, useReactFlow, Background, Controls, MarkerType, type Node, type Edge } from "@xyflow/react";
 import type { Task } from "../../api/types";
 import { fmtDuration, shortId, toEpochSec } from "../../lib/format";
 import { useInspectorStore, type GraphInspectorDoc } from "../../stores/inspectorStore";
@@ -14,9 +14,21 @@ interface Props {
   tasks: Task[];
   /** "activity" groups tasks by activity_id (default); "task" shows one node per task. */
   mode?: "activity" | "task";
+  height?: string | number;
 }
 
-export function DagView({ tasks: allTasks, mode = "activity" }: Props) {
+function FitViewHelper({ trigger }: { trigger: any }) {
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fitView({ duration: 250, padding: 0.2 });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [trigger, fitView]);
+  return null;
+}
+
+export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
   const tasks = useMemo(() => {
     if (mode !== "task" || allTasks.length <= MAX_TASK_NODES) return allTasks;
     return [...allTasks]
@@ -188,33 +200,39 @@ export function DagView({ tasks: allTasks, mode = "activity" }: Props) {
   if (nodes.length === 0) return null;
 
   return (
-    <div className="space-y-1">
+    <div className={`space-y-1 ${height === "100%" ? "flex-1 flex flex-col h-full" : ""}`}>
       {mode === "task" && allTasks.length > MAX_TASK_NODES && (
         <div className="text-warn text-[11px]">
           Showing the first {MAX_TASK_NODES} of {allTasks.length} tasks.
         </div>
       )}
-    <div style={{ height: mode === "task" ? 420 : 320 }} className="rounded border border-border bg-surface-2">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable={false}
-        onNodeClick={(_, node) => {
-          const stats = node.data as unknown as GraphInspectorDoc;
-          useInspectorStore.getState().set({
-            kind: mode === "task" ? "task" : "activity",
-            data: stats,
-          });
-        }}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
+      <div
+        style={{ height: height ?? (mode === "task" ? 420 : 320) }}
+        className={`rounded border border-border bg-surface-2 ${height === "100%" ? "flex-1" : ""}`}
       >
-        <Background />
-        <Controls showInteractive={false} />
-      </ReactFlow>
-    </div>
+        <ReactFlowProvider>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={false}
+            onNodeClick={(_, node) => {
+              const stats = node.data as unknown as GraphInspectorDoc;
+              useInspectorStore.getState().set({
+                kind: mode === "task" ? "task" : "activity",
+                data: stats,
+              });
+            }}
+            fitView
+            fitViewOptions={{ padding: 0.2 }}
+          >
+            <Background />
+            <Controls showInteractive={false} />
+            <FitViewHelper trigger={height} />
+          </ReactFlow>
+        </ReactFlowProvider>
+      </div>
     </div>
   );
 }

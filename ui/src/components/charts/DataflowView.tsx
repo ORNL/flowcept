@@ -4,14 +4,15 @@
  */
 
 import "@xyflow/react/dist/style.css";
-import { useMemo, useState } from "react";
-import { ReactFlow, Background, Controls, MarkerType, type Node, type Edge } from "@xyflow/react";
+import { useEffect, useMemo, useState } from "react";
+import { ReactFlow, ReactFlowProvider, useReactFlow, Background, Controls, MarkerType, type Node, type Edge } from "@xyflow/react";
 import { useDataflow, type DataflowGraph } from "../../api/queries";
 import { useInspectorStore } from "../../stores/inspectorStore";
 import { TASK_NODE_STYLE } from "./graphStyles";
 
 interface Props {
   workflowId: string;
+  height?: string | number;
 }
 
 // W3C PROV diagram convention: Entity = yellow ellipse, Activity = blue rectangle.
@@ -62,7 +63,18 @@ function layout(graph: DataflowGraph) {
   return { visibleNodes, visibleEdges, ranks, rankGroups };
 }
 
-export function DataflowView({ workflowId }: Props) {
+function FitViewHelper({ trigger }: { trigger: any }) {
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fitView({ duration: 250, padding: 0.15 });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [trigger, fitView]);
+  return null;
+}
+
+export function DataflowView({ workflowId, height }: Props) {
   const [focus, setFocus] = useState<string | null>(null);
 
   const { data: graph, isLoading, error } = useDataflow(workflowId);
@@ -152,7 +164,7 @@ export function DataflowView({ workflowId }: Props) {
   if (!graph || nodes.length === 0) return <div className="text-fg-muted text-xs">No dataflow data captured.</div>;
 
   return (
-    <div className="space-y-2">
+    <div className={`space-y-2 ${height === "100%" ? "flex-1 flex flex-col h-full justify-between" : ""}`}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-fg-muted text-[11px]">
           Inputs and outputs are packed into data chunks — click a task or chunk to inspect metadata.
@@ -162,28 +174,34 @@ export function DataflowView({ workflowId }: Props) {
         )}
       </div>
 
-      <div style={{ height: 440 }} className="rounded border border-border bg-surface-2">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodesDraggable={false}
-          nodesConnectable={false}
-          onNodeClick={(_, node) => {
-            setFocus((prev) => (prev === node.id ? null : node.id));
-            const selectedNode = graph.nodes.find((n) => n.id === node.id) ?? null;
-            if (selectedNode) {
-              useInspectorStore.getState().set({
-                kind: selectedNode.kind === "task" ? "task" : "dataflow",
-                data: { label: selectedNode.label, stats: selectedNode.stats },
-              });
-            }
-          }}
-          fitView
-          fitViewOptions={{ padding: 0.15 }}
-        >
-          <Background />
-          <Controls showInteractive={false} />
-        </ReactFlow>
+      <div
+        style={{ height: height ?? 440 }}
+        className={`rounded border border-border bg-surface-2 ${height === "100%" ? "flex-1" : ""}`}
+      >
+        <ReactFlowProvider>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            onNodeClick={(_, node) => {
+              setFocus((prev) => (prev === node.id ? null : node.id));
+              const selectedNode = graph.nodes.find((n) => n.id === node.id) ?? null;
+              if (selectedNode) {
+                useInspectorStore.getState().set({
+                  kind: selectedNode.kind === "task" ? "task" : "dataflow",
+                  data: { label: selectedNode.label, stats: selectedNode.stats },
+                });
+              }
+            }}
+            fitView
+            fitViewOptions={{ padding: 0.15 }}
+          >
+            <Background />
+            <Controls showInteractive={false} />
+            <FitViewHelper trigger={height} />
+          </ReactFlow>
+        </ReactFlowProvider>
       </div>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
