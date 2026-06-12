@@ -134,6 +134,10 @@ def flowcept_task(func=None, **decorator_kwargs):
         tags = decorator_kwargs.get("tags", None)
         subtype = decorator_kwargs.get("subtype", None)
         output_names = decorator_kwargs.get("output_names", None)
+        agent_id = decorator_kwargs.get("agent_id", None)
+        decorator_kwargs.get("agent_name", None)
+        source_agent_id = decorator_kwargs.get("source_agent_id", None)
+        decorator_kwargs.get("source_agent_name", None)
 
         # --- shared helpers for sync+async wrappers -------------------------
 
@@ -160,6 +164,8 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.activity_id = func.__name__
             task_obj.workflow_id = handled_args.pop("workflow_id", Flowcept.current_workflow_id)
             task_obj.campaign_id = handled_args.pop("campaign_id", Flowcept.campaign_id)
+            task_obj.agent_id = handled_args.pop("agent_id", agent_id)
+            task_obj.source_agent_id = handled_args.pop("source_agent_id", source_agent_id)
             task_obj.used = handled_args
             task_obj.tags = tags
             task_obj.started_at = time()

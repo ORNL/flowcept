@@ -8,6 +8,7 @@ import { fmtDuration, shortId, toEpochSec } from "../../lib/format";
 import { useInspectorStore, type GraphInspectorDoc } from "../../stores/inspectorStore";
 import { useHighlightStore } from "../../stores/highlightStore";
 import { TASK_NODE_STYLE } from "./graphStyles";
+import { Bot } from "lucide-react";
 
 const MAX_TASK_NODES = 150;
 
@@ -142,10 +143,19 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
       let rank = ranks.get(activity) ?? 0;
       const siblings = rankGroups.get(rank) ?? [];
       let idx = siblings.indexOf(activity);
-      const label =
+      const labelText =
         mode === "task"
           ? `${actTasks[0]?.activity_id ?? "task"}\n${shortId(activity, 12)}`
           : `${activity}\n(${actTasks.length})`;
+      const hasAgent = !!(actTasks[0]?.agent_id || actTasks[0]?.source_agent_id);
+      const label = hasAgent ? (
+        <div className="relative w-full h-full flex items-center justify-center">
+          <Bot size={13} className="absolute -top-1.5 -right-1.5 text-accent bg-surface rounded-full p-0.5 border border-border" />
+          <span className="whitespace-pre">{labelText}</span>
+        </div>
+      ) : (
+        labelText
+      );
       const start = Math.min(...actTasks.map((t) => toEpochSec(t.started_at) ?? Infinity));
       const end = Math.max(...actTasks.map((t) => toEpochSec(t.ended_at) ?? -Infinity));
       const duration = start !== Infinity && end !== -Infinity ? fmtDuration(end - start) : null;
@@ -166,6 +176,8 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
               parent_task_id: actTasks[0]?.parent_task_id ?? null,
               used: actTasks[0]?.used ?? null,
               generated: actTasks[0]?.generated ?? null,
+              agent_id: actTasks[0]?.agent_id ?? null,
+              source_agent_id: actTasks[0]?.source_agent_id ?? null,
             }
           : {
               activity_id: activity,
@@ -179,6 +191,8 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
               ended_at: end === -Infinity ? null : end,
               duration,
               task_ids: actTasks.map((t) => t.task_id),
+              agent_id: actTasks[0]?.agent_id ?? null,
+              source_agent_id: actTasks[0]?.source_agent_id ?? null,
             };
       // Dim when the agent has highlighted specific tasks and this node is not among them.
       const dimmed =

@@ -45,9 +45,7 @@ class FlowceptTask(object):
         campaign_id: str = None,
         activity_id: str = None,
         agent_id: str = None,
-        agent_name: str = None,
         source_agent_id: str = None,
-        source_agent_name: str = None,
         parent_task_id: str = None,
         used: Dict = None,
         data: Any = None,
@@ -129,9 +127,7 @@ class FlowceptTask(object):
         self._task.subtype = subtype
         self._task.adapter_id = adapter_id
         self._task.agent_id = agent_id
-        self._task.agent_name = agent_name
         self._task.source_agent_id = source_agent_id
-        self._task.source_agent_name = source_agent_name
         self._task.hostname = hostname or HOSTNAME
         self._task.custom_metadata = (
             replace_non_serializable(custom_metadata)

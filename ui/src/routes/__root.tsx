@@ -130,6 +130,8 @@ function GraphInspector({ kind, data }: { kind: "task" | "activity" | "dataflow"
         <Field label="task_id" value={stats["task_id"]} />
         <Field label="status" value={stats["status"]} />
         <Field label="duration" value={fmtDuration(duration)} />
+        <Field label="agent_id" value={stats["agent_id"]} />
+        <Field label="source_agent_id" value={stats["source_agent_id"]} />
         <Field label="Used" value={stats["used"]} />
         <Field label="Generated" value={stats["generated"]} />
       </div>
@@ -145,6 +147,8 @@ function GraphInspector({ kind, data }: { kind: "task" | "activity" | "dataflow"
         <Field label="ended_at" value={stats["ended_at"]} />
         <Field label="duration" value={stats["duration"]} />
         <Field label="status_counts" value={stats["status_counts"]} />
+        <Field label="agent_id" value={stats["agent_id"]} />
+        <Field label="source_agent_id" value={stats["source_agent_id"]} />
         <Field label="task_ids" value={stats["task_ids"]} />
       </div>
     );

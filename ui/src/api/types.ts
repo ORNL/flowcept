@@ -31,6 +31,7 @@ export interface Task {
   campaign_id?: string;
   activity_id?: string;
   agent_id?: string;
+  source_agent_id?: string;
   status?: string;
   subtype?: string;
   hostname?: string;

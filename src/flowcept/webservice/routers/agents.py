@@ -22,7 +22,9 @@ def list_agents(
     db: DBAPI = Depends(get_db_api),
 ) -> ListResponse:
     """List derived agent summaries, most recently active first."""
-    agents = stats.derive_agents(db)[:limit]
+    agents = stats.derive_agents(db)
+    agents = sort_docs_by_first_date_field(agents, ["last_active"])
+    agents = agents[:limit]
     normalized = normalize_docs(agents)
     return ListResponse(items=normalized, count=len(normalized), limit=limit)
 

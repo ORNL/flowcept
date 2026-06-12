@@ -136,14 +136,8 @@ class TaskObject:
     agent_id: str = None
     """Identifier of the agent that executed (or is going to execute) this task."""
 
-    agent_name: str = None
-    """Name of the agent that executed (or is going to execute) this task."""
-
     source_agent_id: str = None
     """Identifier of the agent that sent this task to be executed (if any)."""
-
-    source_agent_name: str = None
-    """Name of the agent that sent this task to be executed (if any)."""
 
     _DEFAULT_ENRICH_VALUES = {
         "node_name": NODE_NAME,
@@ -258,7 +252,7 @@ class TaskObject:
     def __repr__(self):
         """Return an unambiguous string representation of the TaskObject."""
         attrs = ["task_id", "workflow_id", "campaign_id", "activity_id", "started_at", "ended_at"]
-        optionals = ["subtype", "parent_task_id", "agent_id", "agent_name", "source_agent_id", "source_agent_name"]
+        optionals = ["subtype", "parent_task_id", "agent_id"]
         for opt in optionals:
             if getattr(self, opt) is not None:
                 attrs.append(opt)

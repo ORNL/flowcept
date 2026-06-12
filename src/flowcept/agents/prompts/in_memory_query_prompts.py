@@ -41,26 +41,6 @@ def generate_common_task_fields(current_fields):
         else ""
     )
     common_task_fields += (
-        "| `agent_name`                  | string | Human-readable name of the agent that executed the task. |\n"
-        if "agent_name" in current_fields
-        else ""
-    )
-    common_task_fields += (
-        "| `agent_name`                  | string | Human-readable name of the agent that executed the task. |\n"
-        if "agent_name" in current_fields
-        else ""
-    )
-    common_task_fields += (
-        "| `source_agent_id`             | string | Identifier of the agent that sent this task for execution (if any). |\n"
-        if "source_agent_id" in current_fields
-        else ""
-    )
-    common_task_fields += (
-        "| `source_agent_name`           | string | Human-readable name of the agent that sent this task for execution (if any). |\n"
-        if "source_agent_name" in current_fields
-        else ""
-    )
-    common_task_fields += (
         "| `started_at`                  | datetime64[ns, UTC] | Start time of a task. Always use this field when the query has any temporal reference related to the workflow execution, such as 'get the first 10 workflow executions' or 'the last workflow execution'. |\n"
         if "started_at" in current_fields
         else ""
@@ -286,8 +266,7 @@ QUERY_GUIDELINES = """
     - ONLY IF the ALLOWED_FIELDS list allow, use `used.` for parameters (inputs) and `generated.` for outputs (metrics).
     - Use `telemetry_summary.duration_sec` for performance-related questions.
     - Use `hostname` when user mentions *where* a task ran.
-    - Use `agent_id` and `agent_name` when the user refers to the executing agent.
-    - Use `source_agent_id` and `source_agent_name` when the user refers to the sending/coordinator agent.
+    - Use `agent_id` when the user refers to agents (non-null means task was agent-run).
 
     ### 4. Hard Constraints (obey strictly, YOUR LIFE DEPENDS ON THEM. DO NOT HALLUCINATE!!!)
 

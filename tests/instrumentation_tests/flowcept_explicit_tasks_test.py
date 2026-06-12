@@ -45,25 +45,6 @@ class ExplicitTaskTest(unittest.TestCase):
         assert isinstance(value, str)
         assert value.startswith("object_instance_id_")
 
-    def test_explicit_task_agent_names_are_serialized(self):
-        with Flowcept(start_persistence=False):
-            FlowceptTask(
-                activity_id="agent_action",
-                agent_id="agent-1",
-                agent_name="Planner",
-                source_agent_id="agent-0",
-                source_agent_name="Coordinator",
-            ).send()
-
-            tasks = [msg for msg in Flowcept.buffer if isinstance(msg, dict) and msg.get("type") == "task"]
-            assert tasks
-            task = tasks[-1]
-
-        assert task["agent_id"] == "agent-1"
-        assert task["agent_name"] == "Planner"
-        assert task["source_agent_id"] == "agent-0"
-        assert task["source_agent_name"] == "Coordinator"
-
     @pytest.mark.safeoffline
     def test_custom_tasks(self):
         if not configs.DUMP_BUFFER_ENABLED:

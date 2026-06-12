@@ -20,18 +20,7 @@ def load_saved_df(df_path: str) -> pd.DataFrame:
         The loaded DataFrame.
     """
     df = pd.read_csv(df_path, index_col=False)
-    str_types = [
-        "task_id",
-        "parent_task_id",
-        "workflow_id",
-        "activity_id",
-        "agent_id",
-        "agent_name",
-        "source_agent_id",
-        "source_agent_name",
-        "campaign_id",
-        "hostname",
-    ]
+    str_types = ["task_id", "parent_task_id", "workflow_id", "activity_id", "agent_id", "campaign_id", "hostname"]
     for col in str_types:
         if col in df.columns:
             df[col] = df[col].astype(str)

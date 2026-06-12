@@ -42,8 +42,11 @@ def _to_epoch(value) -> Optional[float]:
 
 def _mongo_dao_or_none() -> Optional[DocumentDBDAO]:
     """Return the DAO singleton when it supports raw aggregation pipelines, else None."""
-    dao = DocumentDBDAO.get_instance(create_indices=False)
-    return dao if hasattr(dao, "raw_pipeline") else None
+    try:
+        dao = DocumentDBDAO.get_instance(create_indices=False)
+        return dao if hasattr(dao, "raw_pipeline") else None
+    except Exception:
+        return None
 
 
 def get_nested(item: Dict[str, Any], field: str) -> Any:

@@ -42,17 +42,6 @@ At a high level:
 - **Relations** are preserved with IDs and standard fields (for example, workflow IDs, parent or dependency links),
   so the graph remains connected and queryable.
 
-Task-Centric Design and Agent Modeling
---------------------------------------
-Flowcept is fundamentally task-centric: everything is built around the Task record. Rather than maintaining complex relational entities for all components, Flowcept uses a simple, implicit schema to represent workflows and agents:
-
-* **Workflows**: A workflow class (identified by its name) can have multiple executions (identified by ``workflow_id``). Tasks carry ``workflow_id`` to link executions, while Workflow objects store the static metadata (like names and descriptions).
-* **Agents**: Similarly, an agent class (identified by its ``agent_name``) can have multiple instantiations (identified by ``agent_id``). Tasks carry ``agent_id`` and ``agent_name`` (as well as ``source_agent_id`` and ``source_agent_name``) directly.
-* **Campaigns**: Unlike workflows and agents, campaigns are more static; they are identified simply by ``campaign_id`` and do not change frequently over time.
-
-.. note::
-   This task-centric layout keeps storage requirements simple and highly efficient. In the future, we may introduce a more dedicated, first-class schema and storage path for agents, similar to how tasks, workflows, and artifacts are structured.
-
 Figure
 ------
 .. only:: html

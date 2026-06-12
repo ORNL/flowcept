@@ -17,7 +17,7 @@ If a tool requires its own file, make that file (which should immediately go to 
 - Do not commit personal absolute paths.
 - Do not commit secrets or keys.
 - Do not `pip install`; report missing packages and the command the user can run. Consider adding them to pyproject.toml.
-- Do not auto-commit. The AI code assistant must test the fix/implemented feature and fix any error that appears before it asks the user (the developer) to commit or to test themselves.
+- Do not auto-commit. Do not stage files automatically. The AI code assistant must test the fix/implemented feature and fix any error that appears before asking the user to test themselves. Do not ask to commit. 
 
 ## 2. Interaction Rules
 

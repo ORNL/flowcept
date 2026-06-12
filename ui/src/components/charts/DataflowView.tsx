@@ -10,6 +10,7 @@ import { useDataflow, type DataflowGraph } from "../../api/queries";
 import { useInspectorStore } from "../../stores/inspectorStore";
 import { useHighlightStore } from "../../stores/highlightStore";
 import { TASK_NODE_STYLE } from "./graphStyles";
+import { Bot } from "lucide-react";
 
 interface Props {
   workflowId: string;
@@ -121,10 +122,20 @@ export function DataflowView({ workflowId, height }: Props) {
       const dimmed = lineage !== null && !lineage.has(n.id);
       const isEntity = n.kind !== "task";
 
+      const hasAgent = !!(n.stats?.agent_id || n.stats?.source_agent_id);
+      const label = hasAgent ? (
+        <div className="relative w-full h-full flex items-center justify-center">
+          <Bot size={13} className="absolute -top-1.5 -right-1.5 text-accent bg-surface rounded-full p-0.5 border border-border" />
+          <span className="whitespace-pre">{n.label}</span>
+        </div>
+      ) : (
+        n.label
+      );
+
       return {
         id: n.id,
         position: { x: 230 * rank, y: 72 * idx },
-        data: { label: n.label },
+        data: { label },
         style: isEntity
           ? {
               // PROV Entity: yellow ellipse.

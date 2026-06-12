@@ -307,7 +307,7 @@ def test_workflow_card_download_route():
 
     assert rs.status_code == 200
     assert rs.headers["content-type"].startswith("text/markdown")
-    assert "attachment; filename=\"workflow_card_wf-1.md\"" == rs.headers["content-disposition"]
+    assert 'attachment; filename="workflow_card_wf-1.md"' == rs.headers["content-disposition"]
     assert "# Workflow Card" in rs.text
 
 
@@ -669,3 +669,54 @@ def test_dashboard_routes_accept_charts_contract():
     body = rs.json()
     assert body["charts"][0]["chart_id"] == "c1"
     assert body["layout"][0]["chart_id"] == "c1"
+
+
+def test_agents_and_dataflow_routes():
+    client, fake_db = build_client()
+
+    fake_db.tasks = [
+        {
+            "task_id": "t1",
+            "workflow_id": "wf-1",
+            "status": "finished",
+            "started_at": 10,
+            "agent_id": "agent-1",
+            "source_agent_id": "orchestrator",
+            "used": {"x": 1},
+            "generated": {"y": 2},
+        },
+        {
+            "task_id": "t2",
+            "workflow_id": "wf-1",
+            "status": "running",
+            "started_at": 20,
+            "agent_id": "agent-2",
+            "used": {"y": 2},
+            "generated": {"z": 3},
+        },
+    ]
+
+    rs = client.get("/api/v1/agents")
+    assert rs.status_code == 200
+    agents = rs.json()["items"]
+    assert len(agents) == 2
+    agent_map = {a["agent_id"]: a for a in agents}
+    assert "agent-1" in agent_map
+    assert "agent-2" in agent_map
+
+    rs = client.get("/api/v1/agents/agent-1")
+    assert rs.status_code == 200
+    assert rs.json()["agent"]["agent_id"] == "agent-1"
+
+    rs = client.get("/api/v1/workflows/wf-1/dataflow")
+    assert rs.status_code == 200
+    dataflow = rs.json()
+    task_nodes = [n for n in dataflow["nodes"] if n["kind"] == "task"]
+    assert len(task_nodes) == 2
+    for node in task_nodes:
+        stats = node["stats"]
+        assert "agent_id" in stats
+        assert "source_agent_id" in stats
+        if node["id"] == "task:t1":
+            assert stats["agent_id"] == "agent-1"
+            assert stats["source_agent_id"] == "orchestrator"

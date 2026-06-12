@@ -18,7 +18,17 @@ from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.services.stats import _to_epoch
 
 MAX_NODES = 400
-_TASK_PROJECTION = ["task_id", "activity_id", "used", "generated", "started_at", "ended_at", "status"]
+_TASK_PROJECTION = [
+    "task_id",
+    "activity_id",
+    "used",
+    "generated",
+    "started_at",
+    "ended_at",
+    "status",
+    "agent_id",
+    "source_agent_id",
+]
 
 
 def _is_trivial(value: Any) -> bool:
@@ -122,6 +132,8 @@ def _task_node(t: Dict[str, Any]) -> Dict[str, Any]:
             "ended_at": t.get("ended_at"),
             "used": t.get("used") or {},
             "generated": t.get("generated") or {},
+            "agent_id": t.get("agent_id"),
+            "source_agent_id": t.get("source_agent_id"),
         },
     }
 

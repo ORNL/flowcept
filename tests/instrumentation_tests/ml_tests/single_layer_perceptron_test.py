@@ -34,9 +34,7 @@ def _set_reproducibility(seed=0):
     reproducibility["torch_manual_seeded"] = True
     reproducibility["torch_cuda_manual_seeded"] = torch.cuda.is_available()
     reproducibility["torch_deterministic_algorithms"] = (
-        torch.are_deterministic_algorithms_enabled()
-        if hasattr(torch, "are_deterministic_algorithms_enabled")
-        else True
+        torch.are_deterministic_algorithms_enabled() if hasattr(torch, "are_deterministic_algorithms_enabled") else True
     )
     reproducibility["torch_cudnn_deterministic"] = (
         bool(getattr(torch.backends.cudnn, "deterministic", False)) if hasattr(torch.backends, "cudnn") else False
@@ -49,6 +47,7 @@ def _set_reproducibility(seed=0):
 
 def shape_args_handler(*args, **kwargs):
     """Capture tensor values as shape metadata for provenance payloads."""
+
     def _shape_key(name):
         return name if name.endswith("_shape") else f"{name}_shape"
 
@@ -80,6 +79,7 @@ class SingleLayerPerceptron(nn.Module):
     subtype=ML_Types.DATA_PREP,
     args_handler=shape_args_handler,
     output_names=["x_train_shape", "y_train_shape", "x_val_shape", "y_val_shape", "dataset_id"],
+    agent_id="orchestrator_agent_id",
 )
 def get_dataset(n_samples, split_ratio):
     """Generate a toy binary classification dataset."""
@@ -123,7 +123,7 @@ def validate(model, criterion, x_val, y_val):
     return loss.item(), accuracy
 
 
-@flowcept_task(subtype=ML_Types.LEARNING)
+@flowcept_task(subtype=ML_Types.LEARNING, agent_id="train_agent_id")
 def train_and_validate(
     n_input_neurons,
     epochs,
@@ -218,7 +218,11 @@ def select_best_model_args_handler(results=None, **kwargs):
     }
 
 
-@flowcept_task(subtype=ML_Types.MODEL_SELECTION, args_handler=select_best_model_args_handler)
+@flowcept_task(
+    subtype=ML_Types.MODEL_SELECTION,
+    args_handler=select_best_model_args_handler,
+    agent_id="orchestrator_agent_id",
+)
 def select_best_model(results):
     """Select the best model from train task outputs by minimal validation loss."""
     result = _best_gridsearch_result(results)
@@ -308,6 +312,7 @@ def asserts(tasks):
     dataset_task = next((t for t in tasks if t.get("activity_id") == "get_dataset"), None)
     assert dataset_task is not None
     assert dataset_task.get("subtype") == ML_Types.DATA_PREP
+    assert dataset_task.get("agent_id") == "orchestrator_agent_id"
     generated = dataset_task.get("generated", {})
     assert tuple(generated.get("x_train_shape", ())) == (96, 2)
     assert tuple(generated.get("y_train_shape", ())) == (96, 1)
@@ -317,6 +322,11 @@ def asserts(tasks):
     train_task = next((t for t in tasks if t.get("activity_id") == "train_and_validate"), None)
     assert train_task is not None
     assert train_task.get("subtype") == ML_Types.LEARNING
+    assert train_task.get("agent_id") == "train_agent_id"
+
+    select_best_task = next((t for t in tasks if t.get("activity_id") == "select_best_model"), None)
+    if select_best_task is not None:
+        assert select_best_task.get("agent_id") == "orchestrator_agent_id"
     train_generated = train_task.get("generated", {})
     ml_model_object_id = train_generated.get("ml_model_object_id")
     torch_model_object_id = train_generated.get("torch_model_object_id")
@@ -374,7 +384,6 @@ def asserts(tasks):
 
 
 class SingleLayerPerceptronTests(unittest.TestCase):
-
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_single_layer_perceptron_example_flow(self):
         params = {
@@ -507,7 +516,6 @@ class SingleLayerPerceptronTests(unittest.TestCase):
         assert os.path.exists(report_pdf_path)
         assert pdf_stats["report_type"] == "provenance_report"
         assert pdf_stats["format"] == "pdf"
-
 
     def assert_model_metadata(self, reloaded_torch_model, torch_model_object_id):
         assert hasattr(reloaded_torch_model, "_flowcept_model_object")
