@@ -181,6 +181,7 @@ Designed for scenarios involving critical data from multiple, federated workflow
 - Low overhead, suitable for HPC and highly distributed setups
 - Telemetry capture for CPU, GPU, memory, linked to dataflow
 - Pluggable MQ and storage backends (Redis, Kafka, MongoDB, LMDB)
+- Web UI: provenance browser, dashboards, live updates, and an embedded LLM chat agent
 - [W3C PROV](https://www.w3.org/TR/prov-overview/) adherence 
 
 Explore [Jupyter Notebooks](notebooks) and [Examples](examples) for usage.
@@ -442,6 +443,27 @@ Flowcept.generate_report(workflow_id="<id>", report_type="provenance_report", fo
 
 See [`docs/reporting.rst`](docs/reporting.rst) and [`src/flowcept/report/README.md`](src/flowcept/report/README.md) for the full reporting reference.
 
+## Web UI
+
+Flowcept ships a built-in web interface for browsing and analyzing provenance data. Start it with:
+
+```bash
+pip install flowcept[webservice]
+flowcept --start-ui        # starts the webservice + dev server; open http://localhost:8008
+```
+
+Key features:
+- **Provenance browser** — campaigns, workflows, tasks, and artifacts with drill-down views
+- **Live updates** — SSE-based streaming so the task table updates while a workflow runs
+- **Dashboards** — per-workflow and per-campaign chart dashboards (configurable, stored in MongoDB)
+- **Dataflow graph** — W3C PROV-style graph of task inputs/outputs; click any node to inspect its provenance
+- **LLM chat agent** — ask natural-language questions about your provenance data; charts render inline; queries are automatically scoped to the current workflow or campaign
+- **Lineage highlighting** — ask the chat agent to highlight the full provenance lineage (ancestors + descendants) of any task directly in the Dataflow graph
+
+The chat agent queries the **persisted store** (MongoDB) and the **live stream** (via near-real-time DB flushes from the MQ). For sub-second in-flight queries, use the MCP agent instead.
+
+See [`docs/web_ui.rst`](docs/web_ui.rst) and [`ui/README.md`](ui/README.md) for the full reference.
+
 # Summary: Observability, Instrumentation, MQs, DBs, and Querying
 
 | Category                           | Supported Options                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -452,7 +474,7 @@ See [`docs/reporting.rst`](docs/reporting.rst) and [`src/flowcept/report/README.
 | **Custom Task Creation**           | `FlowceptTask(activity_id=<id>, used=<inputs>, generated=<outputs>, ...)` <br/><br/>Use for fully customizable task instrumentation. Publishes directly to the MQ either via context management (`with FlowceptTask(...)`) or by calling `send()`. It needs to have a `Flowcept().start()` first (or within a `with Flowcept()` context). See [example](examples/consumers/ping_pong_example.py).                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | **Message Queues (MQ)**            | - **Disabled** (offline mode: provenance events stay in an in-memory buffer, not accessible to external processes) <br> - [Redis](https://redis.io) → default, lightweight, easy to run anywhere <br> - [Kafka](https://kafka.apache.org) → for distributed, production setups <br> - [Mofka](https://mofka.readthedocs.io) → optimized for HPC runs <br><br> _Setup example:_ [docker compose](https://github.com/ORNL/flowcept/blob/main/deployment/compose.yml)                                                                                                                                                                                                                                                                                                                                                      |
 | **Databases**                      | - **Disabled** → Flowcept runs in ephemeral mode (data only in MQ, no persistence) <br> - **[MongoDB](https://www.mongodb.com)** → default, rich queries and efficient bulk writes <br> - **[LMDB](https://lmdb.readthedocs.io)** → lightweight, file-based, no external service, basic query support                                                                                                                                                                                                                                                                                                                                                     |
-| **Querying and Monitoring**        | - **[Grafana](deployment/compose-grafana.yml)** → dashboarding via MongoDB connector <br> - **MCP Flowcept Agent** → LLM-based querying of provenance data                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | 
+| **Querying and Monitoring**        | - **[Web UI](docs/web_ui.rst)** → browser-based provenance browser with dashboards, live updates, and an embedded LLM chat agent that queries the persisted store and highlights provenance lineage in the Dataflow graph <br> - **[Grafana](deployment/compose-grafana.yml)** → dashboarding via MongoDB connector <br> - **MCP Flowcept Agent** → LLM-based querying of the live MQ stream (Redis/Kafka/Mofka) via external assistants (Claude Code, Codex, etc.) or offline JSONL buffer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | 
 | **Custom Consumer**                | You can implement your own consumer to monitor or query the provenance stream in real time. Useful for custom analytics, monitoring, debugging, or to persist the data in a different data model (e.g., graph) . See [example](examples/consumers/simple_consumer.py).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 

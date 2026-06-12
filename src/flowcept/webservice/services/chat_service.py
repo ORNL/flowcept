@@ -22,15 +22,41 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         payload = result.model_dump() if hasattr(result, "model_dump") else result
         return json.dumps(payload, default=str)
 
+    def _coerce_projection(p: Any) -> Optional[List[str]]:
+        """Accept a list of field names or a Mongo projection dict {field: 1}."""
+        if p is None:
+            return None
+        if isinstance(p, dict):
+            return [k for k, v in p.items() if v]
+        return list(p)
+
+    def _coerce_sort(s: Any) -> Optional[List[Dict[str, Any]]]:
+        """Accept [{field, order}] or a Mongo sort dict {field: -1}."""
+        if s is None:
+            return None
+        if isinstance(s, dict):
+            return [{"field": k, "order": v} for k, v in s.items()]
+        return list(s)
+
     @tool
     def query_tasks(
         filter: Optional[Dict[str, Any]] = None,
-        projection: Optional[List[str]] = None,
+        projection: Optional[Any] = None,
         limit: int = 100,
-        sort: Optional[List[Dict[str, Any]]] = None,
+        sort: Optional[Any] = None,
     ) -> str:
-        """Query task provenance records with a Mongo-style filter."""
-        return _run(prov_tools.query_tasks, filter=filter, projection=projection, limit=limit, sort=sort)
+        """Query task provenance records with a Mongo-style filter.
+
+        projection: list of field names, or a Mongo projection dict {"field": 1}.
+        sort: list of {"field": "...", "order": 1|-1}, or a Mongo sort dict {"field": -1}.
+        """
+        return _run(
+            prov_tools.query_tasks,
+            filter=filter,
+            projection=_coerce_projection(projection),
+            limit=limit,
+            sort=_coerce_sort(sort),
+        )
 
     @tool
     def query_workflows(filter: Optional[Dict[str, Any]] = None, limit: int = 100) -> str:
@@ -57,7 +83,21 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         """Build a chart from a declarative dashboard card spec; the UI renders the result."""
         return _run(prov_tools.make_chart, card_spec=card_spec, context=context)
 
-    tools = [query_tasks, query_workflows, get_task_summary, list_campaigns, list_agents, make_chart]
+    @tool
+    def highlight_lineage(
+        task_ids: Optional[List[str]] = None,
+        filter: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """Highlight the full provenance lineage (ancestors + descendants) of tasks in the Dataflow graph.
+
+        Pass `task_ids` directly, or use `filter` to find the seed tasks first.
+        The UI will dim all other nodes and visually trace the lineage chain.
+        Always pass a workflow_id in the filter when on a workflow page.
+        """
+        wf_id = (context or {}).get("workflow_id")
+        return _run(prov_tools.highlight_lineage, task_ids=task_ids, filter=filter, workflow_id=wf_id)
+
+    tools = [query_tasks, query_workflows, get_task_summary, list_campaigns, list_agents, make_chart, highlight_lineage]
 
     if allow_dashboard_edit:
 
@@ -155,6 +195,8 @@ def run_chat(
                     summary["code"] = parsed.get("code")
                     if name == "make_chart" and isinstance(parsed.get("result"), dict):
                         yield {"event": "card", "data": parsed["result"]}
+                    if name == "highlight_lineage" and isinstance(parsed.get("result"), dict):
+                        yield {"event": "ui:highlight", "data": parsed["result"]}
                 except Exception:
                     pass
                 yield {"event": "tool_result", "data": summary}

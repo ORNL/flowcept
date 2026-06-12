@@ -124,7 +124,7 @@ def build_llm_model(
     LLM
         An initialized LLM object configured using the `AGENT` settings.
     """
-    _model_kwargs = AGENT.get("model_kwargs", {}).copy()
+    _model_kwargs = (AGENT.get("model_kwargs") or {}).copy()
     if model_kwargs is not None:
         for k in model_kwargs:
             _model_kwargs[k] = model_kwargs[k]

@@ -217,6 +217,55 @@ def make_chart(card_spec: Dict[str, Any], context: Optional[Dict[str, Any]] = No
     return ToolResult(code=301, result=result, tool_name="make_chart")
 
 
+@_guarded("highlight_lineage")
+def highlight_lineage(
+    task_ids: Optional[List[str]] = None,
+    filter: Optional[Dict[str, Any]] = None,
+    workflow_id: Optional[str] = None,
+) -> ToolResult:
+    """Highlight the full provenance lineage of tasks in the Dataflow graph.
+
+    Accepts either explicit ``task_ids`` or a Mongo-style ``filter`` to locate
+    the tasks of interest. ``workflow_id`` scopes the lineage traversal to one
+    workflow execution. The result is forwarded to the UI, which visually
+    highlights the ancestor/descendant chain in the Dataflow tab.
+
+    Parameters
+    ----------
+    task_ids : list of str, optional
+        Explicit task IDs to highlight.
+    filter : dict, optional
+        Mongo-style filter to find the seed tasks when ``task_ids`` is omitted.
+    workflow_id : str, optional
+        Workflow execution id — required for lineage traversal.
+
+    Returns
+    -------
+    ToolResult
+        ``result`` holds ``{"task_ids": [...], "seed_count": int}``.
+    """
+    db = DBAPI()
+    resolved_ids = list(task_ids or [])
+
+    if not resolved_ids and filter is not None:
+        scoped = dict(filter)
+        if workflow_id:
+            scoped["workflow_id"] = workflow_id
+        docs = db.task_query(filter=scoped, projection=["task_id"], limit=100) or []
+        resolved_ids = [d["task_id"] for d in docs if d.get("task_id")]
+
+    if not resolved_ids:
+        return ToolResult(code=404, result="No tasks found for the given criteria.", tool_name="highlight_lineage")
+
+    # Return only the seed task IDs. The frontend BFS expands ancestors/descendants
+    # from these seeds using the dataflow graph — a single source of truth for lineage.
+    return ToolResult(
+        code=301,
+        result={"task_ids": resolved_ids},
+        tool_name="highlight_lineage",
+    )
+
+
 @_guarded("get_dashboard")
 def get_dashboard(dashboard_id: str) -> ToolResult:
     """Get a stored dashboard spec by id.

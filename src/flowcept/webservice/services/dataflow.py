@@ -12,7 +12,7 @@ when they share non-trivial (key, value) pairs in temporal order.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.services.stats import _to_epoch
@@ -40,6 +40,49 @@ def _short(value: Any, max_len: int = 32) -> str:
 def _signature(payload: Dict[str, Any]) -> str:
     """Stable content signature for a used/generated dict."""
     return json.dumps({k: repr(v) for k, v in sorted(payload.items())}, sort_keys=True)
+
+
+def get_lineage_task_ids(db: DBAPI, workflow_id: str, seed_task_ids: List[str]) -> List[str]:
+    """Return all task_ids reachable (ancestors + descendants) from the seed tasks.
+
+    Traverses the provenance graph derived from tasks' ``used``/``generated``
+    fields. If the workflow has no dataflow data, returns the seeds unchanged.
+
+    Parameters
+    ----------
+    db : DBAPI
+        DB API facade.
+    workflow_id : str
+        Workflow execution id — scopes the graph traversal.
+    seed_task_ids : list of str
+        Task IDs to start the traversal from.
+
+    Returns
+    -------
+    list of str
+        All task_ids in the lineage subgraph (includes seeds).
+    """
+    graph = build_dataflow(db, workflow_id)
+    if not graph:
+        return seed_task_ids
+
+    fwd: Dict[str, List[str]] = {}
+    bwd: Dict[str, List[str]] = {}
+    for e in graph["edges"]:
+        fwd.setdefault(e["source"], []).append(e["target"])
+        bwd.setdefault(e["target"], []).append(e["source"])
+
+    seeds: Set[str] = {f"task:{tid}" for tid in seed_task_ids}
+    visited: Set[str] = set(seeds)
+    stack = list(seeds)
+    while stack:
+        curr = stack.pop()
+        for adj in fwd.get(curr, []) + bwd.get(curr, []):
+            if adj not in visited:
+                visited.add(adj)
+                stack.append(adj)
+
+    return [nid[5:] for nid in visited if nid.startswith("task:")]
 
 
 def build_dataflow(db: DBAPI, workflow_id: str) -> Optional[Dict[str, Any]]:

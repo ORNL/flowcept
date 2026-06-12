@@ -3,13 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
-import { ChevronDown, Eraser, Send, Wrench } from "lucide-react";
+import { Bot, ChevronDown, Eraser, Send, Wrench } from "lucide-react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { API_BASE } from "../../api/client";
 import { useChatStore, type ChatMsg } from "../../stores/chatStore";
+import { useHighlightStore } from "../../stores/highlightStore";
 import { EChart } from "../charts/EChart";
 import { Markdown } from "../markdown/Markdown";
 import { specToOption } from "../dashboard/specToOption";
+
+function contextHint(pathname: string): string {
+  const wf = pathname.match(/\/workflows\/([^/?]+)/);
+  if (wf) return `Queries are scoped to this workflow execution (id: ${decodeURIComponent(wf[1])}).`;
+  const camp = pathname.match(/\/campaigns\/([^/?]+)/);
+  if (camp) return `Queries are scoped to this campaign (id: ${decodeURIComponent(camp[1])}).`;
+  return "Queries are scoped to the page you're viewing.";
+}
 
 function routeContext(pathname: string): Record<string, string> {
   const wf = pathname.match(/\/workflows\/([^/?]+)/);
@@ -68,6 +77,10 @@ export function ChatPanel({ panelHandle }: ChatPanelProps) {
           if (msg.event === "token" && data) appendPart({ kind: "text", text: String(data) });
           if (msg.event === "tool_call" && data) appendPart({ kind: "tool", name: data.name, args: data.args });
           if (msg.event === "card" && data?.chart) appendPart({ kind: "chart", data });
+          if (msg.event === "ui:highlight" && Array.isArray(data?.task_ids)) {
+            useHighlightStore.getState().setHighlight(data.task_ids as string[]);
+            appendPart({ kind: "ui_highlight", task_ids: data.task_ids as string[] });
+          }
           if (msg.event === "error" && data) appendPart({ kind: "text", text: `⚠️ ${data}` });
         },
         onerror(err) {
@@ -85,7 +98,7 @@ export function ChatPanel({ panelHandle }: ChatPanelProps) {
   return (
     <div className="flex h-full flex-col border-t border-border bg-surface">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <span className="text-sm font-medium">Flowcept chat</span>
+        <span className="flex items-center gap-1.5 text-sm font-medium"><Bot size={15} /> Flowcept Agent</span>
         <div className="flex items-center gap-2">
           <button onClick={reset} title="Clear conversation" className="text-fg-muted hover:text-fg">
             <Eraser size={14} />
@@ -104,7 +117,7 @@ export function ChatPanel({ panelHandle }: ChatPanelProps) {
         {messages.length === 0 && (
           <div className="text-fg-muted px-2 py-8 text-center text-xs">
             Ask about your provenance data — e.g. "how many tasks failed?", "plot task durations per
-            activity". Queries are scoped to the page you're viewing.
+            activity". {contextHint(pathname)}
           </div>
         )}
         {messages.map((msg, i) => (
@@ -118,6 +131,22 @@ export function ChatPanel({ panelHandle }: ChatPanelProps) {
             >
               {msg.parts.map((part, j) => {
                 if (part.kind === "text") return <Markdown key={j}>{part.text}</Markdown>;
+                if (part.kind === "ui_highlight")
+                  return (
+                    <div key={j} className="border-accent/40 text-accent bg-accent-soft flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-[11px]">
+                      <span>↗</span>
+                      <span>
+                        Highlighted {part.task_ids.length} task{part.task_ids.length !== 1 ? "s" : ""} in the Dataflow graph.
+                        {" "}
+                        <button
+                          onClick={() => useHighlightStore.getState().clearHighlight()}
+                          className="underline opacity-70 hover:opacity-100"
+                        >
+                          Clear
+                        </button>
+                      </span>
+                    </div>
+                  );
                 if (part.kind === "tool")
                   return (
                     <details key={j} className="text-fg-muted">

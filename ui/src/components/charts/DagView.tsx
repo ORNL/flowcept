@@ -6,6 +6,7 @@ import { ReactFlow, ReactFlowProvider, useReactFlow, Background, Controls, Marke
 import type { Task } from "../../api/types";
 import { fmtDuration, shortId, toEpochSec } from "../../lib/format";
 import { useInspectorStore, type GraphInspectorDoc } from "../../stores/inspectorStore";
+import { useHighlightStore } from "../../stores/highlightStore";
 import { TASK_NODE_STYLE } from "./graphStyles";
 
 const MAX_TASK_NODES = 150;
@@ -35,6 +36,8 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
       .sort((a, b) => (toEpochSec(a.started_at) ?? 0) - (toEpochSec(b.started_at) ?? 0))
       .slice(0, MAX_TASK_NODES);
   }, [allTasks, mode]);
+
+  const agentHighlight = useHighlightStore((s) => s.taskIds);
 
   const { nodes, edges } = useMemo(() => {
     // Group tasks by node key: activity_id, or task_id in task mode.
@@ -177,6 +180,13 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
               duration,
               task_ids: actTasks.map((t) => t.task_id),
             };
+      // Dim when the agent has highlighted specific tasks and this node is not among them.
+      const dimmed =
+        agentHighlight.size > 0 &&
+        (mode === "task"
+          ? !agentHighlight.has(activity)
+          : !actTasks.some((t) => agentHighlight.has(t.task_id)));
+
       return {
         id: activity,
         position: { x: 220 * rank, y: (mode === "task" ? 70 : 90) * idx },
@@ -185,6 +195,7 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
           ...TASK_NODE_STYLE,
           fontSize: mode === "task" ? 10 : 12,
           whiteSpace: "pre",
+          opacity: dimmed ? 0.15 : 1,
         },
       };
     });
@@ -195,7 +206,7 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
     });
 
     return { nodes, edges };
-  }, [tasks, mode]);
+  }, [tasks, mode, agentHighlight]);
 
   if (nodes.length === 0) return null;
 

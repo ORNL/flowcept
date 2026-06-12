@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ReactFlow, ReactFlowProvider, useReactFlow, Background, Controls, MarkerType, type Node, type Edge } from "@xyflow/react";
 import { useDataflow, type DataflowGraph } from "../../api/queries";
 import { useInspectorStore } from "../../stores/inspectorStore";
+import { useHighlightStore } from "../../stores/highlightStore";
 import { TASK_NODE_STYLE } from "./graphStyles";
 
 interface Props {
@@ -76,6 +77,7 @@ function FitViewHelper({ trigger }: { trigger: any }) {
 
 export function DataflowView({ workflowId, height }: Props) {
   const [focus, setFocus] = useState<string | null>(null);
+  const agentHighlight = useHighlightStore((s) => s.taskIds);
 
   const { data: graph, isLoading, error } = useDataflow(workflowId);
 
@@ -84,10 +86,14 @@ export function DataflowView({ workflowId, height }: Props) {
 
     const { visibleNodes, visibleEdges, ranks, rankGroups } = layout(graph);
 
-    // Lineage highlight: upstream + downstream reachable set from the focused node.
+    // Seed lineage from: agent-highlighted task nodes + local click focus (combined).
+    const seeds = new Set<string>();
+    if (focus) seeds.add(focus);
+    for (const tid of agentHighlight) seeds.add(`task:${tid}`);
+
     let lineage: Set<string> | null = null;
-    if (focus) {
-      lineage = new Set([focus]);
+    if (seeds.size > 0) {
+      lineage = new Set(seeds);
       const fwd = new Map<string, string[]>();
       const back = new Map<string, string[]>();
       for (const e of visibleEdges) {
@@ -96,15 +102,13 @@ export function DataflowView({ workflowId, height }: Props) {
         if (!back.has(e.target)) back.set(e.target, []);
         back.get(e.target)!.push(e.source);
       }
-      for (const dir of [fwd, back]) {
-        const stack = [focus];
+      // Two separate passes to avoid cross-contamination: forward (descendants) then backward (ancestors).
+      for (const adj of [fwd, back]) {
+        const stack = [...seeds];
         while (stack.length) {
           const curr = stack.pop()!;
-          for (const next of dir.get(curr) ?? []) {
-            if (!lineage.has(next)) {
-              lineage.add(next);
-              stack.push(next);
-            }
+          for (const next of adj.get(curr) ?? []) {
+            if (!lineage.has(next)) { lineage.add(next); stack.push(next); }
           }
         }
       }
@@ -157,7 +161,7 @@ export function DataflowView({ workflowId, height }: Props) {
     });
 
     return { nodes, edges };
-  }, [graph, focus]);
+  }, [graph, focus, agentHighlight]);
 
   if (isLoading) return <div className="text-fg-muted text-xs">Loading dataflow…</div>;
   if (error) return <div className="text-fg-muted text-xs">No dataflow data captured for this workflow.</div>;
@@ -185,6 +189,7 @@ export function DataflowView({ workflowId, height }: Props) {
             nodesDraggable={false}
             nodesConnectable={false}
             onNodeClick={(_, node) => {
+              useHighlightStore.getState().clearHighlight();
               setFocus((prev) => (prev === node.id ? null : node.id));
               const selectedNode = graph.nodes.find((n) => n.id === node.id) ?? null;
               if (selectedNode) {
@@ -193,6 +198,10 @@ export function DataflowView({ workflowId, height }: Props) {
                   data: { label: selectedNode.label, stats: selectedNode.stats },
                 });
               }
+            }}
+            onPaneClick={() => {
+              setFocus(null);
+              useHighlightStore.getState().clearHighlight();
             }}
             fitView
             fitViewOptions={{ padding: 0.15 }}

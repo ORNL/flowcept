@@ -12,7 +12,8 @@ export interface ChatChartData {
 export type ChatPart =
   | { kind: "text"; text: string }
   | { kind: "chart"; data: ChatChartData }
-  | { kind: "tool"; name: string; args?: Record<string, unknown> };
+  | { kind: "tool"; name: string; args?: Record<string, unknown> }
+  | { kind: "ui_highlight"; task_ids: string[] };
 
 export interface ChatMsg {
   role: "user" | "assistant";
