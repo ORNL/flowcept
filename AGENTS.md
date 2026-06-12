@@ -17,7 +17,7 @@ If a tool requires its own file, make that file (which should immediately go to 
 - Do not commit personal absolute paths.
 - Do not commit secrets or keys.
 - Do not `pip install`; report missing packages and the command the user can run. Consider adding them to pyproject.toml.
-- Do not auto-commit. Test first, then ask the user to confirm before discussing a commit.
+- Do not auto-commit. The AI code assistant must test the fix/implemented feature and fix any error that appears before it asks the user (the developer) to commit or to test themselves.
 
 ## 2. Interaction Rules
 
@@ -175,6 +175,8 @@ Do not run tests from scratch/sandbox directories. Target `tests/` explicitly.
 
 - Prefer real tests over mocks. Use real services, real data, and real LLMs when feasible.
 - Avoid mock-heavy tests unless there is no practical alternative.
+- When a test fails, the correct fix is almost always to fix the implementation code, not the test; the test itself is very rarely the culprit. Always resolve warnings at their source rather than silencing them.
+
 
 ## 11. CI And Dependency Drift
 
