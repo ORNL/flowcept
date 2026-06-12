@@ -152,9 +152,9 @@ export function useVisibleWorkflows(params: { campaign_id?: string } = {}) {
   const withTasks = useWorkflowsWithTasks();
   const items = useMemo(() => {
     if (!workflows.data || !withTasks.data) return [];
-    return workflows.data.items.filter(
-      (w) => w.name && withTasks.data.has(w.workflow_id) && toEpochSec(w.utc_timestamp) !== null,
-    );
+    return workflows.data.items
+      .filter((w) => w.name && withTasks.data.has(w.workflow_id) && toEpochSec(w.utc_timestamp) !== null)
+      .sort((a, b) => (toEpochSec(b.utc_timestamp) ?? 0) - (toEpochSec(a.utc_timestamp) ?? 0));
   }, [workflows.data, withTasks.data]);
   return {
     items,

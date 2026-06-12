@@ -55,6 +55,7 @@ export interface BlobObjectDoc {
   task_id?: string;
   object_type?: string;
   version?: number;
+  object_size_bytes?: number;
   custom_metadata?: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;

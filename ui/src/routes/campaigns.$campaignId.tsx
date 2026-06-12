@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
-import { Trash2 } from "lucide-react";
+import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { useCampaign, useProvenanceCard, useResolveDashboard, useWorkflowsWithTasks } from "../api/queries";
 import { apiDelete } from "../api/client";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
@@ -49,7 +49,9 @@ function CampaignDetail() {
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-6">
       <header>
-        <div className="text-fg-muted text-xs">Campaign</div>
+        <div className="text-fg-muted text-xs">
+          <Link to="/campaigns" className="hover:text-fg hover:underline">Campaigns</Link>
+        </div>
         <div className="flex items-center gap-3">
           <h1 className="font-mono text-lg font-semibold">{campaignId}</h1>
           <button
@@ -131,16 +133,27 @@ function CampaignDetail() {
 }
 
 function CampaignDashboardTab({ campaignId }: { campaignId: string }) {
+  const [hiddenChartIds, setHiddenChartIds] = useState<Set<string>>(() => new Set());
   const resolved = useResolveDashboard({ campaign_id: campaignId });
   const rawCharts = resolved.data ?? [];
   const charts = rawCharts.map((raw) => chartSchema.parse({ ...raw, data: { filter: {}, ...(raw.data as object) } }));
+  const visibleCharts = charts.filter((c) => !hiddenChartIds.has(c.chart_id));
   const spec: DashboardSpec = dashboardSpec.parse({
     type: "campaign",
     name: "Campaign Dashboard",
     context: { campaign_id: campaignId },
-    charts,
+    charts: visibleCharts,
     layout: [],
   });
+
+  function toggleChart(chartId: string) {
+    setHiddenChartIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(chartId)) next.delete(chartId);
+      else next.add(chartId);
+      return next;
+    });
+  }
 
   if (resolved.isLoading) return <div className="text-fg-muted text-xs">Loading…</div>;
 
@@ -153,15 +166,36 @@ function CampaignDashboardTab({ campaignId }: { campaignId: string }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      {charts.map((c) => (
-        <div key={c.chart_id} className="card p-3" style={{ height: 280 }}>
-          <div className="text-fg-muted mb-2 text-xs font-medium">{c.title}</div>
-          <div className="h-[calc(100%-1.5rem)]">
-            <ChartRenderer chart={c} spec={spec} />
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {charts.map((c) => {
+          const hidden = hiddenChartIds.has(c.chart_id);
+          return (
+            <button
+              key={c.chart_id}
+              onClick={() => toggleChart(c.chart_id)}
+              className={`flex items-center gap-1 rounded border px-2 py-1 text-[11px] ${
+                hidden ? "border-border text-fg-muted" : "border-accent/50 text-fg"
+              }`}
+              title={hidden ? "Show chart" : "Hide chart"}
+            >
+              {hidden ? <EyeOff size={11} /> : <Eye size={11} />}
+              {c.title || c.chart_id}
+            </button>
+          );
+        })}
+      </div>
+      {!visibleCharts.length && <p className="text-fg-muted text-sm">All dashboard charts are hidden.</p>}
+      <div className="grid grid-cols-2 gap-4">
+        {visibleCharts.map((c) => (
+          <div key={c.chart_id} className="card p-3" style={{ height: 280 }}>
+            <div className="text-fg-muted mb-2 text-xs font-medium">{c.title}</div>
+            <div className="h-[calc(100%-1.5rem)]">
+              <ChartRenderer chart={c} spec={spec} />
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,13 +1,32 @@
 /** Campaigns list. */
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { Trash2 } from "lucide-react";
 import { useCampaigns } from "../api/queries";
+import { apiDelete } from "../api/client";
+import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import { fmtTs, shortId } from "../lib/format";
 
 export const Route = createFileRoute("/campaigns/")({ component: CampaignsPage });
 
 function CampaignsPage() {
   const { data, isLoading, error } = useCampaigns();
+  const router = useRouter();
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      await apiDelete(`/campaigns/${deleteId}`);
+      void router.invalidate();
+    } finally {
+      setDeleting(false);
+      setDeleteId(null);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-6">
@@ -19,26 +38,44 @@ function CampaignsPage() {
           .filter((c) => c.task_count > 0)
           .sort((a, b) => (b.last_ts ?? 0) - (a.last_ts ?? 0))
           .map((c) => (
-          <Link
-            key={c.campaign_id}
-            to="/campaigns/$campaignId"
-            params={{ campaignId: c.campaign_id }}
-            className="card hover:border-accent/60 block p-4"
-          >
-            <div className="font-mono text-sm">{shortId(c.campaign_id, 28)}</div>
-            <div className="text-fg-muted mt-2 space-y-1 text-xs">
-              <div>
-                {c.workflow_count} workflows · {c.task_count} tasks
+          <div key={c.campaign_id} className="card hover:border-accent/60 relative group p-4">
+            <Link
+              to="/campaigns/$campaignId"
+              params={{ campaignId: c.campaign_id }}
+              className="block"
+            >
+              <div className="font-mono text-sm">{shortId(c.campaign_id, 28)}</div>
+              <div className="text-fg-muted mt-2 space-y-1 text-xs">
+                <div>
+                  {c.workflow_count} workflows · {c.task_count} tasks
+                </div>
+                {c.workflow_names.length > 0 && <div className="truncate">{c.workflow_names.join(", ")}</div>}
+                <div>
+                  {c.users.join(", ") || "unknown user"} · last: {fmtTs(c.last_ts)}
+                </div>
               </div>
-              {c.workflow_names.length > 0 && <div className="truncate">{c.workflow_names.join(", ")}</div>}
-              <div>
-                {c.users.join(", ") || "unknown user"} · last: {fmtTs(c.last_ts)}
-              </div>
-            </div>
-          </Link>
+            </Link>
+            <button
+              onClick={(e) => { e.preventDefault(); setDeleteId(c.campaign_id); }}
+              className="absolute top-3 right-3 text-fg-muted opacity-0 group-hover:opacity-100 hover:text-err"
+              title="Delete campaign"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
         ))}
       </div>
       {data && data.count === 0 && <div className="text-fg-muted text-xs">No campaigns recorded yet.</div>}
+
+      {deleteId && (
+        <DeleteConfirmModal
+          title="Delete campaign"
+          description={`This will permanently delete campaign ${shortId(deleteId, 16)} and all its workflows, tasks, and artifacts. This cannot be undone.`}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteId(null)}
+          loading={deleting}
+        />
+      )}
     </div>
   );
 }

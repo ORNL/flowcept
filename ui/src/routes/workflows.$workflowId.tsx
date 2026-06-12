@@ -175,7 +175,7 @@ function WorkflowDetail() {
     <div className="mx-auto max-w-6xl space-y-4 p-6">
       <header>
         <div className="text-fg-muted flex items-center gap-2 text-xs">
-          <span>Workflow</span>
+          <Link to="/workflows" className="hover:text-fg hover:underline">Workflows</Link>
           {workflow.data?.campaign_id && (
             <>
               <span>·</span>
