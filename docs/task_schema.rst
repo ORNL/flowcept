@@ -24,7 +24,9 @@ Identifiers
 - **group_id**: Identifier grouping related tasks, e.g., loop iterations (string)
 - **parent_task_id**: Identifier of the parent task, if nested (string)
 - **agent_id**: Identifier of the agent responsible for executing the task (string)
+- **agent_name**: Human-readable name of the agent responsible for executing the task (string)
 - **source_agent_id**: Identifier of the agent that sent this task for execution (string)
+- **source_agent_name**: Human-readable name of the agent that sent this task for execution (string)
 - **adapter_id**: Identifier of the adapter that produced this task (string)
 - **environment_id**: Identifier of the environment where the task ran (string)
 

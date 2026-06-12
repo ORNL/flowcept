@@ -133,6 +133,7 @@ def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
         "hostname",
         "status",
         "agent_id",
+        "agent_name",
         "campaign_id",
         "subtype",
     ]:

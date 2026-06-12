@@ -41,6 +41,11 @@ def generate_common_task_fields(current_fields):
         else ""
     )
     common_task_fields += (
+        "| `agent_name`                  | string | Human-readable name of the agent that executed the task. |\n"
+        if "agent_name" in current_fields
+        else ""
+    )
+    common_task_fields += (
         "| `started_at`                  | datetime64[ns, UTC] | Start time of a task. Always use this field when the query has any temporal reference related to the workflow execution, such as 'get the first 10 workflow executions' or 'the last workflow execution'. |\n"
         if "started_at" in current_fields
         else ""
