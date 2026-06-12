@@ -35,12 +35,21 @@ class ChatRequest(BaseModel):
 def get_chat_llm():
     """Build the chat LLM from the existing ``agent`` settings; 503 when unavailable."""
     if not AGENT_CHAT_ENABLED:
-        raise HTTPException(status_code=503, detail="Chat is disabled (agent.chat_enabled).")
-    api_key = AGENT.get("api_key")
-    if not api_key or api_key == "?":
         raise HTTPException(
             status_code=503,
-            detail="No LLM configured: set the agent section (api_key, service_provider, model) in settings.",
+            detail=(
+                "Chat features are disabled. To enable them, set 'agent.chat_enabled: true' in your settings.yaml file."
+            ),
+        )
+    api_key = AGENT.get("api_key")
+    if not api_key or api_key in ("?", "your-api-key-here"):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "LLM service is not configured. Please edit the 'agent' section in your settings.yaml file "
+                "to provide a valid API key (e.g. replace 'your-api-key-here' with your real key), "
+                "and ensure 'service_provider' and 'model' match your LLM provider configuration."
+            ),
         )
     try:
         from flowcept.agents.agents_utils import build_llm_model
@@ -50,7 +59,13 @@ def get_chat_llm():
         raise
     except Exception as e:
         FlowceptLogger().exception(e)
-        raise HTTPException(status_code=503, detail=f"Could not build the chat LLM: {e}") from e
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                f"Could not initialize the LLM client using the configured settings: {e}. "
+                "Please verify your credentials, API URL, and internet connection."
+            ),
+        ) from e
 
 
 @router.post("")
