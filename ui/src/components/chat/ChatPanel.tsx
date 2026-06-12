@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
-import { ChevronDown, Eraser, Send, Wrench } from "lucide-react";
+import { ChevronDown, Eraser, Maximize2, Minimize2, Send, Wrench } from "lucide-react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { API_BASE } from "../../api/client";
 import { useChatStore, type ChatMsg } from "../../stores/chatStore";
@@ -28,6 +28,18 @@ interface ChatPanelProps {
 export function ChatPanel({ panelHandle }: ChatPanelProps) {
   const { busy, messages, setBusy, push, appendPart, reset } = useChatStore();
   const [input, setInput] = useState("");
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    if (!isMaximized) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsMaximized(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMaximized]);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -82,23 +94,43 @@ export function ChatPanel({ panelHandle }: ChatPanelProps) {
     }
   };
 
+  const containerClasses = isMaximized
+    ? "fixed inset-6 z-50 flex flex-col bg-surface/95 backdrop-blur-md border border-border/80 rounded-xl shadow-2xl overflow-hidden"
+    : "flex h-full flex-col border-t border-border bg-surface";
+
   return (
-    <div className="flex h-full flex-col border-t border-border bg-surface">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <span className="text-sm font-medium">Flowcept chat</span>
-        <div className="flex items-center gap-2">
-          <button onClick={reset} title="Clear conversation" className="text-fg-muted hover:text-fg">
-            <Eraser size={14} />
-          </button>
-          <button
-            onClick={() => panelHandle?.collapse()}
-            title="Minimize chat"
-            className="text-fg-muted hover:text-fg"
-          >
-            <ChevronDown size={15} />
-          </button>
+    <>
+      {isMaximized && (
+        <div
+          className="fixed inset-0 z-40 bg-bg/85 backdrop-blur-sm transition-opacity"
+          onClick={() => setIsMaximized(false)}
+        />
+      )}
+      <div className={containerClasses}>
+        <div className="flex items-center justify-between border-b border-border px-4 py-2">
+          <span className="text-sm font-medium">Flowcept chat</span>
+          <div className="flex items-center gap-2">
+            <button onClick={reset} title="Clear conversation" className="text-fg-muted hover:text-fg">
+              <Eraser size={14} />
+            </button>
+            <button
+              onClick={() => setIsMaximized(!isMaximized)}
+              title={isMaximized ? "Minimize window" : "Maximize window"}
+              className="text-fg-muted hover:text-fg"
+            >
+              {isMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
+            {!isMaximized && (
+              <button
+                onClick={() => panelHandle?.collapse()}
+                title="Collapse panel"
+                className="text-fg-muted hover:text-fg"
+              >
+                <ChevronDown size={15} />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-3">
         {messages.length === 0 && (
@@ -167,5 +199,6 @@ export function ChatPanel({ panelHandle }: ChatPanelProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }
