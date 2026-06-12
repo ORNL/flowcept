@@ -64,6 +64,7 @@ class Flowcept(object):
         workflow_subtype: str = None,
         workflow_args: Dict = None,
         agent_id: str = None,
+        agent_name: str = None,
         parent_workflow_id: str = None,
         start_persistence=True,
         check_safe_stops=True,  # TODO add to docstring
@@ -180,6 +181,32 @@ class Flowcept(object):
         self.workflow_args = workflow_args
         self.parent_workflow_id = parent_workflow_id
         self.agent_id = agent_id
+        self.agent_name = agent_name
+
+        if self.agent_id is not None:
+            from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
+
+            agent_obj = AgentObject(agent_id=self.agent_id, name=self.agent_name)
+            agent_obj.enrich()
+
+            from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED
+
+            if MONGO_ENABLED:
+                from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+
+                try:
+                    MongoDBDAO().insert_or_update_agent(agent_obj)
+                except Exception as e:
+                    self.logger.error(f"Error storing agent in MongoDB: {e}")
+
+            if LMDB_ENABLED:
+                from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
+
+                try:
+                    LMDBDAO().insert_or_update_agent(agent_obj)
+                except Exception as e:
+                    self.logger.error(f"Error storing agent in LMDB: {e}")
+
         should_delete_buffer_file = (
             flowcept.configs.DELETE_BUFFER_FILE if delete_buffer_file is None else delete_buffer_file
         )

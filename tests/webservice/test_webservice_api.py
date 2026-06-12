@@ -27,6 +27,7 @@ class FakeDB:
             {"task_id": "t1", "workflow_id": "wf-1", "status": "finished", "started_at": 10},
             {"task_id": "t3", "workflow_id": "wf-2", "status": "finished", "started_at": 30},
         ]
+        self.agents = []
         self.objects = [
             {
                 "object_id": "o1",
@@ -161,7 +162,31 @@ class FakeDB:
                 rs = [{k: v for k, v in row.items() if k in projection} for row in rs]
             return rs[:limit] if limit else rs
 
+        if collection == "agents":
+            rs = [ag for ag in self.agents if self._matches_filter(ag, filter_)]
+            if sort:
+                for field, order in reversed(sort):
+                    rs = sorted(rs, key=lambda item: self._nested_get(item, field), reverse=(order == -1))
+            if projection:
+                rs = [{k: v for k, v in row.items() if k in projection} for row in rs]
+            return rs[:limit] if limit else rs
+
         return []
+
+    def agent_query(
+        self,
+        filter,
+        projection=None,
+        limit=0,
+        sort=None,
+    ):
+        rs = [ag for ag in self.agents if self._matches_filter(ag, filter or {})]
+        if sort:
+            for field, order in reversed(sort):
+                rs = sorted(rs, key=lambda item: item.get(field), reverse=(order == -1))
+        if projection:
+            rs = [{k: v for k, v in row.items() if k in projection} for row in rs]
+        return rs[:limit] if limit else rs
 
     def task_query(
         self,
@@ -694,6 +719,10 @@ def test_agents_and_dataflow_routes():
             "used": {"y": 2},
             "generated": {"z": 3},
         },
+    ]
+    fake_db.agents = [
+        {"agent_id": "agent-1", "name": "Agent 1", "registered_at": 10},
+        {"agent_id": "agent-2", "name": "Agent 2", "registered_at": 20},
     ]
 
     rs = client.get("/api/v1/agents")

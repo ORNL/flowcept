@@ -10,6 +10,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 )
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
+from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 
@@ -109,6 +110,27 @@ class DBAPI(object):
         else:
             return workflow_obj
 
+    def insert_or_update_agent(self, agent_obj: AgentObject) -> AgentObject:
+        """Insert or update an agent document.
+
+        Parameters
+        ----------
+        agent_obj : AgentObject
+            Agent object to persist.
+
+        Returns
+        -------
+        AgentObject or None
+            The persisted agent object, or ``None`` on failure.
+        """
+        self.logger.debug(f"DB API going to save agent {agent_obj}")
+        ret = DBAPI._dao().insert_or_update_agent(agent_obj)
+        if not ret:
+            self.logger.error("Sorry, couldn't update or insert agent.")
+            return None
+        else:
+            return agent_obj
+
     def get_workflow_object(self, workflow_id) -> WorkflowObject:
         """Get a workflow object by workflow identifier.
 
@@ -145,6 +167,45 @@ class DBAPI(object):
         results = self.query(collection="workflows", filter=filter)
         if results is None:
             self.logger.error("Could not retrieve workflows with that filter.")
+            return None
+        return results
+
+    def get_agent_object(self, agent_id) -> AgentObject:
+        """Get an agent object by agent identifier.
+
+        Parameters
+        ----------
+        agent_id : str
+            Agent identifier.
+
+        Returns
+        -------
+        AgentObject or None
+            Matching agent object, or ``None`` when not found.
+        """
+        agobs = self.agent_query(filter={AgentObject.agent_id_field(): agent_id})
+        if agobs is None or len(agobs) == 0:
+            self.logger.error("Could not retrieve agent with that filter.")
+            return None
+        else:
+            return AgentObject.from_dict(agobs[0])
+
+    def agent_query(self, filter) -> List[Dict]:
+        """Query the ``agents`` collection.
+
+        Parameters
+        ----------
+        filter : dict
+            Mongo/DAO filter expression.
+
+        Returns
+        -------
+        list of dict or None
+            Matching agent records, or ``None`` on error.
+        """
+        results = self.query(collection="agents", filter=filter)
+        if results is None:
+            self.logger.error("Could not retrieve agents with that filter.")
             return None
         return results
 

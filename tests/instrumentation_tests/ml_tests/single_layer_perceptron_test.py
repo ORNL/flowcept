@@ -4,6 +4,7 @@ import os
 import random
 
 import pytest
+from uuid import uuid4
 
 pytest.importorskip("torch")
 
@@ -81,7 +82,7 @@ class SingleLayerPerceptron(nn.Module):
     output_names=["x_train_shape", "y_train_shape", "x_val_shape", "y_val_shape", "dataset_id"],
     agent_id="orchestrator_agent_id",
 )
-def get_dataset(n_samples, split_ratio):
+def get_dataset(n_samples, split_ratio, agent_id=None):
     """Generate a toy binary classification dataset."""
     generator = torch.Generator().manual_seed(torch.initial_seed())
     x = torch.cat(
@@ -136,6 +137,7 @@ def train_and_validate(
     learning_rate=0.1,
     config_id=None,
     torch_only=False,
+    agent_id=None,
 ):
     """Train a perceptron and return validation metrics.
 
@@ -211,11 +213,14 @@ def select_best_model_args_handler(results=None, **kwargs):
     if results is None:
         return kwargs
     result = _best_gridsearch_result(results)
-    return {
+    res = {
         "torch_model_object_id": result["torch_model_object_id"],
         "best_val_loss": result["best_val_loss"],
         "config_id": result["config_id"],
     }
+    for k, v in kwargs.items():
+        res[k] = v
+    return res
 
 
 @flowcept_task(
@@ -223,7 +228,7 @@ def select_best_model_args_handler(results=None, **kwargs):
     args_handler=select_best_model_args_handler,
     agent_id="orchestrator_agent_id",
 )
-def select_best_model(results):
+def select_best_model(results, agent_id=None):
     """Select the best model from train task outputs by minimal validation loss."""
     result = _best_gridsearch_result(results)
     best_model_object_id = result["torch_model_object_id"]
@@ -263,12 +268,27 @@ def run_gridsearch_experiment(campaign_id=None):
         "workflow_name": "Perceptron GridSearch",
         "workflow_subtype": ML_Types.WORKFLOW,
         "workflow_args": reproducibility,
+        "agent_id": f"perceptron_agent_{uuid4()}",
+        "agent_name": "PerceptronAgent",
     }
     if campaign_id is not None:
         kwargs["campaign_id"] = campaign_id
 
+    orchestrator_agent_id = f"orchestrator_agent_{uuid4()}"
+    train_agent_id = f"train_agent_{uuid4()}"
+
     with Flowcept(**kwargs):
-        x_train, y_train, x_val, y_val, dataset_id = get_dataset(120, 0.8)
+        from flowcept import AgentObject
+
+        orchestrator_agent = AgentObject(agent_id=orchestrator_agent_id, name="OrchestratorAgent")
+        orchestrator_agent.enrich()
+        Flowcept.db.insert_or_update_agent(orchestrator_agent)
+
+        train_agent = AgentObject(agent_id=train_agent_id, name="TrainingAgent")
+        train_agent.enrich()
+        Flowcept.db.insert_or_update_agent(train_agent)
+
+        x_train, y_train, x_val, y_val, dataset_id = get_dataset(120, 0.8, agent_id=orchestrator_agent_id)
         results = []
         for idx, cfg in enumerate(configs, 1):
             result = train_and_validate(
@@ -283,10 +303,11 @@ def run_gridsearch_experiment(campaign_id=None):
                 checkpoint_check=2,
                 config_id=f"cfg_{idx}",
                 torch_only=True,
+                agent_id=train_agent_id,
             )
             results.append({"config": cfg, "result": result})
 
-        selected = select_best_model(results)
+        selected = select_best_model(results, agent_id=orchestrator_agent_id)
 
     return {
         "workflow_id": Flowcept.current_workflow_id,
@@ -312,7 +333,7 @@ def asserts(tasks):
     dataset_task = next((t for t in tasks if t.get("activity_id") == "get_dataset"), None)
     assert dataset_task is not None
     assert dataset_task.get("subtype") == ML_Types.DATA_PREP
-    assert dataset_task.get("agent_id") == "orchestrator_agent_id"
+    assert dataset_task.get("agent_id").startswith("orchestrator_agent_")
     generated = dataset_task.get("generated", {})
     assert tuple(generated.get("x_train_shape", ())) == (96, 2)
     assert tuple(generated.get("y_train_shape", ())) == (96, 1)
@@ -322,11 +343,11 @@ def asserts(tasks):
     train_task = next((t for t in tasks if t.get("activity_id") == "train_and_validate"), None)
     assert train_task is not None
     assert train_task.get("subtype") == ML_Types.LEARNING
-    assert train_task.get("agent_id") == "train_agent_id"
+    assert train_task.get("agent_id").startswith("train_agent_")
 
     select_best_task = next((t for t in tasks if t.get("activity_id") == "select_best_model"), None)
     if select_best_task is not None:
-        assert select_best_task.get("agent_id") == "orchestrator_agent_id"
+        assert select_best_task.get("agent_id").startswith("orchestrator_agent_")
     train_generated = train_task.get("generated", {})
     ml_model_object_id = train_generated.get("ml_model_object_id")
     torch_model_object_id = train_generated.get("torch_model_object_id")

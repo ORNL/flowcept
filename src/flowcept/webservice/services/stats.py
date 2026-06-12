@@ -40,8 +40,10 @@ def _to_epoch(value) -> Optional[float]:
     return None
 
 
-def _mongo_dao_or_none() -> Optional[DocumentDBDAO]:
+def _mongo_dao_or_none(db: Optional[DBAPI] = None) -> Optional[DocumentDBDAO]:
     """Return the DAO singleton when it supports raw aggregation pipelines, else None."""
+    if db is not None and not isinstance(db, DBAPI):
+        return None
     try:
         dao = DocumentDBDAO.get_instance(create_indices=False)
         return dao if hasattr(dao, "raw_pipeline") else None
@@ -81,7 +83,7 @@ def task_summary(db: DBAPI, filter: Dict[str, Any]) -> Dict[str, Any]:
     dict
         ``{"count", "status_counts", "activity_stats", "time_range"}``.
     """
-    dao = _mongo_dao_or_none()
+    dao = _mongo_dao_or_none(db)
     if dao is not None:
         return _task_summary_mongo(dao, filter)
     return _task_summary_python(db, filter)
@@ -264,7 +266,7 @@ def derive_campaigns(db: DBAPI) -> List[Dict[str, Any]]:
             record["first_ts"] = value if record["first_ts"] is None else min(record["first_ts"], value)
             record["last_ts"] = value if record["last_ts"] is None else max(record["last_ts"], value)
 
-    dao = _mongo_dao_or_none()
+    dao = _mongo_dao_or_none(db)
     if dao is not None:
         wf_rows = (
             dao.raw_pipeline(
@@ -348,24 +350,55 @@ def derive_campaigns(db: DBAPI) -> List[Dict[str, Any]]:
 
 
 def derive_agents(db: DBAPI, filter: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
-    """Derive agent summaries by grouping tasks by ``agent_id``.
+    """Derive agent summaries by grouping tasks by ``agent_id`` for agents in the agents collection.
 
     Parameters
     ----------
     db : DBAPI
         DB API facade.
     filter : dict, optional
-        Extra Mongo-style filter ANDed with the agent-existence condition.
+        Extra Mongo-style filter for querying the agents collection.
 
     Returns
     -------
     list of dict
         One record per agent with task counts, activities, and last activity time.
     """
-    base = {"agent_id": {"$exists": True, "$ne": None}}
-    query_filter = {"$and": [base, filter]} if filter else base
 
-    dao = _mongo_dao_or_none()
+    def to_float_ts(val):
+        if val is None:
+            return None
+        if isinstance(val, (int, float)):
+            return float(val)
+        from datetime import datetime as dt
+
+        if isinstance(val, dt):
+            return val.timestamp()
+        if isinstance(val, str):
+            try:
+                return dt.fromisoformat(val.replace("Z", "+00:00")).timestamp()
+            except Exception:
+                return None
+        return None
+
+    try:
+        stored_agents = db.agent_query(filter=filter or {}) or []
+    except Exception as e:
+        from flowcept.commons.flowcept_logger import FlowceptLogger
+
+        FlowceptLogger().error(f"Error querying stored agents: {e}")
+        stored_agents = []
+
+    # Filter out train_agent_id and orchestrator_agent_id
+    stored_agents = [a for a in stored_agents if a.get("agent_id") not in ("train_agent_id", "orchestrator_agent_id")]
+
+    if not stored_agents:
+        return []
+
+    agent_ids = [a["agent_id"] for a in stored_agents if "agent_id" in a]
+    query_filter = {"agent_id": {"$in": agent_ids}}
+
+    dao = _mongo_dao_or_none(db)
     if dao is not None:
         rows = (
             dao.raw_pipeline(
@@ -378,7 +411,7 @@ def derive_agents(db: DBAPI, filter: Optional[Dict[str, Any]] = None) -> List[Di
                             "activities": {"$addToSet": "$activity_id"},
                             "source_agent_ids": {"$addToSet": "$source_agent_id"},
                             "campaign_ids": {"$addToSet": "$campaign_id"},
-                            "last_active": {"$max": "$utc_timestamp"},
+                            "last_active": {"$max": "$registered_at"},
                         }
                     },
                 ],
@@ -386,34 +419,38 @@ def derive_agents(db: DBAPI, filter: Optional[Dict[str, Any]] = None) -> List[Di
             )
             or []
         )
-        agents = [
-            {
-                "agent_id": row["_id"],
+        stats_map = {
+            row["_id"]: {
                 "task_count": row.get("task_count", 0),
                 "activities": sorted(a for a in row.get("activities", []) if a),
                 "source_agent_ids": sorted(s for s in row.get("source_agent_ids", []) if s),
                 "campaign_ids": sorted(c for c in row.get("campaign_ids", []) if c),
-                "last_active": row.get("last_active"),
+                "last_active": to_float_ts(row.get("last_active")),
             }
             for row in rows
-        ]
+        }
     else:
         docs = (
             db.task_query(
                 filter=query_filter,
-                projection=["agent_id", "activity_id", "source_agent_id", "campaign_id", "utc_timestamp"],
+                projection=[
+                    "agent_id",
+                    "activity_id",
+                    "source_agent_id",
+                    "campaign_id",
+                    "registered_at",
+                ],
             )
             or []
         )
-        grouped: Dict[str, Dict[str, Any]] = {}
+        stats_map = {}
         for doc in docs:
             agent_id = doc.get("agent_id")
             if not agent_id:
                 continue
-            record = grouped.setdefault(
+            record = stats_map.setdefault(
                 agent_id,
                 {
-                    "agent_id": agent_id,
                     "task_count": 0,
                     "activities": set(),
                     "source_agent_ids": set(),
@@ -429,16 +466,44 @@ def derive_agents(db: DBAPI, filter: Optional[Dict[str, Any]] = None) -> List[Di
             ):
                 if doc.get(field):
                     record[key].add(doc[field])
-            ts = doc.get("utc_timestamp")
-            if isinstance(ts, (int, float)):
+            ts = to_float_ts(doc.get("registered_at"))
+            if ts is not None:
                 current = record["last_active"]
                 record["last_active"] = ts if current is None else max(current, ts)
-        agents = [
-            {**record, **{key: sorted(record[key]) for key in ("activities", "source_agent_ids", "campaign_ids")}}
-            for record in grouped.values()
-        ]
+        for record in stats_map.values():
+            for key in ("activities", "source_agent_ids", "campaign_ids"):
+                record[key] = sorted(record[key])
 
-    agents.sort(key=lambda a: (a["last_active"] is None, a["last_active"]), reverse=True)
+    agents = []
+    for sa in stored_agents:
+        agent_id = sa["agent_id"]
+        stat = stats_map.get(
+            agent_id,
+            {
+                "task_count": 0,
+                "activities": [],
+                "source_agent_ids": [],
+                "campaign_ids": [],
+                "last_active": None,
+            },
+        )
+        agents.append(
+            {
+                "agent_id": agent_id,
+                "task_count": stat["task_count"],
+                "activities": stat["activities"],
+                "source_agent_ids": stat["source_agent_ids"],
+                "campaign_ids": stat["campaign_ids"],
+                "last_active": stat["last_active"],
+                "name": sa.get("name"),
+                "registered_at": to_float_ts(sa.get("registered_at")),
+            }
+        )
+
+    agents.sort(
+        key=lambda a: (1, a["registered_at"]) if a["registered_at"] is not None else (0, float("-inf")),
+        reverse=True,
+    )
     return agents
 
 
@@ -499,13 +564,13 @@ def _merge_context_filter(card_filter: Dict[str, Any], context: Optional[Dict[st
     return {"$and": [context, card_filter]}
 
 
-def _resolve_collection_sizes(query_filter: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _resolve_collection_sizes(db: DBAPI, query_filter: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Return per-collection BSON byte totals for the given filter (e.g. workflow_id).
 
     Uses MongoDB ``$bsonSize`` on each of the three provenance collections.
     Returns an empty list when Mongo is unavailable.
     """
-    dao = _mongo_dao_or_none()
+    dao = _mongo_dao_or_none(db)
     if dao is None:
         return []
     rows = []
@@ -548,7 +613,7 @@ def resolve_chart_data(db: DBAPI, data: "ChartData", context: Optional[Dict[str,
     query_filter = _merge_context_filter(data.filter, context)
 
     if data.source == "collection_sizes":
-        rows = _resolve_collection_sizes(query_filter)
+        rows = _resolve_collection_sizes(db, query_filter)
         return {"rows": rows, "count": len(rows)}
 
     if data.group_by or data.metrics:
@@ -573,7 +638,7 @@ def resolve_chart_data(db: DBAPI, data: "ChartData", context: Optional[Dict[str,
 def _resolve_grouped(db: DBAPI, data: "ChartData", query_filter: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Group/aggregate rows for a card, using Mongo pipelines when available."""
     metrics = data.metrics or [MetricSpec(field="", agg="count")]
-    dao = _mongo_dao_or_none()
+    dao = _mongo_dao_or_none(db)
     has_elapsed_metric = any(getattr(m, "field", None) == "elapsed" for m in metrics)
     if dao is not None and data.source in ("tasks", "workflows", "objects") and not has_elapsed_metric:
         group_id = f"${data.group_by}" if data.group_by else None

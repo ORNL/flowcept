@@ -10,6 +10,7 @@ import pandas as pd
 
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import WorkflowObject
+from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
 from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED
 
 
@@ -120,6 +121,22 @@ class DocumentDBDAO(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def insert_or_update_agent(self, agent_obj: AgentObject):
+        """Insert or update an agent object.
+
+        Parameters
+        ----------
+        agent_obj : AgentObject
+            The agent object to insert or update.
+
+        Raises
+        ------
+        NotImplementedError
+            This method must be implemented by subclasses.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def insert_one_task(self, task_dict: Dict):
         """Insert a single task document.
 
@@ -215,6 +232,30 @@ class DocumentDBDAO(ABC):
     @abstractmethod
     def workflow_query(self, filter, projection, limit, sort, remove_json_unserializables):
         """Query workflow documents.
+
+        Parameters
+        ----------
+        filter : dict
+            Query filter to apply.
+        projection : dict
+            Fields to include or exclude in the results.
+        limit : int
+            Maximum number of documents to return.
+        sort : list
+            Sorting criteria.
+        remove_json_unserializables : bool
+            Whether to remove JSON-unserializable fields from the results.
+
+        Raises
+        ------
+        NotImplementedError
+            This method must be implemented by subclasses.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def agent_query(self, filter, projection, limit, sort, remove_json_unserializables):
+        """Query agent documents.
 
         Parameters
         ----------

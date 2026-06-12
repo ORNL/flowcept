@@ -192,8 +192,14 @@ def test_webservice_campaigns_agents_stats_and_prov_card(db_cleanup):
     db_cleanup["campaigns"].append(campaign_id)
     workflow_name = f"ws-stats-workflow-{uuid4()}"
     agent_id = f"ws-agent-{uuid4()}"
+    agent_name = "WSAgent"
 
-    with Flowcept(campaign_id=campaign_id, workflow_name=workflow_name):
+    with Flowcept(
+        campaign_id=campaign_id,
+        workflow_name=workflow_name,
+        agent_id=agent_id,
+        agent_name=agent_name,
+    ):
         workflow_id = Flowcept.current_workflow_id
         for i in range(3):
             with FlowceptTask(activity_id="preprocess", used={"i": i}) as task:
@@ -886,7 +892,9 @@ def test_webservice_dataflow_graph(db_cleanup):
     workflow_id = run_data["workflow_id"]
     learning_tasks = [t for t in run_data["tasks"] if t.get("activity_id") == "train_and_validate"]
 
-    ok = _wait_for(lambda: len(Flowcept.db.task_query(filter={"workflow_id": workflow_id}) or []) >= len(run_data["tasks"]))
+    ok = _wait_for(
+        lambda: len(Flowcept.db.task_query(filter={"workflow_id": workflow_id}) or []) >= len(run_data["tasks"])
+    )
     assert ok, "Timed out waiting for persisted tasks."
 
     app = create_app()

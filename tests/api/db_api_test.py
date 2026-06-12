@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
-from flowcept import BlobObject, Flowcept, WorkflowObject
+from flowcept import BlobObject, Flowcept, WorkflowObject, AgentObject
 from flowcept.configs import MONGO_ENABLED
 from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 
@@ -38,6 +38,61 @@ class DBAPITest(unittest.TestCase):
         wf_obj = Flowcept.db.get_workflow_object(workflow_id=workflow1_id)
         assert wf_obj is not None
         print(wf_obj)
+
+    def test_agent_dao(self):
+        agent_id = str(uuid4())
+        agent = AgentObject(agent_id=agent_id, name="TestAgent")
+        agent.enrich()
+
+        # Check registered_at is populated and is a float
+        assert agent.registered_at is not None
+        assert isinstance(agent.registered_at, float)
+
+        assert Flowcept.db.insert_or_update_agent(agent)
+
+        agent_obj = Flowcept.db.get_agent_object(agent_id=agent_id)
+        assert agent_obj is not None
+        assert agent_obj.name == "TestAgent"
+        assert agent_obj.agent_id == agent_id
+        assert agent_obj.registered_at == agent.registered_at
+
+    def test_agent_dao_both_db_paths(self):
+        from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+        from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
+        from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED
+
+        agent_id = str(uuid4())
+        agent = AgentObject(agent_id=agent_id, name="DBTestAgent")
+        agent.enrich()
+
+        if MONGO_ENABLED:
+            mongo_dao = MongoDBDAO()
+            assert mongo_dao.insert_or_update_agent(agent)
+            res = mongo_dao.agent_query(filter={"agent_id": agent_id})
+            assert len(res) == 1
+            assert res[0]["name"] == "DBTestAgent"
+            assert res[0]["registered_at"] == agent.registered_at
+
+        if LMDB_ENABLED:
+            lmdb_dao = LMDBDAO()
+            assert lmdb_dao.insert_or_update_agent(agent)
+            res = lmdb_dao.agent_query(filter={"agent_id": agent_id})
+            assert len(res) == 1
+            assert res[0]["name"] == "DBTestAgent"
+            assert res[0]["registered_at"] == agent.registered_at
+
+    def test_flowcept_agent_instantiation(self):
+        agent_id = str(uuid4())
+        agent_name = "InstantiatedAgent"
+
+        with Flowcept(agent_id=agent_id, agent_name=agent_name, save_workflow=False, start_persistence=False):
+            pass
+
+        agent_obj = Flowcept.db.get_agent_object(agent_id=agent_id)
+        assert agent_obj is not None
+        assert agent_obj.name == agent_name
+        assert agent_obj.agent_id == agent_id
+        assert agent_obj.registered_at is not None
 
         wf2_id = str(uuid4())
         print(wf2_id)
@@ -488,30 +543,29 @@ class DBAPITest(unittest.TestCase):
             "activity_id": {
                 "epochs_loop_iteration": [
                     "{'epoch': task['used']['epoch']}",
-                    "{'model_train': ancestors[task['task_id']][-1]['task_id']}"
+                    "{'model_train': ancestors[task['task_id']][-1]['task_id']}",
                 ],
                 "train_batch_iteration": [
                     "{'train_batch': task['used']['i'], 'train_data_path': ancestors[task['task_id']][0]['used']['train_data_path'], 'train_batch_size': ancestors[task['task_id']][0]['used']['batch_size'] }",
-                    "{'epoch': ancestors[task['task_id']][-1]['used']['epoch']}"
+                    "{'epoch': ancestors[task['task_id']][-1]['used']['epoch']}",
                 ],
                 "eval_batch_iteration": [
                     "{'eval_batch': task['used']['i'], 'eval_data_path': ancestors[task['task_id']][0]['used']['val_data_path'], 'train_batch_size': ancestors[task['task_id']][0]['used']['eval_batch_size'] }",
-                    "{'epoch': ancestors[task['task_id']][-1]['used']['epoch']}"
+                    "{'epoch': ancestors[task['task_id']][-1]['used']['epoch']}",
                 ],
             },
             "subtype": {
                 "parent_forward": [
                     "{'model': task['activity_id']}",
-                    "ancestors[task['task_id']][-1]['custom_provenance_id']"
+                    "ancestors[task['task_id']][-1]['custom_provenance_id']",
                 ],
                 "child_forward": [
                     "{'module': task['activity_id']}",
-                    "ancestors[task['task_id']][-1]['custom_provenance_id']"
-                ]
-            }
+                    "ancestors[task['task_id']][-1]['custom_provenance_id']",
+                ],
+            },
         }
-        d = Flowcept.db._dao().get_tasks_recursive('e9a3b567-cb56-4884-ba14-f137c0260191', mapping=mapping)
-
+        d = Flowcept.db._dao().get_tasks_recursive("e9a3b567-cb56-4884-ba14-f137c0260191", mapping=mapping)
 
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_dump(self):

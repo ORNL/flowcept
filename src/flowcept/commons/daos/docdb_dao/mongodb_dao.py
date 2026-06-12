@@ -23,6 +23,7 @@ from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
+from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.utils import perf_log, get_utc_now_str
@@ -86,6 +87,7 @@ class MongoDBDAO(DocumentDBDAO):
         self._obj_collection = self._db["objects"]
         self._obj_history_collection = self._db["object_history"]
         self._dashboards_collection = self._db["dashboards"]
+        self._agents_collection = self._db["agents"]
 
         if create_indices:
             self._create_indices()
@@ -110,6 +112,11 @@ class MongoDBDAO(DocumentDBDAO):
             self._wfs_collection.create_index("parent_workflow_id")
         if "campaign_id" not in existing_indices:
             self._wfs_collection.create_index("campaign_id")
+
+        # Creating agent collection indices:
+        existing_indices = [list(x["key"].keys())[0] for x in self._agents_collection.list_indexes()]
+        if AgentObject.agent_id_field() not in existing_indices:
+            self._agents_collection.create_index(AgentObject.agent_id_field(), unique=True)
 
         # Creating objects collection indices:
         existing_indices = [list(x["key"].keys())[0] for x in self._obj_collection.list_indexes()]
@@ -697,6 +704,34 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
+    def insert_or_update_agent(self, agent_obj: AgentObject) -> bool:
+        """Insert or update agent."""
+        _dict = agent_obj.to_dict().copy()
+        agent_id = _dict.pop(AgentObject.agent_id_field(), None)
+        if agent_id is None:
+            self.logger.exception("The agent identifier cannot be none.")
+            return False
+        _filter = {AgentObject.agent_id_field(): agent_id}
+        update_query = {}
+
+        machine_info = _dict.pop("machine_info", None)
+        if machine_info is not None:
+            for k in machine_info:
+                _dict[f"machine_info.{k}"] = machine_info[k]
+
+        update_query.update(
+            {
+                "$set": _dict,
+            }
+        )
+
+        try:
+            result = self._agents_collection.update_one(_filter, update_query, upsert=True)
+            return (result.upserted_id is not None) or result.raw_result["updatedExisting"]
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
     def to_df(self, collection="tasks", filter=None) -> pd.DataFrame:
         """
         Convert the contents of a MongoDB collection to a pandas DataFrame.
@@ -1118,9 +1153,12 @@ class MongoDBDAO(DocumentDBDAO):
             return self.object_query(filter, projection, limit, sort)
         elif collection == "object_history":
             return list(self._obj_history_collection.find(filter))
+        elif collection == "agents":
+            return self.agent_query(filter, projection, limit, sort, remove_json_unserializables)
         else:
             raise Exception(
-                f"You used type={collection}, but MongoDB only stores tasks, workflows, objects, and object_history"
+                f"You used type={collection}, but MongoDB only stores "
+                "tasks, workflows, objects, object_history, and agents"
             )
 
     def raw_task_pipeline(self, pipeline: List[Dict]):
@@ -1381,6 +1419,35 @@ class MongoDBDAO(DocumentDBDAO):
             _projection.update({"_id": 0})  # Add here more fields that are non serializable
         try:
             rs = self._wfs_collection.find(
+                filter=filter,
+                projection=_projection,
+                limit=limit,
+                sort=sort,
+            )
+            lst = list(rs)
+            return lst
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def agent_query(
+        self,
+        filter: Dict = None,
+        projection: List[str] = None,
+        limit: int = 0,
+        sort: List[Tuple] = None,
+        remove_json_unserializables=True,
+    ) -> List[Dict]:
+        """Query agents collection in the MongoDB database."""
+        _projection = {}
+        if projection is not None:
+            for proj_field in projection:
+                _projection[proj_field] = 1
+
+        if remove_json_unserializables:
+            _projection.update({"_id": 0})
+        try:
+            rs = self._agents_collection.find(
                 filter=filter,
                 projection=_projection,
                 limit=limit,
