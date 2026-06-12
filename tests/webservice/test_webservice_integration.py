@@ -29,24 +29,42 @@ def _wait_for(condition, timeout_sec: float = 20.0, interval_sec: float = 0.25) 
     return False
 
 
-def test_webservice_end_to_end_with_flowcept_and_blob_apis():
+@pytest.fixture
+def db_cleanup(request):
+    """Track ids a test inserts and delete them from MongoDB afterwards, even on failure.
+
+    Tests register ids in the yielded dict; teardown recursively deletes campaigns
+    (workflows + tasks + objects), then workflows, then standalone objects.
+    """
+    created = {"campaigns": [], "workflows": [], "objects": []}
+    yield created
+    if request.config.getoption("--keep-webservice-test-data"):
+        print(f"Keeping webservice test data for UI inspection: {created}")
+        return
+    dao = DocumentDBDAO.get_instance(create_indices=False)
+    for campaign_id in created["campaigns"]:
+        dao.delete_campaign_data(campaign_id)
+    for workflow_id in created["workflows"]:
+        dao.delete_workflow_data(workflow_id)
+    if created["objects"]:
+        dao.delete_object_keys("object_id", created["objects"])
+    DocumentDBDAO._instance.close()
+
+
+def test_webservice_end_to_end_with_flowcept_and_blob_apis(db_cleanup):
+    """End-to-end: real workflow + blob objects, then exercise the read APIs."""
     if not Flowcept.services_alive():
         pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
 
-    campaign_id = f"ws-campaign-{uuid4()}"
+    campaign_id = f"GridSearchCampaign-{uuid4()}"
     workflow_name = f"ws-workflow-{uuid4()}"
-
-    workflow_id = None
-    generic_obj_id = None
-    dataset_obj_id = None
-    model_obj_id = None
+    db_cleanup["campaigns"].append(campaign_id)
 
     with Flowcept(campaign_id=campaign_id, workflow_name=workflow_name):
         with FlowceptTask(activity_id="ws_task", used={"x": 1}) as task:
             task.end(generated={"y": 2})
 
         workflow_id = Flowcept.current_workflow_id
-
         generic_obj_id = Flowcept.db.save_or_update_object(
             object=b"generic-blob-payload",
             object_type="artifact",
@@ -70,6 +88,7 @@ def test_webservice_end_to_end_with_flowcept_and_blob_apis():
     assert generic_obj_id is not None
     assert dataset_obj_id is not None
     assert model_obj_id is not None
+    db_cleanup["objects"].extend([generic_obj_id, dataset_obj_id, model_obj_id])
 
     ok = _wait_for(lambda: len(Flowcept.db.task_query(filter={"workflow_id": workflow_id}) or []) >= 1)
     assert ok, "Timed out waiting for persisted tasks."
@@ -164,12 +183,13 @@ def test_webservice_end_to_end_with_flowcept_and_blob_apis():
         DocumentDBDAO._instance.close()
 
 
-def test_webservice_campaigns_agents_stats_and_prov_card():
+def test_webservice_campaigns_agents_stats_and_prov_card(db_cleanup):
     """End-to-end test for derived campaigns/agents, stats endpoints, and workflow cards."""
     if not Flowcept.services_alive():
         pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
 
     campaign_id = f"ws-campaign-{uuid4()}"
+    db_cleanup["campaigns"].append(campaign_id)
     workflow_name = f"ws-stats-workflow-{uuid4()}"
     agent_id = f"ws-agent-{uuid4()}"
 
@@ -237,7 +257,7 @@ def test_webservice_campaigns_agents_stats_and_prov_card():
     assert all(row["started_at"] is not None for row in rs.json()["rows"])
 
     rs = client.post(
-        "/api/v1/stats/card_data",
+        "/api/v1/stats/chart_data",
         json={
             "data": {
                 "source": "tasks",
@@ -256,7 +276,7 @@ def test_webservice_campaigns_agents_stats_and_prov_card():
     rs = client.get("/api/v1/stats/tasks/summary", params={"filter_json": '{"$where": "1"}'})
     assert rs.status_code == 400
 
-    # Provenance card: JSON and markdown content.
+    # Workflow card: JSON and markdown content.
     rs = client.get(f"/api/v1/workflows/{workflow_id}/workflow_card", params={"format": "json"})
     assert rs.status_code == 200
     card = rs.json()
@@ -272,20 +292,23 @@ def test_webservice_campaigns_agents_stats_and_prov_card():
     assert rs.status_code == 200
 
     rs = client.get(f"/api/v1/workflows/{workflow_id}/workflow_card", params={"format": "pdf"})
-    assert rs.status_code == 400
+    assert rs.status_code == 200
+    assert rs.headers["content-type"].startswith("application/pdf")
 
     # Cleanup singleton client handles for test isolation.
     if DocumentDBDAO._instance is not None:
         DocumentDBDAO._instance.close()
 
 
-def test_webservice_object_versioning_and_unified_query():
+def test_webservice_object_versioning_and_unified_query(db_cleanup):
     """End-to-end test for object version history and the unified /query/{scope} endpoint."""
     if not Flowcept.services_alive():
         pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
 
     campaign_id = f"ws-campaign-{uuid4()}"
     obj_id = f"ws-versioned-{uuid4()}"
+    db_cleanup["campaigns"].append(campaign_id)
+    db_cleanup["objects"].append(obj_id)
 
     with Flowcept(campaign_id=campaign_id, workflow_name=f"ws-version-wf-{uuid4()}"):
         workflow_id = Flowcept.current_workflow_id
@@ -378,13 +401,14 @@ def test_webservice_dashboards_crud():
     app = create_app()
     client = TestClient(app)
 
-    spec = {
+    target = f"wf-name-{uuid4()}"
+    config = {
+        "dashboard_type": "custom_workflow",
+        "target": target,
         "name": f"dash-{uuid4()}",
-        "description": "integration test dashboard",
-        "context": {"campaign_id": "camp-1"},
-        "cards": [
+        "charts": [
             {
-                "card_id": "c1",
+                "chart_id": "c1",
                 "type": "chart",
                 "title": "Tasks per activity",
                 "data": {
@@ -394,16 +418,12 @@ def test_webservice_dashboards_crud():
                 },
                 "viz": {"kind": "bar"},
             },
-            {"card_id": "c2", "type": "markdown", "content": "# Notes"},
-        ],
-        "layout": [
-            {"card_id": "c1", "x": 0, "y": 0, "w": 6, "h": 4},
-            {"card_id": "c2", "x": 6, "y": 0, "w": 6, "h": 4},
+            {"chart_id": "c2", "type": "markdown", "content": "# Notes"},
         ],
     }
 
-    rs = client.post("/api/v1/dashboards", json=spec)
-    assert rs.status_code == 201
+    rs = client.post("/api/v1/dashboards", json=config)
+    assert rs.status_code == 201, rs.text
     created = rs.json()
     dashboard_id = created["dashboard_id"]
     assert dashboard_id and created["created_at"]
@@ -411,26 +431,45 @@ def test_webservice_dashboards_crud():
     try:
         rs = client.get(f"/api/v1/dashboards/{dashboard_id}")
         assert rs.status_code == 200
-        assert rs.json()["name"] == spec["name"]
-        assert len(rs.json()["cards"]) == 2
+        assert rs.json()["name"] == config["name"]
+        assert len(rs.json()["charts"]) == 2
 
         rs = client.get("/api/v1/dashboards")
         assert rs.status_code == 200
         assert any(d["dashboard_id"] == dashboard_id for d in rs.json()["items"])
 
-        updated = dict(spec, description="updated")
+        rs = client.get("/api/v1/dashboards", params={"dashboard_type": "custom_workflow"})
+        assert rs.status_code == 200
+        assert any(d["dashboard_id"] == dashboard_id for d in rs.json()["items"])
+
+        # Resolution merges common_workflow charts with this workflow's custom charts.
+        rs = client.get("/api/v1/dashboards/resolve", params={"workflow_name": target})
+        assert rs.status_code == 200
+        resolved_ids = {c["chart_id"] for c in rs.json()}
+        assert {"c1", "c2"}.issubset(resolved_ids)
+
+        rs = client.get("/api/v1/dashboards/resolve")
+        assert rs.status_code == 400
+
+        updated = dict(config, name="updated")
         rs = client.put(f"/api/v1/dashboards/{dashboard_id}", json=updated)
         assert rs.status_code == 200
-        assert rs.json()["description"] == "updated"
+        assert rs.json()["name"] == "updated"
         assert rs.json()["created_at"] == created["created_at"]
         assert rs.json()["updated_at"] >= created["updated_at"]
 
-        # Spec validation: bad card type and disallowed filter operator must be rejected.
-        bad = dict(spec, cards=[{"card_id": "x", "type": "nope"}])
+        # Validation: bad chart type, bad dashboard type, and disallowed filter operator.
+        bad = dict(config, charts=[{"chart_id": "x", "type": "nope"}])
         rs = client.post("/api/v1/dashboards", json=bad)
         assert rs.status_code == 422
 
-        bad = dict(spec, context={"$where": "1"})
+        bad = dict(config, dashboard_type="nope")
+        rs = client.post("/api/v1/dashboards", json=bad)
+        assert rs.status_code == 422
+
+        bad_chart = dict(config["charts"][0])
+        bad_chart["data"] = dict(bad_chart["data"], filter={"$where": "1"})
+        bad = dict(config, charts=[bad_chart])
         rs = client.post("/api/v1/dashboards", json=bad)
         assert rs.status_code == 400
     finally:
@@ -492,12 +531,13 @@ def _read_sse_events(line_iter, max_events: int, timeout_sec: float = 15.0):
     return events
 
 
-def test_webservice_stream_tasks_sse():
+def test_webservice_stream_tasks_sse(db_cleanup):
     """End-to-end SSE: existing tasks arrive in the first event; mid-stream inserts arrive next."""
     if not Flowcept.services_alive():
         pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
 
     campaign_id = f"ws-campaign-{uuid4()}"
+    db_cleanup["campaigns"].append(campaign_id)
 
     with Flowcept(campaign_id=campaign_id, workflow_name=f"ws-sse-wf-{uuid4()}"):
         workflow_id = Flowcept.current_workflow_id
@@ -558,12 +598,13 @@ def test_webservice_stream_tasks_sse():
         DocumentDBDAO._instance.close()
 
 
-def test_webservice_stream_workflows_sse():
+def test_webservice_stream_workflows_sse(db_cleanup):
     """End-to-end SSE for the workflows stream filtered by campaign."""
     if not Flowcept.services_alive():
         pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
 
     campaign_id = f"ws-campaign-{uuid4()}"
+    db_cleanup["campaigns"].append(campaign_id)
     with Flowcept(campaign_id=campaign_id, workflow_name=f"ws-sse-wf2-{uuid4()}"):
         workflow_id = Flowcept.current_workflow_id
 
@@ -633,7 +674,7 @@ def test_webservice_spa_serving(tmp_path, monkeypatch):
     assert rs.status_code == 404
 
 
-def test_prov_tools_shared_core():
+def test_prov_tools_shared_core(db_cleanup):
     """The shared provenance tool core (used by web chat and MCP agent) works on real data."""
     if not Flowcept.services_alive():
         pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
@@ -647,6 +688,7 @@ def test_prov_tools_shared_core():
     )
 
     campaign_id = f"ws-campaign-{uuid4()}"
+    db_cleanup["campaigns"].append(campaign_id)
     with Flowcept(campaign_id=campaign_id, workflow_name=f"ws-tools-wf-{uuid4()}"):
         workflow_id = Flowcept.current_workflow_id
         with FlowceptTask(activity_id="tool_seed", used={"x": 1}) as task:
@@ -671,7 +713,7 @@ def test_prov_tools_shared_core():
 
     result = make_chart(
         card_spec={
-            "card_id": "chat-c1",
+            "chart_id": "chat-c1",
             "type": "chart",
             "title": "tasks per activity",
             "data": {"source": "tasks", "filter": {"workflow_id": workflow_id}, "group_by": "activity_id"},
@@ -680,7 +722,7 @@ def test_prov_tools_shared_core():
     )
     assert result.code in (201, 301)
     assert result.result["rows"]
-    assert result.result["card"]["card_id"] == "chat-c1"
+    assert result.result["chart"]["chart_id"] == "chat-c1"
 
     # Disallowed filter operators are rejected by the shared core.
     result = query_tasks(filter={"$where": "1"}, limit=10)
@@ -705,7 +747,7 @@ def test_chat_endpoint_unavailable_without_llm():
     assert "LLM" in rs.json()["detail"] or "llm" in rs.json()["detail"]
 
 
-def test_chat_endpoint_real_llm_tool_roundtrip():
+def test_chat_endpoint_real_llm_tool_roundtrip(db_cleanup):
     """Real LLM chat round-trip: the model must call a query tool and answer (env-gated)."""
     from flowcept.commons.flowcept_logger import FlowceptLogger
     from flowcept.configs import AGENT
@@ -721,6 +763,7 @@ def test_chat_endpoint_real_llm_tool_roundtrip():
         pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
 
     campaign_id = f"ws-campaign-{uuid4()}"
+    db_cleanup["campaigns"].append(campaign_id)
     with Flowcept(campaign_id=campaign_id, workflow_name=f"ws-chat-wf-{uuid4()}"):
         workflow_id = Flowcept.current_workflow_id
         for i in range(3):
@@ -750,11 +793,14 @@ def test_chat_endpoint_real_llm_tool_roundtrip():
         DocumentDBDAO._instance.close()
 
 
-def test_recursive_delete_workflow_and_campaign():
+def test_recursive_delete_workflow_and_campaign(db_cleanup):
+    """Recursive delete endpoints remove workflows, campaigns, and their tasks/objects."""
     if not Flowcept.services_alive():
         pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
 
     campaign_id = f"del-camp-{uuid4()}"
+    # The test deletes everything itself; this guards against mid-test failures.
+    db_cleanup["campaigns"].append(campaign_id)
 
     # Seed two workflows, one task and one object each.
     wf1_id = None
@@ -816,10 +862,64 @@ def test_file_dashboard_store_roundtrip(tmp_path):
     from flowcept.webservice.services.dashboard_store import FileDashboardStore
 
     store = FileDashboardStore(directory=str(tmp_path))
-    doc = {"dashboard_id": "d1", "name": "local", "cards": [], "layout": []}
+    doc = {"dashboard_id": "d1", "name": "local", "charts": [], "layout": []}
     assert store.save(doc)
     assert store.get("d1")["name"] == "local"
     assert any(d["dashboard_id"] == "d1" for d in store.list())
     assert store.delete("d1")
     assert store.get("d1") is None
     assert store.delete("d1") is False
+
+
+def test_webservice_dataflow_graph(db_cleanup):
+    """PROV-style dataflow over the real Perceptron GridSearch workflow."""
+    if not Flowcept.services_alive():
+        pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
+
+    from tests.instrumentation_tests.ml_tests.single_layer_perceptron_test import run_gridsearch_experiment
+
+    campaign_id = f"GridSearchCampaign-{uuid4()}"
+    db_cleanup["campaigns"].append(campaign_id)
+    run_data = run_gridsearch_experiment(campaign_id=campaign_id)
+    workflow_id = run_data["workflow_id"]
+    learning_tasks = [t for t in run_data["tasks"] if t.get("activity_id") == "train_and_validate"]
+
+    ok = _wait_for(lambda: len(Flowcept.db.task_query(filter={"workflow_id": workflow_id}) or []) >= len(run_data["tasks"]))
+    assert ok, "Timed out waiting for persisted tasks."
+
+    app = create_app()
+    client = TestClient(app)
+
+    # Coarse level (default): per-task input/output chunk entities (PROV Entity vs Activity).
+    rs = client.get(f"/api/v1/workflows/{workflow_id}/dataflow")
+    assert rs.status_code == 200, rs.text
+    body = rs.json()
+    assert body["level"] == "coarse"
+    task_nodes = [n for n in body["nodes"] if n["kind"] == "task"]
+    chunk_nodes = [n for n in body["nodes"] if n["kind"] == "chunk"]
+    assert len(task_nodes) == len(run_data["tasks"])
+    assert {n["label"] for n in task_nodes} == {"get_dataset", "train_and_validate", "select_best_model"}
+    assert len([n for n in task_nodes if n["label"] == "train_and_validate"]) == len(learning_tasks)
+    assert any(n["stats"]["activity_id"] == "train_and_validate" for n in task_nodes)
+    assert any(n["stats"]["used"].get("config_id") == "cfg_1" for n in task_nodes)
+    assert any("best_val_loss" in n["stats"]["generated"] for n in task_nodes)
+    # Each task with used/generated data is represented as a PROV activity.
+    inputs = [c for c in chunk_nodes if c["stats"]["kind"] == "input"]
+    outputs = [c for c in chunk_nodes if c["stats"]["kind"] == "output"]
+    assert inputs and outputs
+    # Chunks pack the key-values; clicking in the UI shows these items.
+    assert any(c["stats"]["items"].get("config_id") == "cfg_1" for c in inputs)
+    assert any("best_val_loss" in c["stats"]["items"] for c in outputs)
+    assert all(c["stats"]["generated_by"] for c in outputs)
+    edges = {(e["source"], e["target"], e["relation"]) for e in body["edges"]}
+    for t in task_nodes:
+        if t["stats"]["used"]:
+            assert any(s.startswith("chunk:") and tgt == t["id"] and r == "used" for (s, tgt, r) in edges)
+        if t["stats"]["generated"]:
+            assert any(s == t["id"] and tgt.startswith("chunk:") and r == "generated" for (s, tgt, r) in edges)
+
+    assert not any(n["kind"] == "data" for n in body["nodes"])
+
+    # 404 for unknown workflow.
+    rs = client.get("/api/v1/workflows/nonexistent-wf/dataflow")
+    assert rs.status_code == 404
