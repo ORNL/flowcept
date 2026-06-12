@@ -183,6 +183,8 @@ def test_webservice_campaigns_agents_stats_and_prov_card():
 
     ok = _wait_for(lambda: len(Flowcept.db.task_query(filter={"workflow_id": workflow_id}) or []) >= 4)
     assert ok, "Timed out waiting for persisted tasks."
+    ok = _wait_for(lambda: Flowcept.db.get_workflow_object(workflow_id) is not None)
+    assert ok, "Timed out waiting for persisted workflow."
 
     app = create_app()
     client = TestClient(app)
@@ -680,7 +682,7 @@ def test_prov_tools_shared_core():
     )
     assert result.code in (201, 301)
     assert result.result["rows"]
-    assert result.result["card"]["card_id"] == "chat-c1"
+    assert result.result["chart"]["card_id"] == "chat-c1"
 
     # Disallowed filter operators are rejected by the shared core.
     result = query_tasks(filter={"$where": "1"}, limit=10)

@@ -97,6 +97,7 @@ class WorkflowObject:
         self.name = name
         self.used = used
         self.generated = generated
+        self.utc_timestamp = get_utc_now()
 
     @staticmethod
     def workflow_id_field():
