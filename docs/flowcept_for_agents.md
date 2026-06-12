@@ -98,7 +98,7 @@ Campaign  (campaign_id)
               └── Object      (object_id) ← blob (model checkpoint, dataset, artifact)
 ```
 
-- **Task record**: type, subtype, task_id, workflow_id, activity_id, parent_task_id, agent_id, submitted_at/started_at/ended_at, used (inputs), generated (outputs), status, stdout, stderr, telemetry_at_start, telemetry_at_end, node_name, hostname, user, custom_metadata
+- **Task record**: type, subtype, task_id, workflow_id, activity_id, parent_task_id, agent_id, agent_name, submitted_at/started_at/ended_at, used (inputs), generated (outputs), status, stdout, stderr, telemetry_at_start, telemetry_at_end, node_name, hostname, user, custom_metadata
 - **Workflow record**: workflow_id, campaign_id, name, machine_info, conf, flowcept_version, user, environment_id
 - **Object record**: object_id, version, task_id, workflow_id, type (ml_model | dataset | ...), data (binary), custom_metadata, prev_version (for version control)
 
