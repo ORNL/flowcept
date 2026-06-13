@@ -494,7 +494,10 @@ class MongoDBDAO(DocumentDBDAO):
             return -1
 
     def delete_workflow_data(self, workflow_id: str) -> dict:
-        """Delete all data for one workflow: tasks, objects, and the workflow doc.
+        """Delete all data for one workflow: tasks, objects, workflow doc, and orphaned agents.
+
+        An agent is considered orphaned after this deletion if it has no remaining tasks
+        in any other workflow.
 
         Parameters
         ----------
@@ -504,19 +507,50 @@ class MongoDBDAO(DocumentDBDAO):
         Returns
         -------
         dict
-            Per-collection deleted counts: ``{"workflows": x, "tasks": y, "objects": z}``.
+            Per-collection deleted counts:
+            ``{"workflows": x, "tasks": y, "objects": z, "agents": a}``.
         """
+        agent_ids = self._tasks_collection.distinct("agent_id", {"workflow_id": workflow_id, "agent_id": {"$exists": True}})
         tasks_result = self._tasks_collection.delete_many({"workflow_id": workflow_id})
         objects_result = self._obj_collection.delete_many({"workflow_id": workflow_id})
         wfs_result = self._wfs_collection.delete_many({"workflow_id": workflow_id})
+        agents_deleted = self._delete_orphaned_agents(agent_ids)
         return {
             "workflows": wfs_result.deleted_count,
             "tasks": tasks_result.deleted_count,
             "objects": objects_result.deleted_count,
+            "agents": agents_deleted,
         }
 
+    def _delete_orphaned_agents(self, agent_ids: list) -> int:
+        """Delete agents from ``agent_ids`` that have no remaining tasks.
+
+        Parameters
+        ----------
+        agent_ids : list
+            Candidate agent IDs to check and potentially remove.
+
+        Returns
+        -------
+        int
+            Number of agent documents deleted.
+        """
+        if not agent_ids:
+            return 0
+        orphans = [
+            aid for aid in agent_ids
+            if self._tasks_collection.count_documents({"agent_id": aid}) == 0
+        ]
+        if not orphans:
+            return 0
+        result = self._agents_collection.delete_many({"agent_id": {"$in": orphans}})
+        return result.deleted_count
+
     def delete_campaign_data(self, campaign_id: str) -> dict:
-        """Delete all data for one campaign: tasks, objects, and workflow docs.
+        """Delete all data for one campaign: tasks, objects, workflow docs, and orphaned agents.
+
+        An agent is considered orphaned after this deletion if it has no remaining tasks
+        in any workflow.
 
         Parameters
         ----------
@@ -526,19 +560,23 @@ class MongoDBDAO(DocumentDBDAO):
         Returns
         -------
         dict
-            Per-collection deleted counts: ``{"workflows": x, "tasks": y, "objects": z}``.
+            Per-collection deleted counts:
+            ``{"workflows": x, "tasks": y, "objects": z, "agents": a}``.
         """
         wf_cursor = self._wfs_collection.find({"campaign_id": campaign_id}, {"workflow_id": 1})
         wf_ids = [doc["workflow_id"] for doc in wf_cursor if "workflow_id" in doc]
         if not wf_ids:
-            return {"workflows": 0, "tasks": 0, "objects": 0}
+            return {"workflows": 0, "tasks": 0, "objects": 0, "agents": 0}
+        agent_ids = self._tasks_collection.distinct("agent_id", {"workflow_id": {"$in": wf_ids}, "agent_id": {"$exists": True}})
         tasks_result = self._tasks_collection.delete_many({"workflow_id": {"$in": wf_ids}})
         objects_result = self._obj_collection.delete_many({"workflow_id": {"$in": wf_ids}})
         wfs_result = self._wfs_collection.delete_many({"campaign_id": campaign_id})
+        agents_deleted = self._delete_orphaned_agents(agent_ids)
         return {
             "workflows": wfs_result.deleted_count,
             "tasks": tasks_result.deleted_count,
             "objects": objects_result.deleted_count,
+            "agents": agents_deleted,
         }
 
     @staticmethod
