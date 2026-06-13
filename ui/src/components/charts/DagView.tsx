@@ -1,11 +1,11 @@
 /** Activity- or task-level DAG view for a workflow's tasks. */
 
 import "@xyflow/react/dist/style.css";
-import { useEffect, useMemo } from "react";
-import { ReactFlow, ReactFlowProvider, useReactFlow, Background, Controls, MarkerType, type Node, type Edge } from "@xyflow/react";
+import { useEffect, useMemo, useState } from "react";
+import { ReactFlow, ReactFlowProvider, useReactFlow, Background, Controls, MarkerType, useNodesState, useEdgesState, Position, type Node, type Edge } from "@xyflow/react";
 import type { Task } from "../../api/types";
 import { fmtDuration, shortId, toEpochSec } from "../../lib/format";
-import { useInspectorStore, type GraphInspectorDoc } from "../../stores/inspectorStore";
+import { useInspectorStore } from "../../stores/inspectorStore";
 import { useHighlightStore } from "../../stores/highlightStore";
 import { TASK_NODE_STYLE } from "./graphStyles";
 import { Bot } from "lucide-react";
@@ -40,7 +40,19 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
 
   const agentHighlight = useHighlightStore((s) => s.taskIds);
 
-  const { nodes, edges } = useMemo(() => {
+  const [prevTasks, setPrevTasks] = useState<Task[]>(allTasks);
+  const [prevMode, setPrevMode] = useState<string>(mode);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  if (prevTasks !== allTasks || prevMode !== mode) {
+    setPrevTasks(allTasks);
+    setPrevMode(mode);
+    setNodes([]);
+    setEdges([]);
+  }
+
+  useEffect(() => {
     // Group tasks by node key: activity_id, or task_id in task mode.
     const byActivity = new Map<string, Task[]>();
     for (const t of tasks) {
@@ -52,7 +64,7 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
     const activities = [...byActivity.keys()];
 
     // Derive edge connections from task dependencies, falling back to time-ordered chain
-    const hasDeps = tasks.some((t) => Array.isArray((t as any).dependencies) && (t as any).dependencies.length > 0);
+    const hasDeps = tasks.some((t: Task) => Array.isArray((t as any).dependencies) && (t as any).dependencies.length > 0);
 
     const nodeKey = (t: Task) => ((mode === "task" ? t.task_id : t.activity_id) ?? "unknown");
 
@@ -61,7 +73,7 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
       for (const t of tasks) {
         const deps: string[] = (t as any).dependencies ?? [];
         for (const depId of deps) {
-          const depTask = tasks.find((x) => x.task_id === depId);
+          const depTask = tasks.find((x: Task) => x.task_id === depId);
           if (depTask && nodeKey(depTask) !== nodeKey(t)) {
             activityEdges.add(`${nodeKey(depTask)}__${nodeKey(t)}`);
           }
@@ -137,7 +149,7 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
       }
     }
 
-    const nodes: Node[] = activities.map((activity) => {
+    const nextNodes: Node[] = activities.map((activity) => {
       const actTasks = byActivity.get(activity) ?? [];
       const statuses = actTasks.map((t) => t.status ?? "");
       let rank = ranks.get(activity) ?? 0;
@@ -183,7 +195,7 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
               activity_id: activity,
               task_count: actTasks.length,
               status_counts: statuses.reduce<Record<string, number>>((acc, status) => {
-                if (!status) return acc;
+                if (!acc) return {}; // safety check
                 acc[status] = (acc[status] ?? 0) + 1;
                 return acc;
               }, {}),
@@ -204,7 +216,9 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
       return {
         id: activity,
         position: { x: 220 * rank, y: (mode === "task" ? 70 : 90) * idx },
-        data: { label, stats } as GraphInspectorDoc,
+        data: { label, labelText, stats } as any,
+        targetPosition: Position.Left,
+        sourcePosition: Position.Right,
         style: {
           ...TASK_NODE_STYLE,
           fontSize: mode === "task" ? 10 : 12,
@@ -214,12 +228,20 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
       };
     });
 
-    const edges: Edge[] = [...activityEdges].map((key) => {
+    const nextEdges: Edge[] = [...activityEdges].map((key) => {
       const [source, target] = key.split("__");
       return { id: key, source, target, type: "smoothstep", markerEnd: { type: MarkerType.ArrowClosed } };
     });
 
-    return { nodes, edges };
+    // Update nodes state preserving previously dragged positions.
+    setNodes((prevNodes) => {
+      const prevPositions = new Map(prevNodes.map((n) => [n.id, n.position]));
+      return nextNodes.map((n) => ({
+        ...n,
+        position: prevPositions.get(n.id) || n.position,
+      }));
+    });
+    setEdges(nextEdges);
   }, [tasks, mode, agentHighlight]);
 
   if (nodes.length === 0) return null;
@@ -239,14 +261,16 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
           <ReactFlow
             nodes={nodes}
             edges={edges}
-            nodesDraggable={false}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            nodesDraggable={true}
             nodesConnectable={false}
             elementsSelectable={false}
             onNodeClick={(_, node) => {
-              const stats = node.data as unknown as GraphInspectorDoc;
+              const nodeData = node.data as any;
               useInspectorStore.getState().set({
                 kind: mode === "task" ? "task" : "activity",
-                data: stats,
+                data: { label: nodeData.labelText, stats: nodeData.stats },
               });
             }}
             fitView

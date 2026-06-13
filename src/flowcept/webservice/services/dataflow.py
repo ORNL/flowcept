@@ -138,6 +138,21 @@ def _task_node(t: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _flatten_payload(payload: Any) -> List[tuple[str, Any]]:
+    """Recursively extract flat key-value pairs from a nested structure."""
+    results = []
+    if isinstance(payload, dict):
+        for k, v in payload.items():
+            if isinstance(v, (dict, list)):
+                results.extend(_flatten_payload(v))
+            else:
+                results.append((k, v))
+    elif isinstance(payload, list):
+        for item in payload:
+            results.extend(_flatten_payload(item))
+    return results
+
+
 def _coarse(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
     nodes: List[Dict[str, Any]] = []
     edges: List[Dict[str, Any]] = []
@@ -180,7 +195,7 @@ def _coarse(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
                 }
             )
             edges.append({"source": f"task:{tid}", "target": out_id, "relation": "generated"})
-            for key, value in generated.items():
+            for key, value in _flatten_payload(generated):
                 if not _is_trivial(value):
                     producers.setdefault((key, repr(value)), []).append((t, out_id))
 
@@ -192,7 +207,7 @@ def _coarse(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
             continue
         in_id = _chunk(used, "input")
         t_start = _to_epoch(t.get("started_at"))
-        for key, value in used.items():
+        for key, value in _flatten_payload(used):
             if _is_trivial(value):
                 continue
             for producer, out_id in producers.get((key, repr(value)), ()):

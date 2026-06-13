@@ -8,6 +8,7 @@ from uuid import uuid4
 import flowcept
 from flowcept.commons.autoflush_buffer import AutoflushBuffer
 from flowcept.commons.daos.mq_dao.mq_dao_base import MQDao
+from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
@@ -453,6 +454,38 @@ class Flowcept(object):
                 return pd.read_json(file_path, lines=True)
 
         return buffer
+
+    def save_agent(
+        self,
+        name: str | None = None,
+        agent_id: str | None = None,
+        workflow_id: str | None = None,
+        campaign_id: str | None = None,
+    ) -> str:
+        """Register and save an agent associated with the workflow/campaign."""
+        if not agent_id:
+            prefix = ""
+            if name:
+                prefix = name.lower()
+                if prefix == "hpcagent":
+                    prefix = "hpc_agent"
+                elif "agent" not in prefix:
+                    prefix = f"{prefix}_agent"
+                prefix = f"{prefix}_"
+            agent_id = f"{prefix}{uuid4()}"
+
+        agent_obj = AgentObject(
+            agent_id=agent_id,
+            name=name,
+            workflow_id=workflow_id or self.current_workflow_id,
+            campaign_id=campaign_id or self.campaign_id,
+        )
+
+        interceptors = self._interceptor_instances or []
+        if not interceptors:
+            raise Exception("No active interceptors are initialized or registered on this Flowcept instance.")
+        interceptors[0].send_agent_message(agent_obj)
+        return agent_obj.agent_id
 
     @staticmethod
     def generate_report(

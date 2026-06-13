@@ -31,24 +31,76 @@ def _wait_for(condition, timeout_sec: float = 20.0, interval_sec: float = 0.25) 
 
 @pytest.fixture
 def db_cleanup(request):
-    """Track ids a test inserts and delete them from MongoDB afterwards, even on failure.
+    """Track ids a test inserts and delete them from MongoDB/LMDB afterwards, even on failure.
 
     Tests register ids in the yielded dict; teardown recursively deletes campaigns
-    (workflows + tasks + objects), then workflows, then standalone objects.
+    (workflows + tasks + objects), then workflows, then standalone objects, and any
+    agents registered during the test.
     """
     created = {"campaigns": [], "workflows": [], "objects": []}
+    dao = DocumentDBDAO.get_instance(create_indices=False)
+
+    initial_agents = set()
+    if MONGO_ENABLED and hasattr(dao, "_agents_collection"):
+        try:
+            initial_agents = {a["agent_id"] for a in dao._agents_collection.find({}, {"agent_id": 1})}
+        except Exception:
+            pass
+
+    from flowcept.configs import LMDB_ENABLED
+    initial_lmdb_agents = set()
+    if LMDB_ENABLED and hasattr(dao, "_agents_db"):
+        try:
+            with dao._env.begin(db=dao._agents_db) as txn:
+                with txn.cursor() as cur:
+                    for k, _ in cur:
+                        initial_lmdb_agents.add(k)
+        except Exception:
+            pass
+
     yield created
+
     if request.config.getoption("--keep-webservice-test-data"):
         print(f"Keeping webservice test data for UI inspection: {created}")
         return
+
+    # Re-retrieve active/fresh DAO because the old one might have been closed by Flowcept.stop()
     dao = DocumentDBDAO.get_instance(create_indices=False)
+
     for campaign_id in created["campaigns"]:
         dao.delete_campaign_data(campaign_id)
     for workflow_id in created["workflows"]:
         dao.delete_workflow_data(workflow_id)
     if created["objects"]:
         dao.delete_object_keys("object_id", created["objects"])
-    DocumentDBDAO._instance.close()
+
+    # Clean up agents registered during this test
+    if MONGO_ENABLED and hasattr(dao, "_agents_collection"):
+        try:
+            current_agents = {a["agent_id"] for a in dao._agents_collection.find({}, {"agent_id": 1})}
+            new_agents = current_agents - initial_agents
+            if new_agents:
+                dao._agents_collection.delete_many({"agent_id": {"$in": list(new_agents)}})
+        except Exception:
+            pass
+
+    if LMDB_ENABLED and hasattr(dao, "_agents_db"):
+        try:
+            current_lmdb_agents = set()
+            with dao._env.begin(db=dao._agents_db) as txn:
+                with txn.cursor() as cur:
+                    for k, _ in cur:
+                        current_lmdb_agents.add(k)
+            new_lmdb_agents = current_lmdb_agents - initial_lmdb_agents
+            if new_lmdb_agents:
+                with dao._env.begin(write=True, db=dao._agents_db) as txn:
+                    for k in new_lmdb_agents:
+                        txn.delete(k)
+        except Exception:
+            pass
+
+    if DocumentDBDAO._instance is not None:
+        DocumentDBDAO._instance.close()
 
 
 def test_webservice_end_to_end_with_flowcept_and_blob_apis(db_cleanup):
@@ -908,7 +960,13 @@ def test_webservice_dataflow_graph(db_cleanup):
     task_nodes = [n for n in body["nodes"] if n["kind"] == "task"]
     chunk_nodes = [n for n in body["nodes"] if n["kind"] == "chunk"]
     assert len(task_nodes) == len(run_data["tasks"])
-    assert {n["label"] for n in task_nodes} == {"get_dataset", "train_and_validate", "select_best_model"}
+    assert {n["label"] for n in task_nodes} == {
+        "generate_configs",
+        "get_dataset",
+        "submit_gridsearch_job",
+        "train_and_validate",
+        "select_best_model",
+    }
     assert len([n for n in task_nodes if n["label"] == "train_and_validate"]) == len(learning_tasks)
     assert any(n["stats"]["activity_id"] == "train_and_validate" for n in task_nodes)
     assert any(n["stats"]["used"].get("config_id") == "cfg_1" for n in task_nodes)

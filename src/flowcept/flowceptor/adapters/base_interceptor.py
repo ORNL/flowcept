@@ -7,6 +7,7 @@ from uuid import uuid4
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
+from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
 from flowcept.configs import (
     ENRICH_MESSAGES,
     TELEMETRY_ENABLED,
@@ -83,6 +84,7 @@ class BaseInterceptor(object):
             self.telemetry_capture = None
 
         self._saved_workflows = set()
+        self._saved_agents = set()
         self._generated_workflow_id = False
         self.kind = kind
 
@@ -147,6 +149,20 @@ class BaseInterceptor(object):
             workflow_obj.enrich(self.settings.key if self.settings else None)
         self.intercept(workflow_obj.to_dict())
         return wf_id
+
+    def send_agent_message(self, agent_obj: AgentObject):
+        """Send agent."""
+        agent_id = agent_obj.agent_id or str(uuid4())
+        agent_obj.agent_id = agent_id
+        if agent_id in self._saved_agents:
+            return
+        self._saved_agents.add(agent_id)
+        if not self._mq_dao.started:
+            raise Exception(f"This interceptor {id(self)} has never been started!")
+        if ENRICH_MESSAGES:
+            agent_obj.enrich()
+        self.intercept(agent_obj.to_dict())
+        return agent_id
 
     def intercept(self, obj_msg: Dict):
         """Intercept a message."""

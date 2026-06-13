@@ -26,12 +26,20 @@ class AgentObject:
     user: AnyStr = None
     """User who launched or owns the agent run."""
 
+    workflow_id: AnyStr = None
+    """Workflow identifier associated with the agent."""
+
+    campaign_id: AnyStr = None
+    """Campaign identifier associated with the agent."""
+
     extra_metadata: Dict = None
     """Optional free-form metadata for extensions not covered by other fields."""
 
-    def __init__(self, agent_id=None, name=None):
+    def __init__(self, agent_id=None, name=None, workflow_id=None, campaign_id=None):
         self.agent_id = agent_id
         self.name = name
+        self.workflow_id = workflow_id
+        self.campaign_id = campaign_id
         self.registered_at = get_utc_now()
 
     @staticmethod
@@ -88,6 +96,8 @@ class AgentObject:
             f"AgentObject("
             f"agent_id={repr(self.agent_id)}, "
             f"name={repr(self.name)}, "
+            f"workflow_id={repr(self.workflow_id)}, "
+            f"campaign_id={repr(self.campaign_id)}, "
             f"registered_at={repr(self.registered_at)}, "
             f"user={repr(self.user)}, "
             f"extra_metadata={repr(self.extra_metadata)})"
