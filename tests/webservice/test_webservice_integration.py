@@ -10,7 +10,7 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from flowcept import Flowcept, FlowceptTask
+from flowcept import Flowcept, FlowceptTask, WorkflowObject
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.configs import MONGO_ENABLED
@@ -961,7 +961,7 @@ def test_webservice_dataflow_graph(db_cleanup):
     chunk_nodes = [n for n in body["nodes"] if n["kind"] == "chunk"]
     assert len(task_nodes) == len(run_data["tasks"])
     assert {n["label"] for n in task_nodes} == {
-        "generate_configs",
+        "call_hpc_agent",
         "get_dataset",
         "submit_gridsearch_job",
         "train_and_validate",
@@ -979,12 +979,23 @@ def test_webservice_dataflow_graph(db_cleanup):
     assert any(c["stats"]["items"].get("config_id") == "cfg_1" for c in inputs)
     assert any("best_val_loss" in c["stats"]["items"] for c in outputs)
     assert all(c["stats"]["generated_by"] for c in outputs)
+    # TDD: Verify chunk labels use key names
+    assert any("config_id" in c["label"] for c in inputs)
+    assert any("best_val_loss" in c["label"] for c in outputs)
     edges = {(e["source"], e["target"], e["relation"]) for e in body["edges"]}
     for t in task_nodes:
         if t["stats"]["used"]:
             assert any(s.startswith("chunk:") and tgt == t["id"] and r == "used" for (s, tgt, r) in edges)
         if t["stats"]["generated"]:
             assert any(s == t["id"] and tgt.startswith("chunk:") and r == "generated" for (s, tgt, r) in edges)
+
+    # TDD: Verify delegation edge exists from call_hpc_agent task node to submit_gridsearch_job task node
+    call_task = next(n for n in task_nodes if n["label"] == "call_hpc_agent")
+    submit_task = next(n for n in task_nodes if n["label"] == "submit_gridsearch_job")
+    assert any(
+        e["source"] == call_task["id"] and e["target"] == submit_task["id"] and e["relation"] == "delegation"
+        for e in body["edges"]
+    )
 
     assert not any(n["kind"] == "data" for n in body["nodes"])
 
@@ -1098,3 +1109,44 @@ def test_chat_highlight_lineage_sse(db_cleanup):
 
     if DocumentDBDAO._instance is not None:
         DocumentDBDAO._instance.close()
+
+
+def test_node_positions_endpoint(db_cleanup):
+    """Test saving and loading node positions via FastAPI REST endpoints."""
+    if not Flowcept.services_alive():
+        pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
+
+    workflow_id = f"wf-pos-test-{uuid4()}"
+    db_cleanup["workflows"].append(workflow_id)
+
+    # Insert a dummy workflow so the ID exists/cleans up nicely
+    wf = WorkflowObject()
+    wf.workflow_id = workflow_id
+    Flowcept.db.insert_or_update_workflow(wf)
+
+    app = create_app()
+    client = TestClient(app)
+
+    # 1. Fetch positions for a non-existent position mapping (should be empty dict)
+    rs = client.get(f"/api/v1/workflows/{workflow_id}/node_positions?graph_type=dataflow")
+    assert rs.status_code == 200
+    assert rs.json() == {}
+
+    # 2. Save positions
+    pos_data = {
+        "graph_type": "dataflow",
+        "positions": {
+            "node-1": {"x": 12.5, "y": 45.6},
+            "node-2": {"x": 78.9, "y": 101.2}
+        }
+    }
+    rs = client.post(f"/api/v1/workflows/{workflow_id}/node_positions", json=pos_data)
+    assert rs.status_code == 200
+    assert rs.json() == {"success": True}
+
+    # 3. Retrieve positions and verify
+    rs = client.get(f"/api/v1/workflows/{workflow_id}/node_positions?graph_type=dataflow")
+    assert rs.status_code == 200
+    retrieved = rs.json()
+    assert retrieved["node-1"] == {"x": 12.5, "y": 45.6}
+    assert retrieved["node-2"] == {"x": 78.9, "y": 101.2}

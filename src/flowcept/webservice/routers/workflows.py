@@ -159,3 +159,32 @@ def download_workflow_card(workflow_id: str, db: DBAPI = Depends(get_db_api)) ->
         media_type="text/markdown; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/{workflow_id}/node_positions", response_model=Dict[str, Any])
+def get_node_positions(
+    workflow_id: str,
+    graph_type: str = Query(..., description="Graph type: 'dataflow', 'task', or 'activity'"),
+    db: DBAPI = Depends(get_db_api),
+) -> Dict[str, Any]:
+    """Get node positions for a workflow graph type."""
+    if db.get_workflow_object(workflow_id) is None:
+        raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
+    return db.get_node_positions(workflow_id, graph_type)
+
+
+@router.post("/{workflow_id}/node_positions", response_model=Dict[str, Any])
+def save_node_positions(
+    workflow_id: str,
+    payload: Dict[str, Any],
+    db: DBAPI = Depends(get_db_api),
+) -> Dict[str, Any]:
+    """Save node positions for a workflow graph type."""
+    if db.get_workflow_object(workflow_id) is None:
+        raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
+    graph_type = payload.get("graph_type")
+    positions = payload.get("positions")
+    if not graph_type or positions is None:
+        raise HTTPException(status_code=400, detail="Missing graph_type or positions in payload")
+    success = db.save_node_positions(workflow_id, graph_type, positions)
+    return {"success": success}

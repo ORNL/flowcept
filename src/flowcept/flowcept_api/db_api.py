@@ -999,3 +999,45 @@ class DBAPI(object):
         model._flowcept_model_object = {k: v for k, v in doc.items() if k != "data"}
 
         return doc
+
+    def save_node_positions(self, workflow_id: str, graph_type: str, positions: dict) -> bool:
+        """Save node positions for a workflow graph type.
+
+        Parameters
+        ----------
+        workflow_id : str
+            Workflow identifier.
+        graph_type : str
+            Graph type: 'dataflow', 'task', or 'activity'.
+        positions : dict
+            Dict mapping node IDs to coordinates.
+
+        Returns
+        -------
+        bool
+            True on success, False otherwise.
+        """
+        dao = DBAPI._dao()
+        if hasattr(dao, "save_node_positions"):
+            return dao.save_node_positions(workflow_id, graph_type, positions)
+        return False
+
+    def get_node_positions(self, workflow_id: str, graph_type: str) -> dict:
+        """Get node positions for a workflow graph type.
+
+        Parameters
+        ----------
+        workflow_id : str
+            Workflow identifier.
+        graph_type : str
+            Graph type.
+
+        Returns
+        -------
+        dict
+            Dict mapping node IDs to coordinates.
+        """
+        dao = DBAPI._dao()
+        if hasattr(dao, "get_node_positions"):
+            return dao.get_node_positions(workflow_id, graph_type)
+        return {}
