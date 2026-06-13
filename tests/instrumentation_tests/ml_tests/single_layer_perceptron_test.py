@@ -80,9 +80,8 @@ class SingleLayerPerceptron(nn.Module):
     subtype=ML_Types.DATA_PREP,
     args_handler=shape_args_handler,
     output_names=["x_train_shape", "y_train_shape", "x_val_shape", "y_val_shape", "dataset_id"],
-    agent_id="orchestrator_agent_id",
 )
-def get_dataset(n_samples, split_ratio, agent_id=None):
+def get_dataset(n_samples, split_ratio, job_id=None):
     """Generate a toy binary classification dataset."""
     generator = torch.Generator().manual_seed(torch.initial_seed())
     x = torch.cat(
@@ -124,7 +123,24 @@ def validate(model, criterion, x_val, y_val):
     return loss.item(), accuracy
 
 
-@flowcept_task(subtype=ML_Types.LEARNING, agent_id="train_agent_id")
+@flowcept_task(subtype=ML_Types.LEARNING, output_names=["job_id", "configs"])
+def submit_gridsearch_job(
+    agent_id=None,
+):
+    """Simulate submitting a training job to an HPC system."""
+    from uuid import uuid4
+    job_id = f"hpc_job_{uuid4()}"
+    configs = [
+        {"epochs": 2, "learning_rate": 0.01, "n_input_neurons": 1},
+        {"epochs": 4, "learning_rate": 0.03, "n_input_neurons": 1},
+        {"epochs": 6, "learning_rate": 0.08, "n_input_neurons": 2},
+        {"epochs": 10, "learning_rate": 0.12, "n_input_neurons": 2},
+        {"epochs": 14, "learning_rate": 0.20, "n_input_neurons": 2},
+    ]
+    return job_id, configs
+
+
+@flowcept_task(subtype=ML_Types.LEARNING)
 def train_and_validate(
     n_input_neurons,
     epochs,
@@ -138,6 +154,7 @@ def train_and_validate(
     config_id=None,
     torch_only=False,
     agent_id=None,
+    job_id=None,
 ):
     """Train a perceptron and return validation metrics.
 
@@ -222,25 +239,46 @@ def select_best_model_args_handler(results=None, **kwargs):
         res[k] = v
     return res
 
-
-@flowcept_task(
-    subtype=ML_Types.MODEL_SELECTION,
-    args_handler=select_best_model_args_handler,
-    agent_id="orchestrator_agent_id",
-)
+@flowcept_task(subtype=ML_Types.MODEL_SELECTION)
 def select_best_model(results, agent_id=None):
     """Select the best model from train task outputs by minimal validation loss."""
-    result = _best_gridsearch_result(results)
-    best_model_object_id = result["torch_model_object_id"]
-    Flowcept.db.update_object_metadata(
-        object_id=best_model_object_id,
-        tags=["best"],
-        control_version=True,
-    )
+    min_loss = float("inf")
+    best_model_object_id = None
+    best_config_id = None
+
+    for r in results:
+        if isinstance(r, dict):
+            if "torch_model_object_id" in r:
+                obj_id = r["torch_model_object_id"]
+            elif "result" in r and isinstance(r["result"], dict) and "torch_model_object_id" in r["result"]:
+                obj_id = r["result"]["torch_model_object_id"]
+            else:
+                obj_id = None
+        else:
+            obj_id = r
+
+        if not obj_id:
+            raise Exception("This can't happen")
+
+        model_obj = Flowcept.db.get_ml_model(obj_id)
+        if model_obj and model_obj.custom_metadata:
+            loss = model_obj.custom_metadata.get("loss")
+            if loss is not None and loss < min_loss:
+                min_loss = loss
+                best_model_object_id = obj_id
+                best_config_id = model_obj.custom_metadata.get("config_id")
+
+    if best_model_object_id:
+        Flowcept.db.update_object_metadata(
+            object_id=best_model_object_id,
+            tags=["best"],
+            control_version=True,
+        )
+
     return {
         "selected_model_object_id": best_model_object_id,
-        "selected_loss": result["best_val_loss"],
-        "selected_config_id": result["config_id"],
+        "selected_loss": min_loss,
+        "selected_config_id": best_config_id,
     }
 
 
@@ -257,38 +295,23 @@ def run_training(n_samples, split_ratio, n_input_neurons, epochs):
 def run_gridsearch_experiment(campaign_id=None):
     """Run the Perceptron GridSearch scenario and return captured artifacts."""
     reproducibility = _set_reproducibility(seed=42)
-    configs = [
-        {"epochs": 2, "learning_rate": 0.01, "n_input_neurons": 1},
-        {"epochs": 4, "learning_rate": 0.03, "n_input_neurons": 1},
-        {"epochs": 6, "learning_rate": 0.08, "n_input_neurons": 2},
-        {"epochs": 10, "learning_rate": 0.12, "n_input_neurons": 2},
-        {"epochs": 14, "learning_rate": 0.20, "n_input_neurons": 2},
-    ]
+
     kwargs = {
         "workflow_name": "Perceptron GridSearch",
         "workflow_subtype": ML_Types.WORKFLOW,
         "workflow_args": reproducibility,
-        "agent_id": f"perceptron_agent_{uuid4()}",
-        "agent_name": "PerceptronAgent",
     }
     if campaign_id is not None:
         kwargs["campaign_id"] = campaign_id
 
-    orchestrator_agent_id = f"orchestrator_agent_{uuid4()}"
-    train_agent_id = f"train_agent_{uuid4()}"
+    with Flowcept(**kwargs) as fc:
+        orchestrator_agent_id = fc.save_agent(name="Orchestrator")
+        hpc_agent_id = fc.save_agent(name="HPCAgent")
 
-    with Flowcept(**kwargs):
-        from flowcept import AgentObject
+        job_id, configs = submit_gridsearch_job(agent_id=hpc_agent_id)
 
-        orchestrator_agent = AgentObject(agent_id=orchestrator_agent_id, name="OrchestratorAgent")
-        orchestrator_agent.enrich()
-        Flowcept.db.insert_or_update_agent(orchestrator_agent)
+        x_train, y_train, x_val, y_val, dataset_id = get_dataset(120, 0.8, job_id=job_id)
 
-        train_agent = AgentObject(agent_id=train_agent_id, name="TrainingAgent")
-        train_agent.enrich()
-        Flowcept.db.insert_or_update_agent(train_agent)
-
-        x_train, y_train, x_val, y_val, dataset_id = get_dataset(120, 0.8, agent_id=orchestrator_agent_id)
         results = []
         for idx, cfg in enumerate(configs, 1):
             result = train_and_validate(
@@ -303,9 +326,8 @@ def run_gridsearch_experiment(campaign_id=None):
                 checkpoint_check=2,
                 config_id=f"cfg_{idx}",
                 torch_only=True,
-                agent_id=train_agent_id,
             )
-            results.append({"config": cfg, "result": result})
+            results.append({"torch_model_object_id": result.get("torch_model_object_id")})
 
         selected = select_best_model(results, agent_id=orchestrator_agent_id)
 
@@ -333,7 +355,7 @@ def asserts(tasks):
     dataset_task = next((t for t in tasks if t.get("activity_id") == "get_dataset"), None)
     assert dataset_task is not None
     assert dataset_task.get("subtype") == ML_Types.DATA_PREP
-    assert dataset_task.get("agent_id").startswith("orchestrator_agent_")
+    assert dataset_task.get("agent_id") is None
     generated = dataset_task.get("generated", {})
     assert tuple(generated.get("x_train_shape", ())) == (96, 2)
     assert tuple(generated.get("y_train_shape", ())) == (96, 1)
@@ -343,7 +365,9 @@ def asserts(tasks):
     train_task = next((t for t in tasks if t.get("activity_id") == "train_and_validate"), None)
     assert train_task is not None
     assert train_task.get("subtype") == ML_Types.LEARNING
-    assert train_task.get("agent_id").startswith("train_agent_")
+    assert train_task.get("agent_id") is None
+
+
 
     select_best_task = next((t for t in tasks if t.get("activity_id") == "select_best_model"), None)
     if select_best_task is not None:
@@ -557,6 +581,13 @@ class SingleLayerPerceptronTests(unittest.TestCase):
         assert all(task.get("subtype") == ML_Types.LEARNING for task in learning_tasks)
         assert all(task.get("generated", {}).get("torch_model_object_id") is not None for task in learning_tasks)
         assert all("ml_model_object_id" not in task.get("generated", {}) for task in learning_tasks)
+        assert all(task.get("agent_id") is None for task in learning_tasks)
+
+        submit_tasks = [t for t in tasks if t.get("activity_id") == "submit_gridsearch_job"]
+        assert len(submit_tasks) == 1
+        assert all(task.get("subtype") == ML_Types.LEARNING for task in submit_tasks)
+        assert all(task.get("agent_id").startswith("hpc_agent_") for task in submit_tasks)
+
         model_selection_tasks = [t for t in tasks if t.get("activity_id") == "select_best_model"]
         assert len(model_selection_tasks) == 1
         assert model_selection_tasks[0].get("subtype") == ML_Types.MODEL_SELECTION
@@ -574,17 +605,33 @@ class SingleLayerPerceptronTests(unittest.TestCase):
     def assert_gridsearch_results(self, results, selected):
         """Validate grid-search result quality and selected model consistency."""
         assert len(results) == 5
-        best_losses = [r["result"]["best_val_loss"] for r in results if r["result"]["best_val_loss"] is not None]
-        assert len(best_losses) == 5
-        rounded_losses = {round(float(loss), 4) for loss in best_losses}
+        model_losses = []
+        best_loss = float("inf")
+        best_model_object_id = None
+        best_cfg = None
+
+        for r in results:
+            obj_id = r["torch_model_object_id"]
+            model_obj = Flowcept.db.get_ml_model(obj_id)
+            assert model_obj is not None
+            loss = model_obj.custom_metadata.get("loss")
+            assert loss is not None
+            model_losses.append(loss)
+
+            if loss < best_loss:
+                best_loss = loss
+                best_model_object_id = obj_id
+                best_cfg = {
+                    "n_input_neurons": model_obj.custom_metadata.get("n_input_neurons")
+                }
+
+        assert len(model_losses) == 5
+        rounded_losses = {round(float(loss), 4) for loss in model_losses}
         assert len(rounded_losses) > 1
 
-        best_entry = min(results, key=lambda item: item["result"]["best_val_loss"])
-        best_cfg = best_entry["config"]
-        best_model_object_id = best_entry["result"]["torch_model_object_id"]
         assert best_model_object_id is not None
         assert selected["selected_model_object_id"] == best_model_object_id
-        assert abs(float(selected["selected_loss"]) - float(best_entry["result"]["best_val_loss"])) < 1e-9
+        assert abs(float(selected["selected_loss"]) - float(best_loss)) < 1e-9
         return best_cfg, best_model_object_id
 
     def assert_gridsearch_best_model_inference(self, best_cfg, best_model_object_id):

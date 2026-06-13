@@ -4,8 +4,8 @@
  */
 
 import "@xyflow/react/dist/style.css";
-import { useEffect, useMemo, useState } from "react";
-import { ReactFlow, ReactFlowProvider, useReactFlow, Background, Controls, MarkerType, type Node, type Edge } from "@xyflow/react";
+import { useEffect, useState } from "react";
+import { ReactFlow, ReactFlowProvider, useReactFlow, Background, Controls, MarkerType, useNodesState, useEdgesState, Position, type Node, type Edge } from "@xyflow/react";
 import { useDataflow, type DataflowGraph } from "../../api/queries";
 import { useInspectorStore } from "../../stores/inspectorStore";
 import { useHighlightStore } from "../../stores/highlightStore";
@@ -52,6 +52,7 @@ function layout(graph: DataflowGraph) {
         queue.push(next);
       } else if (nextRank > (ranks.get(next) ?? 0) && nextRank < 50) {
         ranks.set(next, nextRank);
+        queue.push(next);
       }
     }
   }
@@ -82,8 +83,22 @@ export function DataflowView({ workflowId, height }: Props) {
 
   const { data: graph, isLoading, error } = useDataflow(workflowId);
 
-  const { nodes, edges } = useMemo(() => {
-    if (!graph) return { nodes: [] as Node[], edges: [] as Edge[] };
+  const [prevWfId, setPrevWfId] = useState<string>(workflowId);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  if (prevWfId !== workflowId) {
+    setPrevWfId(workflowId);
+    setNodes([]);
+    setEdges([]);
+  }
+
+  useEffect(() => {
+    if (!graph) {
+      setNodes([]);
+      setEdges([]);
+      return;
+    }
 
     const { visibleNodes, visibleEdges, ranks, rankGroups } = layout(graph);
 
@@ -94,28 +109,116 @@ export function DataflowView({ workflowId, height }: Props) {
 
     let lineage: Set<string> | null = null;
     if (seeds.size > 0) {
+      // 1. Build a map of values for each node in the graph.
+      const getValues = (n: any) => {
+        const vals = new Set<string>();
+        const addVal = (v: any) => {
+          if (v === null || v === undefined) return;
+          if (Array.isArray(v)) {
+            for (const item of v) addVal(item);
+          } else if (typeof v === "object") {
+            for (const k of Object.keys(v)) addVal(v[k]);
+          } else {
+            const s = String(v);
+            if (s.length > 2 && s !== "true" && s !== "false") {
+              vals.add(s);
+            }
+          }
+        };
+        if (n.kind === "chunk") {
+          addVal(n.stats?.items);
+        } else {
+          addVal(n.stats?.used);
+          addVal(n.stats?.generated);
+        }
+        return vals;
+      };
+
+      const nodeValuesMap = new Map<string, Set<string>>();
+      const nodeMap = new Map<string, any>();
+      for (const n of visibleNodes) {
+        nodeValuesMap.set(n.id, getValues(n));
+        nodeMap.set(n.id, n);
+      }
+
+      // 2. Collect the union of all primitive values from the seed nodes.
+      const V_seed = new Set<string>();
+      for (const seed of seeds) {
+        const vals = nodeValuesMap.get(seed);
+        if (vals) {
+          for (const v of vals) V_seed.add(v);
+        }
+      }
+
+      // 3. Run standard BFS/DFS guided by V_seed intersection on derived edges only.
       lineage = new Set(seeds);
-      const fwd = new Map<string, string[]>();
-      const back = new Map<string, string[]>();
+      const fwd = new Map<string, { node: string; relation: string }[]>();
+      const back = new Map<string, { node: string; relation: string }[]>();
       for (const e of visibleEdges) {
         if (!fwd.has(e.source)) fwd.set(e.source, []);
-        fwd.get(e.source)!.push(e.target);
+        fwd.get(e.source)!.push({ node: e.target, relation: e.relation });
         if (!back.has(e.target)) back.set(e.target, []);
-        back.get(e.target)!.push(e.source);
+        back.get(e.target)!.push({ node: e.source, relation: e.relation });
       }
       // Two separate passes to avoid cross-contamination: forward (descendants) then backward (ancestors).
       for (const adj of [fwd, back]) {
         const stack = [...seeds];
         while (stack.length) {
           const curr = stack.pop()!;
-          for (const next of adj.get(curr) ?? []) {
-            if (!lineage.has(next)) { lineage.add(next); stack.push(next); }
+          for (const edge of adj.get(curr) ?? []) {
+            const next = edge.node;
+            const rel = edge.relation;
+
+            let shouldTraverse = true;
+            if (rel === "derived") {
+              const nextVals = nodeValuesMap.get(next) ?? new Set();
+              const intersection = new Set([...V_seed].filter((x) => nextVals.has(x)));
+              shouldTraverse = V_seed.size === 0 || nextVals.size === 0 || intersection.size > 0;
+            }
+
+            if (shouldTraverse) {
+              if (!lineage.has(next)) {
+                lineage.add(next);
+
+                // Add next node's values to V_seed dynamically if it's a chunk node and NOT a selector node.
+                const isChunk = next.startsWith("chunk:");
+                if (isChunk) {
+                  const incomingDerived = (back.get(next) ?? []).filter((e) => e.relation === "derived");
+                  let isSelectorChunk = false;
+                  if (incomingDerived.length > 1) {
+                    const sourceActivities = new Set<string>();
+                    for (const e of incomingDerived) {
+                      const srcNode = nodeMap.get(e.node);
+                      if (srcNode && srcNode.stats?.generated_by) {
+                        for (const g of srcNode.stats.generated_by) {
+                          if (g.activity) {
+                            sourceActivities.add(g.activity);
+                          }
+                        }
+                      }
+                    }
+                    if (sourceActivities.size === 1) {
+                      isSelectorChunk = true;
+                    }
+                  }
+
+                  if (!isSelectorChunk) {
+                    const nextVals = nodeValuesMap.get(next);
+                    if (nextVals) {
+                      for (const v of nextVals) V_seed.add(v);
+                    }
+                  }
+                }
+
+                stack.push(next);
+              }
+            }
           }
         }
       }
     }
 
-    const nodes: Node[] = visibleNodes.map((n) => {
+    const nextNodes: Node[] = visibleNodes.map((n) => {
       const rank = ranks.get(n.id) ?? 0;
       const siblings = rankGroups.get(rank) ?? [];
       const idx = siblings.indexOf(n.id);
@@ -136,6 +239,8 @@ export function DataflowView({ workflowId, height }: Props) {
         id: n.id,
         position: { x: 230 * rank, y: 72 * idx },
         data: { label },
+        targetPosition: Position.Left,
+        sourcePosition: Position.Right,
         style: isEntity
           ? {
               // PROV Entity: yellow ellipse.
@@ -155,7 +260,7 @@ export function DataflowView({ workflowId, height }: Props) {
       };
     });
 
-    const edges: Edge[] = visibleEdges.map((e, i) => {
+    const nextEdges: Edge[] = visibleEdges.map((e, i) => {
       const dimmed = lineage !== null && !(lineage.has(e.source) && lineage.has(e.target));
       return {
         id: `${e.source}->${e.target}-${i}`,
@@ -171,7 +276,15 @@ export function DataflowView({ workflowId, height }: Props) {
       };
     });
 
-    return { nodes, edges };
+    // Update nodes state preserving previously dragged positions.
+    setNodes((prevNodes) => {
+      const prevPositions = new Map(prevNodes.map((n) => [n.id, n.position]));
+      return nextNodes.map((n) => ({
+        ...n,
+        position: prevPositions.get(n.id) || n.position,
+      }));
+    });
+    setEdges(nextEdges);
   }, [graph, focus, agentHighlight]);
 
   if (isLoading) return <div className="text-fg-muted text-xs">Loading dataflow…</div>;
@@ -197,7 +310,9 @@ export function DataflowView({ workflowId, height }: Props) {
           <ReactFlow
             nodes={nodes}
             edges={edges}
-            nodesDraggable={false}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            nodesDraggable={true}
             nodesConnectable={false}
             onNodeClick={(_, node) => {
               useHighlightStore.getState().clearHighlight();
@@ -210,7 +325,8 @@ export function DataflowView({ workflowId, height }: Props) {
                 });
               }
             }}
-            onPaneClick={() => {
+            onPaneClick={(e) => {
+              if ((e.target as HTMLElement).closest(".react-flow__node")) return;
               setFocus(null);
               useHighlightStore.getState().clearHighlight();
             }}
