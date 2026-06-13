@@ -6,11 +6,13 @@
 import "@xyflow/react/dist/style.css";
 import { useEffect, useState } from "react";
 import { ReactFlow, ReactFlowProvider, useReactFlow, Background, Controls, MarkerType, useNodesState, useEdgesState, Position, type Node, type Edge } from "@xyflow/react";
-import { useDataflow, type DataflowGraph } from "../../api/queries";
+import { useDataflow, useNodePositions, type DataflowGraph } from "../../api/queries";
 import { useInspectorStore } from "../../stores/inspectorStore";
 import { useHighlightStore } from "../../stores/highlightStore";
 import { TASK_NODE_STYLE } from "./graphStyles";
 import { Bot } from "lucide-react";
+import { agentColor, applyNodePositions } from "../../lib/format";
+import { apiPost } from "../../api/client";
 
 interface Props {
   workflowId: string;
@@ -82,6 +84,7 @@ export function DataflowView({ workflowId, height }: Props) {
   const agentHighlight = useHighlightStore((s) => s.taskIds);
 
   const { data: graph, isLoading, error } = useDataflow(workflowId);
+  const { data: positions } = useNodePositions(workflowId, "dataflow");
 
   const [prevWfId, setPrevWfId] = useState<string>(workflowId);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -225,10 +228,11 @@ export function DataflowView({ workflowId, height }: Props) {
       const dimmed = lineage !== null && !lineage.has(n.id);
       const isEntity = n.kind !== "task";
 
-      const hasAgent = !!(n.stats?.agent_id || n.stats?.source_agent_id);
+      const agentId = (n.stats?.agent_id || n.stats?.source_agent_id) as string | null | undefined;
+      const hasAgent = !!agentId;
       const label = hasAgent ? (
         <div className="relative w-full h-full flex items-center justify-center">
-          <Bot size={13} className="absolute -top-1.5 -right-1.5 text-accent bg-surface rounded-full p-0.5 border border-border" />
+          <Bot size={13} style={{ color: agentColor(agentId) }} className="absolute -top-1.5 -right-1.5 bg-surface rounded-full p-0.5 border border-border" />
           <span className="whitespace-pre">{n.label}</span>
         </div>
       ) : (
@@ -276,16 +280,31 @@ export function DataflowView({ workflowId, height }: Props) {
       };
     });
 
+    const nextNodesWithPositions = applyNodePositions(nextNodes, positions);
+
     // Update nodes state preserving previously dragged positions.
     setNodes((prevNodes) => {
       const prevPositions = new Map(prevNodes.map((n) => [n.id, n.position]));
-      return nextNodes.map((n) => ({
+      return nextNodesWithPositions.map((n) => ({
         ...n,
         position: prevPositions.get(n.id) || n.position,
       }));
     });
     setEdges(nextEdges);
-  }, [graph, focus, agentHighlight]);
+  }, [graph, focus, agentHighlight, positions]);
+
+  const handleNodeDragStop = () => {
+    const posPayload: Record<string, { x: number; y: number }> = {};
+    nodes.forEach((n) => {
+      if (n.position) {
+        posPayload[n.id] = n.position;
+      }
+    });
+    apiPost(`/workflows/${workflowId}/node_positions`, {
+      graph_type: "dataflow",
+      positions: posPayload,
+    }).catch(console.error);
+  };
 
   if (isLoading) return <div className="text-fg-muted text-xs">Loading dataflow…</div>;
   if (error) return <div className="text-fg-muted text-xs">No dataflow data captured for this workflow.</div>;
@@ -312,6 +331,7 @@ export function DataflowView({ workflowId, height }: Props) {
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            onNodeDragStop={handleNodeDragStop}
             nodesDraggable={true}
             nodesConnectable={false}
             onNodeClick={(_, node) => {

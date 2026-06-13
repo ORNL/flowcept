@@ -88,6 +88,7 @@ class MongoDBDAO(DocumentDBDAO):
         self._obj_history_collection = self._db["object_history"]
         self._dashboards_collection = self._db["dashboards"]
         self._agents_collection = self._db["agents"]
+        self._node_positions_collection = self._db["node_positions"]
 
         if create_indices:
             self._create_indices()
@@ -146,6 +147,11 @@ class MongoDBDAO(DocumentDBDAO):
         existing_indices = [list(x["key"].keys())[0] for x in self._dashboards_collection.list_indexes()]
         if "dashboard_id" not in existing_indices:
             self._dashboards_collection.create_index("dashboard_id", unique=True)
+
+        # Creating node_positions collection indices:
+        existing_indices_np = [list(x["key"].keys())[0] for x in self._node_positions_collection.list_indexes()]
+        if "workflow_id" not in existing_indices_np:
+            self._node_positions_collection.create_index([("workflow_id", 1), ("graph_type", 1)], unique=True)
 
     def _pipeline(
         self,
@@ -1714,3 +1720,55 @@ class MongoDBDAO(DocumentDBDAO):
                 queue = queue[1:]
             else:
                 break
+
+    def save_node_positions(self, workflow_id: str, graph_type: str, positions: Dict) -> bool:
+        """Save or update node positions for a workflow graph type.
+
+        Parameters
+        ----------
+        workflow_id : str
+            Workflow identifier.
+        graph_type : str
+            Graph type: 'dataflow', 'task', or 'activity'.
+        positions : dict
+            Dict mapping node IDs to coordinates {"x": float, "y": float}.
+
+        Returns
+        -------
+        bool
+            True on success, False otherwise.
+        """
+        try:
+            self._node_positions_collection.replace_one(
+                {"workflow_id": workflow_id, "graph_type": graph_type},
+                {"workflow_id": workflow_id, "graph_type": graph_type, "positions": positions},
+                upsert=True,
+            )
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
+    def get_node_positions(self, workflow_id: str, graph_type: str) -> Dict:
+        """Get node positions for a workflow graph type.
+
+        Parameters
+        ----------
+        workflow_id : str
+            Workflow identifier.
+        graph_type : str
+            Graph type.
+
+        Returns
+        -------
+        dict
+            Dict mapping node IDs to coordinates.
+        """
+        try:
+            doc = self._node_positions_collection.find_one(
+                {"workflow_id": workflow_id, "graph_type": graph_type}, projection={"_id": 0}
+            )
+            return doc.get("positions", {}) if doc else {}
+        except Exception as e:
+            self.logger.exception(e)
+            return {}

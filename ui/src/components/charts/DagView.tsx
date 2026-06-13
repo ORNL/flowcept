@@ -4,11 +4,13 @@ import "@xyflow/react/dist/style.css";
 import { useEffect, useMemo, useState } from "react";
 import { ReactFlow, ReactFlowProvider, useReactFlow, Background, Controls, MarkerType, useNodesState, useEdgesState, Position, type Node, type Edge } from "@xyflow/react";
 import type { Task } from "../../api/types";
-import { fmtDuration, shortId, toEpochSec } from "../../lib/format";
+import { fmtDuration, shortId, toEpochSec, agentColor, applyNodePositions } from "../../lib/format";
 import { useInspectorStore } from "../../stores/inspectorStore";
 import { useHighlightStore } from "../../stores/highlightStore";
 import { TASK_NODE_STYLE } from "./graphStyles";
 import { Bot } from "lucide-react";
+import { useNodePositions } from "../../api/queries";
+import { apiPost } from "../../api/client";
 
 const MAX_TASK_NODES = 150;
 
@@ -39,6 +41,8 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
   }, [allTasks, mode]);
 
   const agentHighlight = useHighlightStore((s) => s.taskIds);
+  const workflowId = allTasks[0]?.workflow_id;
+  const { data: positions } = useNodePositions(workflowId || "", mode);
 
   const [prevTasks, setPrevTasks] = useState<Task[]>(allTasks);
   const [prevMode, setPrevMode] = useState<string>(mode);
@@ -159,10 +163,11 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
         mode === "task"
           ? `${actTasks[0]?.activity_id ?? "task"}\n${shortId(activity, 12)}`
           : `${activity}\n(${actTasks.length})`;
-      const hasAgent = !!(actTasks[0]?.agent_id || actTasks[0]?.source_agent_id);
+      const agentId = actTasks[0]?.agent_id || actTasks[0]?.source_agent_id;
+      const hasAgent = !!agentId;
       const label = hasAgent ? (
         <div className="relative w-full h-full flex items-center justify-center">
-          <Bot size={13} className="absolute -top-1.5 -right-1.5 text-accent bg-surface rounded-full p-0.5 border border-border" />
+          <Bot size={13} style={{ color: agentColor(agentId) }} className="absolute -top-1.5 -right-1.5 bg-surface rounded-full p-0.5 border border-border" />
           <span className="whitespace-pre">{labelText}</span>
         </div>
       ) : (
@@ -233,16 +238,32 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
       return { id: key, source, target, type: "smoothstep", markerEnd: { type: MarkerType.ArrowClosed } };
     });
 
+    const nextNodesWithPositions = applyNodePositions(nextNodes, positions);
+
     // Update nodes state preserving previously dragged positions.
     setNodes((prevNodes) => {
       const prevPositions = new Map(prevNodes.map((n) => [n.id, n.position]));
-      return nextNodes.map((n) => ({
+      return nextNodesWithPositions.map((n) => ({
         ...n,
         position: prevPositions.get(n.id) || n.position,
       }));
     });
     setEdges(nextEdges);
-  }, [tasks, mode, agentHighlight]);
+  }, [tasks, mode, agentHighlight, positions]);
+
+  const handleNodeDragStop = () => {
+    if (!workflowId) return;
+    const posPayload: Record<string, { x: number; y: number }> = {};
+    nodes.forEach((n) => {
+      if (n.position) {
+        posPayload[n.id] = n.position;
+      }
+    });
+    apiPost(`/workflows/${workflowId}/node_positions`, {
+      graph_type: mode,
+      positions: posPayload,
+    }).catch(console.error);
+  };
 
   if (nodes.length === 0) return null;
 
@@ -263,6 +284,7 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            onNodeDragStop={handleNodeDragStop}
             nodesDraggable={true}
             nodesConnectable={false}
             elementsSelectable={false}

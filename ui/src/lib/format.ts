@@ -77,3 +77,34 @@ export function fmtBytes(bytes?: number | null): string {
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
+
+/** Deterministically returns one of 16 colors for an agent ID. */
+export function agentColor(agentId?: string | null): string {
+  if (!agentId) return "#7c3aed"; // Default accent color (e.g. violet)
+  const colors = [
+    "#f87171", "#fb923c", "#fbbf24", "#34d399", 
+    "#2dd4bf", "#38bdf8", "#60a5fa", "#818cf8", 
+    "#a78bfa", "#c084fc", "#f472b6", "#fb7185", 
+    "#10b981", "#a3e635", "#e11d48", "#db2777"
+  ];
+  
+  // Deterministic hash of agentId to index
+  let hash = 0;
+  for (let i = 0; i < agentId.length; i++) {
+    hash = agentId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const idx = Math.abs(hash) % colors.length;
+  return colors[idx];
+}
+
+/** Merges custom node positions into a React Flow node list. */
+export function applyNodePositions(
+  nodes: any[],
+  positions?: Record<string, { x: number; y: number }> | null
+): any[] {
+  if (!positions) return nodes;
+  return nodes.map((n) => {
+    const pos = positions[n.id];
+    return pos ? { ...n, position: pos } : n;
+  });
+}

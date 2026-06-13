@@ -30,13 +30,8 @@ If a tool requires its own file, make that file (which should immediately go to 
 ## 3. Editing Rules
 
 - Read relevant code and tests before editing.
-- Before editing Python files, explain the intended change and keep it narrow.
-- After editing Python files, run:
-
-```bash
-conda run -n flowcept make reformat
-```
-
+- Keep Python changes narrow, small, surgical, easy to review by a human.
+- Before git commiting python files, run `make format`
 - Use existing tests when possible. Add a new test file only when no existing file is a good home.
 - Public functions/classes under `src/` need concise docstrings.
 - Use `FlowceptLogger` for Flowcept warnings/errors, not `print`.

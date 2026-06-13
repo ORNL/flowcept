@@ -193,3 +193,11 @@ export function useProvenanceCard(scope: "workflows" | "campaigns", id: string, 
     staleTime: 60_000,
   });
 }
+
+export function useNodePositions(workflowId: string, graphType: string) {
+  return useQuery({
+    queryKey: ["nodePositions", workflowId, graphType],
+    queryFn: () => apiGet<Record<string, { x: number; y: number }>>(`/workflows/${workflowId}/node_positions`, { graph_type: graphType }),
+    staleTime: 30_000,
+  });
+}

@@ -11,6 +11,8 @@ import {
   fmtDuration,
   fmtBytes,
   shortId,
+  agentColor,
+  applyNodePositions,
   type TimeValue,
 } from "../src/lib/format";
 
@@ -197,3 +199,83 @@ describe("workflow sort ordering (newest-first)", () => {
     expect(sorted[1].workflow_id).toBe("wf-no-ts");
   });
 });
+
+// ---------------------------------------------------------------------------
+// agentColor
+// ---------------------------------------------------------------------------
+
+describe("agentColor", () => {
+  it("returns default color when agentId is missing", () => {
+    expect(agentColor(null)).toBe("#7c3aed");
+    expect(agentColor(undefined)).toBe("#7c3aed");
+  });
+
+  it("returns a hex color string for valid agent IDs", () => {
+    const color = agentColor("agent-1");
+    expect(color).toMatch(/^#[0-9a-fA-F]{6}$/);
+  });
+
+  it("returns deterministic color for the same agent ID", () => {
+    expect(agentColor("agent-1")).toBe(agentColor("agent-1"));
+  });
+
+  it("circulates across multiple colors for different IDs", () => {
+    const colors = new Set<string>();
+    for (let i = 0; i < 50; i++) {
+      colors.add(agentColor(`agent-${i}`));
+    }
+    // We expect multiple colors to be used, not just one or two
+    expect(colors.size).toBeGreaterThan(5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// applyNodePositions
+// ---------------------------------------------------------------------------
+
+describe("applyNodePositions", () => {
+  it("merges custom positions into nodes if present", () => {
+    const nodes = [
+      { id: "1", position: { x: 0, y: 0 } },
+      { id: "2", position: { x: 10, y: 10 } },
+    ] as any[];
+    const positions = {
+      "1": { x: 100, y: 200 },
+    };
+    const result = applyNodePositions(nodes, positions);
+    expect(result[0].position).toEqual({ x: 100, y: 200 });
+    expect(result[1].position).toEqual({ x: 10, y: 10 });
+  });
+
+  it("handles empty or missing positions gracefully", () => {
+    const nodes = [
+      { id: "1", position: { x: 0, y: 0 } },
+    ] as any[];
+    const result = applyNodePositions(nodes, null as any);
+    expect(result[0].position).toEqual({ x: 0, y: 0 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getAssociatedAgents
+// ---------------------------------------------------------------------------
+
+describe("getAssociatedAgents", () => {
+  it("returns unique associated agents (both upstream and downstream)", () => {
+    const { getAssociatedAgents } = require("../src/lib/format");
+    const agentA = { agent_id: "agent-a", source_agent_ids: ["agent-b"] };
+    const agentB = { agent_id: "agent-b", source_agent_ids: [] };
+    const agentC = { agent_id: "agent-c", source_agent_ids: ["agent-a"] };
+    const agentD = { agent_id: "agent-d", source_agent_ids: [] };
+    const allAgents = [agentA, agentB, agentC, agentD] as any[];
+
+    const assoc = getAssociatedAgents(agentA, allAgents);
+    const ids = assoc.map((a: any) => a.agent_id);
+    expect(ids).toContain("agent-b"); // Upstream
+    expect(ids).toContain("agent-c"); // Downstream
+    expect(ids).not.toContain("agent-d"); // Unrelated
+    expect(ids).not.toContain("agent-a"); // Self
+    expect(assoc).toHaveLength(2);
+  });
+});
+

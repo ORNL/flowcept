@@ -220,12 +220,37 @@ def _coarse(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
                     seen_derived.add((out_id, in_id))
                     edges.append({"source": out_id, "target": in_id, "relation": "derived"})
 
+    # Delegation edges: delegator task -> delegatee task
+    for t in tasks:
+        source_agent_id = t.get("source_agent_id")
+        if source_agent_id:
+            delegator = None
+            t_start = _to_epoch(t.get("started_at")) or 0
+            for s in tasks:
+                if s.get("agent_id") == source_agent_id:
+                    s_start = _to_epoch(s.get("started_at")) or 0
+                    if s_start <= t_start:
+                        if delegator is None or s_start > (_to_epoch(delegator.get("started_at")) or 0):
+                            delegator = s
+            if delegator:
+                edges.append(
+                    {
+                        "source": f"task:{delegator['task_id']}",
+                        "target": f"task:{t['task_id']}",
+                        "relation": "delegation",
+                    }
+                )
+
     for chunk in chunks.values():
         roles = chunk["stats"].pop("roles")
         role = "input/output" if len(roles) > 1 else next(iter(roles))
         chunk["stats"]["kind"] = role
-        prefix = {"input": "inputs", "output": "outputs", "input/output": "data"}[role]
-        chunk["label"] = f"{prefix} ({len(chunk['stats']['items'])})"
+        keys = list(chunk["stats"]["items"].keys()) if isinstance(chunk["stats"]["items"], dict) else []
+        if keys:
+            chunk["label"] = ", ".join(str(k) for k in keys)
+        else:
+            prefix = {"input": "inputs", "output": "outputs", "input/output": "data"}[role]
+            chunk["label"] = f"{prefix} ({len(chunk['stats']['items'])})"
         nodes.append(chunk)
 
     return {"level": "coarse", "nodes": nodes, "edges": edges, "truncated": truncated}
