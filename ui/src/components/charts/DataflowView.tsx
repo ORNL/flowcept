@@ -9,8 +9,8 @@ import { ReactFlow, ReactFlowProvider, useReactFlow, Background, Controls, Marke
 import { useDataflow, type DataflowGraph } from "../../api/queries";
 import { useInspectorStore } from "../../stores/inspectorStore";
 import { useHighlightStore } from "../../stores/highlightStore";
+import { expandLineage } from "../../lib/lineage";
 import { TASK_NODE_STYLE } from "./graphStyles";
-import { Bot } from "lucide-react";
 
 interface Props {
   workflowId: string;
@@ -92,28 +92,7 @@ export function DataflowView({ workflowId, height }: Props) {
     if (focus) seeds.add(focus);
     for (const tid of agentHighlight) seeds.add(`task:${tid}`);
 
-    let lineage: Set<string> | null = null;
-    if (seeds.size > 0) {
-      lineage = new Set(seeds);
-      const fwd = new Map<string, string[]>();
-      const back = new Map<string, string[]>();
-      for (const e of visibleEdges) {
-        if (!fwd.has(e.source)) fwd.set(e.source, []);
-        fwd.get(e.source)!.push(e.target);
-        if (!back.has(e.target)) back.set(e.target, []);
-        back.get(e.target)!.push(e.source);
-      }
-      // Two separate passes to avoid cross-contamination: forward (descendants) then backward (ancestors).
-      for (const adj of [fwd, back]) {
-        const stack = [...seeds];
-        while (stack.length) {
-          const curr = stack.pop()!;
-          for (const next of adj.get(curr) ?? []) {
-            if (!lineage.has(next)) { lineage.add(next); stack.push(next); }
-          }
-        }
-      }
-    }
+    const lineage: Set<string> | null = seeds.size > 0 ? expandLineage(seeds, visibleEdges) : null;
 
     const nodes: Node[] = visibleNodes.map((n) => {
       const rank = ranks.get(n.id) ?? 0;

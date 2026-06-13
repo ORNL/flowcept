@@ -46,25 +46,6 @@ def _set_reproducibility(seed=0):
     return reproducibility
 
 
-def shape_args_handler(*args, **kwargs):
-    """Capture tensor values as shape metadata for provenance payloads."""
-
-    def _shape_key(name):
-        return name if name.endswith("_shape") else f"{name}_shape"
-
-    handled = {}
-    for i, arg in enumerate(args):
-        key = f"arg_{i}"
-        if isinstance(arg, torch.Tensor):
-            handled[_shape_key(key)] = tuple(arg.shape)
-        else:
-            handled[key] = arg
-    for key, value in kwargs.items():
-        if isinstance(value, torch.Tensor):
-            handled[_shape_key(key)] = tuple(value.shape)
-        else:
-            handled[key] = value
-    return handled
 
 
 class SingleLayerPerceptron(nn.Module):
@@ -78,11 +59,9 @@ class SingleLayerPerceptron(nn.Module):
 
 @flowcept_task(
     subtype=ML_Types.DATA_PREP,
-    args_handler=shape_args_handler,
     output_names=["x_train_shape", "y_train_shape", "x_val_shape", "y_val_shape", "dataset_id"],
-    agent_id="orchestrator_agent_id",
 )
-def get_dataset(n_samples, split_ratio, agent_id=None):
+def get_dataset(n_samples, split_ratio):
     """Generate a toy binary classification dataset."""
     generator = torch.Generator().manual_seed(torch.initial_seed())
     x = torch.cat(
@@ -288,7 +267,7 @@ def run_gridsearch_experiment(campaign_id=None):
         train_agent.enrich()
         Flowcept.db.insert_or_update_agent(train_agent)
 
-        x_train, y_train, x_val, y_val, dataset_id = get_dataset(120, 0.8, agent_id=orchestrator_agent_id)
+        x_train, y_train, x_val, y_val, dataset_id = get_dataset(120, 0.8)
         results = []
         for idx, cfg in enumerate(configs, 1):
             result = train_and_validate(

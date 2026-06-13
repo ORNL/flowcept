@@ -1,10 +1,7 @@
 name: Web UI checks
 
 on:
-  pull_request:
-    paths:
-      - "ui/**"
-      - ".github/workflows/ui-checks.yml"
+  push:
 
 jobs:
   ui-checks:
@@ -22,6 +19,15 @@ jobs:
 
       - name: Install UI dependencies
         run: make ui-install
+
+      - name: Run UI unit tests
+        run: make ui-test
+
+      - name: Install Playwright browsers
+        run: cd ui && npx playwright install --with-deps chromium
+
+      - name: Run UI end-to-end tests
+        run: make ui-e2e
 
       - name: Build and typecheck the UI
         run: make ui-build
