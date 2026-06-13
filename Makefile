@@ -26,6 +26,8 @@ help:
 	@printf "\033[32mui-dev\033[0m                    run the web UI dev server (proxies /api to :5000)\n"
 	@printf "\033[32mui-build\033[0m                  build the web UI into src/flowcept/webservice/ui_build\n"
 	@printf "\033[32mui-checks\033[0m                 typecheck the web UI\n"
+	@printf "\033[32mui-test\033[0m                   run web UI unit tests (vitest)\n"
+	@printf "\033[32mui-e2e\033[0m                    run web UI end-to-end tests (playwright)\n"
 	@printf "\033[32mchecks\033[0m                    run ruff linter and formatter checks\n"
 	@printf "\033[32mreformat\033[0m                  run ruff linter and formatter\n"
 	@printf "\033[32mcompile-rules\033[0m             compile central rules files for all coding assistants\n"
@@ -39,7 +41,7 @@ checks:
 compile-rules:
 	python scripts/compile_rules.py
 
-.PHONY: ui-install ui-dev ui-build ui-checks ui
+.PHONY: ui-install ui-dev ui-build ui-checks ui-test ui-e2e ui
 ui-install:
 	npm ci --prefix ui --no-audit --no-fund
 
@@ -51,6 +53,12 @@ ui-build:
 
 ui-checks:
 	npm run lint --prefix ui
+
+ui-test:
+	npm test --prefix ui
+
+ui-e2e:
+	cd ui && npx playwright test
 
 ui:
 	FLOWCEPT_SETTINGS_PATH=$(or $(FLOWCEPT_SETTINGS_PATH),$(PWD)/agent_sandbox/settings.yaml) PYTHONPATH=src python -m flowcept.cli --start-ui

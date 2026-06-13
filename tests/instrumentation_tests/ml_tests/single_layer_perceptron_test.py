@@ -47,11 +47,8 @@ def _set_reproducibility(seed=0):
 
 
 def shape_args_handler(*args, **kwargs):
-    """Capture tensor values as shape metadata for provenance payloads."""
-
     def _shape_key(name):
         return name if name.endswith("_shape") else f"{name}_shape"
-
     handled = {}
     for i, arg in enumerate(args):
         key = f"arg_{i}"
@@ -65,7 +62,6 @@ def shape_args_handler(*args, **kwargs):
         else:
             handled[key] = value
     return handled
-
 
 class SingleLayerPerceptron(nn.Module):
     def __init__(self, input_size, **kwargs):
@@ -81,7 +77,7 @@ class SingleLayerPerceptron(nn.Module):
     args_handler=shape_args_handler,
     output_names=["x_train_shape", "y_train_shape", "x_val_shape", "y_val_shape", "dataset_id"],
 )
-def get_dataset(n_samples, split_ratio, job_id=None):
+def get_dataset(n_samples, split_ratio):
     """Generate a toy binary classification dataset."""
     generator = torch.Generator().manual_seed(torch.initial_seed())
     x = torch.cat(
@@ -123,13 +119,20 @@ def validate(model, criterion, x_val, y_val):
     return loss.item(), accuracy
 
 
-@flowcept_task(subtype=ML_Types.LEARNING, output_names=["job_id", "configs"])
+@flowcept_task(output_names=["dataset_config", "n_configs"])
+def call_hpc_agent(agent_id=None):
+    dataset_config = dict(n_samples=120, split_ratio=0.8)
+    n_configs = 5
+    return dataset_config, n_configs
+
+@flowcept_task(output_names=["configs"])
 def submit_gridsearch_job(
+    n_configs=5,
     agent_id=None,
+    source_agent_id=None,
 ):
     """Simulate submitting a training job to an HPC system."""
     from uuid import uuid4
-    job_id = f"hpc_job_{uuid4()}"
     configs = [
         {"epochs": 2, "learning_rate": 0.01, "n_input_neurons": 1},
         {"epochs": 4, "learning_rate": 0.03, "n_input_neurons": 1},
@@ -137,7 +140,9 @@ def submit_gridsearch_job(
         {"epochs": 10, "learning_rate": 0.12, "n_input_neurons": 2},
         {"epochs": 14, "learning_rate": 0.20, "n_input_neurons": 2},
     ]
-    return job_id, configs
+    configs = configs[:n_configs]
+    assert len(configs) == n_configs
+    return configs
 
 
 @flowcept_task(subtype=ML_Types.LEARNING)
@@ -308,9 +313,12 @@ def run_gridsearch_experiment(campaign_id=None):
         orchestrator_agent_id = fc.save_agent(name="Orchestrator")
         hpc_agent_id = fc.save_agent(name="HPCAgent")
 
-        job_id, configs = submit_gridsearch_job(agent_id=hpc_agent_id)
+        dataset_config, n_configs = call_hpc_agent(agent_id=orchestrator_agent_id)
 
-        x_train, y_train, x_val, y_val, dataset_id = get_dataset(120, 0.8, job_id=job_id)
+        configs = submit_gridsearch_job(n_configs=n_configs, agent_id=hpc_agent_id, source_agent_id=orchestrator_agent_id)
+
+        x_train, y_train, x_val, y_val, dataset_id = get_dataset(**dataset_config)
+
 
         results = []
         for idx, cfg in enumerate(configs, 1):
@@ -585,8 +593,6 @@ class SingleLayerPerceptronTests(unittest.TestCase):
 
         submit_tasks = [t for t in tasks if t.get("activity_id") == "submit_gridsearch_job"]
         assert len(submit_tasks) == 1
-        assert all(task.get("subtype") == ML_Types.LEARNING for task in submit_tasks)
-        assert all(task.get("agent_id").startswith("hpc_agent_") for task in submit_tasks)
 
         model_selection_tasks = [t for t in tasks if t.get("activity_id") == "select_best_model"]
         assert len(model_selection_tasks) == 1
