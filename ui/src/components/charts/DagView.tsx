@@ -4,7 +4,7 @@ import "@xyflow/react/dist/style.css";
 import { useEffect, useMemo, useState } from "react";
 import { ReactFlow, ReactFlowProvider, useReactFlow, Background, Controls, MarkerType, useNodesState, useEdgesState, Position, type Node, type Edge } from "@xyflow/react";
 import type { Task } from "../../api/types";
-import { fmtDuration, shortId, toEpochSec, agentColor, applyNodePositions } from "../../lib/format";
+import { fmtDuration, shortId, toEpochSec, agentIconStyle, applyNodePositions } from "../../lib/format";
 import { useInspectorStore } from "../../stores/inspectorStore";
 import { useHighlightStore } from "../../stores/highlightStore";
 import { TASK_NODE_STYLE } from "./graphStyles";
@@ -153,6 +153,29 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
       }
     }
 
+    // Collect all unique agent IDs to assign them distinct colors sequentially (avoids hash collisions).
+    const uniqueAgentIds = Array.from(
+      new Set(
+        activities
+          .map((activity) => {
+            const actTasks = byActivity.get(activity) ?? [];
+            return actTasks[0]?.agent_id || actTasks[0]?.source_agent_id;
+          })
+          .filter((id): id is string => !!id)
+      )
+    ).sort();
+
+    const agentColorMap = new Map<string, string>();
+    const palette = [
+      "#f87171", "#fb923c", "#fbbf24", "#34d399", 
+      "#2dd4bf", "#38bdf8", "#60a5fa", "#818cf8", 
+      "#a78bfa", "#c084fc", "#f472b6", "#fb7185", 
+      "#10b981", "#a3e635", "#e11d48", "#db2777"
+    ];
+    uniqueAgentIds.forEach((id, idx) => {
+      agentColorMap.set(id, palette[idx % palette.length]);
+    });
+
     const nextNodes: Node[] = activities.map((activity) => {
       const actTasks = byActivity.get(activity) ?? [];
       const statuses = actTasks.map((t) => t.status ?? "");
@@ -167,7 +190,7 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
       const hasAgent = !!agentId;
       const label = hasAgent ? (
         <div className="relative w-full h-full flex items-center justify-center">
-          <Bot size={13} style={{ color: agentColor(agentId) }} className="absolute -top-1.5 -right-1.5 bg-surface rounded-full p-0.5 border border-border" />
+          <Bot size={13} {...agentIconStyle(agentId, agentColorMap)} className="absolute -top-1.5 -right-1.5 bg-surface rounded-full p-0.5 border border-border" />
           <span className="whitespace-pre">{labelText}</span>
         </div>
       ) : (
@@ -195,6 +218,7 @@ export function DagView({ tasks: allTasks, mode = "activity", height }: Props) {
               generated: actTasks[0]?.generated ?? null,
               agent_id: actTasks[0]?.agent_id ?? null,
               source_agent_id: actTasks[0]?.source_agent_id ?? null,
+              subtype: actTasks[0]?.subtype ?? null,
             }
           : {
               activity_id: activity,

@@ -132,6 +132,7 @@ function GraphInspector({ kind, data }: { kind: "task" | "activity" | "dataflow"
         <Field label="duration" value={fmtDuration(duration)} />
         <Field label="agent_id" value={stats["agent_id"]} />
         <Field label="source_agent_id" value={stats["source_agent_id"]} />
+        <Field label="subtype" value={stats["subtype"]} />
         <Field label="Used" value={stats["used"]} />
         <Field label="Generated" value={stats["generated"]} />
       </div>

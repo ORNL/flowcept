@@ -463,17 +463,6 @@ class Flowcept(object):
         campaign_id: str | None = None,
     ) -> str:
         """Register and save an agent associated with the workflow/campaign."""
-        if not agent_id:
-            prefix = ""
-            if name:
-                prefix = name.lower()
-                if prefix == "hpcagent":
-                    prefix = "hpc_agent"
-                elif "agent" not in prefix:
-                    prefix = f"{prefix}_agent"
-                prefix = f"{prefix}_"
-            agent_id = f"{prefix}{uuid4()}"
-
         agent_obj = AgentObject(
             agent_id=agent_id,
             name=name,

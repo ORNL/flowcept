@@ -460,6 +460,15 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
+    def delete_agents_with_filter(self, filter) -> bool:
+        """Delete agent documents that match the specified filter."""
+        try:
+            self._agents_collection.delete_many(filter)
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
     def count_tasks(self) -> int:
         """Count number of docs in tasks collection."""
         try:

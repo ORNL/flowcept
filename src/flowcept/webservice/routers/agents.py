@@ -62,3 +62,22 @@ def get_agent_tasks(
     )
     normalized = normalize_docs(docs)
     return ListResponse(items=normalized, count=len(normalized), limit=limit)
+
+
+@router.delete("/cleanup/empty", response_model=Dict[str, Any])
+def delete_empty_agents(db: DBAPI = Depends(get_db_api)) -> Dict[str, Any]:
+    """Delete all agents from the database that don't have associated task_id."""
+    stored_agents = db.agent_query(filter={}) or []
+    deleted_count = 0
+    for agent in stored_agents:
+        agent_id = agent.get("agent_id")
+        if not agent_id:
+            continue
+        tasks = db.task_query(
+            filter={"$or": [{"agent_id": agent_id}, {"source_agent_id": agent_id}]},
+            limit=1,
+        )
+        if not tasks:
+            db.delete_agents_with_filter({"agent_id": agent_id})
+            deleted_count += 1
+    return {"deleted_count": deleted_count}

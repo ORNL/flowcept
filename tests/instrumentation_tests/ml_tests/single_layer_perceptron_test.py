@@ -14,7 +14,7 @@ import torch.optim as optim
 
 from flowcept import Flowcept
 from flowcept.configs import MONGO_ENABLED
-from flowcept.commons.vocabulary import ML_Types
+from flowcept.commons.vocabulary import ML_Types, PROV_AGENT
 from flowcept.instrumentation.flowcept_task import flowcept_task, get_current_context_task_id
 
 
@@ -125,7 +125,7 @@ def call_hpc_agent(agent_id=None):
     n_configs = 5
     return dataset_config, n_configs
 
-@flowcept_task(output_names=["configs"])
+@flowcept_task(output_names=["configs"], subtype=PROV_AGENT.AGENT_TOOL)
 def submit_gridsearch_job(
     n_configs=5,
     agent_id=None,

@@ -78,9 +78,25 @@ export function fmtBytes(bytes?: number | null): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-/** Deterministically returns one of 16 colors for an agent ID. */
-export function agentColor(agentId?: string | null): string {
-  if (!agentId) return "#7c3aed"; // Default accent color (e.g. violet)
+export function getAgentNameFromId(agentId?: string | null): string {
+  if (!agentId) return "";
+  const parts = agentId.split("_");
+  const filtered = parts.filter((p) => {
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p)) return false;
+    if (/^[0-9a-f]{8,32}$/i.test(p)) return false;
+    if (/^\d+(\.\d+)?$/.test(p)) return false;
+    return true;
+  });
+  if (filtered.length > 0) {
+    return filtered.join("_");
+  }
+  return agentId;
+}
+
+/** Deterministically returns one of 16 colors for an agent. Driven by name. */
+export function agentColor(agentId?: string | null, name?: string | null): string {
+  const identifier = name || getAgentNameFromId(agentId);
+  if (!identifier) return "#7c3aed"; // Default accent color (e.g. violet)
   const colors = [
     "#f87171", "#fb923c", "#fbbf24", "#34d399", 
     "#2dd4bf", "#38bdf8", "#60a5fa", "#818cf8", 
@@ -88,13 +104,38 @@ export function agentColor(agentId?: string | null): string {
     "#10b981", "#a3e635", "#e11d48", "#db2777"
   ];
   
-  // Deterministic hash of agentId to index
+  // Deterministic hash of identifier to index
   let hash = 0;
-  for (let i = 0; i < agentId.length; i++) {
-    hash = agentId.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < identifier.length; i++) {
+    hash = identifier.charCodeAt(i) + ((hash << 5) - hash);
   }
   const idx = Math.abs(hash) % colors.length;
   return colors[idx];
+}
+
+/** Returns both the React color/stroke props and the CSS inline style color/stroke for the agent icon. */
+export function agentIconStyle(
+  agentId?: string | null,
+  colorMap?: Map<string, string>,
+  name?: string | null
+): {
+  color: string;
+  stroke: string;
+  style: { color: string; stroke: string };
+} {
+  let col = "#7c3aed";
+  if (agentId) {
+    if (colorMap && colorMap.has(agentId)) {
+      col = colorMap.get(agentId)!;
+    } else {
+      col = agentColor(agentId, name);
+    }
+  }
+  return {
+    color: col,
+    stroke: col,
+    style: { color: col, stroke: col }
+  };
 }
 
 /** Merges custom node positions into a React Flow node list. */
@@ -108,3 +149,49 @@ export function applyNodePositions(
     return pos ? { ...n, position: pos } : n;
   });
 }
+
+export function getAgentTimestamp(a: any): number {
+  const lastActive = toEpochSec(a.last_active);
+  const registeredAt = toEpochSec(a.registered_at);
+  if (lastActive !== null && registeredAt !== null) {
+    return Math.max(lastActive, registeredAt);
+  }
+  if (lastActive !== null) return lastActive;
+  if (registeredAt !== null) return registeredAt;
+  return 0;
+}
+
+export function sortAgents(agents: any[]): any[] {
+  return [...agents].sort((a, b) => getAgentTimestamp(b) - getAgentTimestamp(a));
+}
+
+export function getCampaignTimestamp(c: any): number {
+  const lastTs = toEpochSec(c.last_ts);
+  const firstTs = toEpochSec(c.first_ts);
+  if (lastTs !== null && firstTs !== null) {
+    return Math.max(lastTs, firstTs);
+  }
+  if (lastTs !== null) return lastTs;
+  if (firstTs !== null) return firstTs;
+  return 0;
+}
+
+export function sortCampaigns(campaigns: any[]): any[] {
+  return [...campaigns].sort((a, b) => getCampaignTimestamp(b) - getCampaignTimestamp(a));
+}
+
+export function sortWorkflows(workflows: any[]): any[] {
+  return [...workflows].sort((a, b) => (toEpochSec(b.utc_timestamp) ?? 0) - (toEpochSec(a.utc_timestamp) ?? 0));
+}
+
+export function filterActiveAgents(agents: any[]): any[] {
+  return agents.filter((a) => (a.task_count ?? 0) > 0);
+}
+
+export function filterGraphEdges(edges: any[], options: { showDelegation: boolean }): any[] {
+  if (options.showDelegation) return edges;
+  return edges.filter((e) => e.relation !== "delegation");
+}
+
+
+

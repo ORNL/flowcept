@@ -953,7 +953,14 @@ def test_webservice_dataflow_graph(db_cleanup):
     client = TestClient(app)
 
     # Coarse level (default): per-task input/output chunk entities (PROV Entity vs Activity).
-    rs = client.get(f"/api/v1/workflows/{workflow_id}/dataflow")
+    from flowcept import configs
+    original_max = getattr(configs, "WEBSERVER_MAX_LABEL_LENGTH", 30)
+    try:
+        configs.WEBSERVER_MAX_LABEL_LENGTH = 300
+        rs = client.get(f"/api/v1/workflows/{workflow_id}/dataflow")
+    finally:
+        configs.WEBSERVER_MAX_LABEL_LENGTH = original_max
+
     assert rs.status_code == 200, rs.text
     body = rs.json()
     assert body["level"] == "coarse"
@@ -971,6 +978,9 @@ def test_webservice_dataflow_graph(db_cleanup):
     assert any(n["stats"]["activity_id"] == "train_and_validate" for n in task_nodes)
     assert any(n["stats"]["used"].get("config_id") == "cfg_1" for n in task_nodes)
     assert any("best_val_loss" in n["stats"]["generated"] for n in task_nodes)
+    # TDD: Verify task nodes have subtype in their stats
+    learning_node = next(n for n in task_nodes if n["label"] == "train_and_validate")
+    assert learning_node["stats"].get("subtype") == "learning"
     # Each task with used/generated data is represented as a PROV activity.
     inputs = [c for c in chunk_nodes if c["stats"]["kind"] == "input"]
     outputs = [c for c in chunk_nodes if c["stats"]["kind"] == "output"]
@@ -1150,3 +1160,26 @@ def test_node_positions_endpoint(db_cleanup):
     retrieved = rs.json()
     assert retrieved["node-1"] == {"x": 12.5, "y": 45.6}
     assert retrieved["node-2"] == {"x": 78.9, "y": 101.2}
+
+
+def test_agents_without_tasks_are_not_returned(db_cleanup):
+    """TDD test: agents with 0 tasks must be filtered out and not listed."""
+    if not Flowcept.services_alive():
+        pytest.skip("Flowcept services are not alive.")
+
+    from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
+    empty_agent_id = f"empty-agent-{uuid4()}"
+
+    agent = AgentObject()
+    agent.agent_id = empty_agent_id
+    agent.name = "EmptyAgent"
+    Flowcept.db.insert_or_update_agent(agent)
+
+    app = create_app()
+    client = TestClient(app)
+
+    rs = client.get("/api/v1/agents")
+    assert rs.status_code == 200
+    items = rs.json()["items"]
+    assert not any(item["agent_id"] == empty_agent_id for item in items)
+

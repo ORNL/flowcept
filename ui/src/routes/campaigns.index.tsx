@@ -6,7 +6,7 @@ import { Trash2 } from "lucide-react";
 import { useCampaigns } from "../api/queries";
 import { apiDelete } from "../api/client";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
-import { fmtTs, shortId } from "../lib/format";
+import { fmtTs, shortId, sortCampaigns } from "../lib/format";
 
 export const Route = createFileRoute("/campaigns/")({ component: CampaignsPage });
 
@@ -34,10 +34,7 @@ function CampaignsPage() {
       {isLoading && <div className="text-fg-muted text-xs">Loading…</div>}
       {error && <div className="text-err text-xs">{String(error)}</div>}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {(data?.items ?? [])
-          .filter((c) => c.task_count > 0)
-          .sort((a, b) => (b.last_ts ?? 0) - (a.last_ts ?? 0))
-          .map((c) => (
+        {sortCampaigns((data?.items ?? []).filter((c) => c.task_count > 0)).map((c) => (
           <div key={c.campaign_id} className="card hover:border-accent/60 relative group p-4">
             <Link
               to="/campaigns/$campaignId"

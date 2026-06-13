@@ -145,8 +145,10 @@ class DBAPI(object):
             Matching workflow object, or ``None`` when not found.
         """
         wfobs = self.workflow_query(filter={WorkflowObject.workflow_id_field(): workflow_id})
-        if wfobs is None or len(wfobs) == 0:
+        if wfobs is None:
             self.logger.error("Could not retrieve workflow with that filter.")
+            return None
+        elif len(wfobs) == 0:
             return None
         else:
             return WorkflowObject.from_dict(wfobs[0])
@@ -184,8 +186,10 @@ class DBAPI(object):
             Matching agent object, or ``None`` when not found.
         """
         agobs = self.agent_query(filter={AgentObject.agent_id_field(): agent_id})
-        if agobs is None or len(agobs) == 0:
+        if agobs is None:
             self.logger.error("Could not retrieve agent with that filter.")
+            return None
+        elif len(agobs) == 0:
             return None
         else:
             return AgentObject.from_dict(agobs[0])
@@ -208,6 +212,26 @@ class DBAPI(object):
             self.logger.error("Could not retrieve agents with that filter.")
             return None
         return results
+
+    def delete_agents_with_filter(self, filter) -> bool:
+        """Delete agents matching the filter.
+
+        Parameters
+        ----------
+        filter : dict
+            DAO filter expression.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        dao = DBAPI._dao()
+        try:
+            return dao.delete_agents_with_filter(filter)
+        except Exception as e:
+            self.logger.error(f"Could not delete agents with filter {filter}: {e}")
+            return False
 
     def get_tasks_from_current_workflow(self):
         """Get tasks belonging to ``Flowcept.current_workflow_id``.
@@ -316,7 +340,6 @@ class DBAPI(object):
             obj_doc = None if objs is None or len(objs) == 0 else objs[0]
 
         if obj_doc is None:
-            self.logger.error("Could not retrieve blob object with that filter.")
             return None
         return BlobObject.from_dict(obj_doc)
 

@@ -188,6 +188,22 @@ class LMDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
+    def delete_agents_with_filter(self, filter) -> bool:
+        """Delete agent documents that match the specified filter."""
+        if self._is_closed:
+            self._open()
+        try:
+            with self._env.begin(write=True, db=self._agents_db) as txn:
+                cursor = txn.cursor()
+                for key, value in cursor:
+                    entry = json.loads(value.decode())
+                    if LMDBDAO._match_filter(entry, filter):
+                        cursor.delete()
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
     def count_tasks(self) -> int:
         """Count number of docs in tasks collection."""
         if self._is_closed:
@@ -231,8 +247,45 @@ class LMDBDAO(DocumentDBDAO):
             return True
 
         for key, value in filter.items():
-            if entry.get(key) != value:
-                return False
+            if key == "$or":
+                if not isinstance(value, list) or not any(LMDBDAO._match_filter(entry, clause) for clause in value):
+                    return False
+            elif key == "$and":
+                if not isinstance(value, list) or not all(LMDBDAO._match_filter(entry, clause) for clause in value):
+                    return False
+            elif isinstance(value, dict):
+                entry_val = entry.get(key)
+                for op, op_val in value.items():
+                    if op == "$in":
+                        if not isinstance(op_val, (list, set, tuple)) or entry_val not in op_val:
+                            return False
+                    elif op == "$nin":
+                        if not isinstance(op_val, (list, set, tuple)) or entry_val in op_val:
+                            return False
+                    elif op == "$eq":
+                        if entry_val != op_val:
+                            return False
+                    elif op == "$ne":
+                        if entry_val == op_val:
+                            return False
+                    elif op == "$gt":
+                        if entry_val is None or entry_val <= op_val:
+                            return False
+                    elif op == "$gte":
+                        if entry_val is None or entry_val < op_val:
+                            return False
+                    elif op == "$lt":
+                        if entry_val is None or entry_val >= op_val:
+                            return False
+                    elif op == "$lte":
+                        if entry_val is None or entry_val > op_val:
+                            return False
+                    else:
+                        if entry_val != value:
+                            return False
+            else:
+                if entry.get(key) != value:
+                    return False
         return True
 
     def to_df(self, collection="tasks", filter=None) -> pd.DataFrame:

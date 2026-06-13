@@ -12,7 +12,13 @@ import {
   fmtBytes,
   shortId,
   agentColor,
+  agentIconStyle,
   applyNodePositions,
+  sortAgents,
+  sortCampaigns,
+  sortWorkflows,
+  filterActiveAgents,
+  filterGraphEdges,
   type TimeValue,
 } from "../src/lib/format";
 
@@ -257,25 +263,96 @@ describe("applyNodePositions", () => {
 });
 
 // ---------------------------------------------------------------------------
-// getAssociatedAgents
+// Entity sorting (newest-first)
 // ---------------------------------------------------------------------------
 
-describe("getAssociatedAgents", () => {
-  it("returns unique associated agents (both upstream and downstream)", () => {
-    const { getAssociatedAgents } = require("../src/lib/format");
-    const agentA = { agent_id: "agent-a", source_agent_ids: ["agent-b"] };
-    const agentB = { agent_id: "agent-b", source_agent_ids: [] };
-    const agentC = { agent_id: "agent-c", source_agent_ids: ["agent-a"] };
-    const agentD = { agent_id: "agent-d", source_agent_ids: [] };
-    const allAgents = [agentA, agentB, agentC, agentD] as any[];
+describe("entity sorting (newest-first)", () => {
+  it("sortAgents sorts agents descending by most recent timestamp (last_active or registered_at)", () => {
+    const a1 = { agent_id: "a1", registered_at: 1000, last_active: 2000 };
+    const a2 = { agent_id: "a2", registered_at: 5000, last_active: null };
+    const a3 = { agent_id: "a3", registered_at: 3000, last_active: 1000 };
+    const sorted = sortAgents([a1, a2, a3] as any[]);
+    expect(sorted[0].agent_id).toBe("a2"); // 5000
+    expect(sorted[1].agent_id).toBe("a3"); // 3000
+    expect(sorted[2].agent_id).toBe("a1"); // 2000
+  });
 
-    const assoc = getAssociatedAgents(agentA, allAgents);
-    const ids = assoc.map((a: any) => a.agent_id);
-    expect(ids).toContain("agent-b"); // Upstream
-    expect(ids).toContain("agent-c"); // Downstream
-    expect(ids).not.toContain("agent-d"); // Unrelated
-    expect(ids).not.toContain("agent-a"); // Self
-    expect(assoc).toHaveLength(2);
+  it("sortCampaigns sorts campaigns descending by most recent timestamp (last_ts or first_ts)", () => {
+    const c1 = { campaign_id: "c1", last_ts: 1000, first_ts: 500 };
+    const c2 = { campaign_id: "c2", last_ts: 3000, first_ts: 2000 };
+    const c3 = { campaign_id: "c3", last_ts: 2000, first_ts: 1500 };
+    const sorted = sortCampaigns([c1, c2, c3] as any[]);
+    expect(sorted[0].campaign_id).toBe("c2"); // 3000
+    expect(sorted[1].campaign_id).toBe("c3"); // 2000
+    expect(sorted[2].campaign_id).toBe("c1"); // 1000
+  });
+
+  it("sortWorkflows sorts workflows descending by utc_timestamp", () => {
+    const workflows = sampleWorkflows();
+    const sorted = sortWorkflows(workflows as any[]);
+    expect(sorted[0].workflow_id).toBe("wf-new");
+    expect(sorted[1].workflow_id).toBe("wf-mid");
+    expect(sorted[2].workflow_id).toBe("wf-old");
+  });
+
+  it("filterActiveAgents filters out agents with 0 task count", () => {
+    const a1 = { agent_id: "a1", task_count: 5 };
+    const a2 = { agent_id: "a2", task_count: 0 };
+    const a3 = { agent_id: "a3", task_count: 1 };
+    const filtered = filterActiveAgents([a1, a2, a3] as any[]);
+    expect(filtered).toHaveLength(2);
+    expect(filtered.map(x => x.agent_id)).toEqual(["a1", "a3"]);
   });
 });
+
+describe("agentIconStyle", () => {
+  it("returns default color and stroke when agentId is missing", () => {
+    const res = agentIconStyle(null);
+    expect(res.color).toBe("#7c3aed");
+    expect(res.stroke).toBe("#7c3aed");
+    expect(res.style.color).toBe("#7c3aed");
+    expect(res.style.stroke).toBe("#7c3aed");
+  });
+
+  it("returns matching color, stroke, and style properties for valid agent ID", () => {
+    const res = agentIconStyle("agent-123");
+    const expectedColor = agentColor("agent-123");
+    expect(res.color).toBe(expectedColor);
+    expect(res.stroke).toBe(expectedColor);
+    expect(res.style.color).toBe(expectedColor);
+    expect(res.style.stroke).toBe(expectedColor);
+  });
+
+  it("respects colorMap overrides when provided", () => {
+    const colorMap = new Map([["agent-123", "#00ff00"]]);
+    const res = agentIconStyle("agent-123", colorMap);
+    expect(res.color).toBe("#00ff00");
+    expect(res.stroke).toBe("#00ff00");
+    expect(res.style.color).toBe("#00ff00");
+    expect(res.style.stroke).toBe("#00ff00");
+  });
+});
+
+describe("filterGraphEdges", () => {
+  const sampleEdges = [
+    { source: "t1", target: "c1", relation: "generated" },
+    { source: "t1", target: "t2", relation: "delegation" },
+    { source: "c1", target: "t2", relation: "used" },
+  ];
+
+  it("returns all edges when showDelegation is true", () => {
+    const res = filterGraphEdges(sampleEdges, { showDelegation: true });
+    expect(res).toHaveLength(3);
+    expect(res.map((e) => e.relation)).toContain("delegation");
+  });
+
+  it("filters out delegation edges when showDelegation is false", () => {
+    const res = filterGraphEdges(sampleEdges, { showDelegation: false });
+    expect(res).toHaveLength(2);
+    expect(res.map((e) => e.relation)).not.toContain("delegation");
+  });
+});
+
+
+
 

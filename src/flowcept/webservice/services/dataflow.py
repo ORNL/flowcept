@@ -28,6 +28,7 @@ _TASK_PROJECTION = [
     "status",
     "agent_id",
     "source_agent_id",
+    "subtype",
 ]
 
 
@@ -134,6 +135,7 @@ def _task_node(t: Dict[str, Any]) -> Dict[str, Any]:
             "generated": t.get("generated") or {},
             "agent_id": t.get("agent_id"),
             "source_agent_id": t.get("source_agent_id"),
+            "subtype": t.get("subtype"),
         },
     }
 
@@ -223,7 +225,8 @@ def _coarse(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
     # Delegation edges: delegator task -> delegatee task
     for t in tasks:
         source_agent_id = t.get("source_agent_id")
-        if source_agent_id:
+        agent_id = t.get("agent_id")
+        if source_agent_id and agent_id:
             delegator = None
             t_start = _to_epoch(t.get("started_at")) or 0
             for s in tasks:
@@ -241,15 +244,22 @@ def _coarse(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
                     }
                 )
 
+    from flowcept import configs
+
     for chunk in chunks.values():
         roles = chunk["stats"].pop("roles")
         role = "input/output" if len(roles) > 1 else next(iter(roles))
         chunk["stats"]["kind"] = role
+        prefix = {"input": "inputs", "output": "outputs", "input/output": "data"}[role]
         keys = list(chunk["stats"]["items"].keys()) if isinstance(chunk["stats"]["items"], dict) else []
         if keys:
-            chunk["label"] = ", ".join(str(k) for k in keys)
+            label = ", ".join(str(k) for k in keys)
+            max_len = getattr(configs, "WEBSERVER_MAX_LABEL_LENGTH", 30)
+            if len(label) > max_len:
+                chunk["label"] = f"{prefix} ({len(chunk['stats']['items'])})"
+            else:
+                chunk["label"] = label
         else:
-            prefix = {"input": "inputs", "output": "outputs", "input/output": "data"}[role]
             chunk["label"] = f"{prefix} ({len(chunk['stats']['items'])})"
         nodes.append(chunk)
 

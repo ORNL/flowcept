@@ -11,7 +11,7 @@ import { useInspectorStore } from "../../stores/inspectorStore";
 import { useHighlightStore } from "../../stores/highlightStore";
 import { TASK_NODE_STYLE } from "./graphStyles";
 import { Bot } from "lucide-react";
-import { agentColor, applyNodePositions } from "../../lib/format";
+import { agentIconStyle, applyNodePositions, filterGraphEdges } from "../../lib/format";
 import { apiPost } from "../../api/client";
 
 interface Props {
@@ -29,10 +29,13 @@ const PROV = {
 };
 
 /** Longest-path layered layout over the directed graph. */
-function layout(graph: DataflowGraph) {
+function layout(graph: DataflowGraph, options: { showDelegation: boolean }) {
   const visibleNodes = graph.nodes;
   const visibleIds = new Set(visibleNodes.map((n) => n.id));
-  const visibleEdges = graph.edges.filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target));
+  const visibleEdges = filterGraphEdges(
+    graph.edges.filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target)),
+    options
+  );
 
   const inDegree = new Map<string, number>(visibleNodes.map((n) => [n.id, 0]));
   const adj = new Map<string, string[]>(visibleNodes.map((n) => [n.id, []]));
@@ -81,6 +84,7 @@ function FitViewHelper({ trigger }: { trigger: any }) {
 
 export function DataflowView({ workflowId, height }: Props) {
   const [focus, setFocus] = useState<string | null>(null);
+  const [showDelegation, setShowDelegation] = useState(true);
   const agentHighlight = useHighlightStore((s) => s.taskIds);
 
   const { data: graph, isLoading, error } = useDataflow(workflowId);
@@ -103,7 +107,7 @@ export function DataflowView({ workflowId, height }: Props) {
       return;
     }
 
-    const { visibleNodes, visibleEdges, ranks, rankGroups } = layout(graph);
+    const { visibleNodes, visibleEdges, ranks, rankGroups } = layout(graph, { showDelegation });
 
     // Seed lineage from: agent-highlighted task nodes + local click focus (combined).
     const seeds = new Set<string>();
@@ -221,6 +225,26 @@ export function DataflowView({ workflowId, height }: Props) {
       }
     }
 
+    // Collect all unique agent IDs to assign them distinct colors sequentially (avoids hash collisions).
+    const uniqueAgentIds = Array.from(
+      new Set(
+        visibleNodes
+          .map((n) => (n.stats?.agent_id || n.stats?.source_agent_id) as string | null | undefined)
+          .filter((id): id is string => !!id)
+      )
+    ).sort();
+
+    const agentColorMap = new Map<string, string>();
+    const palette = [
+      "#f87171", "#fb923c", "#fbbf24", "#34d399", 
+      "#2dd4bf", "#38bdf8", "#60a5fa", "#818cf8", 
+      "#a78bfa", "#c084fc", "#f472b6", "#fb7185", 
+      "#10b981", "#a3e635", "#e11d48", "#db2777"
+    ];
+    uniqueAgentIds.forEach((id, idx) => {
+      agentColorMap.set(id, palette[idx % palette.length]);
+    });
+
     const nextNodes: Node[] = visibleNodes.map((n) => {
       const rank = ranks.get(n.id) ?? 0;
       const siblings = rankGroups.get(rank) ?? [];
@@ -232,7 +256,7 @@ export function DataflowView({ workflowId, height }: Props) {
       const hasAgent = !!agentId;
       const label = hasAgent ? (
         <div className="relative w-full h-full flex items-center justify-center">
-          <Bot size={13} style={{ color: agentColor(agentId) }} className="absolute -top-1.5 -right-1.5 bg-surface rounded-full p-0.5 border border-border" />
+          <Bot size={13} {...agentIconStyle(agentId, agentColorMap)} className="absolute -top-1.5 -right-1.5 bg-surface rounded-full p-0.5 border border-border" />
           <span className="whitespace-pre">{n.label}</span>
         </div>
       ) : (
@@ -275,7 +299,7 @@ export function DataflowView({ workflowId, height }: Props) {
         markerEnd: { type: MarkerType.ArrowClosed },
         style: {
           opacity: dimmed ? 0.06 : 0.85,
-          strokeDasharray: e.relation === "derived" ? "5 4" : undefined,
+          strokeDasharray: e.relation === "derived" ? "5 4" : e.relation === "delegation" ? "1 4" : undefined,
         },
       };
     });
@@ -291,7 +315,7 @@ export function DataflowView({ workflowId, height }: Props) {
       }));
     });
     setEdges(nextEdges);
-  }, [graph, focus, agentHighlight, positions]);
+  }, [graph, focus, agentHighlight, positions, showDelegation]);
 
   const handleNodeDragStop = () => {
     const posPayload: Record<string, { x: number; y: number }> = {};
@@ -377,6 +401,18 @@ export function DataflowView({ workflowId, height }: Props) {
             task (activity)
           </span>
           <span className="border-l border-border pl-3">┄ derived from</span>
+          <span className="border-l border-border pl-3">··· delegation</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-fg-muted">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showDelegation}
+              onChange={(e) => setShowDelegation(e.target.checked)}
+              className="rounded border-border text-accent focus:ring-accent"
+            />
+            Show delegation edges
+          </label>
         </div>
       </div>
     </div>

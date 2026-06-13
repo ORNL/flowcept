@@ -3,7 +3,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bot } from "lucide-react";
 import { useAgents } from "../api/queries";
-import { fmtTs } from "../lib/format";
+import { fmtTs, sortAgents, filterActiveAgents, agentIconStyle } from "../lib/format";
 
 export const Route = createFileRoute("/agents/")({ component: AgentsPage });
 
@@ -17,7 +17,7 @@ function AgentsPage() {
       {isLoading && <div className="text-fg-muted text-xs">Loading…</div>}
       {error && <div className="text-err text-xs">{String(error)}</div>}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {(data?.items ?? []).map((a) => (
+        {sortAgents(filterActiveAgents(data?.items ?? [])).map((a) => (
           <Link
             key={a.agent_id}
             to="/agents/$agentId"
@@ -26,7 +26,7 @@ function AgentsPage() {
           >
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <Bot size={15} className="text-accent" />
+                <Bot size={15} {...agentIconStyle(a.agent_id)} />
                 <span className="font-semibold text-sm">{a.name || a.agent_id}</span>
               </div>
               {a.name && (

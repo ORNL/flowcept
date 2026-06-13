@@ -173,6 +173,10 @@ class FakeDB:
 
         return []
 
+    def delete_agents_with_filter(self, filter):
+        self.agents = [ag for ag in self.agents if not self._matches_filter(ag, filter)]
+        return True
+
     def agent_query(
         self,
         filter,
@@ -749,3 +753,130 @@ def test_agents_and_dataflow_routes():
         if node["id"] == "task:t1":
             assert stats["agent_id"] == "agent-1"
             assert stats["source_agent_id"] == "orchestrator"
+
+
+def test_dataflow_label_fallback():
+    from flowcept import configs
+
+    original_max = getattr(configs, "WEBSERVER_MAX_LABEL_LENGTH", 30)
+
+    client, fake_db = build_client()
+    fake_db.tasks = [
+        {
+            "task_id": "t1",
+            "workflow_id": "wf-1",
+            "status": "finished",
+            "started_at": 10,
+            "used": {
+                "short_key": 1,
+                "a_very_long_input_key_that_exceeds_ten_characters": 2,
+            },
+            "generated": {
+                "another_extremely_long_output_key_name_that_exceeds_ten": 3,
+            },
+        }
+    ]
+
+    try:
+        configs.WEBSERVER_MAX_LABEL_LENGTH = 10
+        rs = client.get("/api/v1/workflows/wf-1/dataflow")
+        assert rs.status_code == 200
+        dataflow = rs.json()
+
+        # Verify the chunks have fallback labels
+        chunks = [n for n in dataflow["nodes"] if n["kind"] == "chunk"]
+        assert len(chunks) == 2
+
+        # Since the labels are longer than 10 characters, they must fall back to "inputs (2)" and "outputs (1)"
+        input_chunk = next(n for n in chunks if n["stats"]["kind"] == "input")
+        output_chunk = next(n for n in chunks if n["stats"]["kind"] == "output")
+
+        assert input_chunk["label"] == "inputs (2)"
+        assert output_chunk["label"] == "outputs (1)"
+
+    finally:
+        configs.WEBSERVER_MAX_LABEL_LENGTH = original_max
+
+
+def test_delete_empty_agents():
+    client, fake_db = build_client()
+    fake_db.agents = [
+        {"agent_id": "agent-active", "name": "Active Agent", "registered_at": 10},
+        {"agent_id": "agent-empty", "name": "Empty Agent", "registered_at": 20},
+    ]
+    fake_db.tasks = [
+        {
+            "task_id": "t1",
+            "workflow_id": "wf-1",
+            "status": "finished",
+            "started_at": 10,
+            "agent_id": "agent-active",
+        }
+    ]
+
+    rs = client.delete("/api/v1/agents/cleanup/empty")
+    assert rs.status_code == 200
+    body = rs.json()
+    assert body["deleted_count"] == 1
+
+    # Verify agent-empty is deleted, and agent-active remains
+    agents = fake_db.agents
+    assert len(agents) == 1
+    assert agents[0]["agent_id"] == "agent-active"
+
+
+def test_dataflow_delegation_edge():
+    client, fake_db = build_client()
+
+    # case 1: task t2 has both source_agent_id and agent_id -> delegation edge should be created
+    fake_db.tasks = [
+        {
+            "task_id": "t1",
+            "workflow_id": "wf-1",
+            "status": "finished",
+            "started_at": 10,
+            "agent_id": "orchestrator",
+            "used": {"x": 1},
+        },
+        {
+            "task_id": "t2",
+            "workflow_id": "wf-1",
+            "status": "finished",
+            "started_at": 20,
+            "agent_id": "agent-1",
+            "source_agent_id": "orchestrator",
+            "used": {"y": 2},
+        },
+    ]
+    rs = client.get("/api/v1/workflows/wf-1/dataflow")
+    assert rs.status_code == 200
+    edges = rs.json()["edges"]
+    delegation_edges = [e for e in edges if e["relation"] == "delegation"]
+    assert len(delegation_edges) == 1
+    assert delegation_edges[0]["source"] == "task:t1"
+    assert delegation_edges[0]["target"] == "task:t2"
+
+    # case 2: task t2 has source_agent_id but NO agent_id -> delegation edge should NOT be created
+    fake_db.tasks = [
+        {
+            "task_id": "t1",
+            "workflow_id": "wf-1",
+            "status": "finished",
+            "started_at": 10,
+            "agent_id": "orchestrator",
+            "used": {"x": 1},
+        },
+        {
+            "task_id": "t2",
+            "workflow_id": "wf-1",
+            "status": "finished",
+            "started_at": 20,
+            "source_agent_id": "orchestrator",
+            "used": {"y": 2},
+        },
+    ]
+    rs = client.get("/api/v1/workflows/wf-1/dataflow")
+    assert rs.status_code == 200
+    edges = rs.json()["edges"]
+    delegation_edges = [e for e in edges if e["relation"] == "delegation"]
+    assert len(delegation_edges) == 0

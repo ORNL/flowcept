@@ -66,6 +66,7 @@ export function TaskDrawer({ task, onClose }: { task: Task; onClose: () => void 
           <Field label="duration">{fmtDuration(taskDuration(task))}</Field>
           <Field label="host">{task.hostname ?? "—"}</Field>
           {task.agent_id && <Field label="agent">{task.agent_id}</Field>}
+          {task.subtype && <Field label="subtype">{task.subtype}</Field>}
           {task.tags && task.tags.length > 0 && <Field label="tags">{task.tags.join(", ")}</Field>}
         </div>
         <section>

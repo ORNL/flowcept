@@ -25,7 +25,9 @@ def list_campaigns(
     db: DBAPI = Depends(get_db_api),
 ) -> ListResponse:
     """List derived campaign summaries, most recently active first."""
-    campaigns = stats.derive_campaigns(db)[:limit]
+    campaigns = stats.derive_campaigns(db)
+    campaigns = sort_docs_by_first_date_field(campaigns, ["last_ts", "first_ts"])
+    campaigns = campaigns[:limit]
     normalized = normalize_docs(campaigns)
     return ListResponse(items=normalized, count=len(normalized), limit=limit)
 

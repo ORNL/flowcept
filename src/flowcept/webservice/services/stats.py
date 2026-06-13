@@ -345,7 +345,10 @@ def derive_campaigns(db: DBAPI) -> List[Dict[str, Any]]:
         record["users"] = sorted(record["users"])
         record["workflow_names"] = sorted(record["workflow_names"])
         results.append(record)
-    results.sort(key=lambda r: (r["last_ts"] is None, r["last_ts"]), reverse=True)
+    results.sort(
+        key=lambda r: (1, r["last_ts"]) if r["last_ts"] is not None else (0, float("-inf")),
+        reverse=True,
+    )
     return results
 
 
@@ -487,9 +490,12 @@ def derive_agents(db: DBAPI, filter: Optional[Dict[str, Any]] = None) -> List[Di
                 "last_active": None,
             },
         )
+        if stat["task_count"] == 0:
+            continue
         agents.append(
             {
                 "agent_id": agent_id,
+                "workflow_id": sa.get("workflow_id"),
                 "task_count": stat["task_count"],
                 "activities": stat["activities"],
                 "source_agent_ids": stat["source_agent_ids"],

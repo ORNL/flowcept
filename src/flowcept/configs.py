@@ -18,7 +18,7 @@ DEFAULT_SETTINGS = {
     "experiment": {},
     "mq": {"enabled": False},
     "kv_db": {"enabled": False},
-    "web_server": {},
+    "web_server": {"max_label_length": 30},
     "sys_metadata": {},
     "extra_metadata": {},
     "db_buffer": {},
@@ -261,6 +261,9 @@ WEBSERVER_SSE_POLL_INTERVAL = float(_webserver_settings.get("sse_poll_interval_s
 WEBSERVER_SSE_MAX_BATCH = int(_webserver_settings.get("sse_max_batch", 500))
 WEBSERVER_DASHBOARDS_DIR = os.path.expanduser(
     _webserver_settings.get("dashboards_dir", f"~/.{PROJECT_NAME}/dashboards")
+)
+WEBSERVER_MAX_LABEL_LENGTH = int(
+    _get_env("WEBSERVER_MAX_LABEL_LENGTH", _webserver_settings.get("max_label_length", 30))
 )
 
 ####################

@@ -75,6 +75,7 @@ web_server:
   sse_poll_interval_sec: 2.0 # How often live (SSE) endpoints poll the DB for new data.
   sse_max_batch: 500 # Max records pushed per SSE event.
   dashboards_dir: ~/.flowcept/dashboards # Dashboard JSON storage when MongoDB is disabled.
+  max_label_length: 30 # Limit for graph labels. Fall back to inputs/outputs sequential names if exceeded.
 
 sys_metadata:
   environment_id: "laptop"   # We use this to keep track of the environment used to run an experiment. Typical values include the cluster name, but it can be anything that you think will help identify your experimentation environment.

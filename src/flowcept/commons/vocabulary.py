@@ -64,3 +64,10 @@ class ML_Types(str, Enum):
     DATA_PREP = "dataprep"
     LEARNING = "learning"
     MODEL_SELECTION = "model_selection"
+
+
+class PROV_AGENT(str, Enum):
+    """Provenance agent used in Flowcept."""
+
+    AI_MODEL_INVOCATION = "ai_model_invocation"
+    AGENT_TOOL = "agent_tool"

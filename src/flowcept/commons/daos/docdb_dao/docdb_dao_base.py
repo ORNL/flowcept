@@ -137,6 +137,11 @@ class DocumentDBDAO(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def delete_agents_with_filter(self, filter) -> bool:
+        """Delete agent documents that match the filter."""
+        raise NotImplementedError
+
+    @abstractmethod
     def insert_one_task(self, task_dict: Dict):
         """Insert a single task document.
 
