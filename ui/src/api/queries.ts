@@ -123,6 +123,13 @@ export function useAgents() {
   });
 }
 
+export function useAgent(agentId: string) {
+  return useQuery({
+    queryKey: ["agent", agentId],
+    queryFn: () => apiGet<{ agent: AgentSummary; task_summary: import("./types").TaskSummary }>(`/agents/${agentId}`),
+  });
+}
+
 export function useWorkflowsWithTasks() {
   return useQuery({
     queryKey: ["workflowsWithTasks"],

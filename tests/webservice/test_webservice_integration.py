@@ -991,3 +991,110 @@ def test_webservice_dataflow_graph(db_cleanup):
     # 404 for unknown workflow.
     rs = client.get("/api/v1/workflows/nonexistent-wf/dataflow")
     assert rs.status_code == 404
+
+
+def _parse_sse(text: str) -> list:
+    """Parse a raw SSE response body into a list of {event, data} dicts.
+
+    SSE separates events with \\r\\n\\r\\n (CRLF) or \\n\\n; normalise first.
+    """
+    events = []
+    # Normalise CRLF to LF so block splitting works regardless of transport encoding.
+    normalised = text.replace("\r\n", "\n")
+    for block in normalised.strip().split("\n\n"):
+        block = block.strip()
+        if not block:
+            continue
+        ev: dict = {}
+        for line in block.split("\n"):
+            if line.startswith("event:"):
+                ev["event"] = line[len("event:"):].strip()
+            elif line.startswith("data:"):
+                raw = line[len("data:"):].strip()
+                try:
+                    ev["data"] = json.loads(raw)
+                except json.JSONDecodeError:
+                    ev["data"] = raw
+        if ev:
+            events.append(ev)
+    return events
+
+
+def test_chat_highlight_lineage_sse(db_cleanup):
+    """Full end-to-end: real LLM emits ui:highlight SSE event with the correct seed task IDs.
+
+    Creates a two-task workflow (step_a → step_b via shared data), asks the chat
+    endpoint to highlight the lineage of the first task, and verifies the SSE stream
+    contains an ``event: ui:highlight`` entry whose ``task_ids`` includes the seed.
+    """
+    from flowcept.commons.flowcept_logger import FlowceptLogger
+    from flowcept.configs import AGENT
+
+    api_key = AGENT.get("api_key")
+    if not api_key or api_key in ("?", "your-api-key-here"):
+        FlowceptLogger().warning("Skipping real-LLM highlight test: agent.api_key is not set.")
+        pytest.skip("agent.api_key is not set.")
+    if not AGENT.get("service_provider") or AGENT.get("service_provider") == "?":
+        FlowceptLogger().warning("Skipping real-LLM highlight test: agent.service_provider is not set.")
+        pytest.skip("agent.service_provider is not set.")
+    if not Flowcept.services_alive():
+        pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
+
+    campaign_id = f"ws-hl-camp-{uuid4()}"
+    db_cleanup["campaigns"].append(campaign_id)
+
+    # Two-task lineage: step_a generates y=2; step_b uses y=2.
+    with Flowcept(campaign_id=campaign_id, workflow_name="hl-lineage-test"):
+        wf_id = Flowcept.current_workflow_id
+        with FlowceptTask(activity_id="step_a", used={"x": 1}) as task_a:
+            task_a.end(generated={"y": 2})
+        step_a_id = task_a.get_id()
+        with FlowceptTask(activity_id="step_b", used={"y": 2}) as task_b:
+            task_b.end(generated={"z": 3})
+
+    assert step_a_id, "step_a task_id must be set after the context exits."
+
+    ok = _wait_for(lambda: len(Flowcept.db.task_query(filter={"workflow_id": wf_id}) or []) >= 2)
+    assert ok, "Timed out waiting for tasks to be persisted."
+
+    # LLMs can be non-deterministic about tool calls; retry up to 3 times.
+    # Each attempt recreates the app+client to avoid sse_starlette's AppStatus
+    # event-loop binding issue (should_exit_event is a module-level singleton that
+    # gets bound to the first event loop; a fresh Event() avoids the RuntimeError
+    # on the second call in the same process).
+    import asyncio
+    from sse_starlette.sse import AppStatus
+
+    highlight_events = []
+    last_event_names = []
+    for attempt in range(3):
+        AppStatus.should_exit_event = asyncio.Event()
+        app = create_app()
+        client = TestClient(app)
+        rs = client.post(
+            "/api/v1/chat",
+            json={
+                "messages": [{"role": "user", "content": f"Highlight the lineage of task {step_a_id} in the dataflow graph using the highlight_lineage tool."}],
+                "context": {"workflow_id": wf_id},
+                "stream": True,
+            },
+        )
+        assert rs.status_code == 200, rs.text
+        events = _parse_sse(rs.text)
+        last_event_names = [e.get("event") for e in events]
+        highlight_events = [e for e in events if e.get("event") == "ui:highlight"]
+        if highlight_events:
+            break
+        FlowceptLogger().warning(f"highlight attempt {attempt + 1}: no ui:highlight yet (events={last_event_names})")
+
+    assert highlight_events, (
+        f"Expected a 'ui:highlight' SSE event in 3 attempts but got: {last_event_names}. "
+        "Check the system prompt and tool binding."
+    )
+    task_ids_in_highlight = highlight_events[0]["data"].get("task_ids", [])
+    assert step_a_id in task_ids_in_highlight, (
+        f"Expected seed task {step_a_id} in ui:highlight task_ids={task_ids_in_highlight}"
+    )
+
+    if DocumentDBDAO._instance is not None:
+        DocumentDBDAO._instance.close()

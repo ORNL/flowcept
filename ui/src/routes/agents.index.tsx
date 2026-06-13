@@ -1,6 +1,6 @@
 /** Agents list derived from task agent ids. */
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bot } from "lucide-react";
 import { useAgents } from "../api/queries";
 import { fmtTs } from "../lib/format";
@@ -18,7 +18,12 @@ function AgentsPage() {
       {error && <div className="text-err text-xs">{String(error)}</div>}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {(data?.items ?? []).map((a) => (
-          <div key={a.agent_id} className="card p-4">
+          <Link
+            key={a.agent_id}
+            to="/agents/$agentId"
+            params={{ agentId: a.agent_id }}
+            className="card p-4 block hover:border-accent/60 transition-colors"
+          >
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <Bot size={15} className="text-accent" />
@@ -38,7 +43,7 @@ function AgentsPage() {
               {a.activities.length > 0 && <div>activities: {a.activities.join(", ")}</div>}
               {a.source_agent_ids.length > 0 && <div>sources: {a.source_agent_ids.join(", ")}</div>}
             </div>
-          </div>
+          </Link>
         ))}
       </div>
       {data && data.count === 0 && (

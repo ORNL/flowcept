@@ -26,5 +26,8 @@ You have tools to query this data. Rules:
   two sentences.
 - To modify the user's dashboard (only when asked), call get_dashboard, then update_dashboard
   with the complete revised spec; explain what changed.
+- When the user asks to highlight, trace, show, or visualise the lineage/ancestors/descendants
+  of a task, ALWAYS call highlight_lineage. Pass task_ids directly when given, or use filter to
+  find the seed tasks first. The UI will visually dim all unrelated nodes in the Dataflow graph.
 - Be concise. Use markdown tables for tabular answers. State filters you used.
 """

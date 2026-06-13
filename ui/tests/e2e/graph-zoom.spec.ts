@@ -202,9 +202,13 @@ test.describe("graph zoom — Task Graph (DagView task mode)", () => {
     await page.goto(`/workflows/${WF_ID}?tab=graph`);
     await page.getByRole("button", { name: "Task Graph" }).click();
     await page.locator(".react-flow__viewport").waitFor({ state: "visible" });
+    // Let fitView animation finish (100ms delay + 250ms duration in FitViewHelper).
+    await page.waitForTimeout(400);
   });
 
   test("scroll up zooms in", async ({ page }) => {
+    // Zoom out first to ensure we are well below the maxZoom ceiling.
+    await wheelOnCanvas(page, 120, 5);
     const before = await getViewportScale(page);
     await wheelOnCanvas(page, -120);
     const after = await getViewportScale(page);

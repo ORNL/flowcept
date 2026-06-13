@@ -85,17 +85,22 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
 
     @tool
     def highlight_lineage(
-        task_ids: Optional[List[str]] = None,
+        task_ids: Optional[Any] = None,
         filter: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Highlight the full provenance lineage (ancestors + descendants) of tasks in the Dataflow graph.
 
-        Pass `task_ids` directly, or use `filter` to find the seed tasks first.
+        Pass `task_ids` as a list of task ID strings, or a single task ID string.
+        Or use `filter` to find the seed tasks first.
         The UI will dim all other nodes and visually trace the lineage chain.
         Always pass a workflow_id in the filter when on a workflow page.
         """
         wf_id = (context or {}).get("workflow_id")
-        return _run(prov_tools.highlight_lineage, task_ids=task_ids, filter=filter, workflow_id=wf_id)
+        # Coerce a bare string to a list so the LLM can pass either form.
+        ids: Optional[List[str]] = None
+        if task_ids is not None:
+            ids = [task_ids] if isinstance(task_ids, str) else list(task_ids)
+        return _run(prov_tools.highlight_lineage, task_ids=ids, filter=filter, workflow_id=wf_id)
 
     tools = [query_tasks, query_workflows, get_task_summary, list_campaigns, list_agents, make_chart, highlight_lineage]
 

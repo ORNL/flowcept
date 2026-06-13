@@ -99,7 +99,23 @@ function WorkflowDetail() {
           />
         ),
       },
-      { id: "activity_id", header: "Activity", size: 170, accessorKey: "activity_id" },
+      {
+        id: "activity_id",
+        header: "Activity",
+        size: 170,
+        cell: ({ row }) => (
+          <button
+            className="text-accent hover:underline text-left truncate max-w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate({ search: (s) => ({ ...s, activity: row.original.activity_id || undefined }) });
+            }}
+            title={row.original.activity_id ?? ""}
+          >
+            {row.original.activity_id ?? "—"}
+          </button>
+        ),
+      },
       {
         id: "task_id",
         header: "Task",
