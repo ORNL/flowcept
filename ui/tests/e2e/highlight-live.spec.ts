@@ -175,7 +175,7 @@ test.describe("Live highlight integration — real LLM + real DB", () => {
 
     // Navigate to the workflow's graph tab — NO route mocks; all calls hit the real backend.
     await page.goto(`/workflows/${seed.workflow_id}?tab=graph`);
-    await page.getByRole("button", { name: "Dataflow Graph" }).click();
+    await page.getByRole("button", { name: "Provenance Graph" }).click();
     await page.locator(".react-flow__viewport").waitFor({ state: "visible" });
     await page.waitForTimeout(400);
 
@@ -212,7 +212,7 @@ test.describe("Live highlight integration — real LLM + real DB", () => {
     test.skip(!LIVE, "Set E2E_LIVE=1 to run live integration tests.");
 
     await page.goto(`/workflows/${seed.workflow_id}?tab=graph`);
-    await page.getByRole("button", { name: "Dataflow Graph" }).click();
+    await page.getByRole("button", { name: "Provenance Graph" }).click();
     await page.locator(".react-flow__viewport").waitFor({ state: "visible" });
     await page.waitForTimeout(400);
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import threading
 import time
 from uuid import uuid4
@@ -917,6 +918,124 @@ def test_recursive_delete_workflow_and_campaign(db_cleanup):
     assert rs.status_code == 404, rs.text
 
 
+def test_delete_also_removes_orphan_agents(db_cleanup):
+    """Deleting a workflow removes agents whose tasks are all in that workflow.
+
+    An agent that still has tasks in another workflow must NOT be deleted.
+    """
+    if not Flowcept.services_alive():
+        pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
+
+    from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
+
+    campaign_id = f"del-agents-{uuid4()}"
+    db_cleanup["campaigns"].append(campaign_id)
+
+    sole_agent_id = f"sole_agent_{uuid4()}"
+    shared_agent_id = f"shared_agent_{uuid4()}"
+
+    with Flowcept(campaign_id=campaign_id, workflow_name=f"del-ag-wf1-{uuid4()}"):
+        with FlowceptTask(activity_id="act1", used={"x": 1}, agent_id=sole_agent_id) as t:
+            t.end(generated={"y": 1})
+        with FlowceptTask(activity_id="act2", used={"x": 2}, agent_id=shared_agent_id) as t:
+            t.end(generated={"y": 2})
+        wf1_id = Flowcept.current_workflow_id
+
+    with Flowcept(campaign_id=campaign_id, workflow_name=f"del-ag-wf2-{uuid4()}"):
+        with FlowceptTask(activity_id="act2", used={"x": 3}, agent_id=shared_agent_id) as t:
+            t.end(generated={"y": 3})
+        wf2_id = Flowcept.current_workflow_id
+
+    assert wf1_id and wf2_id
+
+    # Explicitly register agents in the agents collection.
+    Flowcept.db.insert_or_update_agent(
+        AgentObject(agent_id=sole_agent_id, name="SoleAgent", workflow_id=wf1_id, campaign_id=campaign_id)
+    )
+    Flowcept.db.insert_or_update_agent(
+        AgentObject(agent_id=shared_agent_id, name="SharedAgent", workflow_id=wf1_id, campaign_id=campaign_id)
+    )
+
+    ok = _wait_for(lambda: len(Flowcept.db.task_query(filter={"workflow_id": wf1_id}) or []) >= 2)
+    assert ok, "Timed out waiting for wf1 tasks."
+
+    # Both agents must be registered before deleting.
+    agents = Flowcept.db.agent_query(filter={"agent_id": {"$in": [sole_agent_id, shared_agent_id]}})
+    assert len(agents) == 2, f"Expected 2 agents, got {len(agents or [])}"
+
+    app = create_app()
+    client = TestClient(app)
+
+    # Delete wf1 — sole_agent should be removed, shared_agent should stay.
+    rs = client.delete(f"/api/v1/workflows/{wf1_id}")
+    assert rs.status_code == 200, rs.text
+    body = rs.json()
+    assert body["deleted"]["agents"] >= 1
+
+    remaining = Flowcept.db.agent_query(filter={"agent_id": sole_agent_id})
+    assert not remaining, "sole_agent should be deleted after its only workflow was deleted"
+
+    remaining = Flowcept.db.agent_query(filter={"agent_id": shared_agent_id})
+    assert remaining, "shared_agent must NOT be deleted; it still has tasks in wf2"
+
+    # Delete the campaign — shared_agent should now be removed.
+    rs = client.delete(f"/api/v1/campaigns/{campaign_id}")
+    assert rs.status_code == 200, rs.text
+    body = rs.json()
+    assert body["deleted"]["agents"] >= 1
+
+    remaining = Flowcept.db.agent_query(filter={"agent_id": shared_agent_id})
+    assert not remaining, "shared_agent should be deleted after its last workflow was removed"
+
+
+def test_agent_telemetry_timeseries(db_cleanup):
+    """Agent-filtered timeseries returns rows with telemetry for the agent's tasks.
+
+    Regression: TelemetryChart on the agent page showed "No telemetry values
+    found" even when the same tasks showed telemetry on the workflow page.
+    """
+    if not Flowcept.services_alive():
+        pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
+
+    campaign_id = f"tel-camp-{uuid4()}"
+    db_cleanup["campaigns"].append(campaign_id)
+    agent_id = f"tel-agent-{uuid4()}"
+
+    with Flowcept(campaign_id=campaign_id, workflow_name=f"tel-wf-{uuid4()}"):
+        workflow_id = Flowcept.current_workflow_id
+        with FlowceptTask(activity_id="tel_task", used={"x": 1}, agent_id=agent_id) as t:
+            t.end(generated={"y": 2})
+
+    ok = _wait_for(lambda: len(Flowcept.db.task_query(filter={"workflow_id": workflow_id}) or []) >= 1)
+    assert ok, "Timed out waiting for tasks."
+
+    app = create_app()
+    client = TestClient(app)
+
+    # Workflow timeseries returns something (baseline — at minimum started_at is set).
+    rs = client.post(
+        "/api/v1/stats/timeseries",
+        json={"filter": {"workflow_id": workflow_id}, "fields": ["started_at"], "x": "started_at"},
+    )
+    assert rs.status_code == 200
+    assert rs.json()["count"] >= 1, "Workflow timeseries found no rows."
+
+    # Agent timeseries with $or filter must also return the task.
+    rs = client.post(
+        "/api/v1/stats/timeseries",
+        json={
+            "filter": {"$or": [{"agent_id": agent_id}, {"source_agent_id": agent_id}]},
+            "fields": ["started_at"],
+            "x": "started_at",
+        },
+    )
+    assert rs.status_code == 200, rs.text
+    assert rs.json()["count"] >= 1, (
+        "Agent timeseries returned 0 rows even though tasks with agent_id exist. "
+        "This is the bug causing 'No telemetry values found' on the agent page."
+    )
+
+
 def test_file_dashboard_store_roundtrip(tmp_path):
     """FileDashboardStore (non-Mongo fallback) persists real JSON files."""
     from flowcept.webservice.services.dashboard_store import FileDashboardStore
@@ -989,9 +1108,22 @@ def test_webservice_dataflow_graph(db_cleanup):
     assert any(c["stats"]["items"].get("config_id") == "cfg_1" for c in inputs)
     assert any("best_val_loss" in c["stats"]["items"] for c in outputs)
     assert all(c["stats"]["generated_by"] for c in outputs)
-    # TDD: Verify chunk labels use key names
+    # TDD: Verify chunk labels use key names, never raw arg_N positional keys
     assert any("config_id" in c["label"] for c in inputs)
     assert any("best_val_loss" in c["label"] for c in outputs)
+    # submit_gridsearch_job outputs configs list under the key "configs" (not "arg_0")
+    submit_node = next(n for n in task_nodes if n["label"] == "submit_gridsearch_job")
+    submit_output_chunks = [
+        c for c in chunk_nodes
+        if any(e["source"] == submit_node["id"] and e["target"] == c["id"] for e in body["edges"])
+    ]
+    assert submit_output_chunks, "submit_gridsearch_job must have output chunks"
+    assert all("configs" in c["label"] for c in submit_output_chunks), (
+        f"submit_gridsearch_job output chunk labels must use 'configs', got: {[c['label'] for c in submit_output_chunks]}"
+    )
+    assert not any(re.match(r"^arg_\d+$", c["label"]) for c in chunk_nodes), (
+        "No chunk label should be a raw arg_N key — positional keys must use count fallback"
+    )
     edges = {(e["source"], e["target"], e["relation"]) for e in body["edges"]}
     for t in task_nodes:
         if t["stats"]["used"]:

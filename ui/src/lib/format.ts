@@ -93,27 +93,50 @@ export function getAgentNameFromId(agentId?: string | null): string {
   return agentId;
 }
 
-/** Deterministically returns one of 16 colors for an agent. Driven by name. */
-export function agentColor(agentId?: string | null, name?: string | null): string {
-  const identifier = name || getAgentNameFromId(agentId);
-  if (!identifier) return "#7c3aed"; // Default accent color (e.g. violet)
-  const colors = [
-    "#f87171", "#fb923c", "#fbbf24", "#34d399", 
-    "#2dd4bf", "#38bdf8", "#60a5fa", "#818cf8", 
-    "#a78bfa", "#c084fc", "#f472b6", "#fb7185", 
-    "#10b981", "#a3e635", "#e11d48", "#db2777"
-  ];
-  
-  // Deterministic hash of identifier to index
-  let hash = 0;
-  for (let i = 0; i < identifier.length; i++) {
-    hash = identifier.charCodeAt(i) + ((hash << 5) - hash);
+/** FNV-1a 32-bit hash — better distribution than DJB2 for short strings. */
+function fnv1a32(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
   }
-  const idx = Math.abs(hash) % colors.length;
-  return colors[idx];
+  return h;
 }
 
-/** Returns both the React color/stroke props and the CSS inline style color/stroke for the agent icon. */
+/**
+ * Deterministically maps an agent name to an HSL color string.
+ * Uses FNV-1a hash → hue in [0°, 360°) so the color space is effectively
+ * collision-free for any realistic number of agent types, and is cross-view
+ * consistent (same name → same color regardless of which other agents are
+ * present in the current view).
+ */
+export function agentColor(agentId?: string | null, name?: string | null): string {
+  const identifier = name || getAgentNameFromId(agentId);
+  if (!identifier) return "#7c3aed";
+  const hue = (fnv1a32(identifier) / 4294967295) * 360;
+  return `hsl(${hue.toFixed(1)}, 65%, 55%)`;
+}
+
+/**
+ * Builds a color map keyed by agent NAME (not raw ID).
+ * Each name is mapped via agentColor, so colors are cross-view consistent
+ * (same name always gets the same color regardless of peer agents present).
+ */
+export function buildAgentNameColorMap(
+  agentIds: (string | null | undefined)[],
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const id of agentIds) {
+    const name = getAgentNameFromId(id);
+    if (name && !map.has(name)) {
+      map.set(name, agentColor(null, name));
+    }
+  }
+  return map;
+}
+
+/** Returns both the React color/stroke props and the CSS inline style color/stroke for the agent icon.
+ *  colorMap is keyed by agent NAME (use buildAgentNameColorMap). */
 export function agentIconStyle(
   agentId?: string | null,
   colorMap?: Map<string, string>,
@@ -125,17 +148,14 @@ export function agentIconStyle(
 } {
   let col = "#7c3aed";
   if (agentId) {
-    if (colorMap && colorMap.has(agentId)) {
-      col = colorMap.get(agentId)!;
+    if (colorMap) {
+      const agentName = name || getAgentNameFromId(agentId);
+      col = colorMap.get(agentName) ?? agentColor(agentId, name);
     } else {
       col = agentColor(agentId, name);
     }
   }
-  return {
-    color: col,
-    stroke: col,
-    style: { color: col, stroke: col }
-  };
+  return { color: col, stroke: col, style: { color: col, stroke: col } };
 }
 
 /** Merges custom node positions into a React Flow node list. */

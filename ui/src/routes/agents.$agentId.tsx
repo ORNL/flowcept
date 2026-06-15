@@ -13,6 +13,7 @@ import { TelemetryChart } from "../components/charts/TelemetryChart";
 import { JsonTree } from "../components/JsonTree";
 import { DataTable } from "../components/tables/DataTable";
 import { TaskDrawer } from "../components/tasks/TaskDrawer";
+import { ActivityDrawer } from "../components/tasks/ActivityDrawer";
 import { apiPost } from "../api/client";
 import { ChartRenderer } from "../components/dashboard/ChartRenderer";
 import { chart, dashboardSpec, type DashboardSpec } from "../components/dashboard/spec";
@@ -39,9 +40,7 @@ function AgentDetail() {
   const agentQuery = useAgent(agentId);
   const summary = useTaskSummary({ agent_id: agentId });
 
-  const filter: Record<string, unknown> = {
-    $or: [{ agent_id: agentId }, { source_agent_id: agentId }],
-  };
+  const filter: Record<string, unknown> = { agent_id: agentId };
   if (search.status) filter["status"] = search.status;
   if (search.activity) filter["activity_id"] = search.activity;
 
@@ -56,6 +55,10 @@ function AgentDetail() {
   const taskItems: Task[] = tasks.data?.items ?? [];
 
   const openTask = useTask(search.task ?? "", !!search.task);
+
+  const openActivity = search.activity
+    ? (summary.data?.activity_stats ?? []).find((a) => a.activity_id === search.activity) ?? null
+    : null;
 
   const columns = useMemo<ColumnDef<Task, unknown>[]>(
     () => [
@@ -80,7 +83,7 @@ function AgentDetail() {
             className="text-accent hover:underline text-left truncate max-w-full"
             onClick={(e) => {
               e.stopPropagation();
-              navigate({ search: (s) => ({ ...s, activity: row.original.activity_id || undefined }) });
+              navigate({ search: (s) => ({ ...s, activity: row.original.activity_id || undefined, task: undefined }) });
             }}
             title={row.original.activity_id ?? ""}
           >
@@ -92,7 +95,7 @@ function AgentDetail() {
         id: "task_id",
         header: "Task",
         size: 130,
-        cell: ({ row }) => <span className="font-mono">{shortId(row.original.task_id, 12)}</span>,
+        cell: ({ row }) => <span className="font-mono text-accent hover:underline cursor-pointer">{shortId(row.original.task_id, 12)}</span>,
       },
       {
         id: "started_at",
@@ -160,10 +163,52 @@ function AgentDetail() {
         {agent && (
           <div className="text-fg-muted mt-0.5 flex flex-wrap gap-4 text-xs">
             {agent.task_count != null && <span>{agent.task_count} tasks</span>}
+            {agent.registered_at != null && <span>Registered: {fmtTs(agent.registered_at)}</span>}
             {agent.last_active && <span>Last active: {fmtTs(agent.last_active)}</span>}
-            {agent.campaign_ids?.length > 0 && <span>Campaigns: {agent.campaign_ids.length}</span>}
+            {agent.campaign_ids?.length > 0 && (
+              <span className="flex flex-wrap items-center gap-1">
+                Campaigns:
+                {agent.campaign_ids.map((cid: string) => (
+                  <Link
+                    key={cid}
+                    to="/campaigns/$campaignId"
+                    params={{ campaignId: cid }}
+                    className="font-mono text-accent hover:underline"
+                  >
+                    {shortId(cid, 10)}
+                  </Link>
+                ))}
+              </span>
+            )}
             {agent.source_agent_ids?.length > 0 && (
-              <span>Sources: {agent.source_agent_ids.map((id) => shortId(id, 10)).join(", ")}</span>
+              <span className="flex flex-wrap items-center gap-1">
+                Source agents:
+                {agent.source_agent_ids.map((sid: string) => (
+                  <Link
+                    key={sid}
+                    to="/agents/$agentId"
+                    params={{ agentId: sid }}
+                    className="font-mono text-accent hover:underline"
+                  >
+                    {shortId(sid, 10)}
+                  </Link>
+                ))}
+              </span>
+            )}
+            {agent.workflow_ids?.length > 0 && (
+              <span className="flex flex-wrap items-center gap-1">
+                Workflows:
+                {agent.workflow_ids.map((wid: string) => (
+                  <Link
+                    key={wid}
+                    to="/workflows/$workflowId"
+                    params={{ workflowId: wid }}
+                    className="font-mono text-accent hover:underline"
+                  >
+                    {shortId(wid, 10)}
+                  </Link>
+                ))}
+              </span>
             )}
           </div>
         )}
@@ -227,13 +272,13 @@ function AgentDetail() {
               const next = typeof updater === "function" ? updater(tableSorting) : updater;
               if (next[0]) navigate({ search: (s) => ({ ...s, sort: `${next[0].desc ? "-" : ""}${next[0].id}` }) });
             }}
-            onRowClick={(t) => navigate({ search: (s) => ({ ...s, task: t.task_id }) })}
+            onRowClick={(t) => navigate({ search: (s) => ({ ...s, task: t.task_id, activity: undefined }) })}
           />
         ))}
 
       {search.tab === "telemetry" && (
         <div className="card p-4">
-          <TelemetryChart filter={{ $or: [{ agent_id: agentId }, { source_agent_id: agentId }] }} />
+          <TelemetryChart filter={{ agent_id: agentId }} />
         </div>
       )}
 
@@ -247,6 +292,9 @@ function AgentDetail() {
 
       {search.task && openTask.data && (
         <TaskDrawer task={openTask.data} onClose={() => navigate({ search: (s) => ({ ...s, task: undefined }) })} />
+      )}
+      {openActivity && (
+        <ActivityDrawer activity={openActivity} onClose={() => navigate({ search: (s) => ({ ...s, activity: undefined }) })} />
       )}
     </div>
   );

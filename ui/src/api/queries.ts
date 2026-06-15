@@ -206,5 +206,6 @@ export function useNodePositions(workflowId: string, graphType: string) {
     queryKey: ["nodePositions", workflowId, graphType],
     queryFn: () => apiGet<Record<string, { x: number; y: number }>>(`/workflows/${workflowId}/node_positions`, { graph_type: graphType }),
     staleTime: 30_000,
+    enabled: !!workflowId,
   });
 }

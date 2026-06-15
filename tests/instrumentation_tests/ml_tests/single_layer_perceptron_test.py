@@ -593,6 +593,10 @@ class SingleLayerPerceptronTests(unittest.TestCase):
 
         submit_tasks = [t for t in tasks if t.get("activity_id") == "submit_gridsearch_job"]
         assert len(submit_tasks) == 1
+        # output_names=["configs"] with a list result must store under "configs", not "arg_0"
+        submit_generated = submit_tasks[0].get("generated", {})
+        assert "configs" in submit_generated, f"Expected 'configs' key in generated, got: {list(submit_generated.keys())}"
+        assert "arg_0" not in submit_generated, "arg_0 should not appear when output_names is set"
 
         model_selection_tasks = [t for t in tasks if t.get("activity_id") == "select_best_model"]
         assert len(model_selection_tasks) == 1

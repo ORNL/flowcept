@@ -798,6 +798,32 @@ def test_dataflow_label_fallback():
         configs.WEBSERVER_MAX_LABEL_LENGTH = original_max
 
 
+def test_dataflow_label_no_positional_args():
+    """Chunk labels must not expose raw arg_N positional-argument keys."""
+    client, fake_db = build_client()
+    fake_db.tasks = [
+        {
+            "task_id": "t1",
+            "workflow_id": "wf-1",
+            "status": "finished",
+            "started_at": 10,
+            "used": {"arg_0": 1, "arg_1": 2},
+            "generated": {"result": 42},
+        }
+    ]
+    rs = client.get("/api/v1/workflows/wf-1/dataflow")
+    assert rs.status_code == 200
+    dataflow = rs.json()
+    chunks = [n for n in dataflow["nodes"] if n["kind"] == "chunk"]
+    assert len(chunks) == 2
+    input_chunk = next(n for n in chunks if n["stats"]["kind"] == "input")
+    # "arg_0, arg_1" is not a useful label; should fall back to count form
+    assert "arg_" not in input_chunk["label"]
+    # Named output keys should still render as-is
+    output_chunk = next(n for n in chunks if n["stats"]["kind"] == "output")
+    assert "result" in output_chunk["label"]
+
+
 def test_delete_empty_agents():
     client, fake_db = build_client()
     fake_db.agents = [

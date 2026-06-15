@@ -160,9 +160,14 @@ export function TelemetryChart({ filter }: { filter: Record<string, unknown> }) 
           <div className="text-fg-muted py-8 text-center text-xs">Loading…</div>
         ) : anyData ? (
           <EChart option={combinedOption} height={240} />
+        ) : (allData?.rows?.length ?? 0) === 0 ? (
+          <div className="text-fg-muted py-8 text-center text-xs">
+            No tasks matched this filter.
+          </div>
         ) : (
           <div className="text-fg-muted py-8 text-center text-xs">
-            No telemetry values found (telemetry capture may be disabled).
+            Tasks were found but no telemetry values are present.
+            Ensure <code className="text-xs">telemetry_capture.enable: true</code> in your Flowcept settings.
           </div>
         )}
       </div>

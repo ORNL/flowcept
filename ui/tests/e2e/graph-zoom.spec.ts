@@ -138,12 +138,12 @@ async function wheelOnCanvas(page: Page, deltaY: number, times = 5) {
 // Tests
 // ---------------------------------------------------------------------------
 
-test.describe("graph zoom — Dataflow Graph (DataflowView)", () => {
+test.describe("graph zoom — Provenance Graph (DataflowView)", () => {
   test.beforeEach(async ({ page }) => {
     await mockWorkflowApis(page);
     await page.goto(`/workflows/${WF_ID}?tab=graph`);
-    // Switch to Dataflow Graph view.
-    await page.getByRole("button", { name: "Dataflow Graph" }).click();
+    // Switch to Provenance Graph view.
+    await page.getByRole("button", { name: "Provenance Graph" }).click();
     await page.locator(".react-flow__viewport").waitFor({ state: "visible" });
     // Let fitView animation finish (100ms delay + 250ms duration in FitViewHelper).
     await page.waitForTimeout(400);
@@ -221,5 +221,96 @@ test.describe("graph zoom — Task Graph (DagView task mode)", () => {
     await wheelOnCanvas(page, 120, 8);
     const after = await getViewportScale(page);
     expect(after).toBeLessThan(before);
+  });
+});
+
+test.describe("graph type buttons — naming", () => {
+  test("dataflow graph button is labelled 'Provenance Graph'", async ({ page }) => {
+    await mockWorkflowApis(page);
+    await page.goto(`/workflows/${WF_ID}?tab=graph`);
+    await expect(page.getByRole("button", { name: "Provenance Graph" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Dataflow Graph" })).toHaveCount(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Agent icon colors in DAG graph nodes
+// ---------------------------------------------------------------------------
+
+const TASKS_WITH_TWO_AGENTS = {
+  items: [
+    {
+      task_id: "ta1",
+      activity_id: "orchestrate",
+      status: "FINISHED",
+      workflow_id: WF_ID,
+      started_at: 1_700_000_000,
+      ended_at: 1_700_000_005,
+      agent_id: "orchestrator_agent_aaaabbbb-1111-2222-3333-444455556666",
+    },
+    {
+      task_id: "ta2",
+      activity_id: "compute",
+      status: "FINISHED",
+      workflow_id: WF_ID,
+      started_at: 1_700_000_005,
+      ended_at: 1_700_000_010,
+      agent_id: "hpc_agent_ccccdddd-5555-6666-7777-888899990000",
+    },
+  ],
+  count: 2,
+};
+
+const TASK_SUMMARY_TWO_AGENTS = {
+  status_counts: { FINISHED: 2 },
+  activity_stats: [
+    { activity_id: "orchestrate", count: 1, avg_duration: 5.0, min_duration: 5.0, max_duration: 5.0, status_counts: { FINISHED: 1 } },
+    { activity_id: "compute", count: 1, avg_duration: 5.0, min_duration: 5.0, max_duration: 5.0, status_counts: { FINISHED: 1 } },
+  ],
+  time_range: { min_started_at: 1_700_000_000, max_ended_at: 1_700_000_010 },
+};
+
+test.describe("agent icon colors in DAG graph", () => {
+  test("two activities with different agent types get different icon colors", async ({ page }) => {
+    // Mock with tasks that have two different agent IDs
+    await page.route("**/api/v1/**", (route) =>
+      route.fulfill({ status: 404, json: { detail: "not mocked" } }),
+    );
+    await page.route("**/api/v1/info", (route) =>
+      route.fulfill({ json: { service: "flowcept", version: "test" } }),
+    );
+    await page.route(`**/api/v1/stats/tasks/summary**`, (route) =>
+      route.fulfill({ json: TASK_SUMMARY_TWO_AGENTS }),
+    );
+    await page.route(`**/api/v1/tasks/query`, (route) =>
+      route.fulfill({ json: TASKS_WITH_TWO_AGENTS }),
+    );
+    await page.route(`**/api/v1/workflows/${WF_ID}/dataflow`, (route) =>
+      route.fulfill({ json: { level: "coarse", nodes: [], edges: [], truncated: false } }),
+    );
+    await page.route(`**/api/v1/workflows/${WF_ID}`, (route) =>
+      route.fulfill({ json: WORKFLOW }),
+    );
+
+    await page.goto(`/workflows/${WF_ID}?tab=graph`);
+    await page.locator(".react-flow__viewport").waitFor({ state: "visible" });
+    await page.waitForTimeout(400);
+
+    // Find agent icons in DAG nodes
+    const icons = page.locator("[data-testid='dag-agent-icon']");
+    await expect(icons).toHaveCount(2);
+
+    const colors = await page.evaluate(() => {
+      const els = document.querySelectorAll("[data-testid='dag-agent-icon']");
+      return Array.from(els).map((el) => {
+        const svg = el as SVGElement;
+        return svg.style.color || svg.getAttribute("stroke") || svg.style.stroke || "";
+      });
+    });
+
+    expect(colors[0]).not.toBe("");
+    expect(colors[1]).not.toBe("");
+    // Different agent types must get different colors
+    expect(colors[0]).not.toBe(colors[1]);
   });
 });

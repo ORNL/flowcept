@@ -6,7 +6,7 @@ import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Eye, EyeOff, Maximize2, Minimize2, Radio, Trash2 } from "lucide-react";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { useObjects, useProvenanceCard, useResolveDashboard, useTask, useTasksQuery, useTaskSummary, useWorkflow } from "../api/queries";
+import { useAgents, useObjects, useProvenanceCard, useResolveDashboard, useTask, useTasksQuery, useTaskSummary, useWorkflow } from "../api/queries";
 import { useEventStream } from "../api/sse";
 import type { BlobObjectDoc, ChartDataResult, ListResponse, Task } from "../api/types";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
@@ -19,13 +19,14 @@ import { JsonTree } from "../components/JsonTree";
 import { Markdown } from "../components/markdown/Markdown";
 import { DataTable } from "../components/tables/DataTable";
 import { TaskDrawer } from "../components/tasks/TaskDrawer";
+import { ActivityDrawer } from "../components/tasks/ActivityDrawer";
 import { apiDelete, apiPost } from "../api/client";
 import { fmtDuration, fmtTs, shortId, statusColor, taskDuration, toEpochSec, type TimeValue } from "../lib/format";
 import { ChartRenderer } from "../components/dashboard/ChartRenderer";
 import { chart, dashboardSpec, type DashboardSpec } from "../components/dashboard/spec";
 import { useInspectorStore } from "../stores/inspectorStore";
 
-const TABS = ["tasks", "graph", "timeline", "telemetry", "card", "artifacts", "dashboard", "raw"] as const;
+const TABS = ["tasks", "agents", "graph", "timeline", "telemetry", "card", "artifacts", "dashboard", "raw"] as const;
 
 export const Route = createFileRoute("/workflows/$workflowId")({
   component: WorkflowDetail,
@@ -84,6 +85,10 @@ function WorkflowDetail() {
   const openTask = useTask(search.task ?? "", !!search.task);
   const taskItems = useMemo(() => tasks.data?.items ?? [], [tasks.data]);
 
+  const openActivity = search.activity
+    ? (summary.data?.activity_stats ?? []).find((a) => a.activity_id === search.activity) ?? null
+    : null;
+
   const columns = useMemo<ColumnDef<Task, any>[]>(
     () => [
       {
@@ -108,7 +113,7 @@ function WorkflowDetail() {
             className="text-accent hover:underline text-left truncate max-w-full"
             onClick={(e) => {
               e.stopPropagation();
-              navigate({ search: (s) => ({ ...s, activity: row.original.activity_id || undefined }) });
+              navigate({ search: (s) => ({ ...s, activity: row.original.activity_id || undefined, task: undefined }) });
             }}
             title={row.original.activity_id ?? ""}
           >
@@ -120,7 +125,7 @@ function WorkflowDetail() {
         id: "task_id",
         header: "Task",
         size: 130,
-        cell: ({ row }) => <span className="font-mono">{shortId(row.original.task_id, 12)}</span>,
+        cell: ({ row }) => <span className="font-mono text-accent hover:underline cursor-pointer">{shortId(row.original.task_id, 12)}</span>,
       },
       {
         id: "started_at",
@@ -247,6 +252,11 @@ function WorkflowDetail() {
             })()}
           </div>
         )}
+        {workflow.data?.utc_timestamp != null && (
+          <div className="text-fg-muted mt-0.5 text-xs">
+            Created: {fmtTs(workflow.data.utc_timestamp)}
+          </div>
+        )}
         {workflow.data?.workflow_description && (
           <p className="text-fg-muted mt-1 text-sm">{workflow.data.workflow_description}</p>
         )}
@@ -310,9 +320,11 @@ function WorkflowDetail() {
               const next = typeof updater === "function" ? updater(tableSorting) : updater;
               if (next[0]) navigate({ search: (s) => ({ ...s, sort: `${next[0].desc ? "-" : ""}${next[0].id}` }) });
             }}
-            onRowClick={(t) => navigate({ search: (s) => ({ ...s, task: t.task_id }) })}
+            onRowClick={(t) => navigate({ search: (s) => ({ ...s, task: t.task_id, activity: undefined }) })}
           />
         ))}
+
+      {search.tab === "agents" && <WorkflowAgentsTab workflowId={workflowId} />}
 
       {search.tab === "graph" && <GraphTab tasks={taskItems} workflowId={workflowId} />}
 
@@ -349,6 +361,9 @@ function WorkflowDetail() {
 
       {search.task && openTask.data && (
         <TaskDrawer task={openTask.data} onClose={() => navigate({ search: (s) => ({ ...s, task: undefined }) })} />
+      )}
+      {openActivity && (
+        <ActivityDrawer activity={openActivity} onClose={() => navigate({ search: (s) => ({ ...s, activity: undefined }) })} />
       )}
 
       {showDelete && (
@@ -466,7 +481,7 @@ function GraphTab({ tasks, workflowId }: { tasks: Task[]; workflowId: string }) 
                 [
                   ["activity", "Activity Graph"],
                   ["task", "Task Graph"],
-                  ["dataflow", "Dataflow Graph"],
+                  ["dataflow", "Provenance Graph"],
                 ] as const
               ).map(([key, label]) => (
                 <button
@@ -594,6 +609,42 @@ function WorkflowDashboardTab({ workflowId, workflowName }: { workflowId: string
         </div>
       ))}
       </div>
+    </div>
+  );
+}
+
+function WorkflowAgentsTab({ workflowId }: { workflowId: string }) {
+  const agents = useAgents();
+  const items = (agents.data?.items ?? []).filter(
+    (a: any) => Array.isArray(a.workflow_ids) && a.workflow_ids.includes(workflowId),
+  );
+
+  if (agents.isLoading) return <div className="text-fg-muted text-xs">Loading agents…</div>;
+  if (!items.length) return <p className="text-fg-muted text-sm">No agents recorded for this workflow.</p>;
+
+  return (
+    <div className="card divide-y divide-border/50">
+      {items.map((a: any) => (
+        <div key={a.agent_id} className="flex items-center justify-between px-4 py-2.5 text-xs">
+          <Link
+            to="/agents/$agentId"
+            params={{ agentId: a.agent_id }}
+            className="flex flex-col gap-0.5 min-w-0"
+          >
+            <span className="font-medium hover:underline">{a.name || shortId(a.agent_id, 20)}</span>
+            {a.name && (
+              <span className="font-mono text-[10px] text-fg-muted">{shortId(a.agent_id, 20)}</span>
+            )}
+          </Link>
+          <div className="text-fg-muted flex items-center gap-4 shrink-0 ml-4">
+            {a.task_count != null && <span>{a.task_count} tasks</span>}
+            {a.activities?.length > 0 && (
+              <span className="truncate max-w-[180px]">{a.activities.join(", ")}</span>
+            )}
+            {a.last_active != null && <span>{fmtTs(a.last_active)}</span>}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

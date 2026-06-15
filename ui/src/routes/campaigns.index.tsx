@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useCampaigns } from "../api/queries";
 import { apiDelete } from "../api/client";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import { fmtTs, shortId, sortCampaigns } from "../lib/format";
+
+const PAGE_SIZE = 30;
 
 export const Route = createFileRoute("/campaigns/")({ component: CampaignsPage });
 
@@ -15,6 +17,10 @@ function CampaignsPage() {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [page, setPage] = useState(0);
+  const allItems = sortCampaigns((data?.items ?? []).filter((c) => c.task_count > 0));
+  const totalPages = Math.ceil(allItems.length / PAGE_SIZE);
+  const pageItems = allItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -34,7 +40,7 @@ function CampaignsPage() {
       {isLoading && <div className="text-fg-muted text-xs">Loading…</div>}
       {error && <div className="text-err text-xs">{String(error)}</div>}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {sortCampaigns((data?.items ?? []).filter((c) => c.task_count > 0)).map((c) => (
+        {pageItems.map((c) => (
           <div key={c.campaign_id} className="card hover:border-accent/60 relative group p-4">
             <Link
               to="/campaigns/$campaignId"
@@ -62,7 +68,28 @@ function CampaignsPage() {
           </div>
         ))}
       </div>
-      {data && data.count === 0 && <div className="text-fg-muted text-xs">No campaigns recorded yet.</div>}
+      {data && allItems.length === 0 && <div className="text-fg-muted text-xs">No campaigns recorded yet.</div>}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            data-testid="pagination-prev"
+            onClick={() => setPage((p) => p - 1)}
+            disabled={page === 0}
+            className="flex items-center gap-1 rounded border border-border px-2.5 py-1.5 text-xs disabled:opacity-40"
+          >
+            <ChevronLeft size={13} /> Prev
+          </button>
+          <span className="text-fg-muted text-xs">Page {page + 1} of {totalPages}</span>
+          <button
+            data-testid="pagination-next"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={page >= totalPages - 1}
+            className="flex items-center gap-1 rounded border border-border px-2.5 py-1.5 text-xs disabled:opacity-40"
+          >
+            Next <ChevronRight size={13} />
+          </button>
+        </div>
+      )}
 
       {deleteId && (
         <DeleteConfirmModal

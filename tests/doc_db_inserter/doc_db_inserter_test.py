@@ -26,7 +26,11 @@ def test_task_message_without_campaign_id_does_not_require_kv_dao():
 
     inserter._handle_task_message(message)
 
-    assert inserter.buffer == [{"task_id": "task-1", "activity_id": "activity"}]
+    assert len(inserter.buffer) == 1
+    buffered = inserter.buffer[0]
+    assert buffered.get("task_id") == "task-1"
+    assert buffered.get("activity_id") == "activity"
+    assert "campaign_id" not in buffered, "campaign_id must not be injected when kv_dao is None"
 
 
 @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")

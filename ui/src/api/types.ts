@@ -38,6 +38,7 @@ export interface Task {
   user?: string;
   started_at?: number | string;
   ended_at?: number | string;
+  submitted_at?: number | string;
   utc_timestamp?: number | string;
   registered_at?: number | string;
   used?: Record<string, unknown>;
@@ -81,6 +82,7 @@ export interface AgentSummary {
   activities: string[];
   source_agent_ids: string[];
   campaign_ids: string[];
+  workflow_ids: string[];
   last_active?: number | null;
 }
 

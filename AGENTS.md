@@ -54,12 +54,23 @@ git add path/to/file1 path/to/file2
 
 ## 5. Paths And Scratch Work
 
-- `agent_sandbox/` is the assistant scratch area.
+- `agent_sandbox/` is the assistant scratch area (gitignored — never committed).
 - Put plans and handoffs under `agent_sandbox/plans/`.
 - Do not create scratch scripts in source, tests, docs, or `/tmp` when `agent_sandbox/` is appropriate.
 - Do not run full test suites against `agent_sandbox/`, `tmp_tests/`, generated workflow cards, caches, or local data artifacts.
 - Deployment templates under `deployment/*.yaml` must use `${DATA_DIR}` placeholders for data paths.
 - Personal absolute paths belong only in untracked local settings files.
+
+### Current-task memory file
+
+**`agent_sandbox/current_task.md`** is the single living document for the feature or issue actively being developed.
+
+- **Read it at the start of every session** before doing any work, and re-read it whenever the task context seems unclear.
+- **Update it continuously**: add TODOs as they are discovered, check them off when done, record open decisions, blockers, and feature-specific mandates that do not belong in the permanent `AGENTS.md`.
+- **Archive it when the feature ships**: rename to `agent_sandbox/archive/<feature-name>.md` and create a fresh `current_task.md` for the next task.
+- Keep it short — bullets, not prose. If it grows past ~100 lines, trim resolved items.
+
+This file exists because context windows reset and session summaries lose nuance. It is the agent's external working memory for the current task.
 
 ## 6. Source Map
 
@@ -150,13 +161,26 @@ Use the `flowcept` conda environment.
 Common commands:
 
 ```bash
+# Python: lint, format, docs
 conda run -n flowcept make checks
 conda run -n flowcept make reformat
 conda run -n flowcept make docs
+
+# Python: integration tests (require live Mongo + Redis)
 conda run -n flowcept make tests
 conda run -n flowcept make tests-offline
 conda run -n flowcept make tests-notebooks
+
+# UI: vitest unit tests (pure functions, stores, utilities — no browser)
 make ui-test
+
+# UI: Playwright E2E tests — mocked (no live services needed)
+make ui-e2e
+
+# UI: Playwright E2E live integration tests (require live Mongo + Redis + webservice + Vite dev server)
+# FLOWCEPT_SETTINGS_PATH must point to a settings file with MongoDB enabled and telemetry_capture configured
+# (same file used to start the webservice, e.g. agent_sandbox/settings.yaml)
+FLOWCEPT_SETTINGS_PATH=agent_sandbox/settings.yaml E2E_LIVE=1 make ui-e2e
 ```
 
 Service commands:
@@ -177,6 +201,7 @@ Do not run tests from scratch/sandbox directories. Target `tests/` explicitly.
 - Prefer real tests over mocks. Use real services, real data, and real LLMs when feasible.
 - Avoid mock-heavy tests unless there is no practical alternative.
 - When a test fails, the correct fix is almost always to fix the implementation code, not the test; the test itself is very rarely the culprit. Always resolve warnings at their source rather than silencing them.
+- **Periodically recommend running the full integration test suites** (`make tests` and `E2E_LIVE=1 make ui-e2e`) — especially after merges, significant backend or UI changes, or when the user has been iterating quickly on a feature. Mocked tests alone are not sufficient to catch regressions against real services.
 
 
 ## 11. CI And Dependency Drift

@@ -324,7 +324,7 @@ function AppShell() {
                 ? "Activity"
                 : inspectorEntity.kind === "chart"
                 ? inspectorEntity.title
-                : "Dataflow"}
+                : "Provenance"}
             </div>
             {inspectorEntity.kind === "object" && (
               <div className="space-y-1.5">

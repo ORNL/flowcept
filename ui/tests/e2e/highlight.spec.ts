@@ -136,11 +136,11 @@ async function nodeOpacity(page: Page, nodeId: string): Promise<number> {
 // Tests
 // ---------------------------------------------------------------------------
 
-test.describe("LLM highlight — Dataflow Graph lineage dimming", () => {
+test.describe("LLM highlight — Provenance Graph lineage dimming", () => {
   test.beforeEach(async ({ page }) => {
     await mockApis(page);
     await page.goto(`/workflows/${WF_ID}?tab=graph`);
-    await page.getByRole("button", { name: "Dataflow Graph" }).click();
+    await page.getByRole("button", { name: "Provenance Graph" }).click();
     await page.locator(".react-flow__viewport").waitFor({ state: "visible" });
     // Let fitView animation finish.
     await page.waitForTimeout(400);
@@ -153,7 +153,7 @@ test.describe("LLM highlight — Dataflow Graph lineage dimming", () => {
 
     // Wait for the highlight confirmation pill in the chat transcript.
     await page
-      .getByText("Highlighted 1 task in the Dataflow graph.")
+      .getByText("Highlighted 1 task in the Provenance graph.")
       .waitFor({ state: "visible", timeout: 8_000 });
 
     // Chain A (task:t1 and its full lineage) must NOT be dimmed.
@@ -174,7 +174,7 @@ test.describe("LLM highlight — Dataflow Graph lineage dimming", () => {
     await page.getByPlaceholder("Ask about your workflows… (Enter to send)").fill("show lineage of t1");
     await page.keyboard.press("Enter");
     await page
-      .getByText("Highlighted 1 task in the Dataflow graph.")
+      .getByText("Highlighted 1 task in the Provenance graph.")
       .waitFor({ state: "visible", timeout: 8_000 });
 
     // Verify chain B is dimmed before clearing.
@@ -209,7 +209,7 @@ test.describe("LLM highlight — Dataflow Graph lineage dimming", () => {
     await page.getByPlaceholder("Ask about your workflows… (Enter to send)").fill("show lineage of t2");
     await page.keyboard.press("Enter");
     await page
-      .getByText("Highlighted 1 task in the Dataflow graph.")
+      .getByText("Highlighted 1 task in the Provenance graph.")
       .waitFor({ state: "visible", timeout: 8_000 });
 
     // Backward BFS from task:t2 should walk back through chunk:0 to task:t1.

@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { z } from "zod";
-import { Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useVisibleWorkflows } from "../api/queries";
 import { apiDelete } from "../api/client";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import { fmtUserTs, shortId } from "../lib/format";
+
+const PAGE_SIZE = 30;
 
 export const Route = createFileRoute("/workflows/")({
   component: WorkflowsPage,
@@ -20,6 +22,9 @@ function WorkflowsPage() {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(items.length / PAGE_SIZE);
+  const pageItems = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -46,7 +51,7 @@ function WorkflowsPage() {
       {isLoading && <div className="text-fg-muted text-xs">Loading…</div>}
       {error && <div className="text-err text-xs">{String(error)}</div>}
       <div className="card divide-y divide-border/50">
-        {items.map((w) => (
+        {pageItems.map((w) => (
           <div key={w.workflow_id} className="group flex items-center justify-between hover:bg-surface-2 px-4 py-2.5 text-xs">
             <Link
               to="/workflows/$workflowId"
@@ -74,6 +79,27 @@ function WorkflowsPage() {
       </div>
       {!isLoading && items.length === 0 && (
         <div className="text-fg-muted text-xs">No workflows recorded yet.</div>
+      )}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            data-testid="pagination-prev"
+            onClick={() => setPage((p) => p - 1)}
+            disabled={page === 0}
+            className="flex items-center gap-1 rounded border border-border px-2.5 py-1.5 text-xs disabled:opacity-40"
+          >
+            <ChevronLeft size={13} /> Prev
+          </button>
+          <span className="text-fg-muted text-xs">Page {page + 1} of {totalPages}</span>
+          <button
+            data-testid="pagination-next"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={page >= totalPages - 1}
+            className="flex items-center gap-1 rounded border border-border px-2.5 py-1.5 text-xs disabled:opacity-40"
+          >
+            Next <ChevronRight size={13} />
+          </button>
+        </div>
       )}
 
       {deleteId && (

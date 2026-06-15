@@ -168,7 +168,7 @@ export function ChatPanel({ panelHandle }: ChatPanelProps) {
                       <div key={j} className="border-accent/40 text-accent bg-accent-soft flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-[11px]">
                         <span>↗</span>
                         <span>
-                          Highlighted {part.task_ids.length} task{part.task_ids.length !== 1 ? "s" : ""} in the Dataflow graph.
+                          Highlighted {part.task_ids.length} task{part.task_ids.length !== 1 ? "s" : ""} in the Provenance graph.
                           {" "}
                           <button
                             onClick={() => useHighlightStore.getState().clearHighlight()}

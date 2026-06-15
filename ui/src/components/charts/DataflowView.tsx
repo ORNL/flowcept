@@ -11,7 +11,7 @@ import { useInspectorStore } from "../../stores/inspectorStore";
 import { useHighlightStore } from "../../stores/highlightStore";
 import { TASK_NODE_STYLE } from "./graphStyles";
 import { Bot } from "lucide-react";
-import { agentIconStyle, applyNodePositions, filterGraphEdges } from "../../lib/format";
+import { agentIconStyle, buildAgentNameColorMap, applyNodePositions, filterGraphEdges } from "../../lib/format";
 import { apiPost } from "../../api/client";
 
 interface Props {
@@ -225,25 +225,10 @@ export function DataflowView({ workflowId, height }: Props) {
       }
     }
 
-    // Collect all unique agent IDs to assign them distinct colors sequentially (avoids hash collisions).
-    const uniqueAgentIds = Array.from(
-      new Set(
-        visibleNodes
-          .map((n) => (n.stats?.agent_id || n.stats?.source_agent_id) as string | null | undefined)
-          .filter((id): id is string => !!id)
-      )
-    ).sort();
-
-    const agentColorMap = new Map<string, string>();
-    const palette = [
-      "#f87171", "#fb923c", "#fbbf24", "#34d399", 
-      "#2dd4bf", "#38bdf8", "#60a5fa", "#818cf8", 
-      "#a78bfa", "#c084fc", "#f472b6", "#fb7185", 
-      "#10b981", "#a3e635", "#e11d48", "#db2777"
-    ];
-    uniqueAgentIds.forEach((id, idx) => {
-      agentColorMap.set(id, palette[idx % palette.length]);
-    });
+    // Build a name-keyed color map: same agent type always gets the same color.
+    const agentColorMap = buildAgentNameColorMap(
+      visibleNodes.map((n) => (n.stats?.agent_id || n.stats?.source_agent_id) as string | null | undefined),
+    );
 
     const nextNodes: Node[] = visibleNodes.map((n) => {
       const rank = ranks.get(n.id) ?? 0;
@@ -256,7 +241,7 @@ export function DataflowView({ workflowId, height }: Props) {
       const hasAgent = !!agentId;
       const label = hasAgent ? (
         <div className="relative w-full h-full flex items-center justify-center">
-          <Bot size={13} {...agentIconStyle(agentId, agentColorMap)} className="absolute -top-1.5 -right-1.5 bg-surface rounded-full p-0.5 border border-border" />
+          <Bot size={13} data-testid="dataflow-agent-icon" {...agentIconStyle(agentId, agentColorMap)} className="absolute -top-1.5 -right-1.5 bg-surface rounded-full p-0.5 border border-border" />
           <span className="whitespace-pre">{n.label}</span>
         </div>
       ) : (

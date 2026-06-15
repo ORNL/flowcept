@@ -48,8 +48,8 @@ export function TaskDrawer({ task, onClose }: { task: Task; onClose: () => void 
               <span className="font-mono">{task.parent_task_id}</span>
             </Field>
           )}
-          <Field label="workflow">
-            {task.workflow_id ? (
+          {task.workflow_id && (
+            <Field label="workflow">
               <Link
                 to="/workflows/$workflowId"
                 params={{ workflowId: task.workflow_id }}
@@ -57,15 +57,47 @@ export function TaskDrawer({ task, onClose }: { task: Task; onClose: () => void 
               >
                 {task.workflow_id}
               </Link>
-            ) : (
-              "—"
-            )}
-          </Field>
-          <Field label="started">{fmtTs(task.started_at)}</Field>
-          <Field label="ended">{fmtTs(task.ended_at)}</Field>
+            </Field>
+          )}
+          {task.campaign_id && (
+            <Field label="campaign">
+              <Link
+                to="/campaigns/$campaignId"
+                params={{ campaignId: task.campaign_id }}
+                className="text-accent font-mono hover:underline"
+              >
+                {task.campaign_id}
+              </Link>
+            </Field>
+          )}
+          {task.agent_id && (
+            <Field label="agent">
+              <Link
+                to="/agents/$agentId"
+                params={{ agentId: task.agent_id }}
+                className="text-accent font-mono hover:underline"
+              >
+                {task.agent_id}
+              </Link>
+            </Field>
+          )}
+          {task.source_agent_id && (
+            <Field label="source agent">
+              <Link
+                to="/agents/$agentId"
+                params={{ agentId: task.source_agent_id }}
+                className="text-accent font-mono hover:underline"
+              >
+                {task.source_agent_id}
+              </Link>
+            </Field>
+          )}
+          {task.started_at != null && <Field label="started">{fmtTs(task.started_at)}</Field>}
+          {task.ended_at != null && <Field label="ended">{fmtTs(task.ended_at)}</Field>}
+          {task.submitted_at != null && <Field label="submitted">{fmtTs(task.submitted_at)}</Field>}
+          {task.registered_at != null && <Field label="registered">{fmtTs(task.registered_at)}</Field>}
           <Field label="duration">{fmtDuration(taskDuration(task))}</Field>
           <Field label="host">{task.hostname ?? "—"}</Field>
-          {task.agent_id && <Field label="agent">{task.agent_id}</Field>}
           {task.subtype && <Field label="subtype">{task.subtype}</Field>}
           {task.tags && task.tags.length > 0 && <Field label="tags">{task.tags.join(", ")}</Field>}
         </div>

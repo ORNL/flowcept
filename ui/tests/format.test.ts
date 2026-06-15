@@ -13,6 +13,7 @@ import {
   shortId,
   agentColor,
   agentIconStyle,
+  buildAgentNameColorMap,
   applyNodePositions,
   sortAgents,
   sortCampaigns,
@@ -216,9 +217,11 @@ describe("agentColor", () => {
     expect(agentColor(undefined)).toBe("#7c3aed");
   });
 
-  it("returns a hex color string for valid agent IDs", () => {
+  it("returns a color string for valid agent IDs", () => {
     const color = agentColor("agent-1");
-    expect(color).toMatch(/^#[0-9a-fA-F]{6}$/);
+    // hsl(...) OR #hex — just must be a non-empty string
+    expect(typeof color).toBe("string");
+    expect(color.length).toBeGreaterThan(0);
   });
 
   it("returns deterministic color for the same agent ID", () => {
@@ -230,8 +233,20 @@ describe("agentColor", () => {
     for (let i = 0; i < 50; i++) {
       colors.add(agentColor(`agent-${i}`));
     }
-    // We expect multiple colors to be used, not just one or two
     expect(colors.size).toBeGreaterThan(5);
+  });
+
+  it("does not collide for 'Orchestrator' and 'HPCAgent' (regression: both mapped to palette[6] with mod-16 hash)", () => {
+    expect(agentColor(undefined, "Orchestrator")).not.toBe(agentColor(undefined, "HPCAgent"));
+  });
+
+  it("same name always produces the same color; different names produce different colors", () => {
+    // Same name → deterministic: identity doesn't matter, name drives the color.
+    expect(agentColor(undefined, "my_agent")).toBe(agentColor(undefined, "my_agent"));
+    // Different names → distinct colors.
+    expect(agentColor(undefined, "agent_alpha")).not.toBe(agentColor(undefined, "agent_beta"));
+    expect(agentColor(undefined, "agent_beta")).not.toBe(agentColor(undefined, "agent_gamma"));
+    expect(agentColor(undefined, "agent_alpha")).not.toBe(agentColor(undefined, "agent_gamma"));
   });
 });
 
@@ -330,6 +345,144 @@ describe("agentIconStyle", () => {
     expect(res.stroke).toBe("#00ff00");
     expect(res.style.color).toBe("#00ff00");
     expect(res.style.stroke).toBe("#00ff00");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildAgentNameColorMap
+// ---------------------------------------------------------------------------
+
+describe("buildAgentNameColorMap", () => {
+  it("returns an empty map for an empty input", () => {
+    expect(buildAgentNameColorMap([]).size).toBe(0);
+  });
+
+  it("assigns distinct colors to agents with different names", () => {
+    const map = buildAgentNameColorMap([
+      "orchestrator_agent_0434e054-3301-4439-b1f0-4a8f000b9b56",
+      "hpc_agent_a2696d28-c359-4fa6-bdf9-e04c5589e689",
+    ]);
+    expect(map.size).toBe(2);
+    const colors = Array.from(map.values());
+    expect(colors[0]).not.toBe(colors[1]);
+  });
+
+  it("assigns the SAME color to two IDs that share a name (same agent type)", () => {
+    // Two different orchestrator UUIDs — both have name "orchestrator_agent"
+    const map = buildAgentNameColorMap([
+      "orchestrator_agent_0434e054-3301-4439-b1f0-4a8f000b9b56",
+      "orchestrator_agent_deadbeef-1234-5678-abcd-ef0123456789",
+    ]);
+    // Only one unique name → one entry in the map
+    expect(map.size).toBe(1);
+    expect(map.has("orchestrator_agent")).toBe(true);
+  });
+
+  it("keys are agent names, not raw IDs", () => {
+    const map = buildAgentNameColorMap([
+      "orchestrator_agent_0434e054-3301-4439-b1f0-4a8f000b9b56",
+      "hpc_agent_a2696d28-c359-4fa6-bdf9-e04c5589e689",
+    ]);
+    expect(map.has("orchestrator_agent")).toBe(true);
+    expect(map.has("hpc_agent")).toBe(true);
+  });
+
+  it("skips null/undefined entries", () => {
+    const map = buildAgentNameColorMap([null, undefined, "hpc_agent_a2696d28-c359-4fa6-bdf9-e04c5589e689"]);
+    expect(map.size).toBe(1);
+  });
+
+  it("returns a non-empty color string (hsl or hex)", () => {
+    const map = buildAgentNameColorMap(["orchestrator_agent_0434e054-3301-4439-b1f0-4a8f000b9b56"]);
+    const color = Array.from(map.values())[0];
+    expect(typeof color).toBe("string");
+    expect(color.length).toBeGreaterThan(0);
+  });
+
+  it("is cross-view consistent: same agent name maps to same color regardless of which peers are present", () => {
+    // Simulates agents list (3 agents) vs workflow graph (2 agents — hpc_agent absent)
+    const fullMap = buildAgentNameColorMap([
+      "orchestrator_agent_aaaabbbb-1111-2222-3333-444455556666",
+      "hpc_agent_ccccdddd-5555-6666-7777-888899990000",
+      "data_worker_eeeeffff-9999-0000-aaaa-bbbbccccdddd",
+    ]);
+    const graphMap = buildAgentNameColorMap([
+      "orchestrator_agent_aaaabbbb-1111-2222-3333-444455556666",
+      "data_worker_eeeeffff-9999-0000-aaaa-bbbbccccdddd",
+    ]);
+    expect(fullMap.get("orchestrator_agent")).toBe(graphMap.get("orchestrator_agent"));
+    expect(fullMap.get("data_worker")).toBe(graphMap.get("data_worker"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// agentIconStyle — name-based colorMap lookup
+// ---------------------------------------------------------------------------
+
+describe("agentIconStyle with name-based colorMap", () => {
+  it("resolves color by agent name when colorMap is keyed by name", () => {
+    // colorMap keyed by name, not raw ID
+    const colorMap = new Map([["orchestrator_agent", "#ff0000"]]);
+    const res = agentIconStyle("orchestrator_agent_0434e054-3301-4439-b1f0-4a8f000b9b56", colorMap);
+    expect(res.color).toBe("#ff0000");
+    expect(res.stroke).toBe("#ff0000");
+  });
+
+  it("two IDs with the same name resolve to the same color from the map", () => {
+    const colorMap = new Map([["orchestrator_agent", "#abcdef"]]);
+    // Both share the "orchestrator_agent" prefix; UUID suffixes are stripped by getAgentNameFromId
+    const r1 = agentIconStyle("orchestrator_agent_0434e054-3301-4439-b1f0-4a8f000b9b56", colorMap);
+    const r2 = agentIconStyle("orchestrator_agent_deadbeef-1234-5678-abcd-ef0123456789", colorMap);
+    expect(r1.color).toBe("#abcdef");
+    expect(r2.color).toBe("#abcdef");
+  });
+
+  it("falls back to agentColor when the name is not in the map", () => {
+    const colorMap = new Map([["other_agent", "#123456"]]);
+    const res = agentIconStyle("orchestrator_agent_0434e054-3301-4439-b1f0-4a8f000b9b56", colorMap);
+    // not in map → falls back to deterministic agentColor
+    expect(res.color).toBe(agentColor("orchestrator_agent_0434e054-3301-4439-b1f0-4a8f000b9b56"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cross-format consistency: plain-UUID vs named-UUID agent IDs
+// ---------------------------------------------------------------------------
+
+describe("agentIconStyle — same name, different ID formats", () => {
+  it("plain-UUID agent ID and named-UUID agent ID with same name get identical color when name is passed", () => {
+    // Real scenario: "000bfd8d-..." (plain UUID, no name in ID) and "hpc_agent_c8ce2b3a-..." both have name "HPCAgent"
+    const plainUUID = "000bfd8d-8c3c-4510-b8bd-939f2a5dfa1c";
+    const namedUUID = "hpc_agent_c8ce2b3a-1fdc-4bd4-90d4-6287e0860ad3";
+    const c1 = agentIconStyle(plainUUID, undefined, "HPCAgent").color;
+    const c2 = agentIconStyle(namedUUID, undefined, "HPCAgent").color;
+    expect(c1).toBe(c2);
+  });
+
+  it("two different named-UUID agents with different names get different colors even without explicit name", () => {
+    // DagView scenario: extracts name from agent_id using getAgentNameFromId
+    const orch = "orchestrator_agent_aaaabbbb-1111-2222-3333-444455556666";
+    const hpc = "hpc_agent_ccccdddd-5555-6666-7777-888899990000";
+    expect(agentColor(orch)).not.toBe(agentColor(hpc));
+  });
+
+  it("agents list scenario: building colorMap from agent names gives consistent lookup", () => {
+    // Simulates agents.index.tsx: agents have both agent_id (different formats) and name
+    // colorMap must be keyed by name so agentIconStyle(id, map, name) always finds the right color
+    const agents = [
+      { agent_id: "000bfd8d-8c3c-4510-b8bd-939f2a5dfa1c", name: "HPCAgent" },
+      { agent_id: "hpc_agent_c8ce2b3a-1fdc-4bd4-90d4-6287e0860ad3", name: "HPCAgent" },
+      { agent_id: "0f3b8dab-1765-4347-8e85-88d2c35c56be", name: "Orchestrator" },
+      { agent_id: "orchestrator_agent_b81e76aa-cb21-4a83-a07c-7327aca97ab0", name: "Orchestrator" },
+    ];
+    // Build color map keyed by name (not by extracted ID)
+    const colorMap = new Map(agents.map((a) => [a.name, agentColor(undefined, a.name)]));
+    // All HPCAgent instances must resolve to the same color
+    const colors = agents.map((a) => agentIconStyle(a.agent_id, colorMap, a.name).color);
+    expect(colors[0]).toBe(colors[1]); // both HPCAgent
+    expect(colors[2]).toBe(colors[3]); // both Orchestrator
+    // Different agent types must differ
+    expect(colors[0]).not.toBe(colors[2]);
   });
 });
 
