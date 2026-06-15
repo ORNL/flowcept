@@ -12,6 +12,7 @@ import type { BlobObjectDoc, ChartDataResult, ListResponse, Task } from "../api/
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import { DagView } from "../components/charts/DagView";
 import { DataflowView } from "../components/charts/DataflowView";
+import { CoarseDataflowView } from "../components/charts/CoarseDataflowView";
 import { GanttChart } from "../components/charts/GanttChart";
 import { StatusStrip } from "../components/charts/StatusStrip";
 import { TelemetryChart } from "../components/charts/TelemetryChart";
@@ -447,7 +448,8 @@ function ArtifactsTab({ workflowId }: { workflowId: string }) {
 }
 
 function GraphTab({ tasks, workflowId }: { tasks: Task[]; workflowId: string }) {
-  const [graphType, setGraphType] = useState<"activity" | "task" | "dataflow">("activity");
+  const [graphType, setGraphType] = useState<"activity" | "task" | "provenance">("activity");
+  const [provMode, setProvMode] = useState<"coarse" | "fine">("coarse");
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
@@ -475,13 +477,13 @@ function GraphTab({ tasks, workflowId }: { tasks: Task[]; workflowId: string }) 
       )}
       <div className={cardClasses}>
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="flex rounded border border-border text-xs">
               {(
                 [
                   ["activity", "Activity Graph"],
                   ["task", "Task Graph"],
-                  ["dataflow", "Provenance Graph"],
+                  ["provenance", "Provenance Graph"],
                 ] as const
               ).map(([key, label]) => (
                 <button
@@ -493,16 +495,32 @@ function GraphTab({ tasks, workflowId }: { tasks: Task[]; workflowId: string }) 
                 </button>
               ))}
             </div>
+
+            {graphType === "provenance" && (
+              <div className="flex rounded border border-border text-xs">
+                {(["coarse", "fine"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setProvMode(mode)}
+                    className={`px-2.5 py-1.5 capitalize ${provMode === mode ? "bg-accent-soft text-fg" : "text-fg-muted hover:text-fg"}`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <span className="text-fg-muted text-[11px] hidden sm:inline">
               {graphType === "activity" && "Activities and their execution order."}
               {graphType === "task" && "Individual task executions."}
-              {graphType === "dataflow" && "How data flows between tasks, derived from inputs and outputs."}
+              {graphType === "provenance" && provMode === "coarse" && "Tasks grouped by activity — each node aggregates all runs of the same activity."}
+              {graphType === "provenance" && provMode === "fine" && "How data flows between tasks, derived from inputs and outputs."}
             </span>
           </div>
 
           <button
             onClick={() => setIsMaximized(!isMaximized)}
-            className="text-fg-muted hover:text-fg p-1.5 rounded border border-border hover:bg-surface-2 transition-colors flex items-center gap-1.5 text-xs font-medium"
+            className="text-fg-muted hover:text-fg p-1.5 rounded border border-border hover:bg-surface-2 transition-colors flex items-center gap-1.5 text-xs font-medium shrink-0"
             title={isMaximized ? "Minimize" : "Maximize"}
           >
             {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
@@ -511,10 +529,12 @@ function GraphTab({ tasks, workflowId }: { tasks: Task[]; workflowId: string }) 
         </div>
 
         <div className={isMaximized ? "flex-1 min-h-0 flex flex-col" : "relative"}>
-          {graphType === "dataflow" ? (
+          {graphType === "provenance" && provMode === "coarse" ? (
+            <CoarseDataflowView workflowId={workflowId} height={isMaximized ? "100%" : undefined} />
+          ) : graphType === "provenance" && provMode === "fine" ? (
             <DataflowView workflowId={workflowId} height={isMaximized ? "100%" : undefined} />
           ) : (
-            <DagView tasks={tasks} mode={graphType} height={isMaximized ? "100%" : undefined} />
+            <DagView tasks={tasks} mode={graphType as "activity" | "task"} height={isMaximized ? "100%" : undefined} />
           )}
         </div>
       </div>

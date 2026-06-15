@@ -109,6 +109,26 @@ const AGENT_TASKS = {
 
 const CAMPAIGN_ID = "campaign-test-001";
 
+// Dataflow graph with two "train" tasks that share activity_id, so they collapse
+// into one coarse super-node with count=2 in the Coarse Provenance Graph view.
+const COARSE_DATAFLOW = {
+  level: "coarse",
+  truncated: false,
+  nodes: [
+    { id: "task:t1", kind: "task", label: "train", stats: { activity_id: "train", started_at: 0, ended_at: 5 } },
+    { id: "task:t2", kind: "task", label: "train", stats: { activity_id: "train", started_at: 10, ended_at: 20 } },
+    { id: "task:t3", kind: "task", label: "eval",  stats: { activity_id: "eval",  started_at: 25, ended_at: 28 } },
+    { id: "chunk:c1", kind: "chunk", label: "loss", stats: {} },
+    { id: "chunk:c2", kind: "chunk", label: "loss", stats: {} },
+  ],
+  edges: [
+    { source: "task:t1", target: "chunk:c1", relation: "generated" },
+    { source: "task:t2", target: "chunk:c2", relation: "generated" },
+    { source: "chunk:c1", target: "task:t3", relation: "used" },
+    { source: "chunk:c2", target: "task:t3", relation: "used" },
+  ],
+};
+
 const TIMESERIES_ROWS = [
   {
     started_at: 1_700_000_000,
@@ -852,5 +872,67 @@ test.describe("Campaigns list — pagination", () => {
   test("prev-page button is disabled on the first page", async ({ page }) => {
     const prevBtn = page.getByTestId("pagination-prev");
     await expect(prevBtn).toBeDisabled({ timeout: 5_000 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: Workflow detail — Provenance Graph (coarse / fine sub-toggle)
+// ---------------------------------------------------------------------------
+
+test.describe("Workflow detail — Provenance Graph", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockWorkflowDetailApis(page);
+    // Add dataflow routes after the catch-all so they take precedence (LIFO).
+    await page.route(`**/api/v1/workflows/${WF_ID}/node_positions**`, (route) =>
+      route.fulfill({ json: {} }),
+    );
+    await page.route(`**/api/v1/workflows/${WF_ID}/dataflow**`, (route) =>
+      route.fulfill({ json: COARSE_DATAFLOW }),
+    );
+    await page.goto(`/workflows/${WF_ID}`);
+    // Navigate to the graph tab ("graph" key renders as "Graphs" in the tab bar).
+    await page.getByRole("button", { name: "Graphs", exact: true }).click();
+    // Click the Provenance Graph outer tab.
+    await page.getByRole("button", { name: "Provenance Graph", exact: true }).click();
+  });
+
+  test("Provenance Graph tab shows coarse/fine sub-toggle", async ({ page }) => {
+    await expect(page.getByRole("button", { name: "coarse", exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("button", { name: "fine", exact: true })).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("coarse is the default sub-mode and renders aggregated nodes", async ({ page }) => {
+    // Coarse is default — no extra click needed.
+    // The two "train" task nodes collapse into one.
+    await expect(
+      page.locator(".react-flow__node").getByText("train", { exact: true }),
+    ).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByText(/×2/).first()).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("switching to fine sub-mode shows the full per-task graph", async ({ page }) => {
+    await page.getByRole("button", { name: "fine", exact: true }).click();
+
+    // Fine graph has 5 original nodes (t1, t2, t3, c1, c2).
+    const nodes = page.locator(".react-flow__node");
+    await expect(nodes.first()).toBeVisible({ timeout: 8_000 });
+    const count = await nodes.count();
+    expect(count).toBe(5);
+  });
+
+  test("coarse graph has fewer nodes than fine graph", async ({ page }) => {
+    // Coarse: 3 nodes.
+    const coarseNodes = page.locator(".react-flow__node");
+    await expect(coarseNodes.first()).toBeVisible({ timeout: 8_000 });
+    const coarseCount = await coarseNodes.count();
+    expect(coarseCount).toBe(3);
+
+    // Switch to fine: 5 nodes.
+    await page.getByRole("button", { name: "fine", exact: true }).click();
+    await expect(coarseNodes.first()).toBeVisible({ timeout: 5_000 });
+    const fineCount = await coarseNodes.count();
+    expect(fineCount).toBe(5);
+
+    expect(coarseCount).toBeLessThan(fineCount);
   });
 });

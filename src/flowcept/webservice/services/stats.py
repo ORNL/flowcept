@@ -414,6 +414,7 @@ def derive_agents(db: DBAPI, filter: Optional[Dict[str, Any]] = None) -> List[Di
                             "activities": {"$addToSet": "$activity_id"},
                             "source_agent_ids": {"$addToSet": "$source_agent_id"},
                             "campaign_ids": {"$addToSet": "$campaign_id"},
+                            "workflow_ids": {"$addToSet": "$workflow_id"},
                             "last_active": {"$max": "$registered_at"},
                         }
                     },
@@ -428,6 +429,7 @@ def derive_agents(db: DBAPI, filter: Optional[Dict[str, Any]] = None) -> List[Di
                 "activities": sorted(a for a in row.get("activities", []) if a),
                 "source_agent_ids": sorted(s for s in row.get("source_agent_ids", []) if s),
                 "campaign_ids": sorted(c for c in row.get("campaign_ids", []) if c),
+                "workflow_ids": sorted(w for w in row.get("workflow_ids", []) if w),
                 "last_active": to_float_ts(row.get("last_active")),
             }
             for row in rows
@@ -441,6 +443,7 @@ def derive_agents(db: DBAPI, filter: Optional[Dict[str, Any]] = None) -> List[Di
                     "activity_id",
                     "source_agent_id",
                     "campaign_id",
+                    "workflow_id",
                     "registered_at",
                 ],
             )
@@ -458,6 +461,7 @@ def derive_agents(db: DBAPI, filter: Optional[Dict[str, Any]] = None) -> List[Di
                     "activities": set(),
                     "source_agent_ids": set(),
                     "campaign_ids": set(),
+                    "workflow_ids": set(),
                     "last_active": None,
                 },
             )
@@ -466,6 +470,7 @@ def derive_agents(db: DBAPI, filter: Optional[Dict[str, Any]] = None) -> List[Di
                 ("activities", "activity_id"),
                 ("source_agent_ids", "source_agent_id"),
                 ("campaign_ids", "campaign_id"),
+                ("workflow_ids", "workflow_id"),
             ):
                 if doc.get(field):
                     record[key].add(doc[field])
@@ -474,7 +479,7 @@ def derive_agents(db: DBAPI, filter: Optional[Dict[str, Any]] = None) -> List[Di
                 current = record["last_active"]
                 record["last_active"] = ts if current is None else max(current, ts)
         for record in stats_map.values():
-            for key in ("activities", "source_agent_ids", "campaign_ids"):
+            for key in ("activities", "source_agent_ids", "campaign_ids", "workflow_ids"):
                 record[key] = sorted(record[key])
 
     agents = []
@@ -487,6 +492,7 @@ def derive_agents(db: DBAPI, filter: Optional[Dict[str, Any]] = None) -> List[Di
                 "activities": [],
                 "source_agent_ids": [],
                 "campaign_ids": [],
+                "workflow_ids": [],
                 "last_active": None,
             },
         )
@@ -495,11 +501,11 @@ def derive_agents(db: DBAPI, filter: Optional[Dict[str, Any]] = None) -> List[Di
         agents.append(
             {
                 "agent_id": agent_id,
-                "workflow_id": sa.get("workflow_id"),
                 "task_count": stat["task_count"],
                 "activities": stat["activities"],
                 "source_agent_ids": stat["source_agent_ids"],
                 "campaign_ids": stat["campaign_ids"],
+                "workflow_ids": stat["workflow_ids"],
                 "last_active": stat["last_active"],
                 "name": sa.get("name"),
                 "registered_at": to_float_ts(sa.get("registered_at")),

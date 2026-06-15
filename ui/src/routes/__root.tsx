@@ -118,6 +118,24 @@ function GeneratedBy({ value }: { value: unknown }) {
   );
 }
 
+/** Compact duration-stats table used in the aggregated-activity inspector. */
+function DurationStats({ ds }: { ds: Record<string, unknown> }) {
+  const fmt = (v: unknown) => (typeof v === "number" ? fmtDuration(v) : "—");
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-fg-muted text-[10px]">duration ({String(ds["count"])} tasks)</span>
+      <div className="rounded bg-surface-2 px-2 py-1.5 font-mono text-[11px] space-y-0.5">
+        {(["mean", "min", "p25", "p50", "p75", "max"] as const).map((k) => (
+          <div key={k} className="flex justify-between gap-4">
+            <span className="text-fg-muted">{k}</span>
+            <span>{fmt(ds[k])}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function GraphInspector({ kind, data }: { kind: "task" | "activity" | "dataflow"; data: GraphInspectorDoc }) {
   const stats = data.stats;
   if (kind === "task") {
@@ -140,6 +158,18 @@ function GraphInspector({ kind, data }: { kind: "task" | "activity" | "dataflow"
   }
 
   if (kind === "activity") {
+    const ds = stats["duration_stats"] as Record<string, unknown> | null | undefined;
+    if (ds) {
+      // Aggregated coarse-graph activity — show duration stats summary.
+      return (
+        <div className="space-y-1.5">
+          <Field label="Activity" value={data.label} />
+          <Field label="tasks" value={stats["task_count"]} />
+          <DurationStats ds={ds} />
+          <Field label="task_ids" value={stats["task_ids"]} />
+        </div>
+      );
+    }
     return (
       <div className="space-y-1.5">
         <Field label="Activity" value={data.label} />
@@ -151,6 +181,33 @@ function GraphInspector({ kind, data }: { kind: "task" | "activity" | "dataflow"
         <Field label="agent_id" value={stats["agent_id"]} />
         <Field label="source_agent_id" value={stats["source_agent_id"]} />
         <Field label="task_ids" value={stats["task_ids"]} />
+      </div>
+    );
+  }
+
+  // dataflow (chunk node)
+  if (stats["chunk_count"] != null) {
+    const itemStats = stats["item_stats"] as Record<string, Record<string, unknown>> | null | undefined;
+    return (
+      <div className="space-y-1.5">
+        <Field label="label" value={data.label} />
+        <Field label="chunks" value={stats["chunk_count"]} />
+        <Field label="activities" value={stats["activities"]} />
+        {itemStats && Object.keys(itemStats).length > 0
+          ? Object.entries(itemStats).map(([key, ds]) => (
+              <div key={key} className="flex flex-col gap-0.5">
+                <span className="text-fg-muted text-[10px]">{key}</span>
+                <div className="rounded bg-surface-2 px-2 py-1.5 font-mono text-[11px] space-y-0.5">
+                  {(["mean", "min", "p25", "p50", "p75", "max"] as const).map((k) => (
+                    <div key={k} className="flex justify-between gap-4">
+                      <span className="text-fg-muted">{k}</span>
+                      <span>{typeof ds[k] === "number" ? (ds[k] as number).toFixed(4) : "—"}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          : <Field label="chunk_ids" value={stats["original_ids"]} />}
       </div>
     );
   }

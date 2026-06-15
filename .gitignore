@@ -51,6 +51,7 @@ SKILLS.md
 input_data/
 
 # Web UI (Node toolchain + built assets)
+node_modules/
 ui/node_modules/
 ui/dist/
 ui/.vite/

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
-import { useCampaigns, useVisibleWorkflows } from "../api/queries";
+import { useCampaigns, useVisibleWorkflows, useAgents } from "../api/queries";
 import { apiDelete } from "../api/client";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import { fmtTs, fmtUserTs, shortId, toEpochSec } from "../lib/format";
@@ -13,6 +13,7 @@ export const Route = createFileRoute("/")({ component: Overview });
 function Overview() {
   const campaigns = useCampaigns();
   const workflows = useVisibleWorkflows();
+  const agents = useAgents();
   const router = useRouter();
   const [deleteTarget, setDeleteTarget] = useState<{ kind: "workflow" | "campaign"; id: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -48,9 +49,10 @@ function Overview() {
         <p className="text-fg-muted text-xs">Provenance at a glance.</p>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Stat label="Campaigns" value={campaigns.data?.count} />
         <Stat label="Workflows" value={workflows.isLoading ? undefined : workflows.items.length} />
+        <Stat label="Agents" value={agents.data?.count} />
         <Stat label="Latest activity" value={fmtTs(latestTs)} />
       </div>
 

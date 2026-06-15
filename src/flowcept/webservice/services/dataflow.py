@@ -12,6 +12,7 @@ when they share non-trivial (key, value) pairs in temporal order.
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, Dict, List, Optional, Set
 
 from flowcept.flowcept_api.db_api import DBAPI
@@ -252,7 +253,8 @@ def _coarse(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
         chunk["stats"]["kind"] = role
         prefix = {"input": "inputs", "output": "outputs", "input/output": "data"}[role]
         keys = list(chunk["stats"]["items"].keys()) if isinstance(chunk["stats"]["items"], dict) else []
-        if keys:
+        all_positional = keys and all(re.match(r"^arg_\d+$", k) for k in keys)
+        if keys and not all_positional:
             label = ", ".join(str(k) for k in keys)
             max_len = getattr(configs, "WEBSERVER_MAX_LABEL_LENGTH", 30)
             if len(label) > max_len:
