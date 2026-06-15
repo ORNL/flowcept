@@ -510,7 +510,9 @@ class MongoDBDAO(DocumentDBDAO):
             Per-collection deleted counts:
             ``{"workflows": x, "tasks": y, "objects": z, "agents": a}``.
         """
-        agent_ids = self._tasks_collection.distinct("agent_id", {"workflow_id": workflow_id, "agent_id": {"$exists": True}})
+        agent_ids = self._tasks_collection.distinct(
+            "agent_id", {"workflow_id": workflow_id, "agent_id": {"$exists": True}}
+        )
         tasks_result = self._tasks_collection.delete_many({"workflow_id": workflow_id})
         objects_result = self._obj_collection.delete_many({"workflow_id": workflow_id})
         wfs_result = self._wfs_collection.delete_many({"workflow_id": workflow_id})
@@ -537,10 +539,7 @@ class MongoDBDAO(DocumentDBDAO):
         """
         if not agent_ids:
             return 0
-        orphans = [
-            aid for aid in agent_ids
-            if self._tasks_collection.count_documents({"agent_id": aid}) == 0
-        ]
+        orphans = [aid for aid in agent_ids if self._tasks_collection.count_documents({"agent_id": aid}) == 0]
         if not orphans:
             return 0
         result = self._agents_collection.delete_many({"agent_id": {"$in": orphans}})
@@ -567,7 +566,9 @@ class MongoDBDAO(DocumentDBDAO):
         wf_ids = [doc["workflow_id"] for doc in wf_cursor if "workflow_id" in doc]
         if not wf_ids:
             return {"workflows": 0, "tasks": 0, "objects": 0, "agents": 0}
-        agent_ids = self._tasks_collection.distinct("agent_id", {"workflow_id": {"$in": wf_ids}, "agent_id": {"$exists": True}})
+        agent_ids = self._tasks_collection.distinct(
+            "agent_id", {"workflow_id": {"$in": wf_ids}, "agent_id": {"$exists": True}}
+        )
         tasks_result = self._tasks_collection.delete_many({"workflow_id": {"$in": wf_ids}})
         objects_result = self._obj_collection.delete_many({"workflow_id": {"$in": wf_ids}})
         wfs_result = self._wfs_collection.delete_many({"campaign_id": campaign_id})

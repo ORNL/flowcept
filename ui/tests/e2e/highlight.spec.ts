@@ -141,6 +141,8 @@ test.describe("LLM highlight — Provenance Graph lineage dimming", () => {
     await mockApis(page);
     await page.goto(`/workflows/${WF_ID}?tab=graph`);
     await page.getByRole("button", { name: "Provenance Graph" }).click();
+    // Switch to fine mode — coarse is default but highlight tests target individual task nodes.
+    await page.getByRole("button", { name: "Fine" }).click();
     await page.locator(".react-flow__viewport").waitFor({ state: "visible" });
     // Let fitView animation finish.
     await page.waitForTimeout(400);

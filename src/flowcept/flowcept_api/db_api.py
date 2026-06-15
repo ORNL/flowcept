@@ -796,10 +796,13 @@ class DBAPI(object):
 
         Returns
         -------
-        list of dict or None
-            Query results from the backend DAO.
+        list of dict
+            Query results from the backend DAO; empty list when nothing matches or on error.
         """
-        return DBAPI._dao().query(filter, projection, limit, sort, aggregation, remove_json_unserializables, collection)
+        result = DBAPI._dao().query(
+            filter, projection, limit, sort, aggregation, remove_json_unserializables, collection
+        )
+        return result or []
 
     def save_or_update_ml_model(
         self,
