@@ -21,9 +21,11 @@ import {
   type Edge,
   type EdgeProps,
 } from "@xyflow/react";
+import { Bot } from "lucide-react";
 import { useDataflow } from "../../api/queries";
 import { useInspectorStore } from "../../stores/inspectorStore";
 import { coarsenGraph, type CoarseNode } from "../../lib/coarsenGraph";
+import { agentIconStyle, buildAgentNameColorMap } from "../../lib/format";
 
 // W3C PROV colours — same palette as DataflowView for visual consistency.
 const PROV = {
@@ -170,12 +172,28 @@ export function CoarseDataflowView({ workflowId, height }: Props) {
     const coarse = coarsenGraph(graph);
     const { ranks, rankGroups } = layoutCoarse(coarse);
 
+    // Build agent color map from ALL original task node agent IDs — same scheme as DataflowView.
+    const agentColorMap = buildAgentNameColorMap(
+      graph.nodes
+        .filter((n) => n.kind === "task")
+        .map((n) => (n.stats?.agent_id || n.stats?.source_agent_id) as string | null | undefined),
+    );
+    // Quick lookup from original node ID → node (for agent_id extraction).
+    const nodeMap = new Map(graph.nodes.map((n) => [n.id, n]));
+
     const nextNodes: Node[] = coarse.nodes.map((n) => {
       const rank = ranks.get(n.id) ?? 0;
       const siblings = rankGroups.get(rank) ?? [];
       const idx = siblings.indexOf(n.id);
       const isEntity = n.kind !== "task";
       const isAggregated = n.count > 1;
+
+      // Use the first original node's agent_id (matches DagView's actTasks[0] approach).
+      const firstOrig = nodeMap.get(n.originalIds[0]);
+      const agentId = n.kind === "task"
+        ? ((firstOrig?.stats?.agent_id || firstOrig?.stats?.source_agent_id) as string | null | undefined)
+        : undefined;
+      const hasAgent = !!agentId;
 
       let labelContent: React.ReactNode;
       if (n.kind === "task" && isAggregated) {
@@ -197,6 +215,21 @@ export function CoarseDataflowView({ workflowId, height }: Props) {
         );
       } else {
         labelContent = n.label;
+      }
+
+      // Wrap task label with the agent icon (same position as DataflowView / DagView).
+      if (hasAgent) {
+        labelContent = (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <Bot
+              size={13}
+              data-testid="coarse-agent-icon"
+              {...agentIconStyle(agentId, agentColorMap)}
+              className="absolute -top-1.5 -right-1.5 bg-surface rounded-full p-0.5 border border-border"
+            />
+            {labelContent}
+          </div>
+        );
       }
 
       const baseStyle = isEntity

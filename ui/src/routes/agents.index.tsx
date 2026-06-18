@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bot, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAgents } from "../api/queries";
-import { fmtTs, sortAgents, filterActiveAgents, agentIconStyle, agentColor } from "../lib/format";
+import { fmtTs, sortAgents, filterActiveAgents, agentIconStyle, agentColor, getAgentNameFromId } from "../lib/format";
 
 const PAGE_SIZE = 30;
 
@@ -18,13 +18,14 @@ function AgentsPage() {
   const totalPages = Math.ceil(visible.length / PAGE_SIZE);
   const pageItems = visible.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  // Key the color map by the real agent name (from backend), not the extracted ID-based name.
-  // This ensures same-name agents (e.g. two "HPCAgent" instances with different ID formats)
-  // always get the same icon color regardless of whether the ID is a plain UUID or named-UUID.
+  // Key the color map the same way agentIconStyle looks it up:
+  //   a.name  OR  getAgentNameFromId(a.agent_id)
+  // This keeps colors coherent across graphs (DagView, DataflowView, CoarseDataflowView)
+  // which all derive the color key via getAgentNameFromId.
   const colorMap = new Map(
     visible.map((a) => {
-      const label = a.name || a.agent_id;
-      return [label, agentColor(undefined, label)];
+      const agentName = a.name || getAgentNameFromId(a.agent_id);
+      return [agentName, agentColor(undefined, agentName)];
     }),
   );
 
