@@ -1,13 +1,19 @@
+"""Session-level MCP tools: liveness, LLM check, guidance recording, context reset, routing.
+
+Split from ``general_tools.py`` — all ``@mcp_flowcept.tool()`` wrappers for session management
+and the ``prompt_handler`` message router.
+"""
+
 import json
 from typing import List
 
 from flowcept import Flowcept
-from flowcept.agents.agents_utils import build_llm_model, ToolResult, normalize_message
-from flowcept.agents.flowcept_ctx_manager import mcp_flowcept
-from flowcept.agents.prompts.general_prompts import ROUTING_PROMPT, SMALL_TALK_PROMPT
-
-from flowcept.agents.tools.in_memory_queries.in_memory_queries_tools import run_df_query
-from flowcept.agents.tools.workflow_query_tools import run_workflow_query
+from flowcept.agents.tool_result import ToolResult
+from flowcept.agents.llm.builders import build_llm_model, normalize_message
+from flowcept.agents.context_manager import mcp_flowcept
+from flowcept.agents.prompts.base_prompts import ROUTING_PROMPT, SMALL_TALK_PROMPT
+from flowcept.agents.mcp_tools.in_memory_task_query_mcp_tools import run_df_query
+from flowcept.agents.mcp_tools.in_memory_workflow_query_mcp_tools import run_workflow_query
 
 
 def _external_llm_enabled() -> bool:
@@ -19,8 +25,7 @@ def _external_llm_enabled() -> bool:
 
 @mcp_flowcept.tool()
 def get_latest(n: int = None) -> str:
-    """
-    Return the most recent task(s) from the task buffer.
+    """Return the most recent task(s) from the task buffer.
 
     Parameters
     ----------
@@ -43,8 +48,7 @@ def get_latest(n: int = None) -> str:
 
 @mcp_flowcept.tool()
 def check_liveness() -> str:
-    """
-    Confirm the agent is alive and responding.
+    """Confirm the agent is alive and responding.
 
     Returns
     -------
@@ -56,36 +60,44 @@ def check_liveness() -> str:
 
 @mcp_flowcept.tool()
 def check_llm() -> str:
-    """
-    Check connectivity and response from the LLM backend.
+    """Check connectivity and response from the LLM backend.
 
     Returns
     -------
     str
-        LLM response, formatted with MCP metadata.
+        LLM response.
     """
     llm = build_llm_model()
-    response = llm("Hello?")
-    return response
+    return llm("Hello?")
 
 
 @mcp_flowcept.tool()
 def record_guidance(message: str) -> ToolResult:
-    """
-    Record guidance tool.
+    """Record a custom guidance message in agent memory.
+
+    Parameters
+    ----------
+    message : str
+        Guidance text to record.
+
+    Returns
+    -------
+    ToolResult
     """
     ctx = mcp_flowcept.get_context()
     message = message.replace("@record", "")
     custom_guidance: List = ctx.request_context.lifespan_context.custom_guidance
     custom_guidance.append(message)
-
     return ToolResult(code=201, result=f"Ok. I recorded in my memory: {message}")
 
 
 @mcp_flowcept.tool()
 def show_records() -> ToolResult:
-    """
-    Lists all recorded user guidance.
+    """List all recorded user guidance.
+
+    Returns
+    -------
+    ToolResult
     """
     try:
         ctx = mcp_flowcept.get_context()
@@ -95,7 +107,6 @@ def show_records() -> ToolResult:
         else:
             message = "This is the list of custom guidance I have in my memory:\n"
             message += "\n".join(f" - {msg}" for msg in custom_guidance)
-
         return ToolResult(code=201, result=message)
     except Exception as e:
         return ToolResult(code=499, result=str(e))
@@ -103,8 +114,11 @@ def show_records() -> ToolResult:
 
 @mcp_flowcept.tool()
 def reset_records() -> ToolResult:
-    """
-    Resets all recorded user guidance.
+    """Reset all recorded user guidance.
+
+    Returns
+    -------
+    ToolResult
     """
     try:
         ctx = mcp_flowcept.get_context()
@@ -116,8 +130,11 @@ def reset_records() -> ToolResult:
 
 @mcp_flowcept.tool()
 def reset_context() -> ToolResult:
-    """
-    Resets all context.
+    """Reset all agent context.
+
+    Returns
+    -------
+    ToolResult
     """
     try:
         ctx = mcp_flowcept.get_context()
@@ -128,58 +145,17 @@ def reset_context() -> ToolResult:
 
 
 @mcp_flowcept.tool()
-def generate_workflow_card(
-    workflow_id: str | None = None,
-    campaign_id: str | None = None,
-    input_jsonl_path: str | None = None,
-) -> ToolResult:
-    """
-    Generate and return a markdown workflow card as text.
-
-    Exactly one of ``workflow_id``, ``campaign_id``, or ``input_jsonl_path`` must be provided.
-
-    Parameters
-    ----------
-    workflow_id : str | None
-        Query by workflow identifier.
-    campaign_id : str | None
-        Query by campaign identifier (produces a campaign-level card).
-    input_jsonl_path : str | None
-        Path to a Flowcept JSONL buffer file used as input instead of the DB.
-
-    Returns
-    -------
-    ToolResult
-        ``code=301`` with markdown text in ``result["markdown"]`` on success,
-        or an error payload on failure.
-    """
-    try:
-        if not any([workflow_id, campaign_id, input_jsonl_path]):
-            return ToolResult(code=400, result="One of workflow_id, campaign_id, or input_jsonl_path is required.")
-
-        stats = Flowcept.generate_report(
-            report_type="workflow_card",
-            format="markdown",
-            workflow_id=workflow_id,
-            campaign_id=campaign_id,
-            input_jsonl_path=input_jsonl_path,
-        )
-        return ToolResult(
-            code=301,
-            result={
-                "workflow_id": workflow_id,
-                "campaign_id": campaign_id,
-                "markdown": stats["markdown"],
-            },
-        )
-    except Exception as e:
-        return ToolResult(code=499, result=str(e))
-
-
-@mcp_flowcept.tool()
 def prompt_handler(message: str) -> ToolResult:
-    """
-    Routes a user message using an LLM to classify its intent.
+    """Route a user message by prefix or LLM classification.
+
+    Prefix routing (no LLM call):
+    - ``w:<query>`` → workflow query
+    - ``t:<query>`` → task DataFrame query
+    - ``o:<query>`` → object DataFrame query
+    - ``save``, ``result = df``, ``df`` keywords → DataFrame query
+    - ``reset context`` / ``@record`` / ``@show records`` / ``@reset records`` → session actions
+
+    Falls back to LLM routing when no prefix matches.
 
     Parameters
     ----------
@@ -188,25 +164,20 @@ def prompt_handler(message: str) -> ToolResult:
 
     Returns
     -------
-    TextContent
-        The AI response or routing feedback.
+    ToolResult
     """
-    workflow_query_prefix = "w:"
-    task_query_prefix = "t:"
-    object_query_prefix = "o:"
     normalized_message = message.strip().lower()
-    if message.strip().lower().startswith(workflow_query_prefix):
+    if normalized_message.startswith("w:"):
         query = message.split(":", 1)[1].strip()
         return run_workflow_query(query=query)
-    if normalized_message.startswith(task_query_prefix):
+    if normalized_message.startswith("t:"):
         query = message.split(":", 1)[1].strip()
         return run_df_query(query=query, llm=None, plot=False, context_kind="tasks")
-    if normalized_message.startswith(object_query_prefix):
+    if normalized_message.startswith("o:"):
         query = message.split(":", 1)[1].strip()
         return run_df_query(query=query, llm=None, plot=False, context_kind="objects")
 
-    df_key_words = ["df", "save", "result = df"]
-    for key in df_key_words:
+    for key in ("df", "save", "result = df"):
         if key in message:
             return run_df_query(query=message, llm=None, plot=False)
 
@@ -231,25 +202,17 @@ def prompt_handler(message: str) -> ToolResult:
         )
 
     llm = build_llm_model()
-
     message = normalize_message(message)
 
-    prompt = ROUTING_PROMPT + message
-    route = llm.invoke(prompt)
+    route = llm.invoke(ROUTING_PROMPT + message)
 
     if route == "small_talk":
-        prompt = SMALL_TALK_PROMPT + message
-        response = llm.invoke(prompt)
-        return ToolResult(code=201, result=response)
+        return ToolResult(code=201, result=llm.invoke(SMALL_TALK_PROMPT + message))
     elif route == "in_context_query":
         return run_df_query(message, llm=llm, plot=False)
     elif route == "plot":
         return run_df_query(message, llm=llm, plot=True)
-    elif route == "historical_prov_query":
-        return ToolResult(code=201, result="We need to query the Provenance Database. Feature coming soon.")
-    elif route == "in_chat_query":
-        prompt = SMALL_TALK_PROMPT + message
-        response = llm.invoke(prompt)
-        return ToolResult(code=201, result=response)
+    elif route in ("historical_prov_query", "in_chat_query"):
+        return ToolResult(code=201, result=llm.invoke(SMALL_TALK_PROMPT + message))
     else:
         return ToolResult(code=404, result="I don't know how to route.")

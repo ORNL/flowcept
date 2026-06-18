@@ -1,12 +1,20 @@
+"""MCP server entry point for the Flowcept agent."""
+
 import json
 import os
 from threading import Thread
 
-from flowcept.agents import check_liveness
-from flowcept.agents.agents_utils import ToolResult
-from flowcept.agents.tools.general_tools import prompt_handler
-from flowcept.agents.agent_client import run_tool
-from flowcept.agents.flowcept_ctx_manager import mcp_flowcept, ctx_manager
+from flowcept.agents.mcp_client import run_tool
+from flowcept.agents.context_manager import mcp_flowcept, ctx_manager
+
+# Import all mcp_tools modules so their @mcp_flowcept.tool() decorators fire
+from flowcept.agents.mcp_tools.session_tools import check_liveness, prompt_handler
+import flowcept.agents.mcp_tools.db_query_mcp_tools  # noqa: F401
+import flowcept.agents.mcp_tools.in_memory_task_query_mcp_tools  # noqa: F401
+import flowcept.agents.mcp_tools.in_memory_workflow_query_mcp_tools  # noqa: F401
+import flowcept.agents.mcp_tools.report_tools  # noqa: F401
+import flowcept.agents.mcp_tools.mcp_prompts  # noqa: F401
+from flowcept.agents.tool_result import ToolResult
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import AGENT_HOST, AGENT_PORT, DUMP_BUFFER_PATH
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
@@ -16,19 +24,15 @@ import uvicorn
 
 
 class FlowceptAgent:
-    """
-    Flowcept agent server wrapper with optional offline buffer loading.
-    """
+    """Flowcept agent server wrapper with optional offline buffer loading."""
 
     def __init__(self, buffer_path: str | None = None, buffer_messages: list[dict] | None = None):
-        """
-        Initialize a FlowceptAgent.
+        """Initialize a FlowceptAgent.
 
         Parameters
         ----------
         buffer_path : str or None
-            Optional path to a JSONL buffer file. When MQ is disabled, the agent
-            loads this file once at startup.
+            Optional path to a JSONL buffer file.
         buffer_messages : list[dict] or None
             Optional list of buffer messages to load directly into the agent context.
         """
@@ -39,8 +43,7 @@ class FlowceptAgent:
         self._server = None
 
     def _load_buffer_messages(self, messages: list[dict]) -> int:
-        """
-        Load a list of message objects into the agent context.
+        """Load a list of message objects into the agent context.
 
         Returns
         -------
@@ -59,8 +62,7 @@ class FlowceptAgent:
         return count
 
     def _load_buffer_once(self) -> int:
-        """
-        Load messages from a JSONL buffer file into the agent context.
+        """Load messages from a JSONL buffer file into the agent context.
 
         Returns
         -------
@@ -91,8 +93,6 @@ class FlowceptAgent:
     def _run_server(self):
         """Run the MCP server (blocking call)."""
         try:
-            # sse-starlette keeps a module-level exit Event bound to the first event loop that
-            # served SSE; reset it so this server's fresh loop can serve SSE in the same process.
             from sse_starlette.sse import AppStatus
 
             AppStatus.should_exit_event = None
@@ -103,8 +103,7 @@ class FlowceptAgent:
         self._server.run()
 
     def start(self):
-        """
-        Start the agent server in a background thread.
+        """Start the agent server in a background thread.
 
         Returns
         -------
@@ -117,8 +116,6 @@ class FlowceptAgent:
             else:
                 self._load_buffer_once()
 
-        # Daemon thread so the hosting process can always exit (e.g., test runners);
-        # long-running deployments block explicitly via wait().
         self._server_thread = Thread(target=self._run_server, daemon=True)
         self._server_thread.start()
         self.logger.info(f"Flowcept agent server started on {AGENT_HOST}:{AGENT_PORT}")
@@ -127,7 +124,6 @@ class FlowceptAgent:
     def stop(self):
         """Stop the agent server and wait briefly for shutdown."""
         if self._server is None and self._server_thread is not None:
-            # The server object is created inside the thread; give it a moment to appear.
             self._server_thread.join(timeout=1)
         if self._server is not None:
             self._server.should_exit = True
@@ -142,9 +138,7 @@ class FlowceptAgent:
             self._server_thread.join()
 
     def query(self, message: str) -> ToolResult:
-        """
-        Send a prompt to the agent's main router tool and return the response.
-        """
+        """Send a prompt to the agent's main router tool and return the response."""
         try:
             resp = run_tool(tool_name=prompt_handler, kwargs={"message": message})[0]
         except Exception as e:
@@ -162,11 +156,8 @@ class FlowceptAgent:
 
 
 def main():
-    """
-    Start the MCP server.
-    """
+    """Start the MCP server."""
     agent = FlowceptAgent().start()
-    # Wake up tool call
     print(run_tool(check_liveness, host=AGENT_HOST, port=AGENT_PORT)[0])
     agent.wait()
 

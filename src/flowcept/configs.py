@@ -280,6 +280,7 @@ AGENT_CHAT_MAX_QUERY_LIMIT = int(AGENT.get("chat_max_query_limit", 1000))
 AGENT_AUDIO = _get_env_bool("AGENT_AUDIO", settings["agent"].get("audio_enabled", "false"))
 AGENT_HOST = _get_env("AGENT_HOST", settings["agent"].get("mcp_host", "localhost"))
 AGENT_PORT = int(_get_env("AGENT_PORT", settings["agent"].get("mcp_port", "8000")))
+AGENT_MODE = _get_env("AGENT_MODE", AGENT.get("agent_mode", "disabled"))
 
 ####################
 # Enabled ADAPTERS #

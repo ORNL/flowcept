@@ -1,168 +1,107 @@
 # Flowcept Agent
 
-This package contains the Flowcept MCP server, client helpers, tools, prompts,
-context manager, and optional UI pieces.
+This package contains the Flowcept MCP server, client helpers, data-query tools,
+MCP-wrapper tools, prompts, context manager, and LLM infrastructure.
 
-For code-assistant behavior, use the repository root `AGENTS.md`. Do not
-duplicate agent rules here. Runtime usage docs live in `docs/agent.rst`.
+For code-assistant behavior, use the repository root `AGENTS.md`. Runtime usage
+docs live in `docs/agent.rst`.
+
+## Directory Layout
+
+```
+agents/
+  mcp_server.py              # MCP server entry point (start with `flowcept --start-agent`)
+  mcp_client.py              # Client helpers: run_tool(), run_prompt()
+  context_manager.py         # FlowceptAgentContextManager, mcp_flowcept, get_df_context
+  tool_result.py             # ToolResult Pydantic model (2xx/3xx/4xx/5xx conventions)
+  schema_introspection.py    # SCHEMA_CONTEXT, build_schema_context, assert_schema_documented
+  agents_utils.py            # Backward-compat re-export shim (points to new locations)
+
+  llm/
+    builders.py              # build_llm_model(), normalize_message()
+    providers/
+      claude_gcp.py          # ClaudeOnGCPLLM (Vertex AI)
+      gemini25.py            # Gemini25LLM
+
+  data_query_tools/          # Plain-Python tool cores — NO MCP imports
+    db_query_tools.py        # query_tasks, query_workflows, get_task_summary, …
+    in_memory_task_query_tools.py   # run_df_query, generate_result_df, …
+    in_memory_workflow_query_tools.py  # execute_generated_workflow_query, run_workflow_query
+    pandas_utils.py          # safe_execute, normalize_output, format_result_df, …
+
+  mcp_tools/                 # Thin MCP wrappers over data_query_tools/
+    db_query_mcp_tools.py
+    in_memory_task_query_mcp_tools.py
+    in_memory_workflow_query_mcp_tools.py
+    session_tools.py         # check_liveness, check_llm, record_guidance, prompt_handler, …
+    report_tools.py          # generate_workflow_card
+    mcp_prompts.py           # @mcp_flowcept.prompt() registrations
+
+  prompts/
+    README.md                # Prompt authoring rules
+    base_prompts.py          # BASE_ROLE, build_single_task_prompt, build_multitask_prompt
+    db_query_prompts.py      # build_db_filter_prompt
+    in_memory_task_query_prompts.py   # Pandas code / plot prompt builders
+    in_memory_workflow_query_prompts.py  # Workflow message query prompt builders
+    general_prompts.py       # Routing / small-talk prompts
+    chat_prompts.py          # Webservice chat system prompt
+```
 
 ## One Agent, Two Orchestrators
 
-Flowcept Agent has one shared backend and two orchestration paths.
+Both paths share the same MCP server, context, tools, prompts, and execution
+functions. The difference is who does routing and LLM reasoning:
 
-Both paths use the same MCP server, in-memory context, tools, prompts, and
-execution functions. The only intended difference is who does routing and LLM
-reasoning:
+- **Internal LLM mode** (`external_llm: false`): Flowcept builds the configured
+  LLM and orchestrates via `prompt_handler`.
+- **External LLM mode** (`external_llm: true`): Claude Code, Codex, LibreChat,
+  or another assistant calls MCP prompt-builders and execution tools directly.
 
-- **Internal LLM mode:** Flowcept builds the configured LLM and orchestrates.
-- **External LLM mode:** Codex, Claude, LibreChat, Cursor, or another assistant
-  orchestrates and calls Flowcept MCP prompts/tools.
+## Schema Context
 
-## Shared Backend
+`SCHEMA_CONTEXT` (module-level dict in `schema_introspection.py`) is populated at
+MCP server startup via `build_schema_context()`. It maps:
 
-- `flowcept_agent.py` starts the MCP server.
-- `flowcept_ctx_manager.py` owns the live task/object/workflow context.
-- `tools/general_tools.py` exposes `prompt_handler` and shared commands.
-- `tools/in_memory_queries/` queries task/object DataFrames.
-- `tools/workflow_query_tools.py` queries the active workflow message object.
-- `prompts/` builds prompts for internal and external LLM generation.
-- `agents_utils.py` builds the configured internal LLM when Flowcept owns
-  orchestration.
-
-## Internal LLM Mode
-
-Use this when Flowcept should route free-text messages itself.
-
-```yaml
-agent:
-  external_llm: false
+```python
+{
+  "task_fields": [...],            # TaskObject attribute docs
+  "workflow_fields": [...],        # WorkflowObject attribute docs
+  "telemetry_summary_fields": [...],  # TelemetrySummary + subclass docs
+  ...
+}
 ```
 
-Typical path:
-
-1. A client calls `prompt_handler(message)`.
-2. Flowcept builds the configured model with `build_llm_model()`.
-3. Flowcept classifies the message with the routing prompt.
-4. Flowcept calls the same MCP tools used by the external path.
-5. Tool results are returned to the client.
-
-This mode supports natural-language routing through `prompt_handler`, including
-task/object DataFrame questions, plots, small talk, records, context reset, and
-direct DataFrame code execution.
-
-## External LLM Mode
-
-Use this when an outside assistant should own reasoning and planning.
-
-```yaml
-agent:
-  external_llm: true
-```
-
-Typical path:
-
-1. The outside assistant calls a Flowcept MCP prompt builder.
-2. The outside assistant sends that prompt to its own LLM.
-3. The outside assistant calls the matching Flowcept execution tool.
-4. Flowcept executes against the same live in-memory context.
-
-In this mode, arbitrary free-text messages sent to `prompt_handler` are not
-internally routed. This prevents Flowcept from silently becoming the planner
-when the outside assistant is supposed to plan.
+All prompt builders in `prompts/` use `SCHEMA_CONTEXT` for field tables instead
+of hardcoded strings. The MCP server refuses to start if any non-private field
+is undocumented (`SchemaDocumentationError`).
 
 ## Equivalent Tool Paths
 
-| Capability | Internal orchestration | External orchestration |
+| Capability | Internal | External |
 |---|---|---|
-| Task DataFrame question | `prompt_handler("...")` -> `run_df_query(...)` | `build_df_query_prompt(...)` -> external LLM -> `execute_generated_df_code(...)` |
-| Object DataFrame question | `prompt_handler("o: ...")` -> `run_df_query(context_kind="objects")` | `build_df_query_prompt(context_kind="objects")` -> external LLM -> `execute_generated_df_code(context_kind="objects")` |
-| Workflow metadata question | `prompt_handler("w: ...")` -> `run_workflow_query(...)` | `build_workflow_query_prompt(...)` -> external LLM -> `execute_generated_workflow_query(...)` |
-| Direct DataFrame code | `prompt_handler("result = df ...")` | `execute_generated_df_code("result = df ...")` |
-| Context reset and records | `prompt_handler("reset context")`, `@record`, `@show records`, `@reset records` | Same tools/commands |
-| Provenance reports | Flowcept report tools | Same report tools called explicitly |
+| Task DF question | `prompt_handler("t: ...")` | `build_df_query_prompt` → LLM → `execute_generated_df_code` |
+| Object DF question | `prompt_handler("o: ...")` | same, `context_kind="objects"` |
+| Workflow question | `prompt_handler("w: ...")` | `build_workflow_query_prompt` → LLM → `execute_generated_workflow_query` |
+| DB provenance | `query_tasks` / `query_workflows` | same tools |
+| Reports | `generate_workflow_card` | same tool |
 
-## Prefix Shortcuts
-
-These shortcuts are accepted by `prompt_handler` in both modes:
-
-- `t: <question>` queries the task DataFrame.
-- `o: <question>` queries the object DataFrame.
-- `w: <question>` queries the workflow message object.
-- `result = df ...` executes explicit pandas code.
-- `save` saves the current DataFrame context.
-- `reset context`, `@record`, `@show records`, and `@reset records` manage
-  context and guidance.
-
-Important nuance: prefix shortcuts are convenience paths. If a shortcut needs
-LLM generation, the current implementation may build Flowcept's configured LLM.
-For strict external orchestration, use prompt-builder tools plus execution tools.
-
-## Start The MCP Server
-
-Prefer the CLI:
+## Starting the MCP Server
 
 ```bash
 flowcept --start-agent
 ```
 
-Equivalent module form:
-
-```bash
-python -m flowcept.agents.flowcept_agent
-```
-
-Run from a Python environment where Flowcept is installed.
-
-## Internal Prompt Handler Example
+## Client Usage
 
 ```python
-from flowcept.agents.agent_client import run_tool
+from flowcept.agents.mcp_client import run_tool, run_prompt
 
-result = run_tool(
-    "prompt_handler",
-    kwargs={"message": "What are the top 5 slowest activities?"},
-)
-```
+# Call a tool
+result = run_tool("prompt_handler", kwargs={"message": "t: top 5 slowest activities"})
 
-## External DataFrame Query Example
-
-```python
-from flowcept.agents.agent_client import run_prompt, run_tool
-
+# Use a prompt builder (external LLM mode)
 prompt = run_prompt(
     "build_df_query_prompt",
-    args={"query": "What are the top 5 slowest activities?", "context_kind": "tasks"},
-)
-
-# The external assistant sends `prompt` to its own LLM and gets pandas code.
-generated_code = (
-    "result = df.assign(duration=(df['ended_at'] - df['started_at']))"
-    ".groupby('activity_id', dropna=False)['duration']"
-    ".mean().sort_values(ascending=False).head(5)"
-    ".reset_index(name='avg_duration')"
-)
-
-result = run_tool(
-    "execute_generated_df_code",
-    kwargs={"user_code": generated_code, "context_kind": "tasks"},
-)
-```
-
-## External Workflow Query Example
-
-```python
-from flowcept.agents.agent_client import run_prompt, run_tool
-
-prompt = run_prompt(
-    "build_workflow_query_prompt",
-    args={"query": "What settings path was used?"},
-)
-
-# The external assistant sends `prompt` to its own LLM and gets a JSON spec.
-query_spec = {"field_paths": ["conf.settings_path"], "missing": [], "answer_style": "short"}
-
-result = run_tool(
-    "execute_generated_workflow_query",
-    kwargs={"query_spec": query_spec},
+    args={"query": "top 5 slowest activities", "context_kind": "tasks"},
 )
 ```

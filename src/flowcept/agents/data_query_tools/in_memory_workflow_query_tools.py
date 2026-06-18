@@ -1,13 +1,19 @@
-"""MCP tools for querying the active workflow message object."""
+"""Plain-Python in-memory workflow query tools.
+
+Functions operate on a ``workflow_msg_obj`` dict (live MQ stream).
+No MCP framework imports (``@mcp_flowcept.tool()`` lives in
+``mcp_tools/in_memory_workflow_query_mcp_tools.py``).
+"""
 
 from __future__ import annotations
 
 import json
 from typing import Any
 
-from flowcept.agents.agents_utils import ToolResult, build_llm_model
-from flowcept.agents.flowcept_ctx_manager import mcp_flowcept
-from flowcept.agents.prompts.workflow_query_prompts import (
+from flowcept.agents.tool_result import ToolResult
+from flowcept.agents.llm.builders import build_llm_model
+
+from flowcept.agents.prompts.in_memory_workflow_query_prompts import (
     EMPTY_WORKFLOW_MESSAGE,
     generate_workflow_query_prompt,
 )
@@ -16,6 +22,25 @@ MISSING_INFO = "info not available"
 
 
 def _resolve_path(value: Any, path: str) -> Any:
+    """Resolve a dot-separated path against a nested dict/list.
+
+    Parameters
+    ----------
+    value : Any
+        Root object to traverse.
+    path : str
+        Dot-separated field path (e.g. ``"conf.settings_path"``).
+
+    Returns
+    -------
+    Any
+        The value at the given path.
+
+    Raises
+    ------
+    KeyError
+        When a path segment is not found.
+    """
     current = value
     for part in path.split("."):
         if isinstance(current, dict):
@@ -33,6 +58,17 @@ def _resolve_path(value: Any, path: str) -> Any:
 
 
 def _parse_query_spec(query_spec: dict | str) -> dict:
+    """Parse a query spec dict or JSON string.
+
+    Parameters
+    ----------
+    query_spec : dict or str
+        A workflow query spec.
+
+    Returns
+    -------
+    dict
+    """
     if isinstance(query_spec, dict):
         return query_spec
     return json.loads(query_spec)
@@ -48,16 +84,23 @@ def _format_answer(values: dict, missing: list[str], answer_style: str) -> str:
     return json.dumps({"values": values, "missing": missing}, indent=2, default=str)
 
 
-@mcp_flowcept.tool()
-def execute_generated_workflow_query(query_spec: dict | str) -> ToolResult:
-    """
-    Execute an externally generated workflow query spec against workflow_msg_obj.
+def execute_generated_workflow_query(query_spec: dict | str, workflow_msg_obj: dict) -> ToolResult:
+    """Execute a workflow query spec against a workflow_msg_obj.
 
     The spec is JSON with ``field_paths`` and optional ``missing`` /
     ``answer_style`` fields. Missing values always return ``info not available``.
+
+    Parameters
+    ----------
+    query_spec : dict or str
+        Workflow query spec.
+    workflow_msg_obj : dict
+        The live workflow message object.
+
+    Returns
+    -------
+    ToolResult
     """
-    ctx = mcp_flowcept.get_context()
-    workflow_msg_obj = ctx.request_context.lifespan_context.workflow_msg_obj
     if not workflow_msg_obj:
         return ToolResult(code=404, result=EMPTY_WORKFLOW_MESSAGE)
 
@@ -83,35 +126,39 @@ def execute_generated_workflow_query(query_spec: dict | str) -> ToolResult:
         "missing": missing,
         "query_spec": spec,
     }
-    return ToolResult(code=301, result=result, tool_name=execute_generated_workflow_query.__name__)
+    return ToolResult(code=301, result=result, tool_name="execute_generated_workflow_query")
 
 
-@mcp_flowcept.tool()
-def run_workflow_query(query: str, llm=None) -> ToolResult:
+def run_workflow_query(query: str, workflow_msg_obj: dict, custom_user_guidance=None, llm=None) -> ToolResult:
+    """Run a free-text query against the active workflow message object.
+
+    Parameters
+    ----------
+    query : str
+        Free-text question about the workflow.
+    workflow_msg_obj : dict
+        The live workflow message object.
+    custom_user_guidance : list, optional
+        Custom guidance strings.
+    llm : callable, optional
+        LLM callable. Built from settings if None.
+
+    Returns
+    -------
+    ToolResult
     """
-    Run a free-text query against the active workflow message object.
-
-    This mirrors the DataFrame query flow but asks the LLM to select workflow
-    message field paths instead of generating pandas code.
-    """
-    ctx = mcp_flowcept.get_context()
-    workflow_msg_obj = ctx.request_context.lifespan_context.workflow_msg_obj
     if not workflow_msg_obj:
         return ToolResult(code=404, result=EMPTY_WORKFLOW_MESSAGE)
 
     if llm is None:
         llm = build_llm_model()
 
-    prompt = generate_workflow_query_prompt(
-        query,
-        workflow_msg_obj,
-        ctx.request_context.lifespan_context.custom_guidance,
-    )
+    prompt = generate_workflow_query_prompt(query, workflow_msg_obj, custom_user_guidance)
     try:
         query_spec = llm(prompt)
     except Exception as e:
         return ToolResult(code=400, result=str(e), extra=prompt)
 
-    result = execute_generated_workflow_query(query_spec)
+    result = execute_generated_workflow_query(query_spec, workflow_msg_obj)
     result.extra = {"prompt": prompt}
     return result

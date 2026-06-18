@@ -5,6 +5,111 @@ from collections import defaultdict
 from typing import Any
 
 
+class CpuSummary:
+    """CPU resource delta between task start and end.
+
+    Present in telemetry_summary only when CPU telemetry was captured.
+    All values are differences (end - start).
+    """
+
+    percent_all_diff: float = None
+    """Difference in overall CPU utilization percentage across all cores."""
+
+    user_time_diff: float = None
+    """Difference in average per-core CPU user-mode time (seconds)."""
+
+    system_time_diff: float = None
+    """Difference in CPU kernel (system) time (seconds)."""
+
+    idle_time_diff: float = None
+    """Difference in CPU idle time (seconds)."""
+
+
+class MemorySummary:
+    """Memory resource delta between task start and end.
+
+    Present in telemetry_summary only when memory telemetry was captured.
+    All values are differences (end - start).
+    """
+
+    used_mem_diff: float = None
+    """Difference in virtual memory used (bytes)."""
+
+    percent_diff: float = None
+    """Difference in virtual memory utilization percentage."""
+
+    swap_used_diff: float = None
+    """Difference in swap memory used (bytes)."""
+
+
+class DiskSummary:
+    """Disk I/O delta between task start and end.
+
+    Present in telemetry_summary only when disk telemetry was captured.
+    All values are differences (end - start).
+    """
+
+    read_bytes_diff: float = None
+    """Difference in total bytes read from disk."""
+
+    write_bytes_diff: float = None
+    """Difference in total bytes written to disk."""
+
+    read_count_diff: float = None
+    """Difference in number of disk read operations."""
+
+    write_count_diff: float = None
+    """Difference in number of disk write operations."""
+
+
+class NetworkSummary:
+    """Network I/O delta between task start and end.
+
+    Present in telemetry_summary only when network telemetry was captured.
+    All values are differences (end - start).
+    """
+
+    bytes_sent_diff: float = None
+    """Difference in bytes sent over the network."""
+
+    bytes_recv_diff: float = None
+    """Difference in bytes received over the network."""
+
+    packets_sent_diff: float = None
+    """Difference in number of network packets sent."""
+
+    packets_recv_diff: float = None
+    """Difference in number of network packets received."""
+
+
+class TelemetrySummary:
+    """Schema authority for the telemetry_summary field produced by summarize_telemetry().
+
+    This class is NOT instantiated at runtime. It exists solely to document
+    the fixed output schema of summarize_telemetry() so that schema_introspection.py
+    can build accurate prompt context at MCP server startup.
+
+    Each sub-field (cpu, memory, disk, network) is present only when the
+    corresponding telemetry section was captured for that task and hardware.
+    GPU telemetry is not yet summarized (TODO).
+    """
+
+    duration_sec: float = None
+    """Task wall-clock duration in seconds (ended_at - started_at)."""
+
+    cpu: CpuSummary = None
+    """CPU usage deltas. Present only when CPU telemetry was captured."""
+
+    memory: MemorySummary = None
+    """Memory usage deltas. Present only when memory telemetry was captured."""
+
+    disk: DiskSummary = None
+    """Disk I/O deltas. Present only when disk telemetry was captured."""
+
+    network: NetworkSummary = None
+    """Network I/O deltas. Present only when network telemetry was captured."""
+
+
 def summarize_telemetry(task: Dict, logger) -> Dict:
     """
     Extract and compute the telemetry summary for a task based on start and end telemetry snapshots.

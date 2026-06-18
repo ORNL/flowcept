@@ -1,6 +1,20 @@
+from contextlib import asynccontextmanager
+
 from flowcept.agents.dynamic_schema_tracker import DynamicSchemaTracker
-from flowcept.agents.tools.in_memory_queries.pandas_agent_utils import load_saved_df
+from flowcept.agents.schema_introspection import assert_schema_documented, build_schema_context, SCHEMA_CONTEXT
+from flowcept.agents.data_query_tools.pandas_utils import load_saved_df
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
+from flowcept.commons.flowcept_dataclasses.workflow_object import WorkflowObject
+from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
+from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
+from flowcept.commons.task_data_preprocess import (
+    TelemetrySummary,
+    CpuSummary,
+    MemorySummary,
+    DiskSummary,
+    NetworkSummary,
+    summarize_task,
+)
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.vocabulary import Status
 from flowcept.configs import AGENT
@@ -14,8 +28,6 @@ from typing import Dict, List
 import pandas as pd
 
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager, BaseAppContext
-
-from flowcept.commons.task_data_preprocess import summarize_task
 
 
 AGENT_DEBUG = AGENT.get("debug", False)
@@ -111,6 +123,30 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         self.context_chunk_size = 1  # Should be in the settings
         super().__init__(allow_mq_disabled=True)
 
+    @asynccontextmanager
+    async def lifespan(self, app):
+        """Start schema assertions before the MCP server begins serving requests.
+
+        Validates that all domain-class fields have attribute docstrings, then
+        populates ``SCHEMA_CONTEXT`` for use by prompt builders. Raises
+        ``SchemaDocumentationError`` loudly so the server refuses to start when
+        any field is undocumented.
+        """
+        assert_schema_documented(
+            TaskObject,
+            WorkflowObject,
+            AgentObject,
+            BlobObject,
+            TelemetrySummary,
+            CpuSummary,
+            MemorySummary,
+            DiskSummary,
+            NetworkSummary,
+        )
+        SCHEMA_CONTEXT.update(build_schema_context())
+        async with super().lifespan(app) as ctx:
+            yield ctx
+
     def message_handler(self, msg_obj: Dict):
         """
         Handle an incoming message and update context accordingly.
@@ -165,9 +201,9 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                 elif task_msg.activity_id == "provenance_query":
                     self.logger.info("Received a prov query message!")
                     query_text = task_msg.used.get("query")
-                    from flowcept.agents import ToolResult
-                    from flowcept.agents.tools.general_tools import prompt_handler
-                    from flowcept.agents.agent_client import run_tool
+                    from flowcept.agents.tool_result import ToolResult
+                    from flowcept.agents.mcp_tools.session_tools import prompt_handler
+                    from flowcept.agents.mcp_client import run_tool
 
                     resp = run_tool(tool_name=prompt_handler, kwargs={"message": query_text})[0]
 
@@ -266,7 +302,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         Perform LLM-based analysis on the current chunk of task messages and send the results.
         """
         self.logger.debug(f"Going to begin LLM job! {self.msgs_counter}")
-        from flowcept.agents.agent_client import run_tool
+        from flowcept.agents.mcp_client import run_tool
 
         result = run_tool("analyze_task_chunk")
         if len(result):

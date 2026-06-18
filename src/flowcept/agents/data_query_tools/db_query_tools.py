@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from datetime import datetime, timezone
 
-from flowcept.agents.agents_utils import ToolResult
+from flowcept.agents.tool_result import ToolResult
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import AGENT_CHAT_MAX_QUERY_LIMIT
 from flowcept.flowcept_api.db_api import DBAPI

@@ -11,7 +11,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import AGENT, AGENT_CHAT_ENABLED
-from flowcept.webservice.services.chat_service import run_chat
+from flowcept.webservice.services.chat_orchestrator_service import run_chat
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -30,6 +30,7 @@ class ChatRequest(BaseModel):
     context: Optional[Dict[str, Any]] = None
     stream: bool = True
     allow_dashboard_edit: bool = False
+    thread_id: Optional[str] = None
 
 
 def get_chat_llm():
@@ -52,7 +53,7 @@ def get_chat_llm():
             ),
         )
     try:
-        from flowcept.agents.agents_utils import build_llm_model
+        from flowcept.agents.llm.builders import build_llm_model
 
         return build_llm_model(track_tools=False)
     except HTTPException:

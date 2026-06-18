@@ -107,6 +107,7 @@ agent:
   chat_enabled: true # Enable the /api/v1/chat endpoint (requires the llm_agent extra and LLM settings above).
   chat_max_tool_iterations: 5 # Max LLM tool-calling iterations per chat message.
   chat_max_query_limit: 1000 # Hard cap for records returned by chat LLM query tools.
+  agent_mode: disabled # How the MCP agent is deployed: disabled | separate | colocated
 
 databases:
 

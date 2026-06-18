@@ -6,8 +6,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from flowcept.agents.flowcept_ctx_manager import mcp_flowcept
-
 
 EMPTY_WORKFLOW_MESSAGE = "Current workflow_msg_obj is empty or null."
 
@@ -34,7 +32,10 @@ def _flatten_paths(value: Any, prefix: str = "") -> list[str]:
 def _example_values(workflow_msg_obj: dict, paths: list[str], limit: int = 60) -> dict:
     examples = {}
     for path in paths[:limit]:
-        value = _resolve_path(workflow_msg_obj, path)
+        try:
+            value = _resolve_path(workflow_msg_obj, path)
+        except KeyError:
+            continue
         if isinstance(value, (dict, list)):
             continue
         examples[path] = value
@@ -56,7 +57,22 @@ def _resolve_path(value: Any, path: str) -> Any:
 
 
 def generate_workflow_query_prompt(query: str, workflow_msg_obj: dict, custom_user_guidance=None) -> str:
-    """Build an LLM prompt that maps a free-text workflow question to field paths."""
+    """Build an LLM prompt that maps a free-text workflow question to field paths.
+
+    Parameters
+    ----------
+    query : str
+        Free-text question about the workflow.
+    workflow_msg_obj : dict
+        The live workflow message object.
+    custom_user_guidance : list, optional
+        Custom guidance strings.
+
+    Returns
+    -------
+    str
+        Formatted LLM prompt.
+    """
     paths = _flatten_paths(workflow_msg_obj)
     examples = _example_values(workflow_msg_obj, paths)
     guidance = ""
@@ -102,18 +118,3 @@ Q: what hardware was used?
 User query:
 {query}
 """
-
-
-@mcp_flowcept.prompt(
-    name="build_workflow_query_prompt",
-    title="Build Workflow Query Prompt",
-    description="Build prompt context for external LLM workflow-message field selection.",
-)
-def build_workflow_query_prompt(query: str) -> str:
-    """Build prompt context for external LLM workflow-message field selection."""
-    ctx = mcp_flowcept.get_context()
-    workflow_msg_obj = ctx.request_context.lifespan_context.workflow_msg_obj
-    if not workflow_msg_obj:
-        return EMPTY_WORKFLOW_MESSAGE
-    custom_user_guidance = ctx.request_context.lifespan_context.custom_guidance
-    return generate_workflow_query_prompt(query, workflow_msg_obj, custom_user_guidance)

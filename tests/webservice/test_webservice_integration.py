@@ -740,7 +740,7 @@ def test_prov_tools_shared_core(db_cleanup):
     if not Flowcept.services_alive():
         pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
 
-    from flowcept.agents.tools.prov_tools import (
+    from flowcept.agents.data_query_tools.db_query_tools import (
         get_task_summary,
         list_campaigns,
         make_chart,

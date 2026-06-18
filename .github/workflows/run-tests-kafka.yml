@@ -58,7 +58,7 @@ jobs:
           export MQ_PORT=9092
           flowcept --init-settings --full -y
           flowcept --config-profile full-online -y
-          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"
+          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -m "not llm" -k "not test_decorated_function_timed"
 
       - name: Test telemetry with kafka
         run: |

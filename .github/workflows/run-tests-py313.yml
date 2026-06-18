@@ -47,7 +47,7 @@ jobs:
         run: |
           flowcept --init-settings --full -y
           flowcept --config-profile full-online -y
-          pytest --ignore=tests/adapters/test_tensorboard.py --ignore=tests/adapters/test_broker.py --ignore=tests/instrumentation_tests/ml_tests/ --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"
+          pytest --ignore=tests/adapters/test_tensorboard.py --ignore=tests/adapters/test_broker.py --ignore=tests/instrumentation_tests/ml_tests/ --ignore=tests/misc_tests/telemetry_test.py -m "not llm" -k "not test_decorated_function_timed"
 
       - name: Shut down docker compose
         run: make services-stop-mongo

@@ -136,6 +136,9 @@ artifacts = ["src/flowcept/webservice/ui_build/**"]
 "resources/sample_settings.yaml" = "resources/sample_settings.yaml"
 
 [tool.pytest.ini_options]
+markers = [
+    "llm: tests that require a real LLM (run locally with env set; excluded from CI except run-llm-tests.yml)",
+]
 filterwarnings = [
     "ignore:websockets\\.legacy is deprecated:DeprecationWarning",
     "ignore:websockets\\.server\\.WebSocketServerProtocol is deprecated:DeprecationWarning",
