@@ -16,7 +16,7 @@ This directory contains all prompt builder functions for the Flowcept agent subs
 ## Design Rules
 
 1. **No MCP imports** — prompt files must never import `mcp_flowcept` or `FastMCP`.
-   - The `@mcp_flowcept.prompt()` registrations live in `mcp_tools/mcp_prompts.py`.
+   - The `@mcp_flowcept.prompt()` registrations live in `prompts/mcp_prompts.py`.
 
 2. **Schema from SCHEMA_CONTEXT** — prompt builders that need field names or types must
    use `SCHEMA_CONTEXT` from `schema_introspection.py`, not hardcoded strings.

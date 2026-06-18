@@ -204,7 +204,7 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
             self.request_context.lifespan_context.custom_guidance = custom_user_guidance
 
     def test_build_df_query_prompt_returns_prompt_payload(self):
-        from flowcept.agents.mcp_tools import mcp_prompts as t
+        from flowcept.agents.prompts import mcp_prompts as t
 
         df = pd.DataFrame({"activity_id": ["a", "b"], "used.x": [1, 2]})
         schema = {"activity_a": {"i": ["used.x"], "o": []}}
@@ -226,7 +226,7 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
         self.assertIn("count tasks by activity", prompt_text)
 
     def test_build_df_query_prompt_returns_404_when_df_missing(self):
-        from flowcept.agents.mcp_tools import mcp_prompts as t
+        from flowcept.agents.prompts import mcp_prompts as t
 
         dummy_ctx = self._DummyContext(df=pd.DataFrame(), schema={}, value_examples={}, custom_user_guidance=[])
         with patch.object(t.mcp_flowcept, "get_context", return_value=dummy_ctx):
@@ -665,7 +665,7 @@ class TestRefactoredAgentStructure(unittest.TestCase):
 
     # ── E5: mcp_prompts.py importable ─────────────────────────────────────
     def test_e5_mcp_prompts_importable(self):
-        import flowcept.agents.mcp_tools.mcp_prompts  # noqa: F401
+        import flowcept.agents.prompts.mcp_prompts  # noqa: F401
         self.assertTrue(True)
 
     # ── F1: base_prompts.py — BASE_ROLE + build_*_prompt functions ─────────

@@ -2,7 +2,7 @@
 """Prompt builders for in-memory task DataFrame queries.
 
 All functions are plain Python — no MCP framework decorators.
-The ``@mcp_flowcept.prompt()`` registration lives in ``mcp_tools/mcp_prompts.py``.
+The ``@mcp_flowcept.prompt()`` registration lives in ``prompts/mcp_prompts.py``.
 """
 
 from flowcept.agents.schema_introspection import SCHEMA_CONTEXT
