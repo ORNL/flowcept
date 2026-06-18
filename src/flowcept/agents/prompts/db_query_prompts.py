@@ -8,10 +8,20 @@ from flowcept.agents.schema_introspection import SCHEMA_CONTEXT
 
 ALLOWED_FILTER_OPERATORS = frozenset(
     {
-        "$and", "$or", "$nor", "$not",
-        "$exists", "$eq", "$ne",
-        "$gt", "$gte", "$lt", "$lte",
-        "$in", "$nin", "$regex",
+        "$and",
+        "$or",
+        "$nor",
+        "$not",
+        "$exists",
+        "$eq",
+        "$ne",
+        "$gt",
+        "$gte",
+        "$lt",
+        "$lte",
+        "$in",
+        "$nin",
+        "$regex",
     }
 )
 

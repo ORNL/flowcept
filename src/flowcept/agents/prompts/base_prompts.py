@@ -48,8 +48,7 @@ def _build_data_schema_prompt() -> str:
         "Pay attention to the 'tags' field, as it may indicate critical tasks. "
         "The 'telemetry_summary' field reports CPU, disk, memory, and network usage, along with 'duration_sec'. "
         "Task placement is stored in the 'hostname' field.\n\n"
-        "### Known task fields\n\n"
-        + _build_schema_table()
+        "### Known task fields\n\n" + _build_schema_table()
     )
 
 

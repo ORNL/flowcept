@@ -81,9 +81,7 @@ def assert_schema_documented(*classes: type) -> None:
     errors: list[str] = []
     for cls in classes:
         annotations = {
-            name: hint
-            for name, hint in getattr(cls, "__annotations__", {}).items()
-            if not name.startswith("_")
+            name: hint for name, hint in getattr(cls, "__annotations__", {}).items() if not name.startswith("_")
         }
         if not annotations:
             continue
@@ -121,11 +119,7 @@ def _build_field_table(cls: type, subclasses: dict[str, type] | None = None) -> 
         use dot-notation names (e.g. ``cpu.percent_all_diff``).
     """
     docs = get_attribute_docstrings(cls)
-    annotations = {
-        name: hint
-        for name, hint in getattr(cls, "__annotations__", {}).items()
-        if not name.startswith("_")
-    }
+    annotations = {name: hint for name, hint in getattr(cls, "__annotations__", {}).items() if not name.startswith("_")}
     rows: list[dict[str, Any]] = []
     for name, hint in annotations.items():
         doc = docs.get(name, "")
@@ -134,9 +128,7 @@ def _build_field_table(cls: type, subclasses: dict[str, type] | None = None) -> 
             sub_cls = subclasses[name]
             sub_docs = get_attribute_docstrings(sub_cls)
             sub_annotations = {
-                n: h
-                for n, h in getattr(sub_cls, "__annotations__", {}).items()
-                if not n.startswith("_")
+                n: h for n, h in getattr(sub_cls, "__annotations__", {}).items() if not n.startswith("_")
             }
             for sub_name, sub_hint in sub_annotations.items():
                 rows.append(

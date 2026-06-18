@@ -99,7 +99,9 @@ def agent_flowcept_task(func=None, **decorator_kwargs):
                 logger.exception(e)
 
             if interceptor._mq_dao.buffer is None:
-                logger.debug(f"Instrumentation buffer not ready for {task_obj.activity_id}; skipping provenance capture.")
+                logger.debug(
+                    f"Instrumentation buffer not ready for {task_obj.activity_id}; skipping provenance capture."
+                )
             else:
                 interceptor.intercept(task_obj.to_dict())
             return result
