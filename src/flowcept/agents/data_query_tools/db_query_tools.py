@@ -19,7 +19,7 @@ from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.commons.dashboard_schemas import DashboardChart, DashboardSpec
 from flowcept.commons import provenance_stats as stats
 from flowcept.commons.dashboard_store import get_dashboard_store
-from flowcept.commons.serializers import normalize_docs
+from flowcept.commons.utils import normalize_docs
 
 ALLOWED_FILTER_OPERATORS = {
     "$and",

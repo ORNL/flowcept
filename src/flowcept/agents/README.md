@@ -90,6 +90,56 @@ is undocumented (`SchemaDocumentationError`).
 | DB provenance | `query_tasks` / `query_workflows` | same tools |
 | Reports | `generate_workflow_card` | same tool |
 
+## PROV-AGENT Instrumentation
+
+Flowcept tracks AI agent provenance following the **PROV-AGENT** model
+(arXiv:2508.02866), a W3C PROV extension for agentic workflows.
+Two `subtype` values from `flowcept.commons.vocabulary.PROV_AGENT` identify
+agent-specific activities in the task database:
+
+| Enum | Stored string | What it captures |
+|---|---|---|
+| `PROV_AGENT.AI_MODEL_INVOCATION` | `"ai_model_invocation"` | One LLM prompt → response call |
+| `PROV_AGENT.AGENT_TOOL` | `"agent_tool"` | One tool execution by an AI agent |
+
+### Automatic capture
+
+**MCP tools** — every `@mcp_flowcept.tool()` function in `mcp_tools/` is also
+decorated with `@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)`.  No extra
+code needed; tool calls are stored automatically when the interceptor is running.
+
+**LLM calls** — wrap any LangChain model with `FlowceptLLM` to record every
+`.invoke()` as `PROV_AGENT.AI_MODEL_INVOCATION`:
+
+```python
+from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM
+wrapped = FlowceptLLM(llm, agent_id=my_agent_id)
+response = wrapped.invoke("How many tasks failed?")
+```
+
+**LangGraph chat** — `run_chat` in `webservice/services/chat_orchestrator_service.py`
+wraps each graph execution in a `Flowcept` context (`workflow_name="langgraph_chat"`,
+`start_persistence=False`).  This gives every chat turn its own `workflow_id`.
+Within the graph, `call_model` uses `FlowceptLLM` and `call_tools` uses
+`FlowceptTask(subtype=PROV_AGENT.AGENT_TOOL)` — both inherit
+`Flowcept.current_workflow_id` automatically.
+
+### Querying agent provenance
+
+```python
+# All LLM calls by a specific agent
+Flowcept.db.task_query(filter={"subtype": "ai_model_invocation", "agent_id": my_agent_id})
+
+# All tool executions in a chat session (workflow)
+Flowcept.db.task_query(filter={"subtype": "agent_tool", "workflow_id": thread_id})
+```
+
+The UI uses `subtype` to display AI agent workflows differently from regular
+scientific workflow tasks.
+
+See `docs/schemas.rst` → *PROV-AGENT and Flowcept* for the full data model and
+paper reference.
+
 ## Starting the MCP Server
 
 ```bash

@@ -14,7 +14,7 @@ from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.schemas.common import ListResponse, QueryRequest
 from flowcept.webservice.services.dataflow import build_dataflow
 from flowcept.webservice.services.reports import workflow_card_response
-from flowcept.commons.serializers import normalize_docs
+from flowcept.commons.utils import normalize_docs
 from flowcept.webservice.services.sorting import sort_docs_by_first_date_field
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])

@@ -851,3 +851,97 @@ class TestLLMRoundTrips(unittest.TestCase):
         events2 = list(run_chat(llm, messages=[{"role": "user", "content": "What is my lucky number?"}], thread_id=tid))
         full_text = " ".join(str(e.get("data", "")) for e in events2 if e["event"] == "token")
         self.assertIn("7777", full_text, f"Expected '7777' in follow-up response, got: {full_text!r}")
+
+
+class TestProvAgentInstrumentation(unittest.TestCase):
+    """Structural tests for PROV-AGENT enum usage.  No live services required."""
+
+    def test_prov_agent_enum_values(self):
+        from flowcept.commons.vocabulary import PROV_AGENT
+
+        self.assertEqual(PROV_AGENT.AI_MODEL_INVOCATION.value, "ai_model_invocation")
+        self.assertEqual(PROV_AGENT.AGENT_TOOL.value, "agent_tool")
+
+    def test_flowcept_llm_uses_prov_agent_enum_not_bare_string(self):
+        import inspect
+        from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM
+
+        src = inspect.getsource(FlowceptLLM._our_call)
+        self.assertNotIn('"llm_task"', src, "FlowceptLLM must use PROV_AGENT.AI_MODEL_INVOCATION, not bare string")
+        self.assertIn("PROV_AGENT.AI_MODEL_INVOCATION", src)
+
+    def test_agent_flowcept_task_default_uses_prov_agent_enum(self):
+        import inspect
+        import flowcept.instrumentation.flowcept_agent_task as m
+
+        src = inspect.getsource(m.agent_flowcept_task)
+        self.assertNotIn('"agent_task"', src, "agent_flowcept_task must use PROV_AGENT.AGENT_TOOL, not bare string")
+        self.assertIn("PROV_AGENT.AGENT_TOOL", src)
+
+    def test_context_manager_comparisons_use_prov_agent_enum(self):
+        import inspect
+        from flowcept.agents.context_manager import FlowceptAgentContextManager
+
+        src = inspect.getsource(FlowceptAgentContextManager.message_handler)
+        self.assertNotIn('"llm_task"', src)
+        self.assertNotIn('"agent_task"', src)
+        self.assertIn("PROV_AGENT", src)
+
+    def test_mcp_db_query_tools_use_agent_flowcept_task(self):
+        import inspect
+        import flowcept.agents.mcp_tools.db_query_mcp_tools as m
+
+        src = inspect.getsource(m)
+        self.assertIn("agent_flowcept_task", src)
+        self.assertIn("PROV_AGENT", src)
+
+    def test_report_tools_use_agent_flowcept_task(self):
+        import inspect
+        import flowcept.agents.mcp_tools.report_tools as m
+
+        src = inspect.getsource(m)
+        self.assertIn("agent_flowcept_task", src)
+
+    def test_in_memory_task_query_mcp_tools_use_agent_flowcept_task(self):
+        import inspect
+        import flowcept.agents.mcp_tools.in_memory_task_query_mcp_tools as m
+
+        src = inspect.getsource(m)
+        self.assertIn("agent_flowcept_task", src)
+
+    def test_session_tools_prompt_handler_uses_agent_flowcept_task(self):
+        import inspect
+        import flowcept.agents.mcp_tools.session_tools as m
+
+        src = inspect.getsource(m)
+        self.assertIn("agent_flowcept_task", src)
+
+    def test_format_messages_handles_base_messages(self):
+        from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM
+        from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+
+        msgs = [SystemMessage(content="sys"), HumanMessage(content="hi"), AIMessage(content="hello")]
+        result = FlowceptLLM._format_messages(msgs)
+        self.assertIn("hi", result)
+        self.assertIn("hello", result)
+        self.assertIn("sys", result)
+
+    def test_run_chat_wraps_graph_in_flowcept_context(self):
+        """Each LangGraph execution is wrapped in a Flowcept context to get its own workflow_id."""
+        import inspect
+        from flowcept.webservice.services import chat_orchestrator_service as svc
+
+        src = inspect.getsource(svc.run_chat)
+        # Must use Flowcept context manager, not manual WorkflowObject
+        self.assertIn("langgraph_chat", src)
+        self.assertNotIn("WorkflowObject", src)
+        self.assertIn("start_persistence=False", src)
+        self.assertIn("save_workflow=True", src)
+
+    def test_build_graph_does_not_accept_workflow_id(self):
+        """workflow_id is not threaded through _build_graph — Flowcept.current_workflow_id is used instead."""
+        import inspect
+        from flowcept.webservice.services import chat_orchestrator_service as svc
+
+        sig = inspect.signature(svc._build_graph)
+        self.assertNotIn("workflow_id", sig.parameters)

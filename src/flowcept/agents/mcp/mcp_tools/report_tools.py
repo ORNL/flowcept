@@ -6,9 +6,12 @@ Split from ``general_tools.py`` — thin wrapper around ``Flowcept.generate_repo
 from flowcept import Flowcept
 from flowcept.agents.tool_result import ToolResult
 from flowcept.agents.context_manager import mcp_flowcept
+from flowcept.commons.vocabulary import PROV_AGENT
+from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task
 
 
 @mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
 def generate_workflow_card(
     workflow_id: str = None,
     campaign_id: str = None,

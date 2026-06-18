@@ -10,7 +10,7 @@ from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.schemas.common import ListResponse
 from flowcept.commons import provenance_stats as stats
-from flowcept.commons.serializers import normalize_docs
+from flowcept.commons.utils import normalize_docs
 from flowcept.webservice.services.sorting import sort_docs_by_first_date_field
 
 router = APIRouter(prefix="/agents", tags=["agents"])

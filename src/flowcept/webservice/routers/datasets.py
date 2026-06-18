@@ -9,7 +9,7 @@ from fastapi.responses import Response
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.schemas.common import ListResponse, ObjectQueryRequest
-from flowcept.commons.serializers import normalize_docs
+from flowcept.commons.utils import normalize_docs
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 

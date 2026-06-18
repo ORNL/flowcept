@@ -13,7 +13,8 @@ from langgraph.graph import END, MessagesState, StateGraph
 from flowcept.agents.prompts.chat_prompts import CHAT_SYSTEM_PROMPT
 from flowcept.agents.data_query_tools import db_query_tools as prov_tools
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.configs import AGENT_CHAT_MAX_TOOL_ITERATIONS
+from flowcept.commons.vocabulary import PROV_AGENT
+from flowcept.configs import AGENT_CHAT_MAX_TOOL_ITERATIONS, INSTRUMENTATION_ENABLED
 
 MAX_TOOL_ITERATIONS = AGENT_CHAT_MAX_TOOL_ITERATIONS
 
@@ -127,27 +128,63 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
     return tools
 
 
-def _build_graph(llm, tools):
+def _build_graph(llm, tools, agent_id: Optional[str] = None):
     """Build a LangGraph agent + tools graph compiled with the module-level MemorySaver."""
     bound = llm.bind_tools(tools)
     tools_by_name = {t.name: t for t in tools}
 
-    def call_model(state: MessagesState):
-        """Agent node: invoke the LLM with current messages."""
-        return {"messages": [bound.invoke(state["messages"])]}
+    if INSTRUMENTATION_ENABLED and agent_id is not None:
+        from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM
+        from flowcept.instrumentation.task_capture import FlowceptTask
 
-    def call_tools(state: MessagesState):
-        """Tools node: execute all pending tool calls and return ToolMessages."""
-        last = state["messages"][-1]
-        tool_msgs = []
-        for tc in getattr(last, "tool_calls", []):
-            name = tc["name"]
-            args = tc.get("args") or {}
-            call_id = tc.get("id") or name
-            tool_fn = tools_by_name.get(name)
-            output = tool_fn.invoke(args) if tool_fn is not None else json.dumps({"error": f"Unknown tool {name}"})
-            tool_msgs.append(ToolMessage(content=output, tool_call_id=call_id, name=name))
-        return {"messages": tool_msgs}
+        # workflow_id is resolved automatically from Flowcept.current_workflow_id
+        # which is set by the Flowcept context in run_chat.
+        instrumented_llm = FlowceptLLM(bound, agent_id=agent_id, return_response_object=True)
+
+        def call_model(state: MessagesState):
+            """Agent node: invoke the LLM with current messages (instrumented)."""
+            return {"messages": [instrumented_llm.invoke(state["messages"])]}
+
+        def call_tools(state: MessagesState):
+            """Tools node: execute all pending tool calls with provenance capture."""
+            last = state["messages"][-1]
+            tool_msgs = []
+            for tc in getattr(last, "tool_calls", []):
+                name = tc["name"]
+                args = tc.get("args") or {}
+                call_id = tc.get("id") or name
+                tool_fn = tools_by_name.get(name)
+                with FlowceptTask(
+                    activity_id=name,
+                    subtype=PROV_AGENT.AGENT_TOOL,
+                    used=args,
+                    agent_id=agent_id,
+                ) as task:
+                    output = (
+                        tool_fn.invoke(args) if tool_fn is not None else json.dumps({"error": f"Unknown tool {name}"})
+                    )
+                    task.end(generated={"output": output[:500] if isinstance(output, str) else output})
+                tool_msgs.append(ToolMessage(content=output, tool_call_id=call_id, name=name))
+            return {"messages": tool_msgs}
+
+    else:
+
+        def call_model(state: MessagesState):
+            """Agent node: invoke the LLM with current messages."""
+            return {"messages": [bound.invoke(state["messages"])]}
+
+        def call_tools(state: MessagesState):
+            """Tools node: execute all pending tool calls and return ToolMessages."""
+            last = state["messages"][-1]
+            tool_msgs = []
+            for tc in getattr(last, "tool_calls", []):
+                name = tc["name"]
+                args = tc.get("args") or {}
+                call_id = tc.get("id") or name
+                tool_fn = tools_by_name.get(name)
+                output = tool_fn.invoke(args) if tool_fn is not None else json.dumps({"error": f"Unknown tool {name}"})
+                tool_msgs.append(ToolMessage(content=output, tool_call_id=call_id, name=name))
+            return {"messages": tool_msgs}
 
     def should_continue(state: MessagesState):
         """Route to tools if the last AI message has tool calls; otherwise end."""
@@ -227,6 +264,14 @@ def run_chat(
     logger = FlowceptLogger()
     tools = _build_langchain_tools(context, allow_dashboard_edit)
 
+    effective_thread_id = thread_id if thread_id is not None else str(uuid.uuid4())
+
+    agent_id: Optional[str] = None
+    if INSTRUMENTATION_ENABLED:
+        from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
+
+        agent_id = BaseAgentContextManager.agent_id or effective_thread_id
+
     try:
         llm.bind_tools(tools)
     except (NotImplementedError, AttributeError):
@@ -251,44 +296,50 @@ def run_chat(
         yield {"event": "done"}
         return
 
-    effective_thread_id = thread_id if thread_id is not None else str(uuid.uuid4())
     config = {
         "configurable": {"thread_id": effective_thread_id},
         "recursion_limit": MAX_TOOL_ITERATIONS * 2 + 2,
     }
 
-    graph = _build_graph(llm, tools)
+    graph = _build_graph(llm, tools, agent_id=agent_id)
     lc_messages = _prepare_input_messages(messages, context, thread_id)
 
-    try:
-        for chunk in graph.stream({"messages": lc_messages}, config=config, stream_mode="updates"):
-            for node_name, node_output in chunk.items():
-                msgs = node_output.get("messages", [])
-                if node_name == "agent":
-                    last = msgs[-1] if msgs else None
-                    if last is None:
-                        continue
-                    tool_calls = getattr(last, "tool_calls", None) or []
-                    if tool_calls:
-                        for tc in tool_calls:
-                            yield {"event": "tool_call", "data": {"name": tc["name"], "args": tc.get("args", {})}}
-                    else:
-                        yield {"event": "token", "data": getattr(last, "content", "")}
-                        yield {"event": "done"}
-                elif node_name == "tools":
-                    for tm in msgs:
-                        name = getattr(tm, "name", "")
-                        summary: Dict[str, Any] = {"name": name}
-                        try:
-                            parsed = json.loads(tm.content)
-                            summary["code"] = parsed.get("code")
-                            if name == "make_chart" and isinstance(parsed.get("result"), dict):
-                                yield {"event": "card", "data": parsed["result"]}
-                            if name == "highlight_lineage" and isinstance(parsed.get("result"), dict):
-                                yield {"event": "ui:highlight", "data": parsed["result"]}
-                        except Exception:
-                            pass
-                        yield {"event": "tool_result", "data": summary}
-    except Exception as e:
-        logger.exception(e)
-        yield {"event": "error", "data": str(e)}
+    # Each LangGraph execution gets its own Flowcept workflow so all AI model
+    # invocations and tool calls within this call share a single workflow_id.
+    # start_persistence=False: no consumer started here; the interceptor singleton
+    # (already started by FlowceptAgent or the webservice) handles the buffer.
+    from flowcept.flowcept_api.flowcept_controller import Flowcept as _FC
+
+    with _FC(workflow_name="langgraph_chat", start_persistence=False, save_workflow=True):
+        try:
+            for chunk in graph.stream({"messages": lc_messages}, config=config, stream_mode="updates"):
+                for node_name, node_output in chunk.items():
+                    msgs = node_output.get("messages", [])
+                    if node_name == "agent":
+                        last = msgs[-1] if msgs else None
+                        if last is None:
+                            continue
+                        tool_calls = getattr(last, "tool_calls", None) or []
+                        if tool_calls:
+                            for tc in tool_calls:
+                                yield {"event": "tool_call", "data": {"name": tc["name"], "args": tc.get("args", {})}}
+                        else:
+                            yield {"event": "token", "data": getattr(last, "content", "")}
+                            yield {"event": "done"}
+                    elif node_name == "tools":
+                        for tm in msgs:
+                            name = getattr(tm, "name", "")
+                            summary: Dict[str, Any] = {"name": name}
+                            try:
+                                parsed = json.loads(tm.content)
+                                summary["code"] = parsed.get("code")
+                                if name == "make_chart" and isinstance(parsed.get("result"), dict):
+                                    yield {"event": "card", "data": parsed["result"]}
+                                if name == "highlight_lineage" and isinstance(parsed.get("result"), dict):
+                                    yield {"event": "ui:highlight", "data": parsed["result"]}
+                            except Exception:
+                                pass
+                            yield {"event": "tool_result", "data": summary}
+        except Exception as e:
+            logger.exception(e)
+            yield {"event": "error", "data": str(e)}

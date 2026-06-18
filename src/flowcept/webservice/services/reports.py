@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse, Response
 
 from flowcept.report.service import build_workflow_card, generate_report
-from flowcept.commons.serializers import normalize_docs
+from flowcept.commons.utils import normalize_docs
 
 
 def workflow_card_response(
