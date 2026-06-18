@@ -7,9 +7,12 @@ MCP context lookup (df, schema, value_examples, custom_user_guidance) happens he
 from flowcept.agents.tool_result import ToolResult
 from flowcept.agents.context_manager import mcp_flowcept, get_df_context, EMPTY_DF_MESSAGE
 from flowcept.agents.data_query_tools import in_memory_task_query_tools as _core
+from flowcept.commons.vocabulary import PROV_AGENT
+from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task
 
 
 @mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
 def run_df_query(query: str, llm=None, plot: bool = False, context_kind: str = "tasks") -> ToolResult:
     r"""Run a natural language query against the current context DataFrame.
 
@@ -45,6 +48,7 @@ def run_df_query(query: str, llm=None, plot: bool = False, context_kind: str = "
 
 
 @mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
 def execute_generated_df_code(user_code: str, context_kind: str = "tasks") -> ToolResult:
     """Execute externally generated pandas code against the current agent DataFrame.
 

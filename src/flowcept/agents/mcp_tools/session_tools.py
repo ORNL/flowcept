@@ -7,13 +7,14 @@ and the ``prompt_handler`` message router.
 import json
 from typing import List
 
-from flowcept import Flowcept
 from flowcept.agents.tool_result import ToolResult
 from flowcept.agents.llm.builders import build_llm_model, normalize_message
 from flowcept.agents.context_manager import mcp_flowcept
 from flowcept.agents.prompts.base_prompts import ROUTING_PROMPT, SMALL_TALK_PROMPT
 from flowcept.agents.mcp_tools.in_memory_task_query_mcp_tools import run_df_query
 from flowcept.agents.mcp_tools.in_memory_workflow_query_mcp_tools import run_workflow_query
+from flowcept.commons.vocabulary import PROV_AGENT
+from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task
 
 
 def _external_llm_enabled() -> bool:
@@ -145,6 +146,7 @@ def reset_context() -> ToolResult:
 
 
 @mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
 def prompt_handler(message: str) -> ToolResult:
     """Route a user message by prefix or LLM classification.
 

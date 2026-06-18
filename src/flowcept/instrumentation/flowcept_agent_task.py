@@ -13,7 +13,7 @@ from langchain_core.runnables import Runnable
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import replace_non_serializable
-from flowcept.commons.vocabulary import Status
+from flowcept.commons.vocabulary import PROV_AGENT, Status
 from flowcept.configs import (
     INSTRUMENTATION_ENABLED,
     REPLACE_NON_JSON_SERIALIZABLE,
@@ -62,7 +62,7 @@ def agent_flowcept_task(func=None, **decorator_kwargs):
             tags = decorator_kwargs.get("tags", None)
 
             task_obj = TaskObject()
-            task_obj.subtype = decorator_kwargs.get("subtype", "agent_task")
+            task_obj.subtype = decorator_kwargs.get("subtype", PROV_AGENT.AGENT_TOOL)
             task_obj.activity_id = func.__name__
             handled_args = args_handler(*args, **kwargs)
             task_obj.workflow_id = handled_args.pop("workflow_id", Flowcept.current_workflow_id)
@@ -98,7 +98,10 @@ def agent_flowcept_task(func=None, **decorator_kwargs):
             except Exception as e:
                 logger.exception(e)
 
-            interceptor.intercept(task_obj.to_dict())
+            if interceptor._mq_dao.buffer is None:
+                logger.debug(f"Instrumentation buffer not ready for {task_obj.activity_id}; skipping provenance capture.")
+            else:
+                interceptor.intercept(task_obj.to_dict())
             return result
 
         return wrapper
@@ -273,7 +276,7 @@ class FlowceptLLM(Runnable):
         used = {"prompt": messages_str}
         with FlowceptTask(
             used=used,
-            subtype="llm_task",
+            subtype=PROV_AGENT.AI_MODEL_INVOCATION,
             custom_metadata=self.metadata,
             agent_id=self.agent_id,
             activity_id="llm_interaction",
@@ -316,10 +319,18 @@ class FlowceptLLM(Runnable):
         return self.invoke(*args, **kwargs)
 
     @staticmethod
-    def _format_messages(messages: Union[str, List[Dict[str, str]]]) -> str:
+    def _format_messages(messages) -> str:
         if isinstance(messages, str):
             return messages
-        elif isinstance(messages, list):
-            return "\n".join(f"{m.get('role', '').capitalize()}: {m.get('content', '')}" for m in messages)
-        else:
+        if not isinstance(messages, list):
             raise ValueError(f"Invalid message format: {messages}")
+        parts = []
+        for m in messages:
+            if isinstance(m, dict):
+                parts.append(f"{m.get('role', '').capitalize()}: {m.get('content', '')}")
+            elif hasattr(m, "content"):
+                role = getattr(m, "type", m.__class__.__name__)
+                parts.append(f"{role}: {m.content}")
+            else:
+                parts.append(str(m))
+        return "\n".join(parts)

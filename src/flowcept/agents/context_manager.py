@@ -16,7 +16,7 @@ from flowcept.commons.task_data_preprocess import (
     summarize_task,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.vocabulary import Status
+from flowcept.commons.vocabulary import PROV_AGENT, Status
 from flowcept.configs import AGENT
 from mcp.server.fastmcp import FastMCP
 
@@ -177,7 +177,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 
         if msg_type == "task":
             task_msg = TaskObject.from_dict(msg_obj)
-            if task_msg.subtype == "llm_task" and task_msg.agent_id == self.agent_id:
+            if task_msg.subtype == PROV_AGENT.AI_MODEL_INVOCATION and task_msg.agent_id == self.agent_id:
                 self.logger.info(f"Going to ignore our own LLM messages: {task_msg}")
                 return True
 
@@ -194,7 +194,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                         FlowceptTask(
                             agent_id=self.agent_id,
                             generated={"msg": "Provenance Agent reset context."},
-                            subtype="agent_task",
+                            subtype=PROV_AGENT.AGENT_TOOL,
                             activity_id="reset_user_context",
                         ).send()
                     return True
@@ -227,14 +227,14 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                             generated=generated,
                             stderr=error,
                             status=status,
-                            subtype="agent_task",
+                            subtype=PROV_AGENT.AGENT_TOOL,
                             activity_id="provenance_query_response",
                         ).send()
 
                     return True
 
             elif (
-                task_msg.subtype == "agent_task"
+                task_msg.subtype == PROV_AGENT.AGENT_TOOL
                 and task_msg.agent_id is not None
                 and task_msg.agent_id == self.agent_id
             ):
