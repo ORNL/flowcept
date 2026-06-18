@@ -13,7 +13,7 @@ from sse_starlette.sse import EventSourceResponse
 from flowcept.configs import WEBSERVER_SSE_MAX_BATCH, WEBSERVER_SSE_POLL_INTERVAL
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.deps import get_db_api
-from flowcept.webservice.services.serializers import normalize_docs
+from flowcept.commons.serializers import normalize_docs
 from flowcept.webservice.services.streaming import poll_new_docs
 
 router = APIRouter(prefix="/stream", tags=["stream"])

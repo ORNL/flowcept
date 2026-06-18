@@ -37,7 +37,7 @@ class TestAgent(unittest.TestCase):
             FlowceptLogger().warning("Skipping no-MQ agent buffer test because instrumentation is disabled.")
             self.skipTest("Instrumentation is disabled.")
 
-        from flowcept.agents import mcp_server as agent_module
+        from flowcept.agents.mcp import mcp_server as agent_module
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as handle:
             buffer_path = handle.name
@@ -70,8 +70,8 @@ class TestAgent(unittest.TestCase):
 
         from uuid import uuid4
 
-        from flowcept.agents import mcp_server as agent_module
-        from flowcept.agents.mcp_client import run_tool
+        from flowcept.agents.mcp import mcp_server as agent_module
+        from flowcept.agents.mcp.mcp_client import run_tool
         from flowcept.instrumentation.task_capture import FlowceptTask
 
         campaign_id = f"mcp-campaign-{uuid4()}"
@@ -235,7 +235,7 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
         self.assertEqual(prompt_text, "Current df is empty or null.")
 
     def test_execute_generated_df_code_runs_against_current_df(self):
-        from flowcept.agents.mcp_tools import in_memory_task_query_mcp_tools as t
+        from flowcept.agents.mcp.mcp_tools import in_memory_task_query_mcp_tools as t
 
         df = pd.DataFrame({"a": [1, 2, 3], "b": [10, 20, 30]})
         dummy_ctx = self._DummyContext(df=df, schema={}, value_examples={}, custom_user_guidance=[])
@@ -250,7 +250,7 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
         self.assertIn("2", tool_result.result["result_df"])
 
     def test_generate_workflow_card_tool(self):
-        from flowcept.agents.mcp_tools import report_tools as g
+        from flowcept.agents.mcp.mcp_tools import report_tools as g
 
         expected_stats = {"markdown": "# Workflow Card: Demo\n\nBody"}
 
@@ -292,7 +292,7 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
             masked = f"{key[:4]}...{key[-4:]}" if len(key) > 8 else key
             print(f"Using agent.api_key: {masked}")
 
-        from flowcept.agents import mcp_server as agent_module
+        from flowcept.agents.mcp import mcp_server as agent_module
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as buffer_handle:
             buffer_path = buffer_handle.name
@@ -315,10 +315,10 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
 
 
 class TestSchemaIntrospection(unittest.TestCase):
-    """Unit tests for schema_introspection.py — no services, no LLM required."""
+    """Unit tests for static_schema_builder.py — no services, no LLM required."""
 
     def test_get_attribute_docstrings_returns_documented_fields(self):
-        from flowcept.agents.schema_introspection import get_attribute_docstrings
+        from flowcept.agents.provenance_schema_manager.static_schema_builder import get_attribute_docstrings
 
         class _Documented:
             foo: str = None
@@ -331,7 +331,7 @@ class TestSchemaIntrospection(unittest.TestCase):
         self.assertEqual(docs["bar"], "Description of bar.")
 
     def test_get_attribute_docstrings_excludes_undocumented(self):
-        from flowcept.agents.schema_introspection import get_attribute_docstrings
+        from flowcept.agents.provenance_schema_manager.static_schema_builder import get_attribute_docstrings
 
         class _Mixed:
             documented: str = None
@@ -343,7 +343,7 @@ class TestSchemaIntrospection(unittest.TestCase):
         self.assertNotIn("undocumented", docs)
 
     def test_assert_schema_documented_passes_on_full_coverage(self):
-        from flowcept.agents.schema_introspection import assert_schema_documented
+        from flowcept.agents.provenance_schema_manager.static_schema_builder import assert_schema_documented
 
         class _Full:
             x: str = None
@@ -354,7 +354,7 @@ class TestSchemaIntrospection(unittest.TestCase):
         assert_schema_documented(_Full)  # must not raise
 
     def test_assert_schema_documented_raises_on_missing(self):
-        from flowcept.agents.schema_introspection import assert_schema_documented, SchemaDocumentationError
+        from flowcept.agents.provenance_schema_manager.static_schema_builder import assert_schema_documented, SchemaDocumentationError
 
         class _Partial:
             good: str = None
@@ -367,7 +367,7 @@ class TestSchemaIntrospection(unittest.TestCase):
         self.assertIn("_Partial", str(ctx.exception))
 
     def test_assert_schema_documented_error_message_is_actionable(self):
-        from flowcept.agents.schema_introspection import assert_schema_documented, SchemaDocumentationError
+        from flowcept.agents.provenance_schema_manager.static_schema_builder import assert_schema_documented, SchemaDocumentationError
 
         class _Empty:
             field_a: str = None
@@ -382,7 +382,7 @@ class TestSchemaIntrospection(unittest.TestCase):
 
     def test_domain_classes_all_documented(self):
         """All domain classes must pass the startup assert — catches regressions."""
-        from flowcept.agents.schema_introspection import assert_schema_documented
+        from flowcept.agents.provenance_schema_manager.static_schema_builder import assert_schema_documented
         from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
         from flowcept.commons.flowcept_dataclasses.workflow_object import WorkflowObject
         from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
@@ -397,7 +397,7 @@ class TestSchemaIntrospection(unittest.TestCase):
         )
 
     def test_build_schema_context_returns_expected_keys(self):
-        from flowcept.agents.schema_introspection import build_schema_context
+        from flowcept.agents.provenance_schema_manager.static_schema_builder import build_schema_context
 
         ctx = build_schema_context()
         for key in ("task_fields", "workflow_fields", "agent_fields", "blob_fields", "telemetry_summary_fields"):
@@ -406,7 +406,7 @@ class TestSchemaIntrospection(unittest.TestCase):
             self.assertTrue(len(ctx[key]) > 0, f"{key} must not be empty")
 
     def test_build_schema_context_task_fields_have_required_keys(self):
-        from flowcept.agents.schema_introspection import build_schema_context
+        from flowcept.agents.provenance_schema_manager.static_schema_builder import build_schema_context
 
         ctx = build_schema_context()
         field_names = {f["name"] for f in ctx["task_fields"]}
@@ -414,7 +414,7 @@ class TestSchemaIntrospection(unittest.TestCase):
             self.assertIn(expected, field_names)
 
     def test_build_schema_context_telemetry_expands_subfields(self):
-        from flowcept.agents.schema_introspection import build_schema_context
+        from flowcept.agents.provenance_schema_manager.static_schema_builder import build_schema_context
 
         ctx = build_schema_context()
         field_names = {f["name"] for f in ctx["telemetry_summary_fields"]}
@@ -429,9 +429,9 @@ class TestSchemaIntrospection(unittest.TestCase):
 
     def test_telemetry_summary_fields_match_summarize_telemetry_output(self):
         """TelemetrySummary schema must match the actual keys produced by summarize_telemetry()."""
-        from flowcept.agents.schema_introspection import get_attribute_docstrings
+        from flowcept.agents.provenance_schema_manager.static_schema_builder import get_attribute_docstrings
         from flowcept.commons.task_data_preprocess import (
-            TelemetrySummary, CpuSummary, MemorySummary, DiskSummary, NetworkSummary,
+            CpuSummary, MemorySummary, DiskSummary, NetworkSummary,
             summarize_telemetry,
         )
 
@@ -466,8 +466,7 @@ class TestSchemaIntrospection(unittest.TestCase):
     def test_lifespan_override_runs_schema_assert_and_populates_context(self):
         """Importing the ctx manager module triggers no errors and the lifespan method is overridden."""
         from flowcept.agents.context_manager import FlowceptAgentContextManager
-        from flowcept.agents.schema_introspection import assert_schema_documented, build_schema_context, SCHEMA_CONTEXT
-        import inspect
+        from flowcept.agents.provenance_schema_manager.static_schema_builder import assert_schema_documented, build_schema_context, SCHEMA_CONTEXT
 
         # Confirm the override is defined directly on FlowceptAgentContextManager (not just inherited).
         self.assertIn("lifespan", FlowceptAgentContextManager.__dict__)
@@ -491,7 +490,7 @@ class TestSchemaIntrospection(unittest.TestCase):
             "task_fields", "workflow_fields", "agent_fields", "blob_fields", "telemetry_summary_fields"
         })
         # SCHEMA_CONTEXT is populated in the module; check it is the same object.
-        from flowcept.agents import schema_introspection as si
+        from flowcept.agents.provenance_schema_manager import static_schema_builder as si
         self.assertIs(SCHEMA_CONTEXT, si.SCHEMA_CONTEXT)
 
 
@@ -515,6 +514,19 @@ class TestRefactoredAgentStructure(unittest.TestCase):
         self.assertTrue(callable(build_llm_model))
         self.assertEqual(normalize_message(" Hello? "), "hello")
 
+    def test_c5_no_python_imports_use_agents_utils_shim(self):
+        from pathlib import Path
+
+        forbidden = "flowcept.agents." + "agents_utils"
+        offenders = []
+        for root in ("src", "tests", "examples"):
+            for path in Path(root).rglob("*.py"):
+                text = path.read_text(encoding="utf-8")
+                if forbidden in text:
+                    offenders.append(str(path))
+
+        self.assertEqual(offenders, [])
+
     # ── C6: llm/providers/ has LLM wrappers ───────────────────────────────
     def test_c6_llm_providers_modules_importable(self):
         import flowcept.agents.llm.providers.claude_gcp as cg
@@ -524,19 +536,56 @@ class TestRefactoredAgentStructure(unittest.TestCase):
 
     # ── C1: mcp_server.py (was flowcept_agent.py) ─────────────────────────
     def test_c1_mcp_server_importable(self):
-        from flowcept.agents.mcp_server import FlowceptAgent
+        from flowcept.agents.mcp.mcp_server import FlowceptAgent
         self.assertTrue(callable(FlowceptAgent))
 
     # ── C2: mcp_client.py (was agent_client.py) ───────────────────────────
     def test_c2_mcp_client_importable(self):
-        from flowcept.agents.mcp_client import run_tool, run_prompt
+        from flowcept.agents.mcp.mcp_client import run_tool, run_prompt
         self.assertTrue(callable(run_tool))
         self.assertTrue(callable(run_prompt))
+
+    def test_c2_no_python_imports_use_duplicate_agent_client(self):
+        from pathlib import Path
+
+        forbidden = "flowcept.agents.mcp." + "agent_client"
+        offenders = []
+        for root in ("src", "tests", "examples"):
+            for path in Path(root).rglob("*.py"):
+                text = path.read_text(encoding="utf-8")
+                if forbidden in text:
+                    offenders.append(str(path))
+
+        self.assertEqual(offenders, [])
+
+    def test_c2_maintained_docs_do_not_reference_removed_agent_paths(self):
+        from pathlib import Path
+
+        forbidden_terms = [
+            "flowcept.agents.agent_client",
+            "flowcept.agents.flowcept_agent",
+            "src/flowcept/agents/tools/prov_tools.py",
+            "src/flowcept/agents/agents_utils.py",
+        ]
+        paths = [
+            Path("docs/agent.rst"),
+            Path("docs/README.md"),
+            Path("src/flowcept/agents/README.md"),
+            Path("agent_sandbox/test_agent_jsonl_smoke.py"),
+        ]
+
+        offenders = []
+        for path in paths:
+            text = path.read_text(encoding="utf-8")
+            for term in forbidden_terms:
+                if term in text:
+                    offenders.append(f"{path}: {term}")
+
+        self.assertEqual(offenders, [])
 
     # ── C3: context_manager.py (was flowcept_ctx_manager.py) ──────────────
     def test_c3_context_manager_importable(self):
         from flowcept.agents.context_manager import (
-            FlowceptAgentContextManager,
             ctx_manager,
             mcp_flowcept,
         )
@@ -549,17 +598,13 @@ class TestRefactoredAgentStructure(unittest.TestCase):
         self.assertTrue(hasattr(dqt, "__path__"))
 
     def test_c10_mcp_tools_package_exists(self):
-        import flowcept.agents.mcp_tools as mt
+        import flowcept.agents.mcp.mcp_tools as mt
         self.assertTrue(hasattr(mt, "__path__"))
 
     # ── D1: db_query_tools.py ─────────────────────────────────────────────
     def test_d1_db_query_tools_importable(self):
         from flowcept.agents.data_query_tools.db_query_tools import (
             query_tasks,
-            query_workflows,
-            get_task_summary,
-            list_campaigns,
-            list_agents,
             ALLOWED_FILTER_OPERATORS,
             validate_filter,
         )
@@ -575,13 +620,17 @@ class TestRefactoredAgentStructure(unittest.TestCase):
             src = inspect.getsource(fn)
             self.assertNotIn("@mcp_flowcept", src, f"{name} must not have @mcp_flowcept decorator")
 
+    def test_d1_db_query_tools_does_not_import_webservice(self):
+        import inspect
+
+        from flowcept.agents.data_query_tools import db_query_tools
+
+        self.assertNotIn("flowcept.webservice", inspect.getsource(db_query_tools))
+
     # ── D2: in_memory_task_query_tools.py ─────────────────────────────────
     def test_d2_in_memory_task_query_tools_importable(self):
         from flowcept.agents.data_query_tools.in_memory_task_query_tools import (
             run_df_query,
-            generate_result_df,
-            run_df_code,
-            save_df,
         )
         self.assertTrue(callable(run_df_query))
 
@@ -597,10 +646,6 @@ class TestRefactoredAgentStructure(unittest.TestCase):
     def test_d3_pandas_utils_importable(self):
         from flowcept.agents.data_query_tools.pandas_utils import (
             safe_execute,
-            normalize_output,
-            format_result_df,
-            safe_json_parse,
-            load_saved_df,
         )
         self.assertTrue(callable(safe_execute))
 
@@ -608,7 +653,6 @@ class TestRefactoredAgentStructure(unittest.TestCase):
     def test_d4_in_memory_workflow_query_tools_importable(self):
         from flowcept.agents.data_query_tools.in_memory_workflow_query_tools import (
             execute_generated_workflow_query,
-            run_workflow_query,
             _resolve_path,
         )
         self.assertTrue(callable(execute_generated_workflow_query))
@@ -624,43 +668,34 @@ class TestRefactoredAgentStructure(unittest.TestCase):
 
     # ── E1: db_query_mcp_tools.py — no _provenance_ infix ─────────────────
     def test_e1_db_query_mcp_tools_importable_and_names_clean(self):
-        from flowcept.agents.mcp_tools import db_query_mcp_tools
+        from flowcept.agents.mcp.mcp_tools import db_query_mcp_tools
         for name in ("query_tasks", "query_workflows", "get_task_summary", "list_campaigns", "list_agents"):
             self.assertTrue(hasattr(db_query_mcp_tools, name), f"missing {name}")
             self.assertNotIn("provenance", name, f"{name} must not contain 'provenance'")
 
     # ── E2: in_memory_task_query_mcp_tools.py ─────────────────────────────
     def test_e2_in_memory_task_query_mcp_tools_importable(self):
-        from flowcept.agents.mcp_tools.in_memory_task_query_mcp_tools import (
+        from flowcept.agents.mcp.mcp_tools.in_memory_task_query_mcp_tools import (
             run_df_query,
-            execute_generated_df_code,
         )
         self.assertTrue(callable(run_df_query))
 
     # ── E3: in_memory_workflow_query_mcp_tools.py ─────────────────────────
     def test_e3_in_memory_workflow_query_mcp_tools_importable(self):
-        from flowcept.agents.mcp_tools.in_memory_workflow_query_mcp_tools import (
+        from flowcept.agents.mcp.mcp_tools.in_memory_workflow_query_mcp_tools import (
             run_workflow_query,
-            execute_generated_workflow_query,
         )
         self.assertTrue(callable(run_workflow_query))
 
     # ── E4: session_tools.py + report_tools.py ────────────────────────────
     def test_e4_session_tools_importable(self):
-        from flowcept.agents.mcp_tools.session_tools import (
+        from flowcept.agents.mcp.mcp_tools import (
             check_liveness,
-            check_llm,
-            record_guidance,
-            show_records,
-            reset_records,
-            reset_context,
-            get_latest,
-            prompt_handler,
         )
         self.assertTrue(callable(check_liveness))
 
     def test_e4_report_tools_importable(self):
-        from flowcept.agents.mcp_tools.report_tools import generate_workflow_card
+        from flowcept.agents.mcp.mcp_tools import generate_workflow_card
         self.assertTrue(callable(generate_workflow_card))
 
     # ── E5: mcp_prompts.py importable ─────────────────────────────────────
@@ -691,7 +726,6 @@ class TestRefactoredAgentStructure(unittest.TestCase):
     def test_f3_in_memory_task_query_prompts_importable(self):
         from flowcept.agents.prompts.in_memory_task_query_prompts import (
             generate_pandas_code_prompt,
-            generate_plot_code_prompt,
         )
         self.assertTrue(callable(generate_pandas_code_prompt))
 
@@ -719,10 +753,28 @@ class TestRefactoredAgentStructure(unittest.TestCase):
 
     # ── G2-G3: run_chat accepts thread_id ─────────────────────────────────
     def test_g2_run_chat_signature_has_thread_id(self):
-        from flowcept.webservice.services.chat_orchestrator_service import run_chat
+        from flowcept.agents.chat_orchestration.chat_orchestrator_service import run_chat
         import inspect
         sig = inspect.signature(run_chat)
         self.assertIn("thread_id", sig.parameters)
+
+    def test_g6_chat_router_forwards_thread_id_to_orchestrator(self):
+        from flowcept.webservice.routers import chat as chat_router
+
+        payload = chat_router.ChatRequest(
+            messages=[chat_router.ChatMessage(role="user", content="hello")],
+            stream=False,
+            thread_id="thread-123",
+        )
+
+        with (
+            patch.object(chat_router, "get_chat_llm", return_value=object()),
+            patch.object(chat_router, "run_chat", return_value=iter([{"event": "done"}])) as run_chat_mock,
+        ):
+            response = chat_router.chat(payload)
+
+        self.assertEqual(response, {"message": "", "tool_trace": [], "cards": []})
+        self.assertEqual(run_chat_mock.call_args.kwargs["thread_id"], "thread-123")
 
 
 class TestLLMRoundTrips(unittest.TestCase):
@@ -767,7 +819,7 @@ class TestLLMRoundTrips(unittest.TestCase):
             FlowceptLogger().warning("Skipping run_chat round-trip: Flowcept services not alive.")
             self.skipTest("Flowcept services not alive.")
         from flowcept.agents.llm.builders import build_llm_model
-        from flowcept.webservice.services.chat_orchestrator_service import run_chat
+        from flowcept.agents.chat_orchestration.chat_orchestrator_service import run_chat
 
         llm = build_llm_model(track_tools=False)
         messages = [{"role": "user", "content": "How many tasks are there in the database?"}]
@@ -784,7 +836,7 @@ class TestLLMRoundTrips(unittest.TestCase):
         """thread_id enables server-side conversation memory: follow-up question recalls prior answer."""
         self._skip_if_no_llm()
         from flowcept.agents.llm.builders import build_llm_model
-        from flowcept.webservice.services.chat_orchestrator_service import run_chat
+        from flowcept.agents.chat_orchestration.chat_orchestrator_service import run_chat
 
         import uuid
         tid = f"test-thread-{uuid.uuid4()}"

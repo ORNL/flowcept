@@ -5,7 +5,7 @@ All functions are plain Python — no MCP framework decorators.
 The ``@mcp_flowcept.prompt()`` registration lives in ``prompts/mcp_prompts.py``.
 """
 
-from flowcept.agents.schema_introspection import SCHEMA_CONTEXT
+from flowcept.agents.provenance_schema_manager.static_schema_builder import SCHEMA_CONTEXT
 
 
 def _build_task_field_table(current_fields) -> str:

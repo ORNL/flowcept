@@ -11,9 +11,9 @@ from pydantic import BaseModel, Field
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.routers.query import _validate_filter_shape
-from flowcept.webservice.schemas.dashboards import ChartData
-from flowcept.webservice.services import stats
-from flowcept.webservice.services.serializers import normalize_docs
+from flowcept.commons.dashboard_schemas import ChartData
+from flowcept.commons import provenance_stats as stats
+from flowcept.commons.serializers import normalize_docs
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 

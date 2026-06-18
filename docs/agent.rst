@@ -27,7 +27,7 @@ Flowcept exposes provenance data to LLM-based agents through two complementary s
    workflow is still executing. It also supports offline JSONL buffer files.
 
 The two surfaces share the same underlying provenance tool core
-(``src/flowcept/agents/tools/prov_tools.py``) so queries stay consistent across both.
+(``src/flowcept/agents/data_query_tools/db_query_tools.py``) so queries stay consistent across both.
 
 The MCP agent has one backend and two orchestration paths:
 
@@ -106,7 +106,7 @@ Internal prompt-handler example
 
 .. code-block:: python
 
-   from flowcept.agents.agent_client import run_tool
+   from flowcept.agents.mcp.mcp_client import run_tool
 
    result = run_tool(
        "prompt_handler",
@@ -118,7 +118,7 @@ External prompt plus execution example
 
 .. code-block:: python
 
-   from flowcept.agents.agent_client import run_prompt, run_tool
+   from flowcept.agents.mcp.mcp_client import run_prompt, run_tool
 
    prompt = run_prompt(
        "build_df_query_prompt",
@@ -143,7 +143,7 @@ External workflow-message query example
 
 .. code-block:: python
 
-   from flowcept.agents.agent_client import run_prompt, run_tool
+   from flowcept.agents.mcp.mcp_client import run_prompt, run_tool
 
    prompt = run_prompt(
        "build_workflow_query_prompt",
@@ -170,7 +170,7 @@ This is a minimal offline example:
 
    import json
    from flowcept import Flowcept, flowcept_task
-   from flowcept.agents.flowcept_agent import FlowceptAgent
+   from flowcept.agents.mcp.mcp_server import FlowceptAgent
 
    @flowcept_task
    def sum_one(x):

@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.webservice.schemas.dashboards import ChartData, MetricSpec
+from flowcept.commons.dashboard_schemas import ChartData, MetricSpec
 
 
 def _to_epoch(value) -> Optional[float]:

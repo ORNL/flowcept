@@ -1,7 +1,11 @@
 from contextlib import asynccontextmanager
 
-from flowcept.agents.dynamic_schema_tracker import DynamicSchemaTracker
-from flowcept.agents.schema_introspection import assert_schema_documented, build_schema_context, SCHEMA_CONTEXT
+from flowcept.agents.provenance_schema_manager.dynamic_schema_tracker import DynamicSchemaTracker
+from flowcept.agents.provenance_schema_manager.static_schema_builder import (
+    SCHEMA_CONTEXT,
+    assert_schema_documented,
+    build_schema_context,
+)
 from flowcept.agents.data_query_tools.pandas_utils import load_saved_df
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_dataclasses.workflow_object import WorkflowObject
@@ -202,8 +206,8 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                     self.logger.info("Received a prov query message!")
                     query_text = task_msg.used.get("query")
                     from flowcept.agents.tool_result import ToolResult
-                    from flowcept.agents.mcp_tools.session_tools import prompt_handler
-                    from flowcept.agents.mcp_client import run_tool
+                    from flowcept.agents.mcp.mcp_tools import prompt_handler
+                    from flowcept.agents.mcp.mcp_client import run_tool
 
                     resp = run_tool(tool_name=prompt_handler, kwargs={"message": query_text})[0]
 
@@ -302,7 +306,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         Perform LLM-based analysis on the current chunk of task messages and send the results.
         """
         self.logger.debug(f"Going to begin LLM job! {self.msgs_counter}")
-        from flowcept.agents.mcp_client import run_tool
+        from flowcept.agents.mcp.mcp_client import run_tool
 
         result = run_tool("analyze_task_chunk")
         if len(result):

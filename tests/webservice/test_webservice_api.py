@@ -11,7 +11,7 @@ from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
 from flowcept.commons.flowcept_dataclasses.workflow_object import WorkflowObject
 from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.main import create_app
-from flowcept.webservice.services.dashboard_store import get_dashboard_store
+from flowcept.commons.dashboard_store import get_dashboard_store
 
 
 class FakeDB:

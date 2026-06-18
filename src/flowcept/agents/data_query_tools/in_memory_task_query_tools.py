@@ -40,7 +40,16 @@ def _call_llm(llm, prompt: str) -> str:
     return response.content if hasattr(response, "content") else str(response)
 
 
-def run_df_query(query: str, df, schema, value_examples, custom_user_guidance, llm=None, plot=False, context_kind: str = "tasks") -> ToolResult:
+def run_df_query(
+    query: str,
+    df,
+    schema,
+    value_examples,
+    custom_user_guidance,
+    llm=None,
+    plot=False,
+    context_kind: str = "tasks",
+) -> ToolResult:
     r"""Run a natural language query against a DataFrame.
 
     Parameters
@@ -74,8 +83,24 @@ def run_df_query(query: str, df, schema, value_examples, custom_user_guidance, l
         return run_df_code(user_code=query, df=df)
 
     if plot:
-        return generate_plot_code(llm, query, schema, value_examples, df, custom_user_guidance=custom_user_guidance, context_kind=context_kind)
-    return generate_result_df(llm, query, schema, value_examples, df, custom_user_guidance=custom_user_guidance, context_kind=context_kind)
+        return generate_plot_code(
+            llm,
+            query,
+            schema,
+            value_examples,
+            df,
+            custom_user_guidance=custom_user_guidance,
+            context_kind=context_kind,
+        )
+    return generate_result_df(
+        llm,
+        query,
+        schema,
+        value_examples,
+        df,
+        custom_user_guidance=custom_user_guidance,
+        context_kind=context_kind,
+    )
 
 
 def execute_df_code(user_code: str, df) -> ToolResult:
@@ -97,7 +122,15 @@ def execute_df_code(user_code: str, df) -> ToolResult:
     return run_df_code(user_code=user_code, df=df)
 
 
-def generate_plot_code(llm, query, dynamic_schema, value_examples, df, custom_user_guidance=None, context_kind="tasks") -> ToolResult:
+def generate_plot_code(
+    llm,
+    query,
+    dynamic_schema,
+    value_examples,
+    df,
+    custom_user_guidance=None,
+    context_kind="tasks",
+) -> ToolResult:
     """Generate DataFrame and plotting code from a natural language query using an LLM.
 
     Parameters
@@ -121,7 +154,13 @@ def generate_plot_code(llm, query, dynamic_schema, value_examples, df, custom_us
     -------
     ToolResult
     """
-    plot_prompt = generate_plot_code_prompt(query, dynamic_schema, value_examples, list(df.columns), context_kind=context_kind)
+    plot_prompt = generate_plot_code_prompt(
+        query,
+        dynamic_schema,
+        value_examples,
+        list(df.columns),
+        context_kind=context_kind,
+    )
     try:
         response = _call_llm(llm, plot_prompt)
     except Exception as e:
@@ -142,7 +181,11 @@ def generate_plot_code(llm, query, dynamic_schema, value_examples, df, custom_us
                 assert "plot_code" in result
                 ToolResult(code=301, result=result, extra=plot_prompt)
             except ValueError as e:
-                return ToolResult(code=405, result=f"Tried to parse this as JSON: {response}, but got Error: {e}", extra=plot_prompt)
+                return ToolResult(
+                    code=405,
+                    result=f"Tried to parse this as JSON: {response}, but got Error: {e}",
+                    extra=plot_prompt,
+                )
             except AssertionError as e:
                 return ToolResult(code=405, result=str(e), extra=plot_prompt)
         else:
@@ -161,10 +204,24 @@ def generate_plot_code(llm, query, dynamic_schema, value_examples, df, custom_us
     except Exception as e:
         return ToolResult(code=404, result=str(e))
 
-    return ToolResult(code=301, result={"result_df": result_df, "plot_code": plot_code, "result_code": result_code}, tool_name="generate_plot_code")
+    return ToolResult(
+        code=301,
+        result={"result_df": result_df, "plot_code": plot_code, "result_code": result_code},
+        tool_name="generate_plot_code",
+    )
 
 
-def generate_result_df(llm, query: str, dynamic_schema, example_values, df, custom_user_guidance=None, attempt_fix=True, summarize=True, context_kind="tasks") -> ToolResult:
+def generate_result_df(
+    llm,
+    query: str,
+    dynamic_schema,
+    example_values,
+    df,
+    custom_user_guidance=None,
+    attempt_fix=True,
+    summarize=True,
+    context_kind="tasks",
+) -> ToolResult:
     """Generate a result DataFrame from a natural language query using an LLM.
 
     Parameters
@@ -196,7 +253,14 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df, cust
     if llm is None:
         llm = build_llm_model()
     try:
-        prompt = generate_pandas_code_prompt(query, dynamic_schema, example_values, custom_user_guidance, list(df.columns), context_kind=context_kind)
+        prompt = generate_pandas_code_prompt(
+            query,
+            dynamic_schema,
+            example_values,
+            custom_user_guidance,
+            list(df.columns),
+            context_kind=context_kind,
+        )
         response = _call_llm(llm, prompt)
     except Exception as e:
         return ToolResult(code=400, result=str(e), extra=prompt)
@@ -208,7 +272,10 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df, cust
         if not attempt_fix:
             return ToolResult(
                 code=405,
-                result=f"Failed to parse this as Python code: \n\n ```python\n {result_code} \n```\n but got error:\n\n {e}.",
+                result=(
+                    "Failed to parse this as Python code: "
+                    f"\n\n ```python\n {result_code} \n```\n but got error:\n\n {e}."
+                ),
                 extra={"generated_code": result_code, "exception": str(e), "prompt": prompt},
             )
         tool_result = extract_or_fix_python_code(llm, result_code, list(df.columns))
@@ -220,18 +287,29 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df, cust
             except Exception as e2:
                 return ToolResult(
                     code=405,
-                    result=f"Failed to parse: ```python\n{result_code}```\nThen tried LLM fix: ```python\n{new_result_code}```\nbut got error:\n{e2}.",
+                    result=(
+                        f"Failed to parse: ```python\n{result_code}```\n"
+                        f"Then tried LLM fix: ```python\n{new_result_code}```\n"
+                        f"but got error:\n{e2}."
+                    ),
                 )
         else:
             return ToolResult(
                 code=405,
-                result=f"Failed to parse: {result_code}. Exception: {e}\nThen tried LLM fix, got error: {tool_result.result}",
+                result=(
+                    f"Failed to parse: {result_code}. Exception: {e}\n"
+                    f"Then tried LLM fix, got error: {tool_result.result}"
+                ),
             )
 
     try:
         result_df = normalize_output(result_df)
     except Exception as e:
-        return ToolResult(code=504, result="Failed to normalize output.", extra={"generated_code": result_code, "exception": str(e), "prompt": prompt})
+        return ToolResult(
+            code=504,
+            result="Failed to normalize output.",
+            extra={"generated_code": result_code, "exception": str(e), "prompt": prompt},
+        )
 
     result_df = result_df.dropna(axis=1, how="all")
 
@@ -239,7 +317,16 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df, cust
     summary, summary_error = None, None
     if summarize:
         try:
-            tool_result = summarize_result(llm, result_code, result_df, query, dynamic_schema, example_values, list(df.columns), context_kind=context_kind)
+            tool_result = summarize_result(
+                llm,
+                result_code,
+                result_df,
+                query,
+                dynamic_schema,
+                example_values,
+                list(df.columns),
+                context_kind=context_kind,
+            )
             if tool_result.is_success():
                 return_code = 301
                 summary = tool_result.result
@@ -255,7 +342,11 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df, cust
     try:
         result_df_str = format_result_df(result_df)
     except Exception as e:
-        return ToolResult(code=405, result="Failed to format output.", extra={"generated_code": result_code, "exception": str(e), "prompt": prompt})
+        return ToolResult(
+            code=405,
+            result="Failed to format output.",
+            extra={"generated_code": result_code, "exception": str(e), "prompt": prompt},
+        )
 
     return ToolResult(
         code=return_code,
@@ -296,7 +387,11 @@ def run_df_code(user_code: str, df) -> ToolResult:
         return ToolResult(code=405, result=str(e))
 
     result_df = result_df.dropna(axis=1, how="all")
-    return ToolResult(code=301, result={"result_code": user_code, "result_df": format_result_df(result_df)}, tool_name="run_df_code")
+    return ToolResult(
+        code=301,
+        result={"result_code": user_code, "result_df": format_result_df(result_df)},
+        tool_name="run_df_code",
+    )
 
 
 def extract_or_fix_python_code(llm, raw_text, current_fields) -> ToolResult:
@@ -345,7 +440,16 @@ def extract_or_fix_json_code(llm, raw_text) -> ToolResult:
         return ToolResult(code=499, result=str(e))
 
 
-def summarize_result(llm, code, result, query: str, dynamic_schema, example_values, current_fields, context_kind="tasks") -> ToolResult:
+def summarize_result(
+    llm,
+    code,
+    result,
+    query: str,
+    dynamic_schema,
+    example_values,
+    current_fields,
+    context_kind="tasks",
+) -> ToolResult:
     """Summarize a pandas result with local reduction for large DataFrames.
 
     Parameters
@@ -372,7 +476,15 @@ def summarize_result(llm, code, result, query: str, dynamic_schema, example_valu
     ToolResult
     """
     summarized_df = summarize_df(result, code)
-    prompt = dataframe_summarizer_context(code, summarized_df, dynamic_schema, example_values, query, current_fields, context_kind=context_kind)
+    prompt = dataframe_summarizer_context(
+        code,
+        summarized_df,
+        dynamic_schema,
+        example_values,
+        query,
+        current_fields,
+        context_kind=context_kind,
+    )
     try:
         response = _call_llm(llm, prompt)
         return ToolResult(code=201, result=response)

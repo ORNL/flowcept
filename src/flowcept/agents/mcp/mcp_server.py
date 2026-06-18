@@ -4,15 +4,15 @@ import json
 import os
 from threading import Thread
 
-from flowcept.agents.mcp_client import run_tool
+from flowcept.agents.mcp.mcp_client import run_tool
 from flowcept.agents.context_manager import mcp_flowcept, ctx_manager
 
 # Import all mcp_tools modules so their @mcp_flowcept.tool() decorators fire
-from flowcept.agents.mcp_tools.session_tools import check_liveness, prompt_handler
-import flowcept.agents.mcp_tools.db_query_mcp_tools  # noqa: F401
-import flowcept.agents.mcp_tools.in_memory_task_query_mcp_tools  # noqa: F401
-import flowcept.agents.mcp_tools.in_memory_workflow_query_mcp_tools  # noqa: F401
-import flowcept.agents.mcp_tools.report_tools  # noqa: F401
+from flowcept.agents.mcp.mcp_tools.session_tools import check_liveness, prompt_handler
+import flowcept.agents.mcp.mcp_tools.db_query_mcp_tools  # noqa: F401
+import flowcept.agents.mcp.mcp_tools.in_memory_task_query_mcp_tools  # noqa: F401
+import flowcept.agents.mcp.mcp_tools.in_memory_workflow_query_mcp_tools  # noqa: F401
+import flowcept.agents.mcp.mcp_tools.report_tools  # noqa: F401
 import flowcept.agents.prompts.mcp_prompts  # noqa: F401
 from flowcept.agents.tool_result import ToolResult
 from flowcept.commons.flowcept_logger import FlowceptLogger

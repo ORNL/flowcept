@@ -1038,7 +1038,7 @@ def test_agent_telemetry_timeseries(db_cleanup):
 
 def test_file_dashboard_store_roundtrip(tmp_path):
     """FileDashboardStore (non-Mongo fallback) persists real JSON files."""
-    from flowcept.webservice.services.dashboard_store import FileDashboardStore
+    from flowcept.commons.dashboard_store import FileDashboardStore
 
     store = FileDashboardStore(directory=str(tmp_path))
     doc = {"dashboard_id": "d1", "name": "local", "charts": [], "layout": []}

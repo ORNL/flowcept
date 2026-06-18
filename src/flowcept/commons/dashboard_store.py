@@ -11,7 +11,7 @@ from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import WEBSERVER_DASHBOARDS_DIR
 
-_SEED_FILE = Path(__file__).parent.parent / "ui_build" / "default_dashboard_configs.json"
+_SEED_FILE = Path(__file__).parent.parent / "webservice" / "ui_build" / "default_dashboard_configs.json"
 
 
 class MongoDashboardStore:

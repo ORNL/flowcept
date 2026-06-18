@@ -5,7 +5,7 @@ These replace the hardcoded schema strings in ``general_prompts.py`` with
 live schema tables derived from ``SCHEMA_CONTEXT`` (populated at MCP server startup).
 """
 
-from flowcept.agents.schema_introspection import SCHEMA_CONTEXT
+from flowcept.agents.provenance_schema_manager.static_schema_builder import SCHEMA_CONTEXT
 
 BASE_ROLE = (
     "You are a helpful assistant analyzing provenance data from a large-scale workflow composed of multiple tasks."
@@ -48,8 +48,7 @@ def _build_data_schema_prompt() -> str:
         "Pay attention to the 'tags' field, as it may indicate critical tasks. "
         "The 'telemetry_summary' field reports CPU, disk, memory, and network usage, along with 'duration_sec'. "
         "Task placement is stored in the 'hostname' field.\n\n"
-        "### Known task fields\n\n"
-        + _build_schema_table()
+        "### Known task fields\n\n" + _build_schema_table()
     )
 
 

@@ -563,7 +563,7 @@ def get_task(task_id: str):
 
 def start_agent():  # TODO: start with gui
     """Start Flowcept agent."""
-    from flowcept.agents.mcp_server import main
+    from flowcept.agents.mcp.mcp_server import main
 
     main()
 
@@ -605,7 +605,7 @@ def agent_client(tool_name: str, kwargs: str = None):
             print(f"Could not parse kwargs as a valid JSON: {kwargs}")
             print(e)
     print("-----------------")
-    from flowcept.agents.mcp_client import run_tool
+    from flowcept.agents.mcp.mcp_client import run_tool
 
     result = run_tool(tool_name, kwargs)[0]
 
@@ -660,7 +660,7 @@ def check_services():
 
     if AGENT.get("enabled", False):
         print("Agent is enabled, so we are testing it too.")
-        from flowcept.agents.mcp_client import run_tool
+        from flowcept.agents.mcp.mcp_client import run_tool
 
         try:
             print(run_tool("check_liveness"))

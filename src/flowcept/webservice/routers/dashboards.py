@@ -10,8 +10,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from flowcept.webservice.routers.query import _validate_filter_shape
 from flowcept.webservice.schemas.common import ListResponse
-from flowcept.webservice.schemas.dashboards import DashboardConfig
-from flowcept.webservice.services.dashboard_store import get_dashboard_store
+from flowcept.commons.dashboard_schemas import DashboardConfig
+from flowcept.commons.dashboard_store import get_dashboard_store
 
 router = APIRouter(prefix="/dashboards", tags=["dashboards"])
 

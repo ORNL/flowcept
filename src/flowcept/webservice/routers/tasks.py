@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.schemas.common import ListResponse, QueryRequest
-from flowcept.webservice.services.serializers import normalize_docs
+from flowcept.commons.serializers import normalize_docs
 from flowcept.webservice.services.sorting import sort_docs_by_first_date_field
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])

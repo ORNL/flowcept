@@ -145,11 +145,7 @@ def _build_graph(llm, tools):
             args = tc.get("args") or {}
             call_id = tc.get("id") or name
             tool_fn = tools_by_name.get(name)
-            output = (
-                tool_fn.invoke(args)
-                if tool_fn is not None
-                else json.dumps({"error": f"Unknown tool {name}"})
-            )
+            output = tool_fn.invoke(args) if tool_fn is not None else json.dumps({"error": f"Unknown tool {name}"})
             tool_msgs.append(ToolMessage(content=output, tool_call_id=call_id, name=name))
         return {"messages": tool_msgs}
 
@@ -241,7 +237,9 @@ def run_chat(
         if context:
             system += f"\nCurrent user context: {json.dumps(context)}"
         lc = [_SM(content=system)] + [
-            AIMessage(content=m.get("content", "")) if m.get("role") == "assistant" else HumanMessage(content=m.get("content", ""))
+            AIMessage(content=m.get("content", ""))
+            if m.get("role") == "assistant"
+            else HumanMessage(content=m.get("content", ""))
             for m in messages
         ]
         try:

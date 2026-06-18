@@ -16,7 +16,7 @@ import re
 from typing import Any, Dict, List, Optional, Set
 
 from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.webservice.services.stats import _to_epoch
+from flowcept.commons.provenance_stats import _to_epoch
 
 MAX_NODES = 400
 _TASK_PROJECTION = [

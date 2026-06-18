@@ -86,7 +86,7 @@ class TelemetrySummary:
     """Schema authority for the telemetry_summary field produced by summarize_telemetry().
 
     This class is NOT instantiated at runtime. It exists solely to document
-    the fixed output schema of summarize_telemetry() so that schema_introspection.py
+    the fixed output schema of summarize_telemetry() so that static_schema_builder.py
     can build accurate prompt context at MCP server startup.
 
     Each sub-field (cpu, memory, disk, network) is present only when the

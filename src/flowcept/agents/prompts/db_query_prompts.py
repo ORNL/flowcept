@@ -4,14 +4,24 @@
 All functions are plain Python — no MCP framework imports.
 """
 
-from flowcept.agents.schema_introspection import SCHEMA_CONTEXT
+from flowcept.agents.provenance_schema_manager.static_schema_builder import SCHEMA_CONTEXT
 
 ALLOWED_FILTER_OPERATORS = frozenset(
     {
-        "$and", "$or", "$nor", "$not",
-        "$exists", "$eq", "$ne",
-        "$gt", "$gte", "$lt", "$lte",
-        "$in", "$nin", "$regex",
+        "$and",
+        "$or",
+        "$nor",
+        "$not",
+        "$exists",
+        "$eq",
+        "$ne",
+        "$gt",
+        "$gte",
+        "$lt",
+        "$lte",
+        "$in",
+        "$nin",
+        "$regex",
     }
 )
 

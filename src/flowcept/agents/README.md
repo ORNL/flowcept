@@ -10,12 +10,8 @@ docs live in `docs/agent.rst`.
 
 ```
 agents/
-  mcp_server.py              # MCP server entry point (start with `flowcept --start-agent`)
-  mcp_client.py              # Client helpers: run_tool(), run_prompt()
   context_manager.py         # FlowceptAgentContextManager, mcp_flowcept, get_df_context
   tool_result.py             # ToolResult Pydantic model (2xx/3xx/4xx/5xx conventions)
-  schema_introspection.py    # SCHEMA_CONTEXT, build_schema_context, assert_schema_documented
-  agents_utils.py            # Backward-compat re-export shim (points to new locations)
 
   llm/
     builders.py              # build_llm_model(), normalize_message()
@@ -23,19 +19,28 @@ agents/
       claude_gcp.py          # ClaudeOnGCPLLM (Vertex AI)
       gemini25.py            # Gemini25LLM
 
+  chat_orchestration/
+    chat_orchestrator_service.py  # LangGraph + MemorySaver chat turn orchestration
+
+  provenance_schema_manager/
+    static_schema_builder.py # SCHEMA_CONTEXT, build_schema_context, assert_schema_documented
+    dynamic_schema_tracker.py # Tracks evolving task/object schemas from live messages
+
   data_query_tools/          # Plain-Python tool cores — NO MCP imports
     db_query_tools.py        # query_tasks, query_workflows, get_task_summary, …
     in_memory_task_query_tools.py   # run_df_query, generate_result_df, …
     in_memory_workflow_query_tools.py  # execute_generated_workflow_query, run_workflow_query
     pandas_utils.py          # safe_execute, normalize_output, format_result_df, …
 
-  mcp_tools/                 # Thin MCP wrappers over data_query_tools/
-    db_query_mcp_tools.py
-    in_memory_task_query_mcp_tools.py
-    in_memory_workflow_query_mcp_tools.py
-    session_tools.py         # check_liveness, check_llm, record_guidance, prompt_handler, …
-    report_tools.py          # generate_workflow_card
-    mcp_prompts.py           # @mcp_flowcept.prompt() registrations
+  mcp/
+    mcp_server.py            # MCP server entry point (start with `flowcept --start-agent`)
+    mcp_client.py            # Client helpers: run_tool(), run_prompt()
+    mcp_tools/               # Thin MCP wrappers over data_query_tools/
+      db_query_mcp_tools.py
+      in_memory_task_query_mcp_tools.py
+      in_memory_workflow_query_mcp_tools.py
+      session_tools.py       # check_liveness, check_llm, record_guidance, prompt_handler, …
+      report_tools.py        # generate_workflow_card
 
   prompts/
     README.md                # Prompt authoring rules
@@ -43,8 +48,8 @@ agents/
     db_query_prompts.py      # build_db_filter_prompt
     in_memory_task_query_prompts.py   # Pandas code / plot prompt builders
     in_memory_workflow_query_prompts.py  # Workflow message query prompt builders
-    general_prompts.py       # Routing / small-talk prompts
     chat_prompts.py          # Webservice chat system prompt
+    mcp_prompts.py           # @mcp_flowcept.prompt() registrations
 ```
 
 ## One Agent, Two Orchestrators
@@ -59,7 +64,7 @@ functions. The difference is who does routing and LLM reasoning:
 
 ## Schema Context
 
-`SCHEMA_CONTEXT` (module-level dict in `schema_introspection.py`) is populated at
+`SCHEMA_CONTEXT` (module-level dict in `provenance_schema_manager/static_schema_builder.py`) is populated at
 MCP server startup via `build_schema_context()`. It maps:
 
 ```python
@@ -94,14 +99,14 @@ flowcept --start-agent
 ## Client Usage
 
 ```python
-from flowcept.agents.mcp_client import run_tool, run_prompt
+from flowcept.agents.mcp.mcp_client import run_tool, run_prompt
 
 # Call a tool
 result = run_tool("prompt_handler", kwargs={"message": "t: top 5 slowest activities"})
 
 # Use a prompt builder (external LLM mode)
 prompt = run_prompt(
-    "build_df_query_prompt",
-    args={"query": "top 5 slowest activities", "context_kind": "tasks"},
+  "build_df_query_prompt",
+  args={"query": "top 5 slowest activities", "context_kind": "tasks"},
 )
 ```

@@ -11,7 +11,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import AGENT, AGENT_CHAT_ENABLED
-from flowcept.webservice.services.chat_orchestrator_service import run_chat
+from flowcept.agents.chat_orchestration.chat_orchestrator_service import run_chat
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
