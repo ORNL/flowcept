@@ -1,9 +1,14 @@
-"""LLM chat orchestration for the webservice: tool-calling loop over the shared prov tools."""
+"""LLM chat orchestration for the webservice: LangGraph + MemorySaver tool-calling loop."""
 
 from __future__ import annotations
 
 import json
+import uuid
 from typing import Any, Dict, Generator, List, Optional
+
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, MessagesState, StateGraph
 
 from flowcept.agents.prompts.chat_prompts import CHAT_SYSTEM_PROMPT
 from flowcept.agents.data_query_tools import db_query_tools as prov_tools
@@ -11,6 +16,9 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import AGENT_CHAT_MAX_TOOL_ITERATIONS
 
 MAX_TOOL_ITERATIONS = AGENT_CHAT_MAX_TOOL_ITERATIONS
+
+# Module-level saver — persists across requests keyed by thread_id.
+_memory = MemorySaver()
 
 
 def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_edit: bool):
@@ -96,7 +104,6 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         Always pass a workflow_id in the filter when on a workflow page.
         """
         wf_id = (context or {}).get("workflow_id")
-        # Coerce a bare string to a list so the LLM can pass either form.
         ids: Optional[List[str]] = None
         if task_ids is not None:
             ids = [task_ids] if isinstance(task_ids, str) else list(task_ids)
@@ -120,17 +127,75 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
     return tools
 
 
-def _build_messages(messages: List[Dict[str, str]], context: Optional[Dict[str, Any]]):
-    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+def _build_graph(llm, tools):
+    """Build a LangGraph agent + tools graph compiled with the module-level MemorySaver."""
+    bound = llm.bind_tools(tools)
+    tools_by_name = {t.name: t for t in tools}
 
-    system = CHAT_SYSTEM_PROMPT
-    if context:
-        system += f"\nCurrent user context (scope queries with it): {json.dumps(context)}"
-    lc_messages = [SystemMessage(content=system)]
-    for message in messages:
-        role = message.get("role")
-        content = message.get("content", "")
+    def call_model(state: MessagesState):
+        """Agent node: invoke the LLM with current messages."""
+        return {"messages": [bound.invoke(state["messages"])]}
+
+    def call_tools(state: MessagesState):
+        """Tools node: execute all pending tool calls and return ToolMessages."""
+        last = state["messages"][-1]
+        tool_msgs = []
+        for tc in getattr(last, "tool_calls", []):
+            name = tc["name"]
+            args = tc.get("args") or {}
+            call_id = tc.get("id") or name
+            tool_fn = tools_by_name.get(name)
+            output = (
+                tool_fn.invoke(args)
+                if tool_fn is not None
+                else json.dumps({"error": f"Unknown tool {name}"})
+            )
+            tool_msgs.append(ToolMessage(content=output, tool_call_id=call_id, name=name))
+        return {"messages": tool_msgs}
+
+    def should_continue(state: MessagesState):
+        """Route to tools if the last AI message has tool calls; otherwise end."""
+        last = state["messages"][-1]
+        if isinstance(last, AIMessage) and getattr(last, "tool_calls", None):
+            return "tools"
+        return END
+
+    graph = StateGraph(MessagesState)
+    graph.add_node("agent", call_model)
+    graph.add_node("tools", call_tools)
+    graph.set_entry_point("agent")
+    graph.add_conditional_edges("agent", should_continue)
+    graph.add_edge("tools", "agent")
+    return graph.compile(checkpointer=_memory)
+
+
+def _prepare_input_messages(
+    messages: List[Dict[str, str]],
+    context: Optional[Dict[str, Any]],
+    thread_id: Optional[str],
+) -> List:
+    """Convert client messages to LangChain message objects.
+
+    When a stateful thread already has a checkpoint, only the new user messages
+    are returned (server owns history via MemorySaver).  For new threads and
+    stateless calls the full message list is returned with the system prompt
+    prepended.
+    """
+    config = {"configurable": {"thread_id": thread_id}} if thread_id else None
+    is_new_thread = config is None or _memory.get(config) is None
+
+    lc_messages = []
+    for m in messages:
+        role = m.get("role")
+        content = m.get("content", "")
         lc_messages.append(AIMessage(content=content) if role == "assistant" else HumanMessage(content=content))
+
+    if is_new_thread:
+        system = CHAT_SYSTEM_PROMPT
+        if context:
+            system += f"\nCurrent user context (scope queries with it): {json.dumps(context)}"
+        lc_messages = [SystemMessage(content=system)] + lc_messages
+
     return lc_messages
 
 
@@ -139,75 +204,93 @@ def run_chat(
     messages: List[Dict[str, str]],
     context: Optional[Dict[str, Any]] = None,
     allow_dashboard_edit: bool = False,
+    thread_id: Optional[str] = None,
 ) -> Generator[Dict[str, Any], None, None]:
-    """Run one chat turn as a generator of events.
+    """Run one chat turn as a generator of events backed by LangGraph + MemorySaver.
 
     Yields dict events: ``{"event": "tool_call"|"tool_result"|"card"|"token"|"done"|"error", ...}``.
-    The caller decides whether to stream them (SSE) or collect them into one response.
+
+    When *thread_id* is ``None`` the call is stateless (client manages full history in
+    *messages*).  When *thread_id* is provided the server owns history: pass only the
+    new message(s) in *messages* on follow-up turns.
 
     Parameters
     ----------
     llm : Any
         A langchain chat model (from ``build_llm_model``).
     messages : list of dict
-        Conversation history, ``[{"role": "user"|"assistant", "content": "..."}]``.
+        ``[{"role": "user"|"assistant", "content": "..."}]``.
+        Full history when *thread_id* is ``None``; only new messages otherwise.
     context : dict, optional
-        UI context (e.g., ``{"workflow_id": ...}``) injected into the system prompt and charts.
+        UI context injected into the system prompt and chart tool.
     allow_dashboard_edit : bool, optional
         Whether dashboard-modifying tools are bound.
+    thread_id : str, optional
+        Stable ID that keys server-side conversation memory.
     """
     logger = FlowceptLogger()
     tools = _build_langchain_tools(context, allow_dashboard_edit)
-    tools_by_name = {t.name: t for t in tools}
-    lc_messages = _build_messages(messages, context)
 
     try:
-        bound = llm.bind_tools(tools)
+        llm.bind_tools(tools)
     except (NotImplementedError, AttributeError):
         logger.warning("Chat LLM does not support tool binding; answering without tools.")
-        bound = None
+        from langchain_core.messages import SystemMessage as _SM
+
+        system = CHAT_SYSTEM_PROMPT
+        if context:
+            system += f"\nCurrent user context: {json.dumps(context)}"
+        lc = [_SM(content=system)] + [
+            AIMessage(content=m.get("content", "")) if m.get("role") == "assistant" else HumanMessage(content=m.get("content", ""))
+            for m in messages
+        ]
+        try:
+            response = llm.invoke(lc)
+            yield {"event": "token", "data": getattr(response, "content", str(response))}
+        except Exception as exc:
+            logger.exception(exc)
+            yield {"event": "error", "data": str(exc)}
+        yield {"event": "done"}
+        return
+
+    effective_thread_id = thread_id if thread_id is not None else str(uuid.uuid4())
+    config = {
+        "configurable": {"thread_id": effective_thread_id},
+        "recursion_limit": MAX_TOOL_ITERATIONS * 2 + 2,
+    }
+
+    graph = _build_graph(llm, tools)
+    lc_messages = _prepare_input_messages(messages, context, thread_id)
 
     try:
-        if bound is None:
-            response = llm.invoke(lc_messages)
-            yield {"event": "token", "data": getattr(response, "content", str(response))}
-            yield {"event": "done"}
-            return
-
-        for _ in range(MAX_TOOL_ITERATIONS):
-            ai_message = bound.invoke(lc_messages)
-            tool_calls = getattr(ai_message, "tool_calls", None) or []
-            if not tool_calls:
-                yield {"event": "token", "data": ai_message.content}
-                yield {"event": "done"}
-                return
-
-            lc_messages.append(ai_message)
-            from langchain_core.messages import ToolMessage
-
-            for call in tool_calls:
-                name = call["name"]
-                args = call.get("args") or {}
-                call_id = call.get("id") or name
-                yield {"event": "tool_call", "data": {"name": name, "args": args}}
-                tool_fn = tools_by_name.get(name)
-                output = tool_fn.invoke(args) if tool_fn is not None else json.dumps({"error": f"Unknown tool {name}"})
-                lc_messages.append(ToolMessage(content=output, tool_call_id=call_id))
-
-                summary: Dict[str, Any] = {"name": name}
-                try:
-                    parsed = json.loads(output)
-                    summary["code"] = parsed.get("code")
-                    if name == "make_chart" and isinstance(parsed.get("result"), dict):
-                        yield {"event": "card", "data": parsed["result"]}
-                    if name == "highlight_lineage" and isinstance(parsed.get("result"), dict):
-                        yield {"event": "ui:highlight", "data": parsed["result"]}
-                except Exception:
-                    pass
-                yield {"event": "tool_result", "data": summary}
-
-        yield {"event": "token", "data": "I reached the tool-call limit for this request. Please refine the question."}
-        yield {"event": "done"}
+        for chunk in graph.stream({"messages": lc_messages}, config=config, stream_mode="updates"):
+            for node_name, node_output in chunk.items():
+                msgs = node_output.get("messages", [])
+                if node_name == "agent":
+                    last = msgs[-1] if msgs else None
+                    if last is None:
+                        continue
+                    tool_calls = getattr(last, "tool_calls", None) or []
+                    if tool_calls:
+                        for tc in tool_calls:
+                            yield {"event": "tool_call", "data": {"name": tc["name"], "args": tc.get("args", {})}}
+                    else:
+                        yield {"event": "token", "data": getattr(last, "content", "")}
+                        yield {"event": "done"}
+                elif node_name == "tools":
+                    for tm in msgs:
+                        name = getattr(tm, "name", "")
+                        summary: Dict[str, Any] = {"name": name}
+                        try:
+                            parsed = json.loads(tm.content)
+                            summary["code"] = parsed.get("code")
+                            if name == "make_chart" and isinstance(parsed.get("result"), dict):
+                                yield {"event": "card", "data": parsed["result"]}
+                            if name == "highlight_lineage" and isinstance(parsed.get("result"), dict):
+                                yield {"event": "ui:highlight", "data": parsed["result"]}
+                        except Exception:
+                            pass
+                        yield {"event": "tool_result", "data": summary}
     except Exception as e:
         logger.exception(e)
         yield {"event": "error", "data": str(e)}

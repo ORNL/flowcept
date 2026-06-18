@@ -3,6 +3,8 @@ import os
 import tempfile
 from time import sleep
 import unittest
+
+import pytest
 from unittest.mock import patch
 
 import pandas as pd
@@ -714,3 +716,86 @@ class TestRefactoredAgentStructure(unittest.TestCase):
         params = inspect.signature(ChatRequest).parameters
         # thread_id should be declared as a field (even if Optional)
         self.assertIn("thread_id", ChatRequest.model_fields)
+
+    # ── G2-G3: run_chat accepts thread_id ─────────────────────────────────
+    def test_g2_run_chat_signature_has_thread_id(self):
+        from flowcept.webservice.services.chat_orchestrator_service import run_chat
+        import inspect
+        sig = inspect.signature(run_chat)
+        self.assertIn("thread_id", sig.parameters)
+
+
+class TestLLMRoundTrips(unittest.TestCase):
+    """I4: LLM-dependent round-trip tests.  Marked @pytest.mark.llm so CI skips them."""
+
+    def _skip_if_no_llm(self):
+        api_key = AGENT.get("api_key", "")
+        if not api_key or api_key in ("?", "your-api-key-here", ""):
+            FlowceptLogger().warning("Skipping LLM round-trip test: no valid api_key in AGENT settings.")
+            self.skipTest("LLM not configured.")
+
+    @pytest.mark.llm
+    def test_i4_run_df_query_real_llm(self):
+        """run_df_query uses a real LLM to generate pandas code and returns a successful ToolResult."""
+        self._skip_if_no_llm()
+        import pandas as pd
+        from flowcept.agents.data_query_tools.in_memory_task_query_tools import run_df_query
+        from flowcept.agents.llm.builders import build_llm_model
+
+        df = pd.DataFrame({
+            "activity_id": ["train", "train", "eval"],
+            "status": ["finished", "finished", "finished"],
+            "telemetry_summary.duration_sec": [10.0, 12.5, 5.0],
+        })
+        schema = {"activity_id": {"type": "str"}, "status": {"type": "str"}}
+        llm = build_llm_model(track_tools=False)
+        result = run_df_query(
+            query="How many rows are there?",
+            df=df,
+            schema=schema,
+            value_examples={},
+            custom_user_guidance=[],
+            llm=llm,
+        )
+        self.assertIn(result.code, (201, 301), f"Expected success code, got {result.code}: {result.result}")
+
+    @pytest.mark.llm
+    def test_i4_run_chat_tool_call_round_trip(self):
+        """run_chat drives tool calling with a real LLM, yielding tool_call + token + done events."""
+        self._skip_if_no_llm()
+        if not Flowcept.services_alive():
+            FlowceptLogger().warning("Skipping run_chat round-trip: Flowcept services not alive.")
+            self.skipTest("Flowcept services not alive.")
+        from flowcept.agents.llm.builders import build_llm_model
+        from flowcept.webservice.services.chat_orchestrator_service import run_chat
+
+        llm = build_llm_model(track_tools=False)
+        messages = [{"role": "user", "content": "How many tasks are there in the database?"}]
+        events = list(run_chat(llm, messages=messages))
+        event_types = [e["event"] for e in events]
+        self.assertIn("done", event_types, f"Expected 'done' event, got: {event_types}")
+        self.assertTrue(
+            any(e in event_types for e in ("token", "error")),
+            f"Expected 'token' or 'error' event, got: {event_types}",
+        )
+
+    @pytest.mark.llm
+    def test_i4_langgraph_thread_memory(self):
+        """thread_id enables server-side conversation memory: follow-up question recalls prior answer."""
+        self._skip_if_no_llm()
+        from flowcept.agents.llm.builders import build_llm_model
+        from flowcept.webservice.services.chat_orchestrator_service import run_chat
+
+        import uuid
+        tid = f"test-thread-{uuid.uuid4()}"
+        llm = build_llm_model(track_tools=False)
+
+        # First turn: plant a fact
+        events1 = list(run_chat(llm, messages=[{"role": "user", "content": "My lucky number is 7777."}], thread_id=tid))
+        types1 = [e["event"] for e in events1]
+        self.assertIn("done", types1, f"First turn missing 'done': {types1}")
+
+        # Second turn: recall the fact (only new message; server owns history via MemorySaver)
+        events2 = list(run_chat(llm, messages=[{"role": "user", "content": "What is my lucky number?"}], thread_id=tid))
+        full_text = " ".join(str(e.get("data", "")) for e in events2 if e["event"] == "token")
+        self.assertIn("7777", full_text, f"Expected '7777' in follow-up response, got: {full_text!r}")

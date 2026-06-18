@@ -30,6 +30,16 @@ from flowcept.agents.prompts.in_memory_task_query_prompts import (
 EMPTY_DF_MESSAGE = "Current df is empty or null."
 
 
+def _call_llm(llm, prompt: str) -> str:
+    """Call an LLM with a string prompt and always return a plain string.
+
+    Handles both ``FlowceptLLM`` (whose ``invoke`` already returns ``str``)
+    and raw LangChain models (whose ``invoke`` returns an ``AIMessage``).
+    """
+    response = llm.invoke(prompt)
+    return response.content if hasattr(response, "content") else str(response)
+
+
 def run_df_query(query: str, df, schema, value_examples, custom_user_guidance, llm=None, plot=False, context_kind: str = "tasks") -> ToolResult:
     r"""Run a natural language query against a DataFrame.
 
@@ -113,7 +123,7 @@ def generate_plot_code(llm, query, dynamic_schema, value_examples, df, custom_us
     """
     plot_prompt = generate_plot_code_prompt(query, dynamic_schema, value_examples, list(df.columns), context_kind=context_kind)
     try:
-        response = llm(plot_prompt)
+        response = _call_llm(llm, plot_prompt)
     except Exception as e:
         return ToolResult(code=400, result=str(e), extra=plot_prompt)
 
@@ -187,7 +197,7 @@ def generate_result_df(llm, query: str, dynamic_schema, example_values, df, cust
         llm = build_llm_model()
     try:
         prompt = generate_pandas_code_prompt(query, dynamic_schema, example_values, custom_user_guidance, list(df.columns), context_kind=context_kind)
-        response = llm(prompt)
+        response = _call_llm(llm, prompt)
     except Exception as e:
         return ToolResult(code=400, result=str(e), extra=prompt)
 
@@ -307,7 +317,7 @@ def extract_or_fix_python_code(llm, raw_text, current_fields) -> ToolResult:
     """
     prompt = extract_or_fix_python_code_prompt(raw_text, current_fields)
     try:
-        response = llm(prompt)
+        response = _call_llm(llm, prompt)
         return ToolResult(code=201, result=response)
     except Exception as e:
         return ToolResult(code=499, result=str(e))
@@ -329,7 +339,7 @@ def extract_or_fix_json_code(llm, raw_text) -> ToolResult:
     """
     prompt = extract_or_fix_json_code_prompt(raw_text)
     try:
-        response = llm(prompt)
+        response = _call_llm(llm, prompt)
         return ToolResult(code=201, result=response)
     except Exception as e:
         return ToolResult(code=499, result=str(e))
@@ -364,7 +374,7 @@ def summarize_result(llm, code, result, query: str, dynamic_schema, example_valu
     summarized_df = summarize_df(result, code)
     prompt = dataframe_summarizer_context(code, summarized_df, dynamic_schema, example_values, query, current_fields, context_kind=context_kind)
     try:
-        response = llm(prompt)
+        response = _call_llm(llm, prompt)
         return ToolResult(code=201, result=response)
     except Exception as e:
         return ToolResult(code=400, result=str(e))

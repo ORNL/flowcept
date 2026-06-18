@@ -85,6 +85,7 @@ def chat(payload: ChatRequest):
         messages=messages,
         context=payload.context,
         allow_dashboard_edit=payload.allow_dashboard_edit,
+        thread_id=payload.thread_id,
     )
 
     if payload.stream:
