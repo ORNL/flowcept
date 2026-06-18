@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from flowcept import __version__
 from flowcept.report.aggregations import as_float, elapsed_seconds, fmt_timestamp_utc
-from flowcept.commons.sanitization import sanitize_json_like
+from flowcept.commons.utils import sanitize_json_like
 
 
 def render_markdown_file_into_rich_terminal(markdown_path: str | Path, *, stream=None) -> None:

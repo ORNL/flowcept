@@ -7,7 +7,7 @@ from omegaconf import OmegaConf, DictConfig
 from flowcept.version import __version__
 from flowcept.commons.utils import get_utc_now, get_git_info
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.sanitization import sanitize_json_like
+from flowcept.commons.utils import sanitize_json_like
 from flowcept.configs import (
     settings,
     SYS_NAME,

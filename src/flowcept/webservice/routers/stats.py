@@ -13,7 +13,7 @@ from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.routers.query import _validate_filter_shape
 from flowcept.webservice.schemas.dashboards import ChartData
 from flowcept.webservice.services import stats
-from flowcept.webservice.services.serializers import normalize_docs
+from flowcept.commons.utils import normalize_docs
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 

@@ -19,7 +19,7 @@ from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.schemas.dashboards import DashboardChart, DashboardSpec
 from flowcept.webservice.services import stats
 from flowcept.webservice.services.dashboard_store import get_dashboard_store
-from flowcept.webservice.services.serializers import normalize_docs
+from flowcept.commons.utils import normalize_docs
 
 ALLOWED_FILTER_OPERATORS = {
     "$and",
