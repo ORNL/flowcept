@@ -34,6 +34,19 @@ from flowcept.configs import (
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 
+class ServicesAliveResult(dict):
+    """Dict of ``{service: "ok" | "unavailable"}`` that also evaluates as a ``bool``.
+
+    ``True`` when every checked service is ``"ok"`` (or when no services are enabled
+    and the dict is empty).  Returned by :meth:`Flowcept.services_alive` so callers
+    can use it as a plain bool *or* inspect per-service status.
+    """
+
+    def __bool__(self) -> bool:
+        """Return True when all checked services report 'ok' (empty dict → True)."""
+        return all(v == "ok" for v in self.values())
+
+
 class Flowcept(object):
     """Main Flowcept controller class."""
 
@@ -734,51 +747,70 @@ class Flowcept(object):
         self.stop()
 
     @staticmethod
-    def services_alive() -> bool:
-        """
-        Checks the liveness of the MQ (Message Queue) and, if enabled, the MongoDB service.
+    def services_alive() -> "ServicesAliveResult":
+        """Check liveness of all enabled services, including the LLM provider when configured.
+
+        Which services are checked is driven entirely by settings.yaml / env vars — no
+        parameters needed:
+
+        - ``mq.enabled`` → message queue.
+        - ``kv_db.enabled`` → key-value store.
+        - ``databases.mongodb.enabled`` → MongoDB.
+        - ``databases.lmdb.enabled`` → LMDB.
+        - ``agent.chat_enabled`` **and** a non-placeholder ``agent.api_key`` → LLM provider.
 
         Returns
         -------
-        bool
-            True if all services (MQ and optionally MongoDB) are alive, False otherwise.
-
-        Notes
-        -----
-        - The method tests the liveness of the MQ service using `MQDao`.
-        - If `MONGO_ENABLED` is True, it also checks the liveness of the MongoDB service
-          using `MongoDBDAO`.
-        - Logs errors if any service is not ready, and logs success when both services are operational.
-
-        Examples
-        --------
-        >>> is_alive = services_alive()
-        >>> if is_alive:
-        ...     print("All services are running.")
-        ... else:
-        ...     print("One or more services are not ready.")
+        ServicesAliveResult
+            A dict subclass mapping each checked service to ``"ok"`` or ``"unavailable"``.
+            Evaluates as ``True`` when every checked service is ``"ok"`` (or no services
+            are enabled), so all existing ``if not Flowcept.services_alive():`` guards
+            continue to work unchanged.  Per-service errors are also logged at ERROR level.
         """
         logger = FlowceptLogger()
+        result = ServicesAliveResult()
         mq = MQDao.build()
+
         if MQ_ENABLED:
-            if not mq.liveness_test():
-                logger.error("MQ Not Ready!")
-                return False
+            up = mq.liveness_test()
+            result["mq"] = "ok" if up else "unavailable"
+            if not up:
+                logger.error("MQ not ready!")
 
         if KVDB_ENABLED:
-            if not mq._keyvalue_dao.liveness_test():
-                logger.error("KVBD is enabled but is not ready!")
-                return False
+            up = mq._keyvalue_dao.liveness_test()
+            result["kvdb"] = "ok" if up else "unavailable"
+            if not up:
+                logger.error("KVDB is enabled but not ready!")
 
-        logger.info("MQ is alive!")
-        if MONGO_ENABLED:
+        if MONGO_ENABLED or LMDB_ENABLED:
             from flowcept.flowcept_api.db_api import DBAPI
 
-            if not DBAPI().liveness_test():
-                logger.error("MongoDB is enabled but DocDB is not ready!")
-                return False
-            logger.info("DocDB is alive!")
-        return True
+            for backend, up in DBAPI.db_liveness_tests().items():
+                result[backend] = "ok" if up else "unavailable"
+                if up:
+                    logger.info(f"{backend} is alive!")
+                else:
+                    logger.error(f"{backend} is enabled but not ready!")
+
+        from flowcept.configs import AGENT, AGENT_CHAT_ENABLED
+
+        if AGENT_CHAT_ENABLED:
+            api_key = AGENT.get("api_key", "")
+            provider = AGENT.get("service_provider", "")
+            bad = {"", "?", "your-api-key-here"}
+            if api_key not in bad and provider not in bad:
+                try:
+                    from flowcept.agents.llm.builders import build_llm_model
+
+                    build_llm_model(track_tools=False).invoke("ping")
+                    result["llm"] = "ok"
+                    logger.info("LLM provider is alive!")
+                except Exception as exc:
+                    result["llm"] = "unavailable"
+                    logger.error(f"LLM provider not reachable: {exc}")
+
+        return result
 
     @staticmethod
     def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: bool = False, consumers: List = None):

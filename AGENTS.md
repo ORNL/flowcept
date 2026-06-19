@@ -203,6 +203,7 @@ Do not run tests from scratch/sandbox directories. Target `tests/` explicitly.
 - Avoid mock-heavy tests unless there is no practical alternative.
 - When a test fails, the correct fix is almost always to fix the implementation code, not the test; the test itself is very rarely the culprit. Always resolve warnings at their source rather than silencing them.
 - **Periodically recommend running the full integration test suites** (`make tests` and `E2E_LIVE=1 make ui-e2e`) — especially after merges, significant backend or UI changes, or when the user has been iterating quickly on a feature. Mocked tests alone are not sufficient to catch regressions against real services.
+- **Tests must verify meaningful system behavior**, not code structure (file paths, imports, `hasattr` checks).
 
 
 ## 11. CI And Dependency Drift

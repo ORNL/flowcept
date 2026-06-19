@@ -1,0 +1,181 @@
+# Chat endpoint integration test cases — Perceptron GridSearch workflow
+#
+# The gridsearch workflow uses two agents (Orchestrator, HPCAgent) and runs
+# train_and_validate tasks for each hyperparameter config, producing accuracy
+# and loss metrics.  Queries mirror PROV-AGENT accountability categories but
+# are grounded in the gridsearch schema.
+#
+# Deterministic facts about this workflow:
+#   Agents       : Orchestrator, HPCAgent
+#   Workflow name: Perceptron GridSearch
+#   Activities   : get_dataset, call_hpc_agent, submit_gridsearch_job,
+#                  train_and_validate (×5), select_best_model  → 9 tasks total
+#   Config IDs   : cfg_1 … cfg_5
+#   cfg_1 inputs : epochs=2, learning_rate=0.01, n_input_neurons=1
+#   cfg_2 inputs : epochs=4, learning_rate=0.03, n_input_neurons=1
+#   cfg_3 inputs : epochs=6, learning_rate=0.08, n_input_neurons=2
+#   cfg_4 inputs : epochs=10, learning_rate=0.12, n_input_neurons=2
+#   cfg_5 inputs : epochs=14, learning_rate=0.20, n_input_neurons=2
+#   train inputs : n_input_neurons, epochs, learning_rate, dataset_id, config_id
+#   val_accuracy / loss: training-generated, not deterministic — not tested exactly
+#
+# query_type: "db"  -> test hits /api/v1/chat backed by DBAPI + MongoDB
+# query_type: "df"  -> test calls DF tools directly (not via HTTP)
+# tool_expected    -> the db_query_tools / in_memory tool expected to be invoked
+# score_threshold  -> minimum cosine-similarity vs expected_response (0.0–1.0)
+
+# ── DB PATH ──────────────────────────────────────────────────────────────────
+# Covers: query_tasks, query_workflows, get_task_summary, list_campaigns,
+#         list_agents, highlight_lineage, make_chart
+
+# Q1-equivalent: complete lineage from best model back to first input data
+- user_query: "What was the complete data lineage of the train_and_validate task that achieved the best validation accuracy?"
+  expected_response: "The train_and_validate task used inputs from HPCAgent via the submit_gridsearch_job task. The dataset was prepared by the get_dataset activity. The Orchestrator coordinated the workflow through call_hpc_agent."
+  score_threshold: 0.65
+  query_type: db
+  tool_expected: highlight_lineage
+
+# Q2-equivalent: specific config details — cfg_1 values are hardcoded and deterministic
+- user_query: "For configuration cfg_1, what hyperparameters were used and what agent submitted them?"
+  expected_response: "Configuration cfg_1 was submitted by the HPCAgent via the submit_gridsearch_job task. It used learning_rate=0.01, epochs=2, and n_input_neurons=1."
+  score_threshold: 0.72
+  query_type: db
+  tool_expected: query_tasks
+
+# Q3-equivalent: input field inventory for train_and_validate — field names are deterministic
+- user_query: "What input fields were used by the train_and_validate tasks?"
+  expected_response: "The train_and_validate tasks used the following input fields: n_input_neurons, epochs, learning_rate, dataset_id, and config_id."
+  score_threshold: 0.72
+  query_type: db
+  tool_expected: query_tasks
+
+# Q4-equivalent: orchestrator propagation through the workflow
+- user_query: "How did the Orchestrator agent's call_hpc_agent task influence subsequent training tasks?"
+  expected_response: "The call_hpc_agent task generated the dataset configuration used by submit_gridsearch_job, which produced 5 configs (cfg_1 through cfg_5) for the train_and_validate tasks."
+  score_threshold: 0.65
+  query_type: db
+  tool_expected: highlight_lineage
+
+# Q5-equivalent: trace a low-accuracy config to its origin
+- user_query: "Which agent and task submitted the training configurations?"
+  expected_response: "All training configurations were submitted by the HPCAgent through the submit_gridsearch_job task."
+  score_threshold: 0.70
+  query_type: db
+  tool_expected: query_tasks
+
+# Task count — 9 tasks total is deterministic
+- user_query: "How many tasks ran across all workflows in the campaign?"
+  expected_response: "The campaign ran 9 tasks total: get_dataset, call_hpc_agent, submit_gridsearch_job, 5 train_and_validate tasks, and select_best_model."
+  score_threshold: 0.65
+  query_type: db
+  tool_expected: get_task_summary
+
+# Hyperparameter sweep coverage — all 5 configs and their learning rates are deterministic
+- user_query: "What learning rates and epoch counts were evaluated in the grid search?"
+  expected_response: "The grid search evaluated 5 configurations with learning rates 0.01, 0.03, 0.08, 0.12, and 0.20, and epoch counts 2, 4, 6, 10, and 14."
+  score_threshold: 0.72
+  query_type: db
+  tool_expected: query_tasks
+
+# Agent roster — agent names are deterministic
+- user_query: "What agents participated in the grid search workflow and what were their roles?"
+  expected_response: "Two agents participated: Orchestrator and HPCAgent. The Orchestrator coordinated the run via call_hpc_agent and selected the best model. The HPCAgent submitted the training configurations via submit_gridsearch_job."
+  score_threshold: 0.72
+  query_type: db
+  tool_expected: list_agents
+
+# Activity breakdown — activity names are deterministic
+- user_query: "Plot a bar chart showing the number of tasks per activity in the workflow."
+  expected_response: "A bar chart with activity_id on the x-axis and task count on the y-axis, showing get_dataset=1, call_hpc_agent=1, submit_gridsearch_job=1, train_and_validate=5, select_best_model=1."
+  score_threshold: 0.55
+  query_type: db
+  tool_expected: make_chart
+
+# Campaign listing
+- user_query: "What campaigns exist in the system?"
+  expected_response: "The system contains the Perceptron GridSearch campaign."
+  score_threshold: 0.70
+  query_type: db
+  tool_expected: list_campaigns
+
+# Workflow listing — workflow name is deterministic
+- user_query: "List the workflows in the campaign."
+  expected_response: "The campaign contains one workflow named Perceptron GridSearch."
+  score_threshold: 0.72
+  query_type: db
+  tool_expected: query_workflows
+
+# Best-result retrieval — val_accuracy not deterministic, but the activity and field name are
+- user_query: "Which training configuration achieved the highest validation accuracy?"
+  expected_response: "The configuration with the highest validation accuracy is one of cfg_1 through cfg_5, identified by comparing generated.val_accuracy across the train_and_validate tasks."
+  score_threshold: 0.60
+  query_type: db
+  tool_expected: get_task_summary
+
+
+# ── DF PATH ──────────────────────────────────────────────────────────────────
+# Covers: run_df_query / generate_result_df, generate_plot_code,
+#         extract_or_fix_python_code, run_workflow_query
+
+# Best result from the in-memory DF — config IDs and field name are deterministic
+- user_query: "Which configuration achieved the best validation accuracy in the in-memory task data?"
+  expected_response: "The configuration with the best validation accuracy is one of cfg_1 through cfg_5, found by sorting the train_and_validate tasks on the generated.val_accuracy column."
+  score_threshold: 0.65
+  query_type: df
+  tool_expected: generate_result_df
+
+# Input field names for train_and_validate are fully deterministic
+- user_query: "What were the used inputs for the train_and_validate tasks?"
+  expected_response: "The train_and_validate tasks used n_input_neurons, epochs, learning_rate, dataset_id, and config_id as input fields."
+  score_threshold: 0.72
+  query_type: df
+  tool_expected: generate_result_df
+
+# Task count per activity — counts are deterministic
+- user_query: "How many train_and_validate tasks ran, and which activity generated the most output fields?"
+  expected_response: "5 train_and_validate tasks ran. The train_and_validate activity generated the most output fields, including val_accuracy and loss metrics."
+  score_threshold: 0.65
+  query_type: df
+  tool_expected: generate_result_df
+
+# Lowest metric — val_accuracy not deterministic, but config IDs and field path are
+- user_query: "What was the lowest validation accuracy recorded and which config produced it?"
+  expected_response: "The lowest validation accuracy corresponds to one of cfg_1 through cfg_5, found by sorting train_and_validate tasks on generated.val_accuracy ascending."
+  score_threshold: 0.60
+  query_type: df
+  tool_expected: generate_result_df
+
+# Plot — axis labels are deterministic
+- user_query: "Plot a bar graph showing validation accuracy for each configuration."
+  expected_response: "A bar chart with config_id on the x-axis and generated.val_accuracy on the y-axis, one bar per cfg_1 through cfg_5."
+  score_threshold: 0.55
+  query_type: df
+  tool_expected: generate_plot_code
+
+# Grouped plot — learning rate values are deterministic
+- user_query: "Plot training loss averaged by learning rate across all configurations."
+  expected_response: "A bar chart grouping the 5 configurations by learning_rate (0.01, 0.03, 0.08, 0.12, 0.20) and showing the average generated.loss."
+  score_threshold: 0.55
+  query_type: df
+  tool_expected: generate_plot_code
+
+# Filtered aggregate — epoch values are deterministic; accuracy not
+- user_query: "What is the average validation accuracy for configurations with more than 5 epochs?"
+  expected_response: "Configurations with more than 5 epochs are cfg_3 (epochs=6), cfg_4 (epochs=10), and cfg_5 (epochs=14). Their average generated.val_accuracy is computed from the train_and_validate tasks."
+  score_threshold: 0.65
+  query_type: df
+  tool_expected: generate_result_df
+
+# Code fix — exact broken/fixed code is deterministic
+- user_query: "Fix this Python code that filters the DataFrame: df[df['activity_id' == 'train_and_validate']]"
+  expected_response: "df[df['activity_id'] == 'train_and_validate']"
+  score_threshold: 0.80
+  query_type: df
+  tool_expected: extract_or_fix_python_code
+
+# Workflow metadata — workflow name is deterministic; utc_timestamp is not
+- user_query: "What is the name and start time of the workflow?"
+  expected_response: "The workflow is named Perceptron GridSearch. Its start time is stored in the utc_timestamp field."
+  score_threshold: 0.65
+  query_type: df
+  tool_expected: run_workflow_query
