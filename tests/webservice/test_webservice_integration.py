@@ -41,7 +41,7 @@ def test_webservice_static_contract_routes():
     assert rs.json() == {"service": "flowcept", "version": __version__}
 
     assert client.get("/api/v1/health/live").json() == {"status": "ok"}
-    assert client.get("/api/v1/health/ready").json() == {"status": "ready"}
+    assert client.get("/api/v1/health/ready").json()["status"] == "ready"
 
     root = client.get("/")
     assert root.status_code == 200
@@ -875,50 +875,127 @@ def test_chat_endpoint_unavailable_without_llm():
     assert "LLM" in rs.json()["detail"] or "llm" in rs.json()["detail"]
 
 
-def test_chat_endpoint_real_llm_tool_roundtrip(db_cleanup):
-    """Real LLM chat round-trip: the model must call a query tool and answer (env-gated)."""
-    from flowcept.commons.flowcept_logger import FlowceptLogger
-    from flowcept.configs import AGENT
+def test_chat_endpoint_real_llm_db_queries(gridsearch_run_data):
+    """HTTP chat → LangGraph → DB tools → DBAPI → Mongo: covers all DB-path tools.
 
-    api_key = AGENT.get("api_key")
-    if not api_key or api_key == "?":
-        FlowceptLogger().warning("Skipping real-LLM chat test because agent.api_key is not set.")
-        pytest.skip("agent.api_key is not set.")
-    if not AGENT.get("service_provider") or AGENT.get("service_provider") == "?":
-        FlowceptLogger().warning("Skipping real-LLM chat test because agent.service_provider is not set.")
-        pytest.skip("agent.service_provider is not set.")
-    if not Flowcept.services_alive():
-        pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
+    Drives every DB-backed chat tool (query_tasks, query_workflows, get_task_summary,
+    list_campaigns, list_agents, highlight_lineage, make_chart) via natural-language
+    queries loaded from chat_query_tests.yaml.  Each response is scored against an
+    expected answer using TF-IDF cosine similarity.  Gridsearch data is provided by
+    the session-scoped ``gridsearch_run_data`` fixture so the expensive experiment
+    runs once and is shared with the DF-path test.
+    """
+    import pathlib
+    import yaml
+    from tests.test_utils.test_llm_utils import score_response
 
-    campaign_id = f"ws-campaign-{uuid4()}"
-    db_cleanup["campaigns"].append(campaign_id)
-    with Flowcept(campaign_id=campaign_id, workflow_name=f"ws-chat-wf-{uuid4()}"):
-        workflow_id = Flowcept.current_workflow_id
-        for i in range(3):
-            with FlowceptTask(activity_id="chat_seed", used={"i": i}) as task:
-                task.end(generated={"o": i})
+    campaign_id = gridsearch_run_data["campaign_id"]
+    workflow_id = gridsearch_run_data["workflow_id"]
 
-    ok = _wait_for(lambda: len(Flowcept.db.task_query(filter={"workflow_id": workflow_id}) or []) >= 3)
-    assert ok, "Timed out waiting for persisted tasks."
+    yaml_path = pathlib.Path(__file__).parent / "chat_query_tests.yaml"
+    cases = [c for c in yaml.safe_load(yaml_path.read_text()) if c.get("query_type") == "db"]
+    assert cases, "No db query_type cases found in chat_query_tests.yaml"
 
     app = create_app()
     client = TestClient(app)
-    rs = client.post(
-        "/api/v1/chat",
-        json={
-            "messages": [{"role": "user", "content": "How many tasks ran in this workflow?"}],
-            "context": {"workflow_id": workflow_id},
-            "stream": False,
-        },
-    )
-    assert rs.status_code == 200
-    body = rs.json()
-    assert body["message"]
-    assert any("3" in str(part) for part in (body["message"], body.get("tool_trace", [])))
-    assert body.get("tool_trace"), "Expected the LLM to call at least one tool."
+
+    failed = []
+    for case in cases:
+        rs = client.post(
+            "/api/v1/chat",
+            json={
+                "messages": [{"role": "user", "content": case["user_query"]}],
+                "context": {"campaign_id": campaign_id, "workflow_id": workflow_id},
+                "stream": False,
+            },
+        )
+        assert rs.status_code == 200, f"HTTP error for query: {case['user_query']!r}"
+        body = rs.json()
+        actual = body.get("message", "")
+        assert actual, f"Empty response for query: {case['user_query']!r}"
+        assert body.get("tool_trace"), f"LLM made no tool call for query: {case['user_query']!r}"
+
+        if not score_response(actual, case["expected_response"], case["score_threshold"]):
+            failed.append(
+                f"[{case['user_query']!r}]\n"
+                f"  expected : {case['expected_response']!r}\n"
+                f"  actual   : {actual!r}\n"
+                f"  threshold: {case['score_threshold']}"
+            )
 
     if DocumentDBDAO._instance is not None:
         DocumentDBDAO._instance.close()
+
+    assert not failed, "One or more DB chat queries scored below threshold:\n" + "\n".join(failed)
+
+
+def test_chat_endpoint_real_llm_df_queries(gridsearch_run_data):
+    """DF-path tools over gridsearch data: covers generate_result_df, generate_plot_code,
+    extract_or_fix_python_code, and run_workflow_query.
+
+    Unlike the DB test this does not go through HTTP — the DF tools operate on
+    an in-memory pandas DataFrame and are not exposed via /api/v1/chat.  We call
+    them directly with a real LLM to exercise the full tool stack end-to-end.
+    Query cases are loaded from chat_query_tests.yaml (query_type=df).
+    """
+    import pathlib
+    import yaml
+    import pandas as pd
+    from tests.test_utils.test_llm_utils import score_response
+    from flowcept.agents.llm.builders import build_llm_model
+    from flowcept.agents.provenance_schema_manager.dynamic_schema_tracker import DynamicSchemaTracker
+    from flowcept.agents.data_query_tools.in_memory_task_query_tools import (
+        run_df_query,
+        extract_or_fix_python_code,
+    )
+    from flowcept.agents.data_query_tools.in_memory_workflow_query_tools import run_workflow_query
+
+    tasks = gridsearch_run_data["tasks"] or []
+    assert tasks, "gridsearch_run_data contains no tasks — cannot build DF."
+
+    df = pd.json_normalize(tasks)
+    tracker = DynamicSchemaTracker()
+    tracker.update_with_tasks(tasks)
+    schema = tracker.get_schema()
+    value_examples = tracker.get_example_values()
+
+    llm = build_llm_model(track_tools=False)
+
+    workflow_obj = Flowcept.db.get_workflow_object(gridsearch_run_data["workflow_id"])
+    workflow_dict = workflow_obj.to_dict() if workflow_obj else {}
+
+    yaml_path = pathlib.Path(__file__).parent / "chat_query_tests.yaml"
+    cases = [c for c in yaml.safe_load(yaml_path.read_text()) if c.get("query_type") == "df"]
+    assert cases, "No df query_type cases found in chat_query_tests.yaml"
+
+    failed = []
+    for case in cases:
+        query = case["user_query"]
+        tool = case.get("tool_expected", "")
+
+        if tool == "extract_or_fix_python_code":
+            result = extract_or_fix_python_code(llm, query, list(df.columns))
+        elif tool == "run_workflow_query":
+            result = run_workflow_query(query, workflow_dict, llm=llm)
+        else:
+            is_plot = tool == "generate_plot_code"
+            result = run_df_query(query, df, schema, value_examples, [], llm=llm, plot=is_plot)
+
+        assert result.code < 400, f"Tool error for query {query!r}: {result.result}"
+        actual = str(result.result)
+
+        if not score_response(actual, case["expected_response"], case["score_threshold"]):
+            failed.append(
+                f"[{case['user_query']!r}]\n"
+                f"  expected : {case['expected_response']!r}\n"
+                f"  actual   : {actual!r}\n"
+                f"  threshold: {case['score_threshold']}"
+            )
+
+    if DocumentDBDAO._instance is not None:
+        DocumentDBDAO._instance.close()
+
+    assert not failed, "One or more DF chat queries scored below threshold:\n" + "\n".join(failed)
 
 
 def test_recursive_delete_workflow_and_campaign(db_cleanup):

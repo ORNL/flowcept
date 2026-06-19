@@ -81,6 +81,32 @@ class DBAPI(object):
         """Return True if the configured document store is reachable."""
         return DBAPI._dao().liveness_test()
 
+    @staticmethod
+    def db_liveness_tests() -> dict:
+        """Return per-backend liveness results for all enabled document stores.
+
+        Tests each enabled backend independently so that both Mongo and LMDB
+        are checked when both are enabled (unlike ``liveness_test()``, which
+        routes through ``DocumentDBDAO.get_instance()`` and returns one winner).
+
+        Returns
+        -------
+        dict
+            Keys are backend names (``"mongo"``, ``"lmdb"``); values are bool.
+        """
+        from flowcept.configs import LMDB_ENABLED, MONGO_ENABLED
+
+        results = {}
+        if MONGO_ENABLED:
+            from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+
+            results["mongo"] = MongoDBDAO.get_instance(create_indices=False).liveness_test()
+        if LMDB_ENABLED:
+            from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
+
+            results["lmdb"] = LMDBDAO.get_instance().liveness_test()
+        return results
+
     def insert_or_update_task(self, task: TaskObject):
         """Insert or update a task document.
 
