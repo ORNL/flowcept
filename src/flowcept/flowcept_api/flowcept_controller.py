@@ -493,7 +493,8 @@ class Flowcept(object):
         output_path : str, optional
             Destination path for the generated report file.
         input_jsonl_path : str, optional
-            Path to a Flowcept JSONL buffer file used as report input.
+            Path to a Flowcept JSONL buffer file used as report input. If no
+            input mode is provided, the configured default buffer file is used.
         records : list of dict, optional
             In-memory workflow/task/object records used as report input.
         workflow_id : str, optional
