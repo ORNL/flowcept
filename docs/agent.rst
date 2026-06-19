@@ -29,33 +29,20 @@ Flowcept exposes provenance data to LLM-based agents through two complementary s
 The two surfaces share the same underlying provenance tool core
 (``src/flowcept/agents/data_query_tools/db_query_tools.py``) so queries stay consistent across both.
 
-The MCP agent has one backend and two orchestration paths:
-
-- **Internal LLM mode**: Flowcept builds the configured LLM and routes free-text messages through ``prompt_handler``.
-- **External LLM mode**: your outside assistant, such as Codex, Claude, LibreChat, Cursor, or another MCP client,
-  owns routing and reasoning, while Flowcept provides the same MCP prompts, tools, and in-memory context.
-
-The modes are intended to expose the same functionality. The difference is only who orchestrates the tools.
+The MCP agent exposes explicit tools only. The outside assistant, such as Codex,
+Claude, LibreChat, Cursor, or another MCP client, owns routing and reasoning,
+while Flowcept provides the MCP prompts, tools, and in-memory context.
 
 Configuring LLM orchestration
 -----------------------------
-
-Internal mode:
-
-.. code-block:: yaml
-
-   agent:
-     external_llm: false
-
-External mode:
 
 .. code-block:: yaml
 
    agent:
      external_llm: true
 
-In external mode, arbitrary free-text messages sent to ``prompt_handler`` are not internally routed. Use explicit
-commands, prompt-builder calls, and execution-tool calls from the outside assistant.
+When ``agent.external_llm`` is enabled, use explicit commands, prompt-builder
+calls, and execution-tool calls from the outside assistant.
 
 Shared commands and prefixes
 ----------------------------
@@ -101,16 +88,16 @@ The agent resolves the matching task(s) via a Mongo-style filter, then the Dataf
 tab dims all unrelated nodes and edges, tracing only the ancestor/descendant chain.
 Click any node or empty space to reset the highlight manually.
 
-Internal prompt-handler example
--------------------------------
+Explicit MCP tool example
+-------------------------
 
 .. code-block:: python
 
    from flowcept.agents.mcp.mcp_client import run_tool
 
    result = run_tool(
-       "prompt_handler",
-       kwargs={"message": "What are the top 5 slowest activities?"},
+       "run_workflow_query",
+       kwargs={"query": "What is the workflow name?"},
    )
 
 External prompt plus execution example

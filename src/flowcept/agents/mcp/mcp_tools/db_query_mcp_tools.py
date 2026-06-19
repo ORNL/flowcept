@@ -7,7 +7,7 @@ No business logic here — all logic lives in ``data_query_tools/``.
 from typing import Any, Dict, List, Optional
 
 from flowcept.agents.tool_result import ToolResult
-from flowcept.agents.context_manager import mcp_flowcept
+from flowcept.agents.mcp.context_manager import mcp_flowcept
 from flowcept.agents.data_query_tools import db_query_tools
 from flowcept.commons.vocabulary import PROV_AGENT
 from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task

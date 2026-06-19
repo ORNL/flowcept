@@ -21,6 +21,10 @@ def get_dashboard_store():
     return DBAPI.get_dao_instance()
 
 
+def _list_by_type(store, dashboard_type: str) -> List[Dict[str, Any]]:
+    return store.list_dashboards(filter={"dashboard_type": dashboard_type}) or []
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -49,11 +53,11 @@ def resolve_dashboard(
     ``campaign_id``.
     """
     if workflow_name:
-        common = store.list_by_type("common_workflow")
-        custom = [c for c in store.list_by_type("custom_workflow") if c.get("target") == workflow_name]
+        common = _list_by_type(store, "common_workflow")
+        custom = [c for c in _list_by_type(store, "custom_workflow") if c.get("target") == workflow_name]
     elif campaign_id:
-        common = store.list_by_type("common_campaign")
-        custom = [c for c in store.list_by_type("custom_campaign") if c.get("target") == campaign_id]
+        common = _list_by_type(store, "common_campaign")
+        custom = [c for c in _list_by_type(store, "custom_campaign") if c.get("target") == campaign_id]
     else:
         raise HTTPException(status_code=400, detail="Provide workflow_name or campaign_id.")
 
@@ -70,9 +74,9 @@ def list_dashboards(
 ) -> ListResponse:
     """List all dashboard configs, optionally filtered by ``dashboard_type``."""
     if dashboard_type:
-        items = store.list_by_type(dashboard_type)
+        items = _list_by_type(store, dashboard_type)
     else:
-        items = store.list()
+        items = store.list_dashboards()
     return ListResponse(items=items, count=len(items), limit=0)
 
 
@@ -83,7 +87,7 @@ def create_dashboard(config: DashboardConfig, store=Depends(get_dashboard_store)
     config.dashboard_id = str(uuid4())
     config.created_at = config.updated_at = _now()
     doc = config.model_dump()
-    if not store.save(doc):
+    if not store.save_dashboard(doc):
         raise HTTPException(status_code=500, detail="Could not save dashboard config.")
     return doc
 
@@ -91,7 +95,7 @@ def create_dashboard(config: DashboardConfig, store=Depends(get_dashboard_store)
 @router.get("/{dashboard_id}", response_model=Dict[str, Any])
 def get_dashboard(dashboard_id: str, store=Depends(get_dashboard_store)) -> Dict[str, Any]:
     """Get a dashboard config by id."""
-    doc = store.get(dashboard_id)
+    doc = store.get_dashboard(dashboard_id)
     if doc is None:
         raise HTTPException(status_code=404, detail=f"Dashboard not found: {dashboard_id}")
     return doc
@@ -100,7 +104,7 @@ def get_dashboard(dashboard_id: str, store=Depends(get_dashboard_store)) -> Dict
 @router.put("/{dashboard_id}", response_model=Dict[str, Any])
 def update_dashboard(dashboard_id: str, config: DashboardConfig, store=Depends(get_dashboard_store)) -> Dict[str, Any]:
     """Replace a dashboard config, preserving its id and creation time."""
-    existing = store.get(dashboard_id)
+    existing = store.get_dashboard(dashboard_id)
     if existing is None:
         raise HTTPException(status_code=404, detail=f"Dashboard not found: {dashboard_id}")
     _validate_config_filters(config)
@@ -108,7 +112,7 @@ def update_dashboard(dashboard_id: str, config: DashboardConfig, store=Depends(g
     config.created_at = existing.get("created_at")
     config.updated_at = _now()
     doc = config.model_dump()
-    if not store.save(doc):
+    if not store.save_dashboard(doc):
         raise HTTPException(status_code=500, detail="Could not save dashboard config.")
     return doc
 
@@ -116,6 +120,6 @@ def update_dashboard(dashboard_id: str, config: DashboardConfig, store=Depends(g
 @router.delete("/{dashboard_id}", response_model=Dict[str, Any])
 def delete_dashboard(dashboard_id: str, store=Depends(get_dashboard_store)) -> Dict[str, Any]:
     """Delete a dashboard config by id."""
-    if not store.delete(dashboard_id):
+    if not store.delete_dashboard(dashboard_id):
         raise HTTPException(status_code=404, detail=f"Dashboard not found: {dashboard_id}")
     return {"deleted": dashboard_id}

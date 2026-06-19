@@ -5,16 +5,15 @@ import os
 from threading import Thread
 
 from flowcept.agents.mcp.mcp_client import run_tool
-from flowcept.agents.context_manager import mcp_flowcept, ctx_manager
+from flowcept.agents.mcp.context_manager import mcp_flowcept, ctx_manager
 
 # Import all mcp_tools modules so their @mcp_flowcept.tool() decorators fire
-from flowcept.agents.mcp.mcp_tools.session_tools import check_liveness, prompt_handler
+from flowcept.agents.mcp.mcp_tools.session_tools import check_liveness
 import flowcept.agents.mcp.mcp_tools.db_query_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.in_memory_task_query_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.in_memory_workflow_query_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.report_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_prompts  # noqa: F401
-from flowcept.agents.tool_result import ToolResult
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import AGENT_HOST, AGENT_PORT, DUMP_BUFFER_PATH
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
@@ -136,23 +135,6 @@ class FlowceptAgent:
         """Block until the server thread exits."""
         if self._server_thread is not None:
             self._server_thread.join()
-
-    def query(self, message: str) -> ToolResult:
-        """Send a prompt to the agent's main router tool and return the response."""
-        try:
-            resp = run_tool(tool_name=prompt_handler, kwargs={"message": message})[0]
-        except Exception as e:
-            return ToolResult(code=400, result=f"Error executing tool prompt_handler: {e}", tool_name="prompt_handler")
-
-        try:
-            return ToolResult(**json.loads(resp))
-        except Exception as e:
-            return ToolResult(
-                code=499,
-                result=f"Could not parse tool response as JSON: {resp}",
-                extra=str(e),
-                tool_name="prompt_handler",
-            )
 
 
 def main():

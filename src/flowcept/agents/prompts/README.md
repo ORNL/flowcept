@@ -11,7 +11,7 @@ This directory contains all prompt builder functions for the Flowcept agent subs
 | `in_memory_task_query_prompts.py` | Prompt builders for in-memory task DataFrame queries (`generate_pandas_code_prompt`, `generate_plot_code_prompt`, etc.) |
 | `in_memory_workflow_query_prompts.py` | Prompt builders for querying the active workflow message object |
 | `general_prompts.py` | Routing and small-talk prompts; `ROUTING_PROMPT`, `SMALL_TALK_PROMPT` |
-| `chat_prompts.py` | System prompt for the webservice chat endpoint |
+| `chat_prompts.py` | `build_chat_system_prompt` — system prompt builder for the webservice chat endpoint |
 
 ## Design Rules
 

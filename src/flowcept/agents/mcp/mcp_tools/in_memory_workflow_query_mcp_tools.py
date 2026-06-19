@@ -5,7 +5,7 @@ MCP context lookup (workflow_msg_obj, custom_guidance) happens here.
 """
 
 from flowcept.agents.tool_result import ToolResult
-from flowcept.agents.context_manager import mcp_flowcept
+from flowcept.agents.mcp.context_manager import mcp_flowcept
 from flowcept.agents.data_query_tools import in_memory_workflow_query_tools as _core
 
 

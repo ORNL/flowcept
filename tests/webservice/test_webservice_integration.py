@@ -30,6 +30,35 @@ def _wait_for(condition, timeout_sec: float = 20.0, interval_sec: float = 0.25) 
     return False
 
 
+def test_webservice_static_contract_routes():
+    """Basic route contracts that do not need seeded provenance data."""
+    from flowcept.version import __version__
+
+    client = TestClient(create_app())
+
+    rs = client.get("/api/v1/info")
+    assert rs.status_code == 200
+    assert rs.json() == {"service": "flowcept", "version": __version__}
+
+    assert client.get("/api/v1/health/live").json() == {"status": "ok"}
+    assert client.get("/api/v1/health/ready").json() == {"status": "ready"}
+
+    root = client.get("/")
+    assert root.status_code == 200
+    if root.headers["content-type"].startswith("application/json"):
+        assert root.json()["service"] == "flowcept-webservice"
+    else:
+        assert "text/html" in root.headers["content-type"]
+
+    openapi = client.get("/openapi.json")
+    assert openapi.status_code == 200
+    paths = openapi.json()["paths"]
+    assert "/api/v1/workflows/{workflow_id}/workflow_card" in paths
+    assert "/api/v1/workflows/{workflow_id}/provenance_card" not in paths
+    assert client.get("/docs").status_code == 200
+    assert client.get("/redoc").status_code == 200
+
+
 @pytest.fixture
 def db_cleanup(request):
     """Track ids a test inserts and delete them from MongoDB/LMDB afterwards, even on failure.
@@ -355,6 +384,10 @@ def test_webservice_campaigns_agents_stats_and_prov_card(db_cleanup):
     rs = client.get(f"/api/v1/workflows/{workflow_id}/workflow_card", params={"format": "pdf"})
     assert rs.status_code == 200
     assert rs.headers["content-type"].startswith("application/pdf")
+    assert rs.headers["content-disposition"] == f'attachment; filename="workflow_card_{workflow_id}.pdf"'
+
+    rs = client.get(f"/api/v1/workflows/non-existent-{uuid4()}/workflow_card", params={"format": "markdown"})
+    assert rs.status_code == 404
 
     # Cleanup singleton client handles for test isolation.
     if DocumentDBDAO._instance is not None:
@@ -446,9 +479,36 @@ def test_webservice_object_versioning_and_unified_query(db_cleanup):
     assert rs.status_code == 200
     assert rs.json()["count"] >= 1
 
+    rs = client.get("/api/v1/tasks/")
+    assert rs.status_code == 404
+
+    rs = client.get("/api/v1/tasks", params={"filter_json": "[]"})
+    assert rs.status_code == 400
+
+    rs = client.post(
+        "/api/v1/tasks/query",
+        json={
+            "filter": {},
+            "projection": ["task_id", "workflow_id"],
+            "aggregation": [{"operator": "max", "field": "started_at"}],
+            "limit": 10,
+        },
+    )
+    assert rs.status_code == 400
+
     rs = client.post(f"/api/v1/workflows/{workflow_id}/reports/workflow-card/download")
     assert rs.status_code == 200
     assert rs.headers["content-type"].startswith("text/markdown")
+    assert rs.headers["content-disposition"] == f'attachment; filename="workflow_card_{workflow_id}.md"'
+
+    rs = client.get(f"/api/v1/workflows/non-existent-{uuid4()}")
+    assert rs.status_code == 404
+
+    rs = client.get("/api/v1/workflows", params={"filter_json": "not-json"})
+    assert rs.status_code == 400
+
+    rs = client.post(f"/api/v1/workflows/non-existent-{uuid4()}/reports/workflow-card/download")
+    assert rs.status_code == 404
 
     if DocumentDBDAO._instance is not None:
         DocumentDBDAO._instance.close()
@@ -1326,4 +1386,3 @@ def test_agents_without_tasks_are_not_returned(db_cleanup):
     assert rs.status_code == 200
     items = rs.json()["items"]
     assert not any(item["agent_id"] == empty_agent_id for item in items)
-

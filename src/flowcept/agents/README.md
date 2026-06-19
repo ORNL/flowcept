@@ -6,6 +6,25 @@ MCP-wrapper tools, prompts, context manager, and LLM infrastructure.
 For code-assistant behavior, use the repository root `AGENTS.md`. Runtime usage
 docs live in `docs/agent.rst`.
 
+## What Lives Here
+
+- `chat_orchestration/`: LangChain / LangGraph orchestration for the web chat.
+  This is where the chat runtime, tool routing, and turn-level orchestration live.
+  It should stay separate from HTTP route handlers.
+- `mcp/`: the standalone MCP server surface. Keep these wrappers thin. They should
+  load context, call tools, and return `ToolResult`, but not own business logic.
+- `mcp/mcp_tools/`: MCP wrappers around shared tool cores. These are the public MCP
+  entry points that external assistants call.
+- `data_query_tools/`: shared query logic. This is where task, workflow, object, and
+  DataFrame query behavior lives. These modules can call `DBAPI` for persisted data
+  or read the in-memory DataFrame / workflow object for runtime questions.
+- `prompts/`: prompt-builder functions and prompt registrations. Keep them as plain
+  Python builders that return strings, not Jinja templates.
+- `provenance_schema_manager/`: schema introspection and documentation context used by
+  prompt builders.
+- `llm/`: model construction and normalization helpers. Centralize LLM creation here.
+- `gui/`: legacy UI helpers. Do not extend this unless the old GUI is being revived.
+
 ## Directory Layout
 
 ```
@@ -39,7 +58,7 @@ agents/
       db_query_mcp_tools.py
       in_memory_task_query_mcp_tools.py
       in_memory_workflow_query_mcp_tools.py
-      session_tools.py       # check_liveness, check_llm, record_guidance, prompt_handler, …
+      session_tools.py       # check_liveness, check_llm, record_guidance, reset_context, …
       report_tools.py        # generate_workflow_card
 
   prompts/
@@ -48,19 +67,19 @@ agents/
     db_query_prompts.py      # build_db_filter_prompt
     in_memory_task_query_prompts.py   # Pandas code / plot prompt builders
     in_memory_workflow_query_prompts.py  # Workflow message query prompt builders
-    chat_prompts.py          # Webservice chat system prompt
+    chat_prompts.py          # build_chat_system_prompt() for the webservice chat
     mcp_prompts.py           # @mcp_flowcept.prompt() registrations
 ```
 
 ## One Agent, Two Orchestrators
 
-Both paths share the same MCP server, context, tools, prompts, and execution
-functions. The difference is who does routing and LLM reasoning:
+The MCP agent exposes explicit tools. Claude Code, Codex, LibreChat, or another
+assistant can call MCP prompt-builders and execution tools directly.
 
-- **Internal LLM mode** (`external_llm: false`): Flowcept builds the configured
-  LLM and orchestrates via `prompt_handler`.
-- **External LLM mode** (`external_llm: true`): Claude Code, Codex, LibreChat,
-  or another assistant calls MCP prompt-builders and execution tools directly.
+The webservice chat path is the sister module that owns the HTTP-facing chat UI.
+Its route layer stays thin and delegates to the chat orchestrator in
+`src/flowcept/webservice/services/`. That orchestrator calls into the same shared
+tool cores used by the MCP surface.
 
 ## Schema Context
 
@@ -84,9 +103,9 @@ is undocumented (`SchemaDocumentationError`).
 
 | Capability | Internal | External |
 |---|---|---|
-| Task DF question | `prompt_handler("t: ...")` | `build_df_query_prompt` → LLM → `execute_generated_df_code` |
-| Object DF question | `prompt_handler("o: ...")` | same, `context_kind="objects"` |
-| Workflow question | `prompt_handler("w: ...")` | `build_workflow_query_prompt` → LLM → `execute_generated_workflow_query` |
+| Task DF question | `run_df_query` | `build_df_query_prompt` → LLM → `execute_generated_df_code` |
+| Object DF question | `run_df_query(context_kind="objects")` | same, `context_kind="objects"` |
+| Workflow question | `run_workflow_query` | `build_workflow_query_prompt` → LLM → `execute_generated_workflow_query` |
 | DB provenance | `query_tasks` / `query_workflows` | same tools |
 | Reports | `generate_workflow_card` | same tool |
 
@@ -152,7 +171,7 @@ flowcept --start-agent
 from flowcept.agents.mcp.mcp_client import run_tool, run_prompt
 
 # Call a tool
-result = run_tool("prompt_handler", kwargs={"message": "t: top 5 slowest activities"})
+result = run_tool("run_df_query", kwargs={"query": "top 5 slowest activities", "context_kind": "tasks"})
 
 # Use a prompt builder (external LLM mode)
 prompt = run_prompt(

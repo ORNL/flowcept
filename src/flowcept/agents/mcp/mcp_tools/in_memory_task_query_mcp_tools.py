@@ -5,7 +5,7 @@ MCP context lookup (df, schema, value_examples, custom_user_guidance) happens he
 """
 
 from flowcept.agents.tool_result import ToolResult
-from flowcept.agents.context_manager import mcp_flowcept, get_df_context, EMPTY_DF_MESSAGE
+from flowcept.agents.mcp.context_manager import mcp_flowcept, get_df_context, EMPTY_DF_MESSAGE
 from flowcept.agents.data_query_tools import in_memory_task_query_tools as _core
 from flowcept.commons.vocabulary import PROV_AGENT
 from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task

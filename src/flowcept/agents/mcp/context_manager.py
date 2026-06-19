@@ -20,7 +20,7 @@ from flowcept.commons.task_data_preprocess import (
     summarize_task,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.vocabulary import PROV_AGENT, Status
+from flowcept.commons.vocabulary import PROV_AGENT
 from flowcept.configs import AGENT
 from mcp.server.fastmcp import FastMCP
 
@@ -203,38 +203,9 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                         ).send()
                     return True
                 elif task_msg.activity_id == "provenance_query":
-                    self.logger.info("Received a prov query message!")
-                    query_text = task_msg.used.get("query")
-                    from flowcept.agents.tool_result import ToolResult
-                    from flowcept.agents.mcp.mcp_tools import prompt_handler
-                    from flowcept.agents.mcp.mcp_client import run_tool
-
-                    resp = run_tool(tool_name=prompt_handler, kwargs={"message": query_text})[0]
-
-                    try:
-                        error = None
-                        status = Status.FINISHED
-                        tool_result = ToolResult(**json.loads(resp))
-                        if tool_result.result_is_str():
-                            generated = {"text": tool_result.result}
-                        else:
-                            generated = tool_result.result
-                    except Exception as e:
-                        status = Status.ERROR
-                        error = f"Could not convert the following into a ToolResult:\n{resp}\nException: {e}"
-                        generated = {"text": str(resp)}
-                    if self._mq_dao is None:
-                        self.logger.warning("MQ is disabled; skipping provenance_query response message.")
-                    else:
-                        FlowceptTask(
-                            agent_id=self.agent_id,
-                            generated=generated,
-                            stderr=error,
-                            status=status,
-                            subtype=PROV_AGENT.AGENT_TOOL,
-                            activity_id="provenance_query_response",
-                        ).send()
-
+                    self.logger.info(
+                        "Ignoring legacy provenance_query task; explicit workflow query tools are used instead."
+                    )
                     return True
 
             elif (

@@ -10,7 +10,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, MessagesState, StateGraph
 
-from flowcept.agents.prompts.chat_prompts import CHAT_SYSTEM_PROMPT
+from flowcept.agents.prompts.chat_prompts import build_chat_system_prompt
 from flowcept.agents.data_query_tools import db_query_tools
 from flowcept.agents.data_query_tools import dashboard_tools
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -225,10 +225,7 @@ def _prepare_input_messages(
         lc_messages.append(AIMessage(content=content) if role == "assistant" else HumanMessage(content=content))
 
     if is_new_thread:
-        system = CHAT_SYSTEM_PROMPT
-        if context:
-            system += f"\nCurrent user context (scope queries with it): {json.dumps(context)}"
-        lc_messages = [SystemMessage(content=system)] + lc_messages
+        lc_messages = [SystemMessage(content=build_chat_system_prompt(context))] + lc_messages
 
     return lc_messages
 
@@ -279,10 +276,7 @@ def run_chat(
         logger.warning("Chat LLM does not support tool binding; answering without tools.")
         from langchain_core.messages import SystemMessage as _SM
 
-        system = CHAT_SYSTEM_PROMPT
-        if context:
-            system += f"\nCurrent user context: {json.dumps(context)}"
-        lc = [_SM(content=system)] + [
+        lc = [_SM(content=build_chat_system_prompt(context))] + [
             AIMessage(content=m.get("content", ""))
             if m.get("role") == "assistant"
             else HumanMessage(content=m.get("content", ""))

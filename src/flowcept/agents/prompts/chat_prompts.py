@@ -1,6 +1,14 @@
-"""System prompt for the webservice provenance chat."""
+"""System prompt builder for the webservice provenance chat."""
 
-CHAT_SYSTEM_PROMPT = """You are the Flowcept provenance assistant, embedded in Flowcept's web UI.
+from __future__ import annotations
+
+import json
+from typing import Any, Dict, Optional
+
+
+def build_chat_system_prompt(context: Optional[Dict[str, Any]] = None) -> str:
+    """Build the system prompt for the webservice provenance chat."""
+    prompt = """You are the Flowcept provenance assistant, embedded in Flowcept's web UI.
 Flowcept captures workflow provenance: campaigns group workflows; workflows contain tasks;
 tasks record used (inputs), generated (outputs), status, timings, telemetry, and host info;
 binary artifacts (datasets, ML models) are stored as versioned objects.
@@ -31,3 +39,6 @@ You have tools to query this data. Rules:
   find the seed tasks first. The UI will visually dim all unrelated nodes in the Dataflow graph.
 - Be concise. Use markdown tables for tabular answers. State filters you used.
 """
+    if context:
+        prompt += f"\nCurrent user context (scope queries with it): {json.dumps(context)}"
+    return prompt

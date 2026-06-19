@@ -3,7 +3,7 @@
 Separated from the prompt builders in ``prompts/`` so those files have no MCP imports.
 """
 
-from flowcept.agents.context_manager import mcp_flowcept, get_df_context, EMPTY_DF_MESSAGE
+from flowcept.agents.mcp.context_manager import mcp_flowcept, get_df_context, EMPTY_DF_MESSAGE
 from flowcept.agents.prompts.in_memory_task_query_prompts import build_pandas_code_prompt
 from flowcept.agents.prompts.in_memory_workflow_query_prompts import EMPTY_WORKFLOW_MESSAGE
 

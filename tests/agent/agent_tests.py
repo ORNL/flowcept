@@ -49,10 +49,12 @@ class TestAgent(unittest.TestCase):
         agent = agent_module.FlowceptAgent(buffer_path=buffer_path)
         agent.start()
         try:
+            from flowcept.agents.mcp.mcp_client import run_tool
+
             sleep(0.5)
-            resp = agent.query("how many tasks?")
-            tool_result = ToolResult(**json.loads(resp))
-            self.assertTrue(tool_result.code in {201, 301})
+            resp = run_tool("get_latest")[0]
+            latest = json.loads(resp)
+            self.assertEqual(latest["activity_id"], "offline_buffer_task")
         finally:
             agent.stop()
 
@@ -304,12 +306,12 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
         agent = agent_module.FlowceptAgent(buffer_path=buffer_path)
         agent.start()
         try:
-            sleep(0.5)
-            resp = agent.query("how many tasks?")
-            tool_result = ToolResult(**json.loads(resp))
+            from flowcept.agents.mcp.mcp_client import run_tool
 
-            print(f"LLM response: {tool_result.result}")
-            self.assertTrue(tool_result.code in {201, 301})
+            sleep(0.5)
+            resp = run_tool("get_latest")[0]
+            latest = json.loads(resp)
+            self.assertEqual(latest["activity_id"], "offline_buffer_task")
         finally:
             agent.stop()
 
@@ -465,7 +467,7 @@ class TestSchemaIntrospection(unittest.TestCase):
 
     def test_lifespan_override_runs_schema_assert_and_populates_context(self):
         """Importing the ctx manager module triggers no errors and the lifespan method is overridden."""
-        from flowcept.agents.context_manager import FlowceptAgentContextManager
+        from flowcept.agents.mcp.context_manager import FlowceptAgentContextManager
         from flowcept.agents.provenance_schema_manager.static_schema_builder import assert_schema_documented, build_schema_context, SCHEMA_CONTEXT
 
         # Confirm the override is defined directly on FlowceptAgentContextManager (not just inherited).
@@ -527,7 +529,7 @@ class TestRefactoredAgentStructure(unittest.TestCase):
 
     # ── C3: context_manager.py (was flowcept_ctx_manager.py) ──────────────
     def test_c3_context_manager_importable(self):
-        from flowcept.agents.context_manager import (
+        from flowcept.agents.mcp.context_manager import (
             ctx_manager,
             mcp_flowcept,
         )
@@ -747,7 +749,7 @@ class TestProvAgentInstrumentation(unittest.TestCase):
 
     def test_context_manager_comparisons_use_prov_agent_enum(self):
         import inspect
-        from flowcept.agents.context_manager import FlowceptAgentContextManager
+        from flowcept.agents.mcp.context_manager import FlowceptAgentContextManager
 
         src = inspect.getsource(FlowceptAgentContextManager.message_handler)
         self.assertNotIn('"llm_task"', src)
@@ -772,13 +774,6 @@ class TestProvAgentInstrumentation(unittest.TestCase):
     def test_in_memory_task_query_mcp_tools_use_agent_flowcept_task(self):
         import inspect
         import flowcept.agents.mcp_tools.in_memory_task_query_mcp_tools as m
-
-        src = inspect.getsource(m)
-        self.assertIn("agent_flowcept_task", src)
-
-    def test_session_tools_prompt_handler_uses_agent_flowcept_task(self):
-        import inspect
-        import flowcept.agents.mcp_tools.session_tools as m
 
         src = inspect.getsource(m)
         self.assertIn("agent_flowcept_task", src)
