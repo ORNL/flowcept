@@ -984,6 +984,13 @@ def test_chat_endpoint_real_llm_df_queries(gridsearch_run_data):
         assert result.code < 400, f"Tool error for query {query!r}: {result.result}"
         actual = str(result.result)
 
+        if case.get("forces_retry"):
+            retry_attempts = (result.extra or {}).get("retry_attempts", 0)
+            assert retry_attempts > 0, (
+                f"Expected retry_attempts > 0 for forces_retry case {query!r}, "
+                f"but got retry_attempts={retry_attempts}"
+            )
+
         if not score_response(actual, case["expected_response"], case["score_threshold"]):
             failed.append(
                 f"[{case['user_query']!r}]\n"

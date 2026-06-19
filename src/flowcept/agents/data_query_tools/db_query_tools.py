@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from flowcept.agents.tool_result import ToolResult
+from flowcept.agents.data_query_tools.tools_utils import query_runtime_retry
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import AGENT_CHAT_MAX_QUERY_LIMIT
 from flowcept.flowcept_api.db_api import DBAPI
@@ -89,6 +90,27 @@ def _normalize(docs: List[Dict]) -> List[Dict]:
     return normalize_docs(docs)
 
 
+def _sanitize_projection(projection: Optional[List[str]]) -> Optional[List[str]]:
+    """Remove child paths whose parent field is already in *projection*.
+
+    MongoDB raises ``OperationFailure: Path collision`` when a projection
+    includes both ``"generated"`` and ``"generated.val_accuracy"``.  This
+    helper strips the redundant children so the parent field covers them.
+    """
+    if not projection:
+        return projection
+    result = []
+    for field in projection:
+        parts = field.split(".")
+        # keep this field only if none of its parent paths is already included
+        parent_already_included = any(
+            ".".join(parts[:i]) in projection for i in range(1, len(parts))
+        )
+        if not parent_already_included:
+            result.append(field)
+    return result or None
+
+
 @_guarded("query_tasks")
 def query_tasks(
     filter: Optional[Dict[str, Any]] = None,
@@ -115,7 +137,24 @@ def query_tasks(
         ``result`` holds ``{"items": [...], "count": int}``.
     """
     sort_tuples = None if not sort else [(s["field"], s["order"]) for s in sort]
-    docs = DBAPI().task_query(filter=filter or {}, projection=projection, limit=limit, sort=sort_tuples) or []
+    proj_holder = [_sanitize_projection(projection)]
+
+    def _execute():
+        return DBAPI().task_query(
+            filter=filter or {},
+            projection=proj_holder[0],
+            limit=limit,
+            sort=sort_tuples,
+        ) or []
+
+    def _fix(exc, attempt):
+        # Only auto-fix MongoDB projection path-collision errors; let others propagate.
+        if "Path collision" not in str(exc):
+            raise exc
+        proj_holder[0] = _sanitize_projection(proj_holder[0])
+        return _execute
+
+    docs = query_runtime_retry(_execute, _fix, max_attempts=2)
     items = _normalize(docs)
     return ToolResult(code=301, result={"items": items, "count": len(items)}, tool_name="query_tasks")
 

@@ -8,6 +8,7 @@ MCP framework (no ``@mcp_flowcept.tool()``). The MCP layer lives in
 import json
 from flowcept.agents.tool_result import ToolResult
 from flowcept.agents.llm.builders import build_llm_model
+from flowcept.agents.data_query_tools.tools_utils import query_runtime_retry
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 from flowcept.agents.data_query_tools.pandas_utils import (
@@ -195,10 +196,29 @@ def generate_plot_code(
     except Exception as e:
         return ToolResult(code=499, result=str(e), extra=plot_prompt)
 
+    columns = list(df.columns)
+    code_holder = [result_code]
+    retry_count = [0]
+
+    def _execute():
+        return safe_execute(df, code_holder[0])
+
+    def _fix(exc, attempt):
+        tool_result = extract_or_fix_python_code(
+            llm, code_holder[0], columns, runtime_error=str(exc)
+        )
+        if tool_result.code != 201:
+            raise RuntimeError(f"LLM could not fix the code: {tool_result.result}")
+        code_holder[0] = tool_result.result
+        retry_count[0] += 1
+        return _execute
+
     try:
-        result_df = safe_execute(df, result_code)
+        result_df = query_runtime_retry(_execute, _fix, max_attempts=3)
+        result_code = code_holder[0]
     except Exception as e:
-        return ToolResult(code=406, result=str(e))
+        return ToolResult(code=406, result=str(e), extra={"retry_attempts": retry_count[0]})
+
     try:
         result_df = format_result_df(result_df)
     except Exception as e:
@@ -208,6 +228,7 @@ def generate_plot_code(
         code=301,
         result={"result_df": result_df, "plot_code": plot_code, "result_code": result_code},
         tool_name="generate_plot_code",
+        extra={"retry_attempts": retry_count[0]},
     )
 
 
@@ -265,42 +286,44 @@ def generate_result_df(
     except Exception as e:
         return ToolResult(code=400, result=str(e), extra=prompt)
 
-    try:
-        result_code = response
-        result_df = safe_execute(df, result_code)
-    except Exception as e:
+    result_code = response
+    columns = list(df.columns)
+
+    code_holder = [result_code]
+    retry_count = [0]
+
+    def _execute():
+        return safe_execute(df, code_holder[0])
+
+    def _fix(exc, attempt):
         if not attempt_fix:
-            return ToolResult(
-                code=405,
-                result=(
-                    "Failed to parse this as Python code: "
-                    f"\n\n ```python\n {result_code} \n```\n but got error:\n\n {e}."
-                ),
-                extra={"generated_code": result_code, "exception": str(e), "prompt": prompt},
-            )
-        tool_result = extract_or_fix_python_code(llm, result_code, list(df.columns))
-        if tool_result.code == 201:
-            new_result_code = tool_result.result
-            result_code = new_result_code
-            try:
-                result_df = safe_execute(df, new_result_code)
-            except Exception as e2:
-                return ToolResult(
-                    code=405,
-                    result=(
-                        f"Failed to parse: ```python\n{result_code}```\n"
-                        f"Then tried LLM fix: ```python\n{new_result_code}```\n"
-                        f"but got error:\n{e2}."
-                    ),
-                )
-        else:
-            return ToolResult(
-                code=405,
-                result=(
-                    f"Failed to parse: {result_code}. Exception: {e}\n"
-                    f"Then tried LLM fix, got error: {tool_result.result}"
-                ),
-            )
+            raise exc
+        tool_result = extract_or_fix_python_code(
+            llm, code_holder[0], columns, runtime_error=str(exc)
+        )
+        if tool_result.code != 201:
+            raise RuntimeError(f"LLM could not fix the code: {tool_result.result}")
+        code_holder[0] = tool_result.result
+        retry_count[0] += 1
+        return _execute
+
+    try:
+        result_df = query_runtime_retry(_execute, _fix, max_attempts=3)
+        result_code = code_holder[0]
+    except Exception as e:
+        return ToolResult(
+            code=405,
+            result=(
+                f"Failed to execute after retries: ```python\n{code_holder[0]}```\n"
+                f"Last error: {e}"
+            ),
+            extra={
+                "generated_code": code_holder[0],
+                "exception": str(e),
+                "prompt": prompt,
+                "retry_attempts": retry_count[0],
+            },
+        )
 
     try:
         result_df = normalize_output(result_df)
@@ -358,7 +381,7 @@ def generate_result_df(
             "summary_error": summary_error,
         },
         tool_name="generate_result_df",
-        extra={"prompt": prompt},
+        extra={"prompt": prompt, "retry_attempts": retry_count[0]},
     )
 
 
@@ -394,7 +417,7 @@ def run_df_code(user_code: str, df) -> ToolResult:
     )
 
 
-def extract_or_fix_python_code(llm, raw_text, current_fields) -> ToolResult:
+def extract_or_fix_python_code(llm, raw_text, current_fields, runtime_error: str = None) -> ToolResult:
     """Extract or repair Python code from raw text using an LLM.
 
     Parameters
@@ -405,12 +428,15 @@ def extract_or_fix_python_code(llm, raw_text, current_fields) -> ToolResult:
         Raw text possibly containing Python code.
     current_fields : list
         Available DataFrame column names.
+    runtime_error : str, optional
+        Exception message from a previous execution attempt.  When provided,
+        the LLM is explicitly asked to fix that runtime error.
 
     Returns
     -------
     ToolResult
     """
-    prompt = build_extract_or_fix_python_code_prompt(raw_text, current_fields)
+    prompt = build_extract_or_fix_python_code_prompt(raw_text, current_fields, runtime_error=runtime_error)
     try:
         response = _call_llm(llm, prompt)
         return ToolResult(code=201, result=response)

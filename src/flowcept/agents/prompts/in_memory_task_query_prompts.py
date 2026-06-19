@@ -429,7 +429,7 @@ def extract_or_fix_json_code_prompt(raw_text) -> str:
     """
 
 
-def build_extract_or_fix_python_code_prompt(raw_text, current_fields) -> str:
+def build_extract_or_fix_python_code_prompt(raw_text, current_fields, runtime_error: str = None) -> str:
     """Build a prompt to extract or fix pandas code from raw text.
 
     Parameters
@@ -438,16 +438,25 @@ def build_extract_or_fix_python_code_prompt(raw_text, current_fields) -> str:
         Raw text possibly containing Python code.
     current_fields : list
         Available DataFrame column names.
+    runtime_error : str, optional
+        Exception message from a previous execution attempt.  When provided,
+        the prompt explicitly asks the LLM to fix the runtime error.
 
     Returns
     -------
     str
         Formatted prompt.
     """
+    error_section = (
+        f"\n    The code previously raised this runtime error — you MUST fix it:\n"
+        f"    {runtime_error}\n"
+        if runtime_error
+        else ""
+    )
     return f"""
     You are a Pandas DataFrame code extractor and fixer.
     You are given a raw user message that may include explanations, markdown fences, or partial DataFrame code that queries a DataFrame `df`.
-
+{error_section}
     Your task:
     1. Check if the message contains a valid DataFrame code.
     2. If it does, extract the code.
