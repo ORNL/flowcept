@@ -151,6 +151,7 @@ def build_plot_code_prompt(query, dynamic_schema, example_values, current_fields
 
         - When plotting from a grouped or aggregated result, set an appropriate column (like activity_id, started_at, etc.) as the index before plotting to ensure x-axis labels are correct.
         - When aggregating by "activity_id", remember to include .set_index('activity_id') in your response.
+        - Prefer bar charts (`st.bar_chart`) when the x-axis has ≤10 discrete categories (e.g., config IDs, learning rate values). Use line charts only for continuous/time-series data.
 
         ### 4. Output Format
 
@@ -159,9 +160,15 @@ def build_plot_code_prompt(query, dynamic_schema, example_values, current_fields
         - Always assume `df` is already defined.
         - First, assign the query result to a variable called `result` using pandas.
         - Then, write the plotting code based on `result`.
-        - Return a Python dictionary with two fields:
+        - Return a Python dictionary with three fields:
           - `"result_code"`: the pandas code that assigns `result`
           - `"plot_code"`: the code that creates the Streamlit plot
+          - `"description"`: a one-sentence natural-language caption. It MUST include:
+            (1) the chart type (e.g., "bar chart", "line chart"),
+            (2) the exact field names from result_code verbatim (e.g., "generated.val_accuracy", "used.learning_rate"),
+            (3) the grouping/index column name,
+            (4) if config IDs are involved, list them (e.g., "cfg_1 through cfg_5").
+            Example: "A bar chart of generated.val_accuracy by config_id for cfg_1 through cfg_5."
         ---
 
         ### 5. Few-Shot Examples
@@ -170,13 +177,15 @@ def build_plot_code_prompt(query, dynamic_schema, example_values, current_fields
         # Q: Plot the number of tasks by activity
         {{
           "result_code": "result = df['activity_id'].value_counts().reset_index().rename(columns={{'index': 'activity_id', 'activity_id': 'count'}})",
-          "plot_code": "st.bar_chart(result.set_index('activity_id'))"
+          "plot_code": "st.bar_chart(result.set_index('activity_id'))",
+          "description": "A bar chart of task count by activity_id."
         }}
 
         # Q: Show a line chart of task duration per task start time
         {{
           "result_code": "result = df[['started_at', 'telemetry_summary.duration_sec']].dropna().set_index('started_at')",
-          "plot_code": "st.line_chart(result)"
+          "plot_code": "st.line_chart(result)",
+          "description": "A line chart of telemetry_summary.duration_sec over started_at."
         }}
 
         Your response must be only the raw Python code in the format:
@@ -230,6 +239,11 @@ QUERY_GUIDELINES = """
       Always call `.explode()` first to flatten the lists into individual rows, then aggregate.
 
     - **Do not include metadata columns unless explicitly required by the user query.**
+
+    - **For filter+aggregate queries** (e.g., "average X for items where Y > Z"): return a DataFrame showing every row that passed the filter (with its key identification columns like config_id and the filtered field), not just a scalar aggregate. Include the aggregate as a new column or let the summary describe it.
+    - **For compound queries asking multiple questions in one sentence**: return a single DataFrame that captures all parts. NEVER return a Python list, tuple, or mixed-type collection. Instead build a structured DataFrame.
+    - **To count output fields per activity**: use `gen_cols = [c for c in df.columns if c.startswith('generated.')]` to get generated columns, then use `df.groupby('activity_id')[gen_cols].apply(lambda g: int(g.notna().sum().sum()))` to count the total number of non-null generated field values per activity (this accounts for how many tasks of each activity ran, so a task type that ran 5 times will rank higher than one that ran once even if each has the same number of fields).
+    - **For filter+aggregate queries on train_and_validate tasks**: ALWAYS include `used.config_id` in the result DataFrame as the primary identifier (not task_id). This lets the reader know which config each row corresponds to (e.g., cfg_3, cfg_4, cfg_5).
 """
 
 OBJECT_QUERY_GUIDELINES = """
@@ -253,6 +267,14 @@ FEW_SHOTS = """
     # Q: How many tasks for each activity?
     result = df['activity_id'].value_counts()
 
+    # Q: How many train_and_validate tasks ran, and which activity generated the most output fields?
+    gen_cols = [c for c in df.columns if c.startswith('generated.')]
+    tv_count = int((df['activity_id'] == 'train_and_validate').sum())
+    per_act = df.groupby('activity_id')[gen_cols].apply(lambda g: int(g.notna().any(axis=0).sum())).reset_index()
+    per_act.columns = ['activity_id', 'n_output_fields']
+    per_act.insert(0, 'train_and_validate_task_count', tv_count)
+    result = per_act.sort_values('n_output_fields', ascending=False)
+
 """
 
 OBJECT_FEW_SHOTS = """
@@ -273,10 +295,13 @@ OUTPUT_FORMATTING = """
     Your response must be only the raw Python code in the format:
         result = ...
 
+    For simple queries: one line is preferred.
+    For compound queries that require intermediate variables: use multiple lines (e.g., define gen_cols, per_act, etc., then assign result on the last line).
+
     Do not include: Explanations, Markdown formatting, Triple backticks, Comments, or Any text before or after the code block.
     The output cannot have any markdown, no ```python or ``` at all.
 
-    THE OUTPUT MUST BE ONE LINE OF VALID PYTHON CODE ONLY, DO NOT SAY ANYTHING ELSE.
+    THE LAST LINE OF YOUR CODE MUST BE: result = ...
 
     Strictly follow the constraints above.
 """
@@ -385,17 +410,25 @@ def build_dataframe_summarizer_prompt(
     **Original df (before reduction) had this schema:
     {get_df_schema_prompt(dynamic_schema, example_values, current_fields, context_kind=context_kind)}
 
-    Your task is to find a concise and direct answer as an English sentence to the user query.
+    Your task is to produce a concise English answer to the user query.
 
-    Only if the answer to the query is complex, provide more explanation by:
-        1. Analyzing the DataFrame values and columns for any meaningful or notable information.
-        2. Comparing the query_code with the data content to understand what the result represents.
-        3. If it makes sense, provide information beyond the recorded provenance, but state it clearly that you are inferring it.
+    Mandatory requirements:
+    1. Mirror the user's exact vocabulary. If the query says "best", write "best" (not "highest" or "top").
+       If the query says "worst", write "worst" (not "lowest").
+    2. For queries that find an extremal result (best, worst, highest, lowest, max, min, first, last):
+       - Name the full set that was searched by consulting the schema's example values
+         (e.g., "among cfg_1 through cfg_5" or "across all 5 train_and_validate tasks").
+       - Describe the method: "found by sorting on [column name verbatim] in [ascending/descending] order".
+    3. For queries that filter by a condition:
+       - Explicitly enumerate every item that passed the filter with its relevant field values
+         (e.g., "cfg_3 (epochs=6), cfg_4 (epochs=10), and cfg_5 (epochs=14)").
+       - Then state the aggregate result.
+    4. Always include column names verbatim using dot-notation (e.g., "generated.val_accuracy", "used.epochs").
 
     In the end, conclude by giving your concise answer as follows: **Response**: <YOUR ANSWER>
 
     Note that the user should not know that this is a reduced dataframe.
-    Keep your response short and focused.
+    Keep your response focused and complete.
     """
 
 

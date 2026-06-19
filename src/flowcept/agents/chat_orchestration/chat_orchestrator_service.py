@@ -10,14 +10,18 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, MessagesState, StateGraph
 
+from langgraph.errors import GraphRecursionError
+
 from flowcept.agents.prompts.chat_prompts import build_chat_system_prompt
 from flowcept.agents.data_query_tools import db_query_tools
 from flowcept.agents.data_query_tools import dashboard_tools
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.vocabulary import PROV_AGENT
-from flowcept.configs import AGENT_CHAT_MAX_TOOL_ITERATIONS, INSTRUMENTATION_ENABLED
+from flowcept.configs import AGENT_CHAT_MAX_TOOL_ITERATIONS, AGENT_CHAT_MAX_TOOL_RESULT_CHARS, INSTRUMENTATION_ENABLED
 
 MAX_TOOL_ITERATIONS = AGENT_CHAT_MAX_TOOL_ITERATIONS
+# Cap individual tool result strings fed into LangGraph state to prevent context overflow.
+_MAX_TOOL_RESULT_CHARS = AGENT_CHAT_MAX_TOOL_RESULT_CHARS
 
 # Module-level saver — persists across requests keyed by thread_id.
 _memory = MemorySaver()
@@ -165,6 +169,8 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None):
                         tool_fn.invoke(args) if tool_fn is not None else json.dumps({"error": f"Unknown tool {name}"})
                     )
                     task.end(generated={"output": output[:500] if isinstance(output, str) else output})
+                if isinstance(output, str) and len(output) > _MAX_TOOL_RESULT_CHARS:
+                    output = output[:_MAX_TOOL_RESULT_CHARS] + f"... [truncated, {len(output)} chars total]"
                 tool_msgs.append(ToolMessage(content=output, tool_call_id=call_id, name=name))
             return {"messages": tool_msgs}
 
@@ -184,6 +190,8 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None):
                 call_id = tc.get("id") or name
                 tool_fn = tools_by_name.get(name)
                 output = tool_fn.invoke(args) if tool_fn is not None else json.dumps({"error": f"Unknown tool {name}"})
+                if isinstance(output, str) and len(output) > _MAX_TOOL_RESULT_CHARS:
+                    output = output[:_MAX_TOOL_RESULT_CHARS] + f"... [truncated, {len(output)} chars total]"
                 tool_msgs.append(ToolMessage(content=output, tool_call_id=call_id, name=name))
             return {"messages": tool_msgs}
 
@@ -306,6 +314,7 @@ def run_chat(
     from flowcept.flowcept_api.flowcept_controller import Flowcept as _FC
 
     with _FC(workflow_name="langgraph_chat", start_persistence=False, save_workflow=True):
+        accumulated_tool_results: List[str] = []
         try:
             for chunk in graph.stream({"messages": lc_messages}, config=config, stream_mode="updates"):
                 for node_name, node_output in chunk.items():
@@ -324,6 +333,7 @@ def run_chat(
                     elif node_name == "tools":
                         for tm in msgs:
                             name = getattr(tm, "name", "")
+                            accumulated_tool_results.append(f"[{name}]: {tm.content[:2000]}")
                             summary: Dict[str, Any] = {"name": name}
                             try:
                                 parsed = json.loads(tm.content)
@@ -335,6 +345,32 @@ def run_chat(
                             except Exception:
                                 pass
                             yield {"event": "tool_result", "data": summary}
+        except GraphRecursionError:
+            logger.warning(
+                f"LLM hit the tool-call recursion limit ({MAX_TOOL_ITERATIONS} iterations) "
+                "without producing a final answer. Synthesizing from accumulated tool results."
+            )
+            if accumulated_tool_results:
+                summary_prompt = (
+                    "The following tool results were retrieved. "
+                    "Write a concise final answer to the user's question based solely on this data. "
+                    "Do not call any tools.\n\n"
+                    + "\n\n".join(accumulated_tool_results)
+                )
+                try:
+                    response = llm.invoke([HumanMessage(content=summary_prompt)])
+                    content = getattr(response, "content", None) or str(response)
+                    if content:
+                        yield {"event": "token", "data": content}
+                    else:
+                        yield {"event": "token", "data": "\n\n".join(accumulated_tool_results[:3])}
+                except Exception as fallback_exc:
+                    logger.exception(fallback_exc)
+                    # Synthesis failed — surface raw tool results so the caller gets a 200
+                    yield {"event": "token", "data": "\n\n".join(accumulated_tool_results[:3])}
+            else:
+                yield {"event": "error", "data": "Reached tool call limit without retrieving any data."}
+            yield {"event": "done"}
         except Exception as e:
             logger.exception(e)
             yield {"event": "error", "data": str(e)}

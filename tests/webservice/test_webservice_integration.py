@@ -1001,7 +1001,24 @@ def test_chat_endpoint_real_llm_df_queries(gridsearch_run_data):
             result = run_df_query(query, df, schema, value_examples, [], llm=llm, plot=is_plot)
 
         assert result.code < 400, f"Tool error for query {query!r}: {result.result}"
-        actual = str(result.result)
+        # Extract the human-readable content from each tool's structured result
+        if isinstance(result.result, dict):
+            r = result.result
+            if "summary" in r:
+                # generate_result_df: combine summary with markdown table so
+                # config IDs in the table are visible to the scorer
+                parts = [r.get("summary") or ""]
+                if r.get("result_df_markdown"):
+                    parts.append(r["result_df_markdown"])
+                actual = "\n\n".join(p for p in parts if p)
+            elif "answer" in r:
+                actual = str(r["answer"])
+            elif "description" in r:
+                actual = str(r["description"])
+            else:
+                actual = str(r)
+        else:
+            actual = str(result.result)
 
         if case.get("forces_retry"):
             retry_attempts = (result.extra or {}).get("retry_attempts", 0)

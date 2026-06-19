@@ -73,6 +73,9 @@ def normalize_output(result):
         else:
             raise ValueError(f"Unsupported ndarray shape: {result.shape}")
 
+    elif isinstance(result, dict):
+        _df = pd.DataFrame([result])
+
     else:
         raise TypeError(f"Unsupported result type: {type(result)}")
 
@@ -216,6 +219,11 @@ def clean_code(text):
     """
     Extracts the first valid Python code block or line that starts with 'result =' from a model response.
 
+    Handles:
+    - Fenced code blocks (```python ... ```)
+    - Multi-line code with intermediate variable assignments before result = ...
+    - Single-line result = ... statements
+
     Parameters
     ----------
     text : str
@@ -231,7 +239,26 @@ def clean_code(text):
     if block_match:
         return block_match.group(1).strip()
 
-    # Fallback: try to find a line that starts with "result ="
+    # Scan for consecutive Python-looking lines starting from the first identifier assignment.
+    # This handles multi-line code with intermediate variables (e.g., per_act = ...; result = ...).
+    code_lines = []
+    in_code = False
+    for line in text.strip().splitlines():
+        stripped = line.strip()
+        if not in_code and re.match(r"^[a-zA-Z_]\w*\s*=", stripped):
+            in_code = True
+        if in_code:
+            code_lines.append(line)
+    if code_lines:
+        candidate = "\n".join(code_lines).strip()
+        try:
+            compile(candidate, "<string>", "exec")
+            if "result" in candidate:
+                return candidate
+        except SyntaxError:
+            pass
+
+    # Single-line fallback for prose+code responses where only the first assignment matters
     line_match = re.search(r"(result\s*=\s*.+)", text)
     if line_match:
         return line_match.group(1).strip()

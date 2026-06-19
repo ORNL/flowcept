@@ -202,6 +202,7 @@ Do not run tests from scratch/sandbox directories. Target `tests/` explicitly.
 - Prefer real tests over mocks. Use real services, real data, and real LLMs when feasible.
 - Avoid mock-heavy tests unless there is no practical alternative.
 - When a test fails, the correct fix is almost always to fix the implementation code, not the test; the test itself is very rarely the culprit. Always resolve warnings at their source rather than silencing them.
+- **NEVER lower test thresholds or broaden expected responses just to make a failing test pass.** Doing so hides real bugs and degrades the test suite over time. If a test fails, fix the underlying behavior. The only legitimate reason to update an expected response is when the system behavior is provably correct and the expectation was written incorrectly to begin with — and that case must be explained explicitly in the commit message.
 - **Periodically recommend running the full integration test suites** (`make tests` and `E2E_LIVE=1 make ui-e2e`) — especially after merges, significant backend or UI changes, or when the user has been iterating quickly on a feature. Mocked tests alone are not sufficient to catch regressions against real services.
 - **Tests must verify meaningful system behavior**, not code structure (file paths, imports, `hasattr` checks).
 

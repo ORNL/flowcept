@@ -155,10 +155,40 @@ def run_workflow_query(query: str, workflow_msg_obj: dict, custom_user_guidance=
 
     prompt = build_workflow_query_prompt(query, workflow_msg_obj, custom_user_guidance)
     try:
-        query_spec = llm(prompt)
+        response = llm.invoke(prompt)
+        query_spec = response.content if hasattr(response, "content") else str(response)
     except Exception as e:
         return ToolResult(code=400, result=str(e), extra=prompt)
 
-    result = execute_generated_workflow_query(query_spec, workflow_msg_obj)
-    result.extra = {"prompt": prompt}
-    return result
+    extraction = execute_generated_workflow_query(query_spec, workflow_msg_obj)
+    if extraction.code >= 400:
+        return extraction
+
+    values = extraction.result.get("values", {}) if isinstance(extraction.result, dict) else {}
+    missing = extraction.result.get("missing", []) if isinstance(extraction.result, dict) else []
+    query_spec_used = extraction.result.get("query_spec", {}) if isinstance(extraction.result, dict) else {}
+
+    nl_prompt = (
+        f"Answer the following question in one or two concise sentences.\n"
+        f"Use the field name verbatim (e.g., 'utc_timestamp') when referencing technical fields.\n\n"
+        f"Question: {query}\n"
+        f"Values: {json.dumps(values, default=str)}\n"
+        f"Answer:"
+    )
+    try:
+        nl_response = llm.invoke(nl_prompt)
+        nl_answer = nl_response.content if hasattr(nl_response, "content") else str(nl_response)
+    except Exception:
+        nl_answer = extraction.result.get("answer", str(extraction.result)) if isinstance(extraction.result, dict) else str(extraction.result)
+
+    return ToolResult(
+        code=301,
+        result={
+            "answer": nl_answer,
+            "values": values,
+            "missing": missing,
+            "query_spec": query_spec_used,
+        },
+        tool_name="run_workflow_query",
+        extra={"prompt": prompt},
+    )

@@ -1107,9 +1107,9 @@ class DBAPI(object):
         """Summarize tasks: status counts, per-activity stats, and time range."""
         return DBAPI._dao().task_summary(filter)
 
-    def derive_campaigns(self) -> List[Dict]:
+    def derive_campaigns(self, campaign_id: str = None) -> List[Dict]:
         """Derive campaign summaries by grouping workflows and tasks by campaign_id."""
-        return DBAPI._dao().derive_campaigns()
+        return DBAPI._dao().derive_campaigns(campaign_id=campaign_id)
 
     def derive_agents(self, filter: Dict = None) -> List[Dict]:
         """Derive agent summaries by joining stored agents with task provenance."""

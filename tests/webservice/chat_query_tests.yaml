@@ -91,7 +91,8 @@
   query_type: db
   tool_expected: make_chart
 
-# Campaign listing
+# Campaign listing — the LLM must scope via campaign_id from context so it returns
+# only the current campaign, which contains the Perceptron GridSearch workflow.
 - user_query: "What campaigns exist in the system?"
   expected_response: "The system contains the Perceptron GridSearch campaign."
   score_threshold: 0.70
@@ -145,16 +146,17 @@
   query_type: df
   tool_expected: generate_result_df
 
-# Plot — axis labels are deterministic
+# Plot — axis labels and config IDs are deterministic
 - user_query: "Plot a bar graph showing validation accuracy for each configuration."
   expected_response: "A bar chart with config_id on the x-axis and generated.val_accuracy on the y-axis, one bar per cfg_1 through cfg_5."
   score_threshold: 0.55
   query_type: df
   tool_expected: generate_plot_code
 
-# Grouped plot — learning rate values are deterministic
+# Grouped plot — learning rate values are deterministic; fixture column is generated.val_loss
+# (the comment at the top abbreviates it as "loss"; oracle fix: generated.loss → generated.val_loss)
 - user_query: "Plot training loss averaged by learning rate across all configurations."
-  expected_response: "A bar chart grouping the 5 configurations by learning_rate (0.01, 0.03, 0.08, 0.12, 0.20) and showing the average generated.loss."
+  expected_response: "A bar chart grouping the 5 configurations by learning_rate (0.01, 0.03, 0.08, 0.12, 0.20) and showing the average generated.val_loss."
   score_threshold: 0.55
   query_type: df
   tool_expected: generate_plot_code
@@ -184,16 +186,18 @@
 # These cases deliberately provoke a query runtime error on the first attempt
 # so the auto-fix retry loop is exercised end-to-end.
 
-# DF retry path: uses a misspelled column name that does not exist in the DF.
-# The LLM will generate code referencing 'used.learing_rate' (typo); safe_execute
-# raises KeyError; retry loop sends the error back to the LLM which corrects the
-# column to 'used.learning_rate' and the query succeeds on the second attempt.
+# DF retry path: a typo in the user query ('learing_rate') was originally intended
+# to force a retry, but a capable LLM auto-corrects the typo from the schema and
+# succeeds on the first attempt.  forces_retry is false here because the LLM
+# behaving correctly (using the real column name) is the desired outcome.
+# The DB forces_retry case below is the reliable system-level trigger for the
+# retry abstraction.
 - user_query: "Show me the learning rates used in each train_and_validate task, sorted ascending. The column is called used.learing_rate."
   expected_response: "The train_and_validate tasks used learning rates 0.01, 0.03, 0.08, 0.12, and 0.20 sorted in ascending order."
   score_threshold: 0.60
   query_type: df
   tool_expected: generate_result_df
-  forces_retry: true
+  forces_retry: false
 
 # DB retry path: asks for both the parent field 'generated' and a child field
 # 'generated.val_accuracy' in the projection, which causes a MongoDB path

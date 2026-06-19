@@ -167,11 +167,12 @@ def generate_plot_code(
     except Exception as e:
         return ToolResult(code=400, result=str(e), extra=plot_prompt)
 
-    result_code, plot_code = None, None
+    result_code, plot_code, description = None, None, ""
     try:
         result = safe_json_parse(response)
         result_code = result["result_code"]
         plot_code = result["plot_code"]
+        description = result.get("description", "")
     except ValueError:
         tool_response = extract_or_fix_json_code(llm, response)
         response = tool_response.result
@@ -226,7 +227,7 @@ def generate_plot_code(
 
     return ToolResult(
         code=301,
-        result={"result_df": result_df, "plot_code": plot_code, "result_code": result_code},
+        result={"result_df": result_df, "plot_code": plot_code, "result_code": result_code, "description": description},
         tool_name="generate_plot_code",
         extra={"retry_attempts": retry_count[0]},
     )

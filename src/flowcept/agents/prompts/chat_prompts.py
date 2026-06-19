@@ -23,7 +23,10 @@ You have tools to query this data. Rules:
 - Filters are Mongo-style; allowed operators: $and $or $nor $not $exists $eq $ne $gt $gte $lt
   $lte $in $nin $regex.
 - When the user context includes workflow_id/campaign_id, scope your queries with it.
+  For list_campaigns, ALWAYS pass campaign_id from context as the campaign_id argument so only the relevant campaign is returned.
 - Prefer get_task_summary for aggregate questions (counts, durations) over fetching all tasks.
+  When reporting task counts, always include the per-activity breakdown (activity name and count for each activity).
+- When listing workflows, always include the workflow name field in your response.
 - When asked for a chart/plot, call make_chart with a declarative chart spec:
   {"chart_id": "<short-id>", "type": "chart", "title": "...",
    "data": {"source": "tasks", "filter": {...}, "group_by": "<field>",
@@ -38,6 +41,9 @@ You have tools to query this data. Rules:
   of a task, ALWAYS call highlight_lineage. Pass task_ids directly when given, or use filter to
   find the seed tasks first. The UI will visually dim all unrelated nodes in the Dataflow graph.
 - Be concise. Use markdown tables for tabular answers. State filters you used.
+- IMPORTANT: after you receive tool results that are sufficient to answer the question,
+  write your FINAL ANSWER immediately. Do NOT call more tools unless the result was empty
+  or returned an error code. One or two tool calls is almost always enough — stop and answer.
 """
     if context:
         prompt += f"\nCurrent user context (scope queries with it): {json.dumps(context)}"

@@ -199,15 +199,21 @@ def get_task_summary(filter: Optional[Dict[str, Any]] = None) -> ToolResult:
 
 
 @_guarded("list_campaigns")
-def list_campaigns() -> ToolResult:
+def list_campaigns(campaign_id: Optional[str] = None) -> ToolResult:
     """List derived campaign summaries (campaigns group workflows and tasks).
+
+    Parameters
+    ----------
+    campaign_id : str, optional
+        When provided, only the summary for that campaign is returned.
+        Pass the campaign_id from the user context to scope the result.
 
     Returns
     -------
     ToolResult
         ``result`` holds ``{"items": [...], "count": int}``.
     """
-    items = _normalize(DBAPI().derive_campaigns())
+    items = _normalize(DBAPI().derive_campaigns(campaign_id=campaign_id))
     return ToolResult(code=301, result={"items": items, "count": len(items)}, tool_name="list_campaigns")
 
 
@@ -264,10 +270,25 @@ def highlight_lineage(
     if not resolved_ids:
         return ToolResult(code=404, result="No tasks found for the given criteria.", tool_name="highlight_lineage")
 
-    # Return only the seed task IDs. The frontend BFS expands ancestors/descendants
+    # Fetch activity names for the resolved task IDs so the LLM can describe the lineage.
+    activity_map: Dict[str, str] = {}
+    try:
+        detail_docs = db.task_query(
+            filter={"task_id": {"$in": resolved_ids}},
+            projection=["task_id", "activity_id", "agent_id"],
+            limit=len(resolved_ids) + 10,
+        ) or []
+        for doc in detail_docs:
+            tid = doc.get("task_id", "")
+            if tid:
+                activity_map[tid] = doc.get("activity_id") or doc.get("agent_id") or ""
+    except Exception:
+        pass
+
+    # Return seed task IDs. The frontend BFS expands ancestors/descendants
     # from these seeds using the dataflow graph — a single source of truth for lineage.
     return ToolResult(
         code=301,
-        result={"task_ids": resolved_ids},
+        result={"task_ids": resolved_ids, "activities": activity_map},
         tool_name="highlight_lineage",
     )
