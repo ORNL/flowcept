@@ -3,7 +3,7 @@ from flowcept.agents.tools.in_memory_queries.pandas_agent_utils import load_save
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.vocabulary import Status
-from flowcept.configs import AGENT
+from flowcept.configs import AGENT, MCP_ALLOWED_ORIGINS, MCP_ALLOWED_HOSTS
 from mcp.server.fastmcp import FastMCP
 
 import json
@@ -286,12 +286,13 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 ctx_manager = FlowceptAgentContextManager()
 
 agent_transport_security = None
-if "allowed_hosts" in AGENT:
+if "mcp_allowed_hosts" in AGENT:
     from mcp.server.transport_security import TransportSecuritySettings
 
     agent_transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
-        allowed_hosts=AGENT.get("allowed_hosts"),
+        allowed_hosts=MCP_ALLOWED_HOSTS,
+        allowed_origins=MCP_ALLOWED_ORIGINS,
     )
 
 mcp_flowcept = FastMCP(
