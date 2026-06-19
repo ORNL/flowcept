@@ -1,13 +1,4 @@
-"""Pydantic schemas for dashboard specs and declarative chart-data bindings.
-
-The spec is deliberately declarative so that LLM tools can reliably generate/modify
-it and the frontend can validate and render it.
-
-Data model:
-- A Dashboard has a type (workflow | campaign) and contains multiple charts.
-- Each chart can have a data binding (ChartData) describing what to query.
-- VizSpec describes how to render the query result (bar, pie, line, ...).
-"""
+"""Pydantic schemas for dashboards: data bindings, chart specs, layout, and config."""
 
 from __future__ import annotations
 
@@ -15,7 +6,12 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from flowcept.webservice.schemas.common import SortSpec
+
+class SortSpec(BaseModel):
+    """Sort field/order pair for chart data queries."""
+
+    field: str
+    order: Literal[1, -1] = 1
 
 
 class MetricSpec(BaseModel):

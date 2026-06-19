@@ -56,7 +56,7 @@ def _resolve_path(value: Any, path: str) -> Any:
     return current
 
 
-def generate_workflow_query_prompt(query: str, workflow_msg_obj: dict, custom_user_guidance=None) -> str:
+def build_workflow_query_prompt(query: str, workflow_msg_obj: dict, custom_user_guidance=None) -> str:
     """Build an LLM prompt that maps a free-text workflow question to field paths.
 
     Parameters

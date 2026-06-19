@@ -137,6 +137,11 @@ class DocumentDBDAO(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def liveness_test(self) -> bool:
+        """Return True if the backing store is reachable and accepting queries."""
+        raise NotImplementedError
+
+    @abstractmethod
     def delete_agents_with_filter(self, filter) -> bool:
         """Delete agent documents that match the filter."""
         raise NotImplementedError
@@ -479,5 +484,45 @@ class DocumentDBDAO(ABC):
         ------
         NotImplementedError
             This method must be implemented by subclasses.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def task_summary(self, filter: Dict) -> Dict:
+        """Return status counts, per-activity stats, and time range for tasks matching filter."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def derive_campaigns(self) -> List[Dict]:
+        """Derive campaign summaries by grouping workflows and tasks by campaign_id."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def derive_agents(self, filter: Dict = None) -> List[Dict]:
+        """Derive agent summaries by joining stored agents with task provenance."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def telemetry_timeseries(
+        self, filter: Dict, fields: List, x_field: str = "started_at", limit: int = 1000
+    ) -> List[Dict]:
+        """Extract plottable rows of dot-notated fields from tasks."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def resolve_chart_data(self, data: Dict, context: Dict = None) -> Dict:
+        """Resolve a declarative chart spec into plottable rows.
+
+        Parameters
+        ----------
+        data : dict
+            Chart spec with keys: source, filter, group_by, metrics, x, y, sort, limit.
+        context : dict, optional
+            Dashboard-level filter ANDed into the card filter.
+
+        Returns
+        -------
+        dict
+            ``{"rows": [...], "count": int}``.
         """
         raise NotImplementedError

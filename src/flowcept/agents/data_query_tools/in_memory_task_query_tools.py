@@ -20,11 +20,11 @@ from flowcept.agents.data_query_tools.pandas_utils import (
 )
 
 from flowcept.agents.prompts.in_memory_task_query_prompts import (
-    generate_plot_code_prompt,
+    build_plot_code_prompt,
     extract_or_fix_json_code_prompt,
-    generate_pandas_code_prompt,
-    dataframe_summarizer_context,
-    extract_or_fix_python_code_prompt,
+    build_pandas_code_prompt,
+    build_dataframe_summarizer_prompt,
+    build_extract_or_fix_python_code_prompt,
 )
 
 EMPTY_DF_MESSAGE = "Current df is empty or null."
@@ -154,7 +154,7 @@ def generate_plot_code(
     -------
     ToolResult
     """
-    plot_prompt = generate_plot_code_prompt(
+    plot_prompt = build_plot_code_prompt(
         query,
         dynamic_schema,
         value_examples,
@@ -253,7 +253,7 @@ def generate_result_df(
     if llm is None:
         llm = build_llm_model()
     try:
-        prompt = generate_pandas_code_prompt(
+        prompt = build_pandas_code_prompt(
             query,
             dynamic_schema,
             example_values,
@@ -410,7 +410,7 @@ def extract_or_fix_python_code(llm, raw_text, current_fields) -> ToolResult:
     -------
     ToolResult
     """
-    prompt = extract_or_fix_python_code_prompt(raw_text, current_fields)
+    prompt = build_extract_or_fix_python_code_prompt(raw_text, current_fields)
     try:
         response = _call_llm(llm, prompt)
         return ToolResult(code=201, result=response)
@@ -476,7 +476,7 @@ def summarize_result(
     ToolResult
     """
     summarized_df = summarize_df(result, code)
-    prompt = dataframe_summarizer_context(
+    prompt = build_dataframe_summarizer_prompt(
         code,
         summarized_df,
         dynamic_schema,

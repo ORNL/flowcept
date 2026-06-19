@@ -9,10 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.routers.query import _validate_filter_shape
-from flowcept.commons.dashboard_schemas import ChartData
-from flowcept.commons import provenance_stats as stats
+from flowcept.webservice.schemas.dashboards import ChartData
 from flowcept.commons.utils import normalize_docs
 
 router = APIRouter(prefix="/stats", tags=["stats"])
@@ -52,7 +50,7 @@ def get_task_summary(
     campaign_id: Optional[str] = None,
     agent_id: Optional[str] = None,
     filter_json: Optional[str] = None,
-    db: DBAPI = Depends(get_db_api),
+    db: DBAPI = Depends(DBAPI),
 ) -> Dict[str, Any]:
     """Summarize tasks (status counts, per-activity durations, time range)."""
     query_filter = _json_filter(filter_json)
@@ -60,15 +58,14 @@ def get_task_summary(
         if value is not None:
             query_filter[key] = value
     _validate_filter_shape(query_filter)
-    return normalize_docs([stats.task_summary(db, query_filter)])[0]
+    return normalize_docs([db.task_summary(query_filter)])[0]
 
 
 @router.post("/timeseries", response_model=Dict[str, Any])
-def post_timeseries(payload: TimeseriesRequest, db: DBAPI = Depends(get_db_api)) -> Dict[str, Any]:
+def post_timeseries(payload: TimeseriesRequest, db: DBAPI = Depends(DBAPI)) -> Dict[str, Any]:
     """Extract plottable rows of dot-notated fields from tasks."""
     _validate_filter_shape(payload.filter)
-    rows = stats.telemetry_timeseries(
-        db,
+    rows = db.telemetry_timeseries(
         filter=payload.filter,
         fields=payload.fields,
         x_field=payload.x,
@@ -79,11 +76,11 @@ def post_timeseries(payload: TimeseriesRequest, db: DBAPI = Depends(get_db_api))
 
 
 @router.post("/chart_data", response_model=Dict[str, Any])
-def post_chart_data(payload: ChartDataRequest, db: DBAPI = Depends(get_db_api)) -> Dict[str, Any]:
+def post_chart_data(payload: ChartDataRequest, db: DBAPI = Depends(DBAPI)) -> Dict[str, Any]:
     """Resolve a declarative dashboard chart data binding into rows."""
     _validate_filter_shape(payload.data.filter)
     if payload.context:
         _validate_filter_shape(payload.context)
-    result = stats.resolve_chart_data(db, payload.data, context=payload.context)
+    result = db.resolve_chart_data(payload.data.model_dump(), context=payload.context)
     result["rows"] = normalize_docs(result["rows"])
     return result

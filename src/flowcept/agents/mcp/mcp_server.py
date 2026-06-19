@@ -13,7 +13,7 @@ import flowcept.agents.mcp.mcp_tools.db_query_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.in_memory_task_query_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.in_memory_workflow_query_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.report_tools  # noqa: F401
-import flowcept.agents.prompts.mcp_prompts  # noqa: F401
+import flowcept.agents.mcp.mcp_prompts  # noqa: F401
 from flowcept.agents.tool_result import ToolResult
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import AGENT_HOST, AGENT_PORT, DUMP_BUFFER_PATH

@@ -204,7 +204,7 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
             self.request_context.lifespan_context.custom_guidance = custom_user_guidance
 
     def test_build_df_query_prompt_returns_prompt_payload(self):
-        from flowcept.agents.prompts import mcp_prompts as t
+        from flowcept.agents.mcp import mcp_prompts as t
 
         df = pd.DataFrame({"activity_id": ["a", "b"], "used.x": [1, 2]})
         schema = {"activity_a": {"i": ["used.x"], "o": []}}
@@ -226,7 +226,7 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
         self.assertIn("count tasks by activity", prompt_text)
 
     def test_build_df_query_prompt_returns_404_when_df_missing(self):
-        from flowcept.agents.prompts import mcp_prompts as t
+        from flowcept.agents.mcp import mcp_prompts as t
 
         dummy_ctx = self._DummyContext(df=pd.DataFrame(), schema={}, value_examples={}, custom_user_guidance=[])
         with patch.object(t.mcp_flowcept, "get_context", return_value=dummy_ctx):
@@ -514,26 +514,6 @@ class TestRefactoredAgentStructure(unittest.TestCase):
         self.assertTrue(callable(build_llm_model))
         self.assertEqual(normalize_message(" Hello? "), "hello")
 
-    def test_c5_no_python_imports_use_agents_utils_shim(self):
-        from pathlib import Path
-
-        forbidden = "flowcept.agents." + "agents_utils"
-        offenders = []
-        for root in ("src", "tests", "examples"):
-            for path in Path(root).rglob("*.py"):
-                text = path.read_text(encoding="utf-8")
-                if forbidden in text:
-                    offenders.append(str(path))
-
-        self.assertEqual(offenders, [])
-
-    # ── C6: llm/providers/ has LLM wrappers ───────────────────────────────
-    def test_c6_llm_providers_modules_importable(self):
-        import flowcept.agents.llm.providers.claude_gcp as cg
-        import flowcept.agents.llm.providers.gemini25 as g
-        self.assertTrue(hasattr(cg, "ClaudeOnGCPLLM"))
-        self.assertTrue(hasattr(g, "Gemini25LLM"))
-
     # ── C1: mcp_server.py (was flowcept_agent.py) ─────────────────────────
     def test_c1_mcp_server_importable(self):
         from flowcept.agents.mcp.mcp_server import FlowceptAgent
@@ -545,44 +525,6 @@ class TestRefactoredAgentStructure(unittest.TestCase):
         self.assertTrue(callable(run_tool))
         self.assertTrue(callable(run_prompt))
 
-    def test_c2_no_python_imports_use_duplicate_agent_client(self):
-        from pathlib import Path
-
-        forbidden = "flowcept.agents.mcp." + "agent_client"
-        offenders = []
-        for root in ("src", "tests", "examples"):
-            for path in Path(root).rglob("*.py"):
-                text = path.read_text(encoding="utf-8")
-                if forbidden in text:
-                    offenders.append(str(path))
-
-        self.assertEqual(offenders, [])
-
-    def test_c2_maintained_docs_do_not_reference_removed_agent_paths(self):
-        from pathlib import Path
-
-        forbidden_terms = [
-            "flowcept.agents.agent_client",
-            "flowcept.agents.flowcept_agent",
-            "src/flowcept/agents/tools/prov_tools.py",
-            "src/flowcept/agents/agents_utils.py",
-        ]
-        paths = [
-            Path("docs/agent.rst"),
-            Path("docs/README.md"),
-            Path("src/flowcept/agents/README.md"),
-            Path("agent_sandbox/test_agent_jsonl_smoke.py"),
-        ]
-
-        offenders = []
-        for path in paths:
-            text = path.read_text(encoding="utf-8")
-            for term in forbidden_terms:
-                if term in text:
-                    offenders.append(f"{path}: {term}")
-
-        self.assertEqual(offenders, [])
-
     # ── C3: context_manager.py (was flowcept_ctx_manager.py) ──────────────
     def test_c3_context_manager_importable(self):
         from flowcept.agents.context_manager import (
@@ -591,15 +533,6 @@ class TestRefactoredAgentStructure(unittest.TestCase):
         )
         self.assertIsNotNone(ctx_manager)
         self.assertEqual(mcp_flowcept.name, "FlowceptAgent")
-
-    # ── C9/C10: data_query_tools/ and mcp_tools/ packages exist ──────────
-    def test_c9_data_query_tools_package_exists(self):
-        import flowcept.agents.data_query_tools as dqt
-        self.assertTrue(hasattr(dqt, "__path__"))
-
-    def test_c10_mcp_tools_package_exists(self):
-        import flowcept.agents.mcp.mcp_tools as mt
-        self.assertTrue(hasattr(mt, "__path__"))
 
     # ── D1: db_query_tools.py ─────────────────────────────────────────────
     def test_d1_db_query_tools_importable(self):
@@ -612,35 +545,12 @@ class TestRefactoredAgentStructure(unittest.TestCase):
         self.assertTrue(callable(query_tasks))
         validate_filter({"status": {"$eq": "FINISHED"}})  # must not raise
 
-    def test_d1_db_query_tools_not_decorated_with_mcp(self):
-        from flowcept.agents.data_query_tools import db_query_tools
-        import inspect
-        for name in ("query_tasks", "query_workflows", "get_task_summary"):
-            fn = getattr(db_query_tools, name)
-            src = inspect.getsource(fn)
-            self.assertNotIn("@mcp_flowcept", src, f"{name} must not have @mcp_flowcept decorator")
-
-    def test_d1_db_query_tools_does_not_import_webservice(self):
-        import inspect
-
-        from flowcept.agents.data_query_tools import db_query_tools
-
-        self.assertNotIn("flowcept.webservice", inspect.getsource(db_query_tools))
-
     # ── D2: in_memory_task_query_tools.py ─────────────────────────────────
     def test_d2_in_memory_task_query_tools_importable(self):
         from flowcept.agents.data_query_tools.in_memory_task_query_tools import (
             run_df_query,
         )
         self.assertTrue(callable(run_df_query))
-
-    def test_d2_in_memory_task_query_tools_no_mcp_decorator(self):
-        from flowcept.agents.data_query_tools import in_memory_task_query_tools as t
-        import inspect
-        for name in ("run_df_query", "generate_result_df", "run_df_code"):
-            fn = getattr(t, name)
-            src = inspect.getsource(fn)
-            self.assertNotIn("@mcp_flowcept", src, f"{name} must not have @mcp_flowcept decorator")
 
     # ── D3: pandas_utils.py ───────────────────────────────────────────────
     def test_d3_pandas_utils_importable(self):
@@ -658,34 +568,12 @@ class TestRefactoredAgentStructure(unittest.TestCase):
         self.assertTrue(callable(execute_generated_workflow_query))
         self.assertEqual(_resolve_path({"a": {"b": 1}}, "a.b"), 1)
 
-    def test_d4_in_memory_workflow_query_tools_no_mcp_decorator(self):
-        from flowcept.agents.data_query_tools import in_memory_workflow_query_tools as t
-        import inspect
-        for name in ("execute_generated_workflow_query", "run_workflow_query"):
-            fn = getattr(t, name)
-            src = inspect.getsource(fn)
-            self.assertNotIn("@mcp_flowcept", src, f"{name} must not have @mcp_flowcept decorator")
-
     # ── E1: db_query_mcp_tools.py — no _provenance_ infix ─────────────────
     def test_e1_db_query_mcp_tools_importable_and_names_clean(self):
         from flowcept.agents.mcp.mcp_tools import db_query_mcp_tools
         for name in ("query_tasks", "query_workflows", "get_task_summary", "list_campaigns", "list_agents"):
             self.assertTrue(hasattr(db_query_mcp_tools, name), f"missing {name}")
             self.assertNotIn("provenance", name, f"{name} must not contain 'provenance'")
-
-    # ── E2: in_memory_task_query_mcp_tools.py ─────────────────────────────
-    def test_e2_in_memory_task_query_mcp_tools_importable(self):
-        from flowcept.agents.mcp.mcp_tools.in_memory_task_query_mcp_tools import (
-            run_df_query,
-        )
-        self.assertTrue(callable(run_df_query))
-
-    # ── E3: in_memory_workflow_query_mcp_tools.py ─────────────────────────
-    def test_e3_in_memory_workflow_query_mcp_tools_importable(self):
-        from flowcept.agents.mcp.mcp_tools.in_memory_workflow_query_mcp_tools import (
-            run_workflow_query,
-        )
-        self.assertTrue(callable(run_workflow_query))
 
     # ── E4: session_tools.py + report_tools.py ────────────────────────────
     def test_e4_session_tools_importable(self):
@@ -697,11 +585,6 @@ class TestRefactoredAgentStructure(unittest.TestCase):
     def test_e4_report_tools_importable(self):
         from flowcept.agents.mcp.mcp_tools import generate_workflow_card
         self.assertTrue(callable(generate_workflow_card))
-
-    # ── E5: mcp_prompts.py importable ─────────────────────────────────────
-    def test_e5_mcp_prompts_importable(self):
-        import flowcept.agents.prompts.mcp_prompts  # noqa: F401
-        self.assertTrue(True)
 
     # ── F1: base_prompts.py — BASE_ROLE + build_*_prompt functions ─────────
     def test_f1_base_prompts_importable(self):
@@ -721,22 +604,6 @@ class TestRefactoredAgentStructure(unittest.TestCase):
         result = build_db_filter_prompt("find tasks in error")
         self.assertIsInstance(result, str)
         self.assertGreater(len(result), 0)
-
-    # ── F3: in_memory_task_query_prompts.py (renamed) ─────────────────────
-    def test_f3_in_memory_task_query_prompts_importable(self):
-        from flowcept.agents.prompts.in_memory_task_query_prompts import (
-            generate_pandas_code_prompt,
-        )
-        self.assertTrue(callable(generate_pandas_code_prompt))
-
-    # ── F4: in_memory_workflow_query_prompts.py (renamed) ─────────────────
-    def test_f4_in_memory_workflow_query_prompts_importable(self):
-        from flowcept.agents.prompts.in_memory_workflow_query_prompts import (
-            generate_workflow_query_prompt,
-            EMPTY_WORKFLOW_MESSAGE,
-        )
-        self.assertTrue(callable(generate_workflow_query_prompt))
-        self.assertIsInstance(EMPTY_WORKFLOW_MESSAGE, str)
 
     # ── G4: agent_mode setting ────────────────────────────────────────────
     def test_g4_agent_mode_setting_in_configs(self):

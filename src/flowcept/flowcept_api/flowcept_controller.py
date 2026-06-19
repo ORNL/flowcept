@@ -190,23 +190,12 @@ class Flowcept(object):
             agent_obj = AgentObject(agent_id=self.agent_id, name=self.agent_name)
             agent_obj.enrich()
 
-            from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED
+            try:
+                from flowcept.flowcept_api.db_api import DBAPI
 
-            if MONGO_ENABLED:
-                from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
-
-                try:
-                    MongoDBDAO().insert_or_update_agent(agent_obj)
-                except Exception as e:
-                    self.logger.error(f"Error storing agent in MongoDB: {e}")
-
-            if LMDB_ENABLED:
-                from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
-
-                try:
-                    LMDBDAO().insert_or_update_agent(agent_obj)
-                except Exception as e:
-                    self.logger.error(f"Error storing agent in LMDB: {e}")
+                DBAPI().insert_or_update_agent(agent_obj)
+            except Exception as e:
+                self.logger.error(f"Error storing agent: {e}")
 
         should_delete_buffer_file = (
             flowcept.configs.DELETE_BUFFER_FILE if delete_buffer_file is None else delete_buffer_file
@@ -782,10 +771,10 @@ class Flowcept(object):
 
         logger.info("MQ is alive!")
         if MONGO_ENABLED:
-            from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+            from flowcept.flowcept_api.db_api import DBAPI
 
-            if not MongoDBDAO(create_indices=False).liveness_test():
-                logger.error("MongoDB is enabled but DocDB is not Ready!")
+            if not DBAPI().liveness_test():
+                logger.error("MongoDB is enabled but DocDB is not ready!")
                 return False
             logger.info("DocDB is alive!")
         return True

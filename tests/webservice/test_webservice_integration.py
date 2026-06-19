@@ -743,9 +743,12 @@ def test_prov_tools_shared_core(db_cleanup):
     from flowcept.agents.data_query_tools.db_query_tools import (
         get_task_summary,
         list_campaigns,
-        make_chart,
         query_tasks,
         query_workflows,
+    )
+    from flowcept.agents.data_query_tools.dashboard_tools import (
+        make_chart,
+        get_dashboard,
     )
 
     campaign_id = f"ws-campaign-{uuid4()}"
@@ -784,6 +787,10 @@ def test_prov_tools_shared_core(db_cleanup):
     assert result.code in (201, 301)
     assert result.result["rows"]
     assert result.result["chart"]["chart_id"] == "chat-c1"
+
+    # get_dashboard returns 404 for unknown id (no real dashboard needed).
+    result = get_dashboard("nonexistent-dashboard-id")
+    assert result.code == 404
 
     # Disallowed filter operators are rejected by the shared core.
     result = query_tasks(filter={"$where": "1"}, limit=10)
@@ -1036,18 +1043,23 @@ def test_agent_telemetry_timeseries(db_cleanup):
     )
 
 
-def test_file_dashboard_store_roundtrip(tmp_path):
-    """FileDashboardStore (non-Mongo fallback) persists real JSON files."""
-    from flowcept.commons.dashboard_store import FileDashboardStore
-
-    store = FileDashboardStore(directory=str(tmp_path))
-    doc = {"dashboard_id": "d1", "name": "local", "charts": [], "layout": []}
-    assert store.save(doc)
-    assert store.get("d1")["name"] == "local"
-    assert any(d["dashboard_id"] == "d1" for d in store.list())
-    assert store.delete("d1")
-    assert store.get("d1") is None
-    assert store.delete("d1") is False
+def test_lmdb_dashboard_roundtrip(tmp_path, monkeypatch):
+    """LMDB dashboard CRUD persists and retrieves dashboard documents."""
+    from flowcept.configs import LMDB_ENABLED
+    if not LMDB_ENABLED:
+        pytest.skip("LMDB not enabled.")
+    from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
+    import flowcept.configs as _fc_configs
+    monkeypatch.setitem(_fc_configs.LMDB_SETTINGS, "path", str(tmp_path / "lmdb"))
+    dao = LMDBDAO()
+    doc = {"dashboard_id": "d1", "dashboard_type": "common_workflow", "name": "local", "charts": [], "layout": []}
+    assert dao.save_dashboard(doc)
+    assert dao.get_dashboard("d1")["name"] == "local"
+    assert any(d["dashboard_id"] == "d1" for d in dao.list_dashboards())
+    assert dao.list_dashboards(filter={"dashboard_type": "common_workflow"})
+    assert dao.delete_dashboard("d1")
+    assert dao.get_dashboard("d1") is None
+    dao.close()
 
 
 def test_webservice_dataflow_graph(db_cleanup):

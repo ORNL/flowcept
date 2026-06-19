@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 
 from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.schemas.common import ListResponse, ObjectQueryRequest
 from flowcept.commons.utils import normalize_docs
 
@@ -45,7 +44,7 @@ def list_models(
     object_id: str | None = None,
     filter_json: str | None = None,
     include_data: bool = False,
-    db: DBAPI = Depends(get_db_api),
+    db: DBAPI = Depends(DBAPI),
 ) -> ListResponse:
     """List ML model objects with optional filters."""
     query_filter = _json_filter(filter_json)
@@ -67,7 +66,7 @@ def get_model(
     object_id: str,
     version: int | None = None,
     include_data: bool = False,
-    db: DBAPI = Depends(get_db_api),
+    db: DBAPI = Depends(DBAPI),
 ):
     """Get ML model object metadata by id and optional version."""
     try:
@@ -86,7 +85,7 @@ def get_model_version(
     object_id: str,
     version: int,
     include_data: bool = False,
-    db: DBAPI = Depends(get_db_api),
+    db: DBAPI = Depends(DBAPI),
 ):
     """Get a specific ML model object version."""
     return get_model(object_id=object_id, version=version, include_data=include_data, db=db)
@@ -96,7 +95,7 @@ def get_model_version(
 def download_model(
     object_id: str,
     version: int | None = None,
-    db: DBAPI = Depends(get_db_api),
+    db: DBAPI = Depends(DBAPI),
 ):
     """Download ML model payload as a binary attachment."""
     try:
@@ -118,7 +117,7 @@ def download_model(
 
 
 @router.post("/query", response_model=ListResponse)
-def query_models(payload: ObjectQueryRequest, db: DBAPI = Depends(get_db_api)):
+def query_models(payload: ObjectQueryRequest, db: DBAPI = Depends(DBAPI)):
     """Run an advanced read-only query for ML model objects."""
     query_filter = dict(payload.filter)
     query_filter["object_type"] = "ml_model"

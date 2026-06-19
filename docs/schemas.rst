@@ -14,10 +14,10 @@ Data Schemas for Flowcept data.
 PROV-AGENT and Flowcept
 =======================
 
-PROV-AGENT is a W3C PROV extension for capturing provenance of agentic AI workflows.
+PROV-AGENT is a `W3C PROV <https://www.w3.org/TR/prov-dm/>`_ extension for capturing provenance of agentic AI workflows.
 It is described in:
 
-  R. Souza et al., *PROV-AGENT: A W3C PROV Extension for Agentic AI Workflow Provenance*,
+  R. Souza et al., *PROV-AGENT: PROV-AGENT: Unified Provenance for Tracking AI Agent Interactions in Agentic Workflows*,
   arXiv:2508.02866, 2025. https://arxiv.org/abs/2508.02866
 
 PROV-AGENT names the main building blocks you see in modern AI systems:

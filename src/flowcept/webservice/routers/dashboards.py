@@ -10,10 +10,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from flowcept.webservice.routers.query import _validate_filter_shape
 from flowcept.webservice.schemas.common import ListResponse
-from flowcept.commons.dashboard_schemas import DashboardConfig
-from flowcept.commons.dashboard_store import get_dashboard_store
+from flowcept.webservice.schemas.dashboards import DashboardConfig
+from flowcept.flowcept_api.db_api import DBAPI
 
 router = APIRouter(prefix="/dashboards", tags=["dashboards"])
+
+
+def get_dashboard_store():
+    """FastAPI dependency: return the DAO instance for dashboard CRUD."""
+    return DBAPI.get_dao_instance()
 
 
 def _now() -> str:

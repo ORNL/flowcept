@@ -120,7 +120,7 @@ def get_df_schema_prompt(dynamic_schema, example_values, current_fields, context
     return schema_prompt + get_example_values_prompt(example_values)
 
 
-def generate_plot_code_prompt(query, dynamic_schema, example_values, current_fields, context_kind="tasks") -> str:
+def build_plot_code_prompt(query, dynamic_schema, example_values, current_fields, context_kind="tasks") -> str:
     """Build a prompt for Streamlit chart code generation.
 
     Parameters
@@ -282,7 +282,7 @@ OUTPUT_FORMATTING = """
 """
 
 
-def generate_pandas_code_prompt(
+def build_pandas_code_prompt(
     query: str, dynamic_schema, example_values, custom_user_guidances, current_fields, context_kind="tasks"
 ) -> str:
     """Build a pandas code generation prompt from a natural language query.
@@ -336,7 +336,7 @@ def generate_pandas_code_prompt(
     )
 
 
-def dataframe_summarizer_context(
+def build_dataframe_summarizer_prompt(
     code, reduced_df, dynamic_schema, example_values, query, current_fields, context_kind="tasks"
 ) -> str:
     """Build a prompt that asks the LLM to summarize a query result DataFrame.
@@ -429,7 +429,7 @@ def extract_or_fix_json_code_prompt(raw_text) -> str:
     """
 
 
-def extract_or_fix_python_code_prompt(raw_text, current_fields) -> str:
+def build_extract_or_fix_python_code_prompt(raw_text, current_fields) -> str:
     """Build a prompt to extract or fix pandas code from raw text.
 
     Parameters

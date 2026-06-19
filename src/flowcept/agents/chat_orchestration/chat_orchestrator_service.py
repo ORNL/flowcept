@@ -11,7 +11,8 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, MessagesState, StateGraph
 
 from flowcept.agents.prompts.chat_prompts import CHAT_SYSTEM_PROMPT
-from flowcept.agents.data_query_tools import db_query_tools as prov_tools
+from flowcept.agents.data_query_tools import db_query_tools
+from flowcept.agents.data_query_tools import dashboard_tools
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.vocabulary import PROV_AGENT
 from flowcept.configs import AGENT_CHAT_MAX_TOOL_ITERATIONS, INSTRUMENTATION_ENABLED
@@ -60,7 +61,7 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         sort: list of {"field": "...", "order": 1|-1}, or a Mongo sort dict {"field": -1}.
         """
         return _run(
-            prov_tools.query_tasks,
+            db_query_tools.query_tasks,
             filter=filter,
             projection=_coerce_projection(projection),
             limit=limit,
@@ -70,27 +71,27 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
     @tool
     def query_workflows(filter: Optional[Dict[str, Any]] = None, limit: int = 100) -> str:
         """Query workflow provenance records with a Mongo-style filter."""
-        return _run(prov_tools.query_workflows, filter=filter, limit=limit)
+        return _run(db_query_tools.query_workflows, filter=filter, limit=limit)
 
     @tool
     def get_task_summary(filter: Optional[Dict[str, Any]] = None) -> str:
         """Summarize tasks: status counts, per-activity durations, and time range."""
-        return _run(prov_tools.get_task_summary, filter=filter)
+        return _run(db_query_tools.get_task_summary, filter=filter)
 
     @tool
     def list_campaigns() -> str:
         """List derived campaign summaries (campaigns group workflows and tasks)."""
-        return _run(prov_tools.list_campaigns)
+        return _run(db_query_tools.list_campaigns)
 
     @tool
     def list_agents() -> str:
         """List derived agent summaries (agents observed in task provenance)."""
-        return _run(prov_tools.list_agents)
+        return _run(db_query_tools.list_agents)
 
     @tool
     def make_chart(card_spec: Dict[str, Any]) -> str:
         """Build a chart from a declarative dashboard card spec; the UI renders the result."""
-        return _run(prov_tools.make_chart, card_spec=card_spec, context=context)
+        return _run(dashboard_tools.make_chart, card_spec=card_spec, context=context)
 
     @tool
     def highlight_lineage(
@@ -108,7 +109,7 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         ids: Optional[List[str]] = None
         if task_ids is not None:
             ids = [task_ids] if isinstance(task_ids, str) else list(task_ids)
-        return _run(prov_tools.highlight_lineage, task_ids=ids, filter=filter, workflow_id=wf_id)
+        return _run(db_query_tools.highlight_lineage, task_ids=ids, filter=filter, workflow_id=wf_id)
 
     tools = [query_tasks, query_workflows, get_task_summary, list_campaigns, list_agents, make_chart, highlight_lineage]
 
@@ -117,12 +118,12 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         @tool
         def get_dashboard(dashboard_id: str) -> str:
             """Get a stored dashboard spec by id."""
-            return _run(prov_tools.get_dashboard, dashboard_id=dashboard_id)
+            return _run(dashboard_tools.get_dashboard, dashboard_id=dashboard_id)
 
         @tool
         def update_dashboard(dashboard_id: str, spec: Dict[str, Any]) -> str:
             """Replace a stored dashboard spec with a complete revised spec."""
-            return _run(prov_tools.update_dashboard, dashboard_id=dashboard_id, spec=spec)
+            return _run(dashboard_tools.update_dashboard, dashboard_id=dashboard_id, spec=spec)
 
         tools += [get_dashboard, update_dashboard]
     return tools

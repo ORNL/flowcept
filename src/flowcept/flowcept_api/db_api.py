@@ -68,9 +68,18 @@ class DBAPI(object):
         """Return the configured document DAO singleton."""
         return DocumentDBDAO.get_instance(create_indices=False)
 
+    @classmethod
+    def get_dao_instance(cls) -> DocumentDBDAO:
+        """Return the DAO singleton for internal/advanced operations not on the public API."""
+        return cls._dao()
+
     def close(self):
         """Close DB resources for the active DAO instance."""
         DBAPI._dao().close()
+
+    def liveness_test(self) -> bool:
+        """Return True if the configured document store is reachable."""
+        return DBAPI._dao().liveness_test()
 
     def insert_or_update_task(self, task: TaskObject):
         """Insert or update a task document.
@@ -1067,3 +1076,46 @@ class DBAPI(object):
         if hasattr(dao, "get_node_positions"):
             return dao.get_node_positions(workflow_id, graph_type)
         return {}
+
+    def task_summary(self, filter: Dict) -> Dict:
+        """Summarize tasks: status counts, per-activity stats, and time range."""
+        return DBAPI._dao().task_summary(filter)
+
+    def derive_campaigns(self) -> List[Dict]:
+        """Derive campaign summaries by grouping workflows and tasks by campaign_id."""
+        return DBAPI._dao().derive_campaigns()
+
+    def derive_agents(self, filter: Dict = None) -> List[Dict]:
+        """Derive agent summaries by joining stored agents with task provenance."""
+        return DBAPI._dao().derive_agents(filter)
+
+    def telemetry_timeseries(
+        self, filter: Dict, fields: List, x_field: str = "started_at", limit: int = 1000
+    ) -> List[Dict]:
+        """Extract plottable rows of dot-notated fields from tasks."""
+        return DBAPI._dao().telemetry_timeseries(filter, fields, x_field=x_field, limit=limit)
+
+    def resolve_chart_data(self, data: Dict, context: Dict = None) -> Dict:
+        """Resolve a declarative chart spec into plottable rows."""
+        return DBAPI._dao().resolve_chart_data(data, context=context)
+
+    def delete_object_keys(self, key_name: str, keys_list: List) -> bool:
+        """Delete object documents matching key_name/keys_list. Raises NotImplementedError if unsupported."""
+        dao = DBAPI._dao()
+        if not hasattr(dao, "delete_object_keys"):
+            raise NotImplementedError("delete_object_keys is not supported by the active DB backend.")
+        return dao.delete_object_keys(key_name, keys_list)
+
+    def delete_workflow_data(self, workflow_id: str) -> dict:
+        """Delete all data for a workflow. Returns empty dict if unsupported."""
+        dao = DBAPI._dao()
+        if not hasattr(dao, "delete_workflow_data"):
+            return {}
+        return dao.delete_workflow_data(workflow_id)
+
+    def delete_campaign_data(self, campaign_id: str) -> dict:
+        """Delete all data for a campaign. Returns empty dict if unsupported."""
+        dao = DBAPI._dao()
+        if not hasattr(dao, "delete_campaign_data"):
+            return {}
+        return dao.delete_campaign_data(campaign_id)

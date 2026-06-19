@@ -9,7 +9,8 @@ If a tool requires its own file, make that file (which should immediately go to 
 ## 1. First Principles
 
 - Be surgical. Prefer small, reviewable changes.
-- Reuse above all. Avoid duplication and one-off fixes.
+- Reuse above all. Avoid duplication and one-off fixes. Duplicating code or logic is a MAJOR problem. Avoid it at all costs.
+- Separation of concerns is extremely important in this project. Mixing concerns is not acceptable. Each module in the project has a clear and separate concern. Report if you find violations.
 - Do not overengineer.
 - Prefer visible failures over fallback code that hides contract mismatches.
 - Prefer `settings.yaml` over hardcoded behavior.

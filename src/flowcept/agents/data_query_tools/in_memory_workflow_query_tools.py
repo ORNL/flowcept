@@ -15,7 +15,7 @@ from flowcept.agents.llm.builders import build_llm_model
 
 from flowcept.agents.prompts.in_memory_workflow_query_prompts import (
     EMPTY_WORKFLOW_MESSAGE,
-    generate_workflow_query_prompt,
+    build_workflow_query_prompt,
 )
 
 MISSING_INFO = "info not available"
@@ -153,7 +153,7 @@ def run_workflow_query(query: str, workflow_msg_obj: dict, custom_user_guidance=
     if llm is None:
         llm = build_llm_model()
 
-    prompt = generate_workflow_query_prompt(query, workflow_msg_obj, custom_user_guidance)
+    prompt = build_workflow_query_prompt(query, workflow_msg_obj, custom_user_guidance)
     try:
         query_spec = llm(prompt)
     except Exception as e:

@@ -10,15 +10,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from datetime import datetime, timezone
-
 from flowcept.agents.tool_result import ToolResult
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import AGENT_CHAT_MAX_QUERY_LIMIT
 from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.commons.dashboard_schemas import DashboardChart, DashboardSpec
-from flowcept.commons import provenance_stats as stats
-from flowcept.commons.dashboard_store import get_dashboard_store
 from flowcept.commons.utils import normalize_docs
 
 ALLOWED_FILTER_OPERATORS = {
@@ -160,7 +155,7 @@ def get_task_summary(filter: Optional[Dict[str, Any]] = None) -> ToolResult:
     ToolResult
         ``result`` holds the summary dict.
     """
-    summary = stats.task_summary(DBAPI(), filter or {})
+    summary = DBAPI().task_summary(filter or {})
     return ToolResult(code=301, result=_normalize([summary])[0], tool_name="get_task_summary")
 
 
@@ -173,7 +168,7 @@ def list_campaigns() -> ToolResult:
     ToolResult
         ``result`` holds ``{"items": [...], "count": int}``.
     """
-    items = _normalize(stats.derive_campaigns(DBAPI()))
+    items = _normalize(DBAPI().derive_campaigns())
     return ToolResult(code=301, result={"items": items, "count": len(items)}, tool_name="list_campaigns")
 
 
@@ -186,35 +181,8 @@ def list_agents() -> ToolResult:
     ToolResult
         ``result`` holds ``{"items": [...], "count": int}``.
     """
-    items = _normalize(stats.derive_agents(DBAPI()))
+    items = _normalize(DBAPI().derive_agents())
     return ToolResult(code=301, result={"items": items, "count": len(items)}, tool_name="list_agents")
-
-
-@_guarded("make_chart")
-def make_chart(card_spec: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> ToolResult:
-    """Build a dashboard-style chart card: validate the spec and resolve its data rows.
-
-    Parameters
-    ----------
-    card_spec : dict
-        A dashboard ``DashboardChart`` spec (type chart/metric/table with a ``data`` binding).
-    context : dict, optional
-        Extra filter ANDed into the chart data filter (e.g., ``{"workflow_id": "..."}``).
-
-    Returns
-    -------
-    ToolResult
-        ``result`` holds ``{"chart": <validated spec>, "rows": [...], "count": int}``.
-    """
-    card = DashboardChart(**card_spec)
-    if card.data is None:
-        return ToolResult(code=400, result="Chart spec must include a data binding.", tool_name="make_chart")
-    validate_filter(card.data.filter)
-    if context:
-        validate_filter(context)
-    resolved = stats.resolve_chart_data(DBAPI(), card.data, context=context)
-    result = {"chart": card.model_dump(), "rows": _normalize(resolved["rows"]), "count": resolved["count"]}
-    return ToolResult(code=301, result=result, tool_name="make_chart")
 
 
 @_guarded("highlight_lineage")
@@ -264,57 +232,3 @@ def highlight_lineage(
         result={"task_ids": resolved_ids},
         tool_name="highlight_lineage",
     )
-
-
-@_guarded("get_dashboard")
-def get_dashboard(dashboard_id: str) -> ToolResult:
-    """Get a stored dashboard spec by id.
-
-    Parameters
-    ----------
-    dashboard_id : str
-        Dashboard identifier.
-
-    Returns
-    -------
-    ToolResult
-        ``result`` holds the dashboard spec dict, or a 404 message.
-    """
-    doc = get_dashboard_store().get(dashboard_id)
-    if doc is None:
-        return ToolResult(code=404, result=f"Dashboard not found: {dashboard_id}", tool_name="get_dashboard")
-    return ToolResult(code=301, result=doc, tool_name="get_dashboard")
-
-
-@_guarded("update_dashboard")
-def update_dashboard(dashboard_id: str, spec: Dict[str, Any]) -> ToolResult:
-    """Replace a stored dashboard spec (validated), preserving id and creation time.
-
-    Parameters
-    ----------
-    dashboard_id : str
-        Dashboard identifier.
-    spec : dict
-        Full replacement ``DashboardSpec``.
-
-    Returns
-    -------
-    ToolResult
-        ``result`` holds the saved dashboard spec dict.
-    """
-    store = get_dashboard_store()
-    existing = store.get(dashboard_id)
-    if existing is None:
-        return ToolResult(code=404, result=f"Dashboard not found: {dashboard_id}", tool_name="update_dashboard")
-    validated = DashboardSpec(**spec)
-    validate_filter(validated.context)
-    for card in validated.cards:
-        if card.data is not None:
-            validate_filter(card.data.filter)
-    validated.dashboard_id = dashboard_id
-    validated.created_at = existing.get("created_at")
-    validated.updated_at = datetime.now(timezone.utc).isoformat()
-    doc = validated.model_dump()
-    if not store.save(doc):
-        return ToolResult(code=500, result="Could not save dashboard.", tool_name="update_dashboard")
-    return ToolResult(code=301, result=doc, tool_name="update_dashboard")

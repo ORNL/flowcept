@@ -5,7 +5,7 @@ from unittest.mock import patch
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept import BlobObject, Flowcept, WorkflowObject, AgentObject
-from flowcept.configs import MONGO_ENABLED
+from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED
 from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 
 
@@ -589,3 +589,129 @@ class DBAPITest(unittest.TestCase):
         Flowcept.db._dao().delete_tasks_with_filter(_filter)
         c1 = Flowcept.db._dao().count_tasks()
         assert c0 == c1
+
+    def test_dashboard_crud_both_db_paths(self):
+        """Dashboard CRUD works on both MongoDBDAO and LMDBDAO."""
+        from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+        from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
+
+        dashboard_id = str(uuid4())
+        doc = {
+            "dashboard_id": dashboard_id,
+            "dashboard_type": "common_workflow",
+            "name": "test-dash",
+            "charts": [],
+            "layout": [],
+        }
+
+        if MONGO_ENABLED:
+            dao = MongoDBDAO()
+            assert dao.save_dashboard(doc)
+            result = dao.get_dashboard(dashboard_id)
+            assert result is not None
+            assert result["name"] == "test-dash"
+            all_docs = dao.list_dashboards()
+            assert any(d["dashboard_id"] == dashboard_id for d in all_docs)
+            filtered = dao.list_dashboards(filter={"dashboard_type": "common_workflow"})
+            assert any(d["dashboard_id"] == dashboard_id for d in filtered)
+            assert dao.delete_dashboard(dashboard_id)
+            assert dao.get_dashboard(dashboard_id) is None
+            dao.close()
+
+        if LMDB_ENABLED:
+            dao = LMDBDAO()
+            assert dao.save_dashboard(doc)
+            result = dao.get_dashboard(dashboard_id)
+            assert result is not None
+            assert result["name"] == "test-dash"
+            all_docs = dao.list_dashboards()
+            assert any(d["dashboard_id"] == dashboard_id for d in all_docs)
+            filtered = dao.list_dashboards(filter={"dashboard_type": "common_workflow"})
+            assert any(d["dashboard_id"] == dashboard_id for d in filtered)
+            assert dao.delete_dashboard(dashboard_id)
+            assert dao.get_dashboard(dashboard_id) is None
+            dao.close()
+
+    def test_dbapi_analytics_methods(self):
+        """DBAPI exposes task_summary, derive_campaigns, derive_agents, telemetry_timeseries."""
+        if not Flowcept.services_alive():
+            import pytest
+            pytest.skip("No live services.")
+        db = Flowcept.db
+        summary = db.task_summary({})
+        assert isinstance(summary, dict)
+        assert "count" in summary
+        assert "status_counts" in summary
+        assert "activity_stats" in summary
+        assert "time_range" in summary
+
+        campaigns = db.derive_campaigns()
+        assert isinstance(campaigns, list)
+
+        agents = db.derive_agents()
+        assert isinstance(agents, list)
+
+        rows = db.telemetry_timeseries({}, fields=["started_at"], x_field="started_at", limit=10)
+        assert isinstance(rows, list)
+
+    def test_dbapi_get_dao_instance(self):
+        """DBAPI.get_dao_instance() returns the DocumentDBDAO singleton."""
+        if not Flowcept.services_alive():
+            import pytest
+            pytest.skip("No live services.")
+        from flowcept.flowcept_api.db_api import DBAPI
+        dao = DBAPI.get_dao_instance()
+        assert isinstance(dao, DocumentDBDAO)
+        dashboard_id = str(uuid4())
+        doc = {"dashboard_id": dashboard_id, "name": "test", "charts": []}
+        assert dao.save_dashboard(doc) is True
+        fetched = dao.get_dashboard(dashboard_id)
+        assert fetched is not None
+        assert fetched["dashboard_id"] == dashboard_id
+        listed = dao.list_dashboards()
+        assert any(d["dashboard_id"] == dashboard_id for d in listed)
+        assert dao.delete_dashboard(dashboard_id) is True
+        assert dao.get_dashboard(dashboard_id) is None
+
+    def test_dbapi_resolve_chart_data(self):
+        """DBAPI.resolve_chart_data returns rows and count for basic specs."""
+        if not Flowcept.services_alive():
+            import pytest
+            pytest.skip("No live services.")
+        from flowcept.flowcept_api.db_api import DBAPI
+        db = DBAPI()
+        result = db.resolve_chart_data({"source": "tasks", "filter": {}})
+        assert isinstance(result, dict)
+        assert "rows" in result and "count" in result
+        assert isinstance(result["rows"], list)
+        assert isinstance(result["count"], int)
+
+        grouped = db.resolve_chart_data({
+            "source": "tasks",
+            "group_by": "status",
+            "metrics": [{"field": "", "agg": "count"}],
+        })
+        assert isinstance(grouped, dict)
+        assert "rows" in grouped and "count" in grouped
+
+    def test_docdb_dao_utils(self):
+        """Shared DAO helpers in docdb_dao_utils are importable and correct."""
+        import pytest
+        from flowcept.commons.daos.docdb_dao.docdb_dao_utils import (
+            to_epoch,
+            get_nested,
+        )
+        # epoch-ms → epoch-sec
+        assert to_epoch(1_000_000_000_000) == pytest.approx(1_000_000_000.0)
+        # already epoch-sec
+        assert to_epoch(1_000_000_000.0) == pytest.approx(1_000_000_000.0)
+        # ISO string (Unix 1000000000 = 2001-09-09T01:46:40Z)
+        iso_result = to_epoch("2001-09-09T01:46:40+00:00")
+        assert iso_result is not None
+        assert abs(iso_result - 1_000_000_000.0) < 60  # within 1 minute of expected
+        # None passthrough
+        assert to_epoch(None) is None
+        # dot-notated nested field
+        assert get_nested({"a": {"b": 1}}, "a.b") == 1
+        assert get_nested({"a": {"b": 1}}, "a.c") is None
+        assert get_nested({"a": 1}, "a.b") is None

@@ -16,7 +16,7 @@ import re
 from typing import Any, Dict, List, Optional, Set
 
 from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.commons.provenance_stats import _to_epoch
+from flowcept.commons.utils import to_epoch
 
 MAX_NODES = 400
 _TASK_PROJECTION = [
@@ -117,7 +117,7 @@ def build_dataflow(db: DBAPI, workflow_id: str) -> Optional[Dict[str, Any]]:
     tasks = [t for t in tasks if t.get("used") or t.get("generated")]
     if not tasks:
         return None
-    tasks.sort(key=lambda t: _to_epoch(t.get("started_at")) or 0)
+    tasks.sort(key=lambda t: to_epoch(t.get("started_at")) or 0)
     return _coarse(tasks)
 
 
@@ -209,14 +209,14 @@ def _coarse(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
         if not used:
             continue
         in_id = _chunk(used, "input")
-        t_start = _to_epoch(t.get("started_at"))
+        t_start = to_epoch(t.get("started_at"))
         for key, value in _flatten_payload(used):
             if _is_trivial(value):
                 continue
             for producer, out_id in producers.get((key, repr(value)), ()):
                 if producer["task_id"] == t["task_id"] or out_id == in_id:
                     continue
-                p_end = _to_epoch(producer.get("ended_at"))
+                p_end = to_epoch(producer.get("ended_at"))
                 if t_start is not None and p_end is not None and p_end > t_start:
                     continue
                 if (out_id, in_id) not in seen_derived:
@@ -229,12 +229,12 @@ def _coarse(tasks: List[Dict[str, Any]]) -> Dict[str, Any]:
         agent_id = t.get("agent_id")
         if source_agent_id and agent_id:
             delegator = None
-            t_start = _to_epoch(t.get("started_at")) or 0
+            t_start = to_epoch(t.get("started_at")) or 0
             for s in tasks:
                 if s.get("agent_id") == source_agent_id:
-                    s_start = _to_epoch(s.get("started_at")) or 0
+                    s_start = to_epoch(s.get("started_at")) or 0
                     if s_start <= t_start:
-                        if delegator is None or s_start > (_to_epoch(delegator.get("started_at")) or 0):
+                        if delegator is None or s_start > (to_epoch(delegator.get("started_at")) or 0):
                             delegator = s
             if delegator:
                 edges.append(

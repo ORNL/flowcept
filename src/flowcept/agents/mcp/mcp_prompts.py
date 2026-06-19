@@ -4,11 +4,8 @@ Separated from the prompt builders in ``prompts/`` so those files have no MCP im
 """
 
 from flowcept.agents.context_manager import mcp_flowcept, get_df_context, EMPTY_DF_MESSAGE
-from flowcept.agents.prompts.in_memory_task_query_prompts import generate_pandas_code_prompt
-from flowcept.agents.prompts.in_memory_workflow_query_prompts import (
-    EMPTY_WORKFLOW_MESSAGE,
-    generate_workflow_query_prompt,
-)
+from flowcept.agents.prompts.in_memory_task_query_prompts import build_pandas_code_prompt
+from flowcept.agents.prompts.in_memory_workflow_query_prompts import EMPTY_WORKFLOW_MESSAGE
 
 
 @mcp_flowcept.prompt(
@@ -36,7 +33,7 @@ def build_df_query_prompt(query: str, context_kind: str = "tasks") -> str:
     if df is None or not len(df):
         return EMPTY_DF_MESSAGE
     current_fields = list(df.columns)
-    return generate_pandas_code_prompt(
+    return build_pandas_code_prompt(
         query,
         schema,
         value_examples,
@@ -69,4 +66,4 @@ def build_workflow_query_prompt(query: str) -> str:
     workflow_msg_obj = lifespan.workflow_msg_obj
     if not workflow_msg_obj:
         return EMPTY_WORKFLOW_MESSAGE
-    return generate_workflow_query_prompt(query, workflow_msg_obj, lifespan.custom_guidance)
+    return build_workflow_query_prompt(query, workflow_msg_obj, lifespan.custom_guidance)

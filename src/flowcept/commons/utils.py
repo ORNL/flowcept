@@ -26,6 +26,30 @@ from flowcept.configs import PERF_LOG
 from flowcept.commons.vocabulary import Status
 
 
+def to_epoch(value):
+    """Normalize a timestamp to epoch seconds.
+
+    Accepts float/int epoch-sec or epoch-ms, ISO string, or datetime object.
+    Returns None if the value cannot be interpreted as a timestamp.
+    """
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return value / 1000.0 if value >= 1e12 else float(value)
+    if isinstance(value, str):
+        try:
+            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return dt.replace(tzinfo=timezone.utc).timestamp() if dt.tzinfo is None else dt.timestamp()
+        except ValueError:
+            return None
+    try:
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=timezone.utc).timestamp() if value.tzinfo is None else value.timestamp()
+    except Exception:
+        pass
+    return None
+
+
 def get_utc_now() -> float:
     """Get current UTC time as a timestamp (seconds since epoch)."""
     now = datetime.now(timezone.utc)

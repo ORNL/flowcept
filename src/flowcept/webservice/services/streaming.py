@@ -11,7 +11,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.flowcept_api.db_api import DBAPI
 
 TASK_CURSOR_FIELDS = ("registered_at", "started_at", "ended_at", "utc_timestamp")
@@ -19,8 +18,7 @@ WORKFLOW_CURSOR_FIELDS = ("utc_timestamp", "created_at", "updated_at", "started_
 
 
 def _supports_operators() -> bool:
-    dao = DocumentDBDAO.get_instance(create_indices=False)
-    return hasattr(dao, "raw_pipeline")
+    return hasattr(DBAPI.get_dao_instance(), "raw_pipeline")
 
 
 def _as_epoch(value: Any) -> Optional[float]:
