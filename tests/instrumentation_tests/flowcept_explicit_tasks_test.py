@@ -53,7 +53,7 @@ class ExplicitTaskTest(unittest.TestCase):
         flowcept = Flowcept(start_persistence=False, save_workflow=True, workflow_name="MyFirstWorkflow").start()
 
         agent1 = str(uuid.uuid4())
-        t1 = FlowceptTask(activity_id="super_func1", used={"x":1}, agent_id=agent1, tags=["tag1"]).send()
+        FlowceptTask(activity_id="super_func1", used={"x":1}, agent_id=agent1, tags=["tag1"]).send()
 
         with FlowceptTask(activity_id="super_func2", used={"y": 1}, agent_id=agent1, tags=["tag2"]) as t2:
             sleep(0.5)
@@ -77,7 +77,7 @@ class ExplicitTaskTest(unittest.TestCase):
 
     @pytest.mark.safeoffline
     def test_data_files(self):
-        with Flowcept() as f:
+        with Flowcept():
             used_args = {"a": 1}
             with FlowceptTask(used=used_args) as t:
                 repo_root = Path(__file__).resolve().parents[2]

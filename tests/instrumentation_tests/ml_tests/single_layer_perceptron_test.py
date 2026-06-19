@@ -4,7 +4,6 @@ import os
 import random
 
 import pytest
-from uuid import uuid4
 
 pytest.importorskip("torch")
 
@@ -132,7 +131,6 @@ def submit_gridsearch_job(
     source_agent_id=None,
 ):
     """Simulate submitting a training job to an HPC system."""
-    from uuid import uuid4
     configs = [
         {"epochs": 2, "learning_rate": 0.01, "n_input_neurons": 1},
         {"epochs": 4, "learning_rate": 0.03, "n_input_neurons": 1},

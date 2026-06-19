@@ -565,7 +565,7 @@ class DBAPITest(unittest.TestCase):
                 ],
             },
         }
-        d = Flowcept.db._dao().get_tasks_recursive("e9a3b567-cb56-4884-ba14-f137c0260191", mapping=mapping)
+        Flowcept.db._dao().get_tasks_recursive("e9a3b567-cb56-4884-ba14-f137c0260191", mapping=mapping)
 
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_dump(self):

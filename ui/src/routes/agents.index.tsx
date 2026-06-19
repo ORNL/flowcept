@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bot, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAgents } from "../api/queries";
-import { fmtTs, sortAgents, filterActiveAgents, agentIconStyle, agentColor } from "../lib/format";
+import { fmtTs, sortAgents, filterActiveAgents, agentIconStyle, agentColor, getAgentNameFromId } from "../lib/format";
 
 const PAGE_SIZE = 30;
 
@@ -18,12 +18,11 @@ function AgentsPage() {
   const totalPages = Math.ceil(visible.length / PAGE_SIZE);
   const pageItems = visible.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  // Key the color map by the real agent name (from backend), not the extracted ID-based name.
-  // This ensures same-name agents (e.g. two "HPCAgent" instances with different ID formats)
-  // always get the same icon color regardless of whether the ID is a plain UUID or named-UUID.
+  // Key the color map by the resolved agent name, not the raw ID containing unique UUIDs.
+  // This ensures identical agent types/names share the exact same color.
   const colorMap = new Map(
     visible.map((a) => {
-      const label = a.name || a.agent_id;
+      const label = a.name || getAgentNameFromId(a.agent_id);
       return [label, agentColor(undefined, label)];
     }),
   );
@@ -50,6 +49,11 @@ function AgentsPage() {
               {a.name && (
                 <div className="font-mono text-[10px] text-fg-muted mt-1 pl-6">
                   {a.agent_id}
+                </div>
+              )}
+              {a.workflow_id && (
+                <div className="text-[10px] text-fg-muted mt-0.5 pl-6">
+                  workflow: <span className="font-mono">{a.workflow_id}</span>
                 </div>
               )}
             </div>

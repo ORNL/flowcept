@@ -2037,6 +2037,7 @@ class MongoDBDAO(DocumentDBDAO):
                     "workflow_ids": stat["workflow_ids"],
                     "last_active": stat["last_active"],
                     "name": sa.get("name"),
+                    "workflow_id": sa.get("workflow_id"),
                     "registered_at": _ts(sa.get("registered_at")),
                 }
             )

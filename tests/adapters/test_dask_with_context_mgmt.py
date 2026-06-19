@@ -8,7 +8,6 @@ from flowcept import Flowcept
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import assert_by_querying_tasks_until
 from flowcept.flowceptor.adapters.dask.dask_plugins import (
-    set_workflow_info_on_workers,
     FlowceptDaskWorkerAdapter,
 )
 from tests.adapters.dask_test_utils import (
@@ -19,7 +18,6 @@ from tests.adapters.dask_test_utils import (
 def dummy_func1(x):
     cool_var = "cool value"  # test if we can intercept this var
     print(cool_var)
-    y = cool_var
     return x * 2
 
 
