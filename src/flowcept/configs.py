@@ -283,13 +283,9 @@ AGENT = settings.get("agent", {})
 AGENT_AUDIO = _get_env_bool("AGENT_AUDIO", settings["agent"].get("audio_enabled", "false"))
 AGENT_HOST = _get_env("AGENT_HOST", settings["agent"].get("mcp_host", "localhost"))
 AGENT_PORT = int(_get_env("AGENT_PORT", settings["agent"].get("mcp_port", "8000")))
-MCP_ALLOWED_HOSTS = _get_env_list("MCP_ALLOWED_HOSTS",
-                                  AGENT.get("mcp_allowed_hosts",
-                                            ["localhost:*", "127.0.0.1:*"])
-)
-MCP_ALLOWED_ORIGINS = _get_env_list("MCP_ALLOWED_ORIGINS",
-                                    AGENT.get("mcp_allowed_origins",
-                                              ["http://localhost:*", "http://127.0.0.1:*"])
+MCP_ALLOWED_HOSTS = _get_env_list("MCP_ALLOWED_HOSTS", AGENT.get("mcp_allowed_hosts", ["localhost:*", "127.0.0.1:*"]))
+MCP_ALLOWED_ORIGINS = _get_env_list(
+    "MCP_ALLOWED_ORIGINS", AGENT.get("mcp_allowed_origins", ["http://localhost:*", "http://127.0.0.1:*"])
 )
 
 ####################
