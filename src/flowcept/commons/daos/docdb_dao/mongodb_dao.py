@@ -1861,17 +1861,23 @@ class MongoDBDAO(DocumentDBDAO):
             ]
         )
 
-    def derive_campaigns(self) -> List[Dict]:
-        """Derive campaign summaries by grouping workflows and tasks by campaign_id."""
+    def derive_campaigns(self, campaign_id: str = None) -> List[Dict]:
+        """Derive campaign summaries by grouping workflows and tasks by campaign_id.
+
+        Parameters
+        ----------
+        campaign_id : str, optional
+            When provided, only the matching campaign is returned.
+        """
         from flowcept.commons.daos.docdb_dao.docdb_dao_utils import to_epoch
 
         campaigns: Dict = {}
 
-        def _campaign(campaign_id):
+        def _campaign(cid):
             return campaigns.setdefault(
-                campaign_id,
+                cid,
                 {
-                    "campaign_id": campaign_id,
+                    "campaign_id": cid,
                     "workflow_count": 0,
                     "task_count": 0,
                     "users": set(),
@@ -1889,10 +1895,14 @@ class MongoDBDAO(DocumentDBDAO):
                 record["first_ts"] = val if record["first_ts"] is None else min(record["first_ts"], val)
                 record["last_ts"] = val if record["last_ts"] is None else max(record["last_ts"], val)
 
+        _base_match: Dict = {"campaign_id": {"$exists": True, "$ne": None}}
+        if campaign_id:
+            _base_match["campaign_id"] = campaign_id
+
         wf_rows = (
             self.raw_pipeline(
                 [
-                    {"$match": {"campaign_id": {"$exists": True, "$ne": None}}},
+                    {"$match": _base_match},
                     {
                         "$group": {
                             "_id": "$campaign_id",
@@ -1912,7 +1922,7 @@ class MongoDBDAO(DocumentDBDAO):
         task_rows = (
             self.raw_pipeline(
                 [
-                    {"$match": {"campaign_id": {"$exists": True, "$ne": None}}},
+                    {"$match": _base_match},
                     {
                         "$group": {
                             "_id": "$campaign_id",
