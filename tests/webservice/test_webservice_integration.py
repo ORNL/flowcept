@@ -78,6 +78,7 @@ def db_cleanup(request):
             pass
 
     from flowcept.configs import LMDB_ENABLED
+
     initial_lmdb_agents = set()
     if LMDB_ENABLED and hasattr(dao, "_agents_db"):
         try:
@@ -875,6 +876,7 @@ def test_chat_endpoint_unavailable_without_llm():
     assert "LLM" in rs.json()["detail"] or "llm" in rs.json()["detail"]
 
 
+@pytest.mark.llm
 def test_chat_endpoint_real_llm_db_queries(gridsearch_run_data):
     """HTTP chat → LangGraph → DB tools → DBAPI → Mongo: covers all DB-path tools.
 
@@ -885,6 +887,14 @@ def test_chat_endpoint_real_llm_db_queries(gridsearch_run_data):
     the session-scoped ``gridsearch_run_data`` fixture so the expensive experiment
     runs once and is shared with the DF-path test.
     """
+    from flowcept.configs import AGENT
+
+    api_key = AGENT.get("api_key")
+    if not api_key or api_key in ("?", "your-api-key-here"):
+        pytest.skip("agent.api_key is not set.")
+    if not AGENT.get("service_provider") or AGENT.get("service_provider") == "?":
+        pytest.skip("agent.service_provider is not set.")
+
     import pathlib
     import yaml
     from tests.test_utils.test_llm_utils import score_response
@@ -929,6 +939,7 @@ def test_chat_endpoint_real_llm_db_queries(gridsearch_run_data):
     assert not failed, "One or more DB chat queries scored below threshold:\n" + "\n".join(failed)
 
 
+@pytest.mark.llm
 def test_chat_endpoint_real_llm_df_queries(gridsearch_run_data):
     """DF-path tools over gridsearch data: covers generate_result_df, generate_plot_code,
     extract_or_fix_python_code, and run_workflow_query.
@@ -938,6 +949,14 @@ def test_chat_endpoint_real_llm_df_queries(gridsearch_run_data):
     them directly with a real LLM to exercise the full tool stack end-to-end.
     Query cases are loaded from chat_query_tests.yaml (query_type=df).
     """
+    from flowcept.configs import AGENT
+
+    api_key = AGENT.get("api_key")
+    if not api_key or api_key in ("?", "your-api-key-here"):
+        pytest.skip("agent.api_key is not set.")
+    if not AGENT.get("service_provider") or AGENT.get("service_provider") == "?":
+        pytest.skip("agent.service_provider is not set.")
+
     import pathlib
     import yaml
     import pandas as pd
@@ -1190,10 +1209,12 @@ def test_agent_telemetry_timeseries(db_cleanup):
 def test_lmdb_dashboard_roundtrip(tmp_path, monkeypatch):
     """LMDB dashboard CRUD persists and retrieves dashboard documents."""
     from flowcept.configs import LMDB_ENABLED
+
     if not LMDB_ENABLED:
         pytest.skip("LMDB not enabled.")
     from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
     import flowcept.configs as _fc_configs
+
     monkeypatch.setitem(_fc_configs.LMDB_SETTINGS, "path", str(tmp_path / "lmdb"))
     dao = LMDBDAO()
     doc = {"dashboard_id": "d1", "dashboard_type": "common_workflow", "name": "local", "charts": [], "layout": []}
@@ -1229,6 +1250,7 @@ def test_webservice_dataflow_graph(db_cleanup):
 
     # Coarse level (default): per-task input/output chunk entities (PROV Entity vs Activity).
     from flowcept import configs
+
     original_max = getattr(configs, "WEBSERVER_MAX_LABEL_LENGTH", 30)
     try:
         configs.WEBSERVER_MAX_LABEL_LENGTH = 300
@@ -1270,7 +1292,8 @@ def test_webservice_dataflow_graph(db_cleanup):
     # submit_gridsearch_job outputs configs list under the key "configs" (not "arg_0")
     submit_node = next(n for n in task_nodes if n["label"] == "submit_gridsearch_job")
     submit_output_chunks = [
-        c for c in chunk_nodes
+        c
+        for c in chunk_nodes
         if any(e["source"] == submit_node["id"] and e["target"] == c["id"] for e in body["edges"])
     ]
     assert submit_output_chunks, "submit_gridsearch_job must have output chunks"
@@ -1303,7 +1326,7 @@ def test_webservice_dataflow_graph(db_cleanup):
 
 
 def _parse_sse(text: str) -> list:
-    """Parse a raw SSE response body into a list of {event, data} dicts.
+    r"""Parse a raw SSE response body into a list of {event, data} dicts.
 
     SSE separates events with \\r\\n\\r\\n (CRLF) or \\n\\n; normalise first.
     """
@@ -1317,9 +1340,9 @@ def _parse_sse(text: str) -> list:
         ev: dict = {}
         for line in block.split("\n"):
             if line.startswith("event:"):
-                ev["event"] = line[len("event:"):].strip()
+                ev["event"] = line[len("event:") :].strip()
             elif line.startswith("data:"):
-                raw = line[len("data:"):].strip()
+                raw = line[len("data:") :].strip()
                 try:
                     ev["data"] = json.loads(raw)
                 except json.JSONDecodeError:
@@ -1383,7 +1406,12 @@ def test_chat_highlight_lineage_sse(db_cleanup):
         rs = client.post(
             "/api/v1/chat",
             json={
-                "messages": [{"role": "user", "content": f"Highlight the lineage of task {step_a_id} in the dataflow graph using the highlight_lineage tool."}],
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": f"Highlight the lineage of task {step_a_id} in the dataflow graph using the highlight_lineage tool.",
+                    }
+                ],
                 "context": {"workflow_id": wf_id},
                 "stream": True,
             },
@@ -1433,10 +1461,7 @@ def test_node_positions_endpoint(db_cleanup):
     # 2. Save positions
     pos_data = {
         "graph_type": "dataflow",
-        "positions": {
-            "node-1": {"x": 12.5, "y": 45.6},
-            "node-2": {"x": 78.9, "y": 101.2}
-        }
+        "positions": {"node-1": {"x": 12.5, "y": 45.6}, "node-2": {"x": 78.9, "y": 101.2}},
     }
     rs = client.post(f"/api/v1/workflows/{workflow_id}/node_positions", json=pos_data)
     assert rs.status_code == 200
@@ -1456,6 +1481,7 @@ def test_agents_without_tasks_are_not_returned(db_cleanup):
         pytest.skip("Flowcept services are not alive.")
 
     from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
+
     empty_agent_id = f"empty-agent-{uuid4()}"
 
     agent = AgentObject()

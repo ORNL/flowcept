@@ -93,7 +93,7 @@ class FlowceptAPITest(unittest.TestCase):
             while True:
                 n = np.random.rand()
                 o1 = sum_one_(x=n)
-                o2 = mult_two_(**o1)
+                mult_two_(**o1)
                 sleep(10)
 
     def test_simple_all_consumers(self):

@@ -20,6 +20,9 @@ jobs:
       - name: Install UI dependencies
         run: make ui-install
 
+      - name: Run UI checks (lint)
+        run: make ui-checks
+
       - name: Run UI unit tests
         run: make ui-test
 

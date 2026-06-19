@@ -1,19 +1,17 @@
 import unittest
 
-from flowcept import Flowcept
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
 from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import MONGO_ENABLED
-from flowcept.flowcept_api.db_api import DBAPI
 
 
 class TestSingleton(unittest.TestCase):
     def test_singleton(self):
         logger = FlowceptLogger()
         try:
-            dao_err = DocumentDBDAO()
+            DocumentDBDAO()
         except Exception as e:
             logger.debug("This exception is expected because we can't instantiate this: " + str(e))
 

@@ -616,7 +616,7 @@ class TestRefactoredAgentStructure(unittest.TestCase):
     def test_g5_chat_request_has_thread_id(self):
         from flowcept.webservice.routers.chat import ChatRequest
         import inspect
-        params = inspect.signature(ChatRequest).parameters
+        inspect.signature(ChatRequest).parameters
         # thread_id should be declared as a field (even if Optional)
         self.assertIn("thread_id", ChatRequest.model_fields)
 
