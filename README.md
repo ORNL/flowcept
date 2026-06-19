@@ -43,14 +43,12 @@ Flowcept captures and queries workflow provenance at runtime with minimal code c
 
 The easiest way to capture provenance from plain Python functions, with no external services needed:
 
-1) Install and initialize settings
+1) Install Flowcept
 
 ```shell
 # Make sure you activate your Python environment (e.g., conda, venv) first
 pip install flowcept
-flowcept --init-settings
 ```
-This generates a minimal settings file in `~/.flowcept/settings.yaml`.
 
 2) Run the minimal example
 
@@ -86,10 +84,8 @@ def main():
 if __name__ == "__main__":
     main()
 
-    prov_messages = Flowcept.read_buffer_file()
-    assert len(prov_messages) == 2
-    print(f"Raw provenance captured: {len(prov_messages)} records in flowcept_messages.jsonl")
-    Flowcept.generate_report(records=prov_messages, print_markdown=True)
+    # print(Flowcept.read_buffer_file())  # inspect raw JSONL records if needed
+    Flowcept.generate_report(print_markdown=True)
 ```
 
 This prints out:

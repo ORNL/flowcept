@@ -1,5 +1,6 @@
 """Configuration module."""
 
+import copy
 import os
 import socket
 import getpass
@@ -45,7 +46,7 @@ def _get_env_bool(name: str, default=False) -> bool:
 
 
 if USE_DEFAULT:
-    settings = DEFAULT_SETTINGS.copy()
+    settings = copy.deepcopy(DEFAULT_SETTINGS)
     SETTINGS_PATH = "FLOWCEPT_DEFAULT_SETTINGS"
 
 else:
@@ -55,12 +56,8 @@ else:
     SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", f"{_SETTINGS_DIR}/settings.yaml")
 
     if not os.path.exists(SETTINGS_PATH):
-        from importlib import resources
-
-        SETTINGS_PATH = str(resources.files("resources").joinpath("sample_settings.yaml"))
-
-        with open(SETTINGS_PATH) as f:
-            settings = OmegaConf.to_container(OmegaConf.load(f), resolve=True)
+        settings = copy.deepcopy(DEFAULT_SETTINGS)
+        SETTINGS_PATH = "FLOWCEPT_DEFAULT_SETTINGS"
     else:
         settings = OmegaConf.to_container(OmegaConf.load(SETTINGS_PATH), resolve=True)
 

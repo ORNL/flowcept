@@ -51,10 +51,10 @@ jobs:
         run: |
           pip install .
           pip list
-          flowcept --init-settings -y
+          rm -f ~/.flowcept/settings.yaml flowcept_buffer.jsonl WORKFLOW_CARD.md
           python examples/start_here.py
           pip uninstall flowcept -y 
-          rm ~/.flowcept/settings.yaml
+          rm -f ~/.flowcept/settings.yaml flowcept_buffer.jsonl WORKFLOW_CARD.md
 
       - name: Start docker compose with redis
         run: make services-mongo
