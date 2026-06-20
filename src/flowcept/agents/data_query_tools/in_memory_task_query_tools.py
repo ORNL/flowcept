@@ -205,9 +205,7 @@ def generate_plot_code(
         return safe_execute(df, code_holder[0])
 
     def _fix(exc, attempt):
-        tool_result = extract_or_fix_python_code(
-            llm, code_holder[0], columns, runtime_error=str(exc)
-        )
+        tool_result = extract_or_fix_python_code(llm, code_holder[0], columns, runtime_error=str(exc))
         if tool_result.code != 201:
             raise RuntimeError(f"LLM could not fix the code: {tool_result.result}")
         code_holder[0] = tool_result.result
@@ -299,9 +297,7 @@ def generate_result_df(
     def _fix(exc, attempt):
         if not attempt_fix:
             raise exc
-        tool_result = extract_or_fix_python_code(
-            llm, code_holder[0], columns, runtime_error=str(exc)
-        )
+        tool_result = extract_or_fix_python_code(llm, code_holder[0], columns, runtime_error=str(exc))
         if tool_result.code != 201:
             raise RuntimeError(f"LLM could not fix the code: {tool_result.result}")
         code_holder[0] = tool_result.result
@@ -314,10 +310,7 @@ def generate_result_df(
     except Exception as e:
         return ToolResult(
             code=405,
-            result=(
-                f"Failed to execute after retries: ```python\n{code_holder[0]}```\n"
-                f"Last error: {e}"
-            ),
+            result=(f"Failed to execute after retries: ```python\n{code_holder[0]}```\nLast error: {e}"),
             extra={
                 "generated_code": code_holder[0],
                 "exception": str(e),

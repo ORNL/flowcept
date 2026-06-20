@@ -19,9 +19,9 @@
 #   train inputs : n_input_neurons, epochs, learning_rate, dataset_id, config_id
 #   val_accuracy / loss: training-generated, not deterministic — not tested exactly
 #
-# query_type: "db"  -> test hits /api/v1/chat backed by DBAPI + MongoDB
-# query_type: "df"  -> test calls DF tools directly (not via HTTP)
-# tool_expected    -> the db_query_tools / in_memory tool expected to be invoked
+# query_type: "db"  -> test hits /api/v1/chat -> LangGraph -> MCP DB tools
+# query_type: "df"  -> test hits /api/v1/chat -> LangGraph -> MCP in-memory DF tools
+# tool_expected    -> preferred tool for human review; tests assert the correct MCP tool group
 # score_threshold  -> minimum cosine-similarity vs expected_response (0.0–1.0)
 
 # ── DB PATH ──────────────────────────────────────────────────────────────────

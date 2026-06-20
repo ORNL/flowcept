@@ -13,28 +13,27 @@ from langgraph.graph import END, MessagesState, StateGraph
 from langgraph.errors import GraphRecursionError
 
 from flowcept.agents.prompts.chat_prompts import build_chat_system_prompt
-from flowcept.agents.data_query_tools import db_query_tools
-from flowcept.agents.data_query_tools import dashboard_tools
+from flowcept.agents.mcp.mcp_client import run_tool
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from flowcept.commons.utils import sanitize_json_like
 from flowcept.commons.vocabulary import PROV_AGENT
 from flowcept.configs import AGENT_CHAT_MAX_TOOL_ITERATIONS, AGENT_CHAT_MAX_TOOL_RESULT_CHARS, INSTRUMENTATION_ENABLED
 
 MAX_TOOL_ITERATIONS = AGENT_CHAT_MAX_TOOL_ITERATIONS
 # Cap individual tool result strings fed into LangGraph state to prevent context overflow.
 _MAX_TOOL_RESULT_CHARS = AGENT_CHAT_MAX_TOOL_RESULT_CHARS
+CHAT_WORKFLOW_NAME = "Flowcept LangGraph Chat"
 
 # Module-level saver — persists across requests keyed by thread_id.
 _memory = MemorySaver()
 
 
 def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_edit: bool):
-    """Wrap the shared prov tool core as langchain tools (results JSON-encoded for the LLM)."""
+    """Wrap MCP tools as LangChain tools."""
     from langchain_core.tools import tool
 
-    def _run(func, **kwargs) -> str:
-        result = func(**kwargs)
-        payload = result.model_dump() if hasattr(result, "model_dump") else result
-        return json.dumps(payload, default=str)
+    def _run_mcp(tool_name: str, **kwargs) -> str:
+        return run_tool(tool_name, kwargs=kwargs)[0]
 
     def _coerce_projection(p: Any) -> Optional[List[str]]:
         """Accept a list of field names or a Mongo projection dict {field: 1}."""
@@ -64,8 +63,8 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         projection: list of field names, or a Mongo projection dict {"field": 1}.
         sort: list of {"field": "...", "order": 1|-1}, or a Mongo sort dict {"field": -1}.
         """
-        return _run(
-            db_query_tools.query_tasks,
+        return _run_mcp(
+            "query_tasks",
             filter=filter,
             projection=_coerce_projection(projection),
             limit=limit,
@@ -75,27 +74,27 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
     @tool
     def query_workflows(filter: Optional[Dict[str, Any]] = None, limit: int = 100) -> str:
         """Query workflow provenance records with a Mongo-style filter."""
-        return _run(db_query_tools.query_workflows, filter=filter, limit=limit)
+        return _run_mcp("query_workflows", filter=filter, limit=limit)
 
     @tool
     def get_task_summary(filter: Optional[Dict[str, Any]] = None) -> str:
         """Summarize tasks: status counts, per-activity durations, and time range."""
-        return _run(db_query_tools.get_task_summary, filter=filter)
+        return _run_mcp("get_task_summary", filter=filter)
 
     @tool
-    def list_campaigns() -> str:
+    def list_campaigns(campaign_id: Optional[str] = None) -> str:
         """List derived campaign summaries (campaigns group workflows and tasks)."""
-        return _run(db_query_tools.list_campaigns)
+        return _run_mcp("list_campaigns", campaign_id=campaign_id)
 
     @tool
     def list_agents() -> str:
         """List derived agent summaries (agents observed in task provenance)."""
-        return _run(db_query_tools.list_agents)
+        return _run_mcp("list_agents")
 
     @tool
     def make_chart(card_spec: Dict[str, Any]) -> str:
         """Build a chart from a declarative dashboard card spec; the UI renders the result."""
-        return _run(dashboard_tools.make_chart, card_spec=card_spec, context=context)
+        return _run_mcp("make_chart", card_spec=card_spec, context=context)
 
     @tool
     def highlight_lineage(
@@ -113,30 +112,109 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         ids: Optional[List[str]] = None
         if task_ids is not None:
             ids = [task_ids] if isinstance(task_ids, str) else list(task_ids)
-        return _run(db_query_tools.highlight_lineage, task_ids=ids, filter=filter, workflow_id=wf_id)
+        return _run_mcp("highlight_lineage", task_ids=ids, filter=filter, workflow_id=wf_id)
 
-    tools = [query_tasks, query_workflows, get_task_summary, list_campaigns, list_agents, make_chart, highlight_lineage]
+    def _query_text(query: Any) -> str:
+        if isinstance(query, str):
+            return query
+        return json.dumps(query, default=str)
+
+    @tool("generate_result_df")
+    def generate_result_df(query: Any) -> str:
+        """Answer a natural-language question using the MCP server's in-memory task DataFrame."""
+        return _run_mcp("run_df_query", query=_query_text(query), plot=False, context_kind="tasks")
+
+    @tool("generate_plot_code")
+    def generate_plot_code(query: Any) -> str:
+        """Generate plotting output using the MCP server's in-memory task DataFrame."""
+        return _run_mcp("run_df_query", query=_query_text(query), plot=True, context_kind="tasks")
+
+    @tool
+    def extract_or_fix_python_code(raw_text: str, runtime_error: Optional[str] = None) -> str:
+        """Extract or repair pandas code using the MCP server's in-memory task DataFrame columns."""
+        return _run_mcp(
+            "extract_or_fix_python_code",
+            raw_text=raw_text,
+            runtime_error=runtime_error,
+            context_kind="tasks",
+        )
+
+    @tool
+    def run_workflow_query(query: str) -> str:
+        """Answer a natural-language question using the MCP server's active workflow message."""
+        return _run_mcp("run_workflow_query", query=query)
+
+    db_tools = [
+        query_tasks,
+        query_workflows,
+        get_task_summary,
+        list_campaigns,
+        list_agents,
+        make_chart,
+        highlight_lineage,
+    ]
+    df_tools = [
+        generate_result_df,
+        generate_plot_code,
+        extract_or_fix_python_code,
+        run_workflow_query,
+    ]
+    tool_context = (context or {}).get("tool_context", "db")
+    if tool_context == "df":
+        tools = df_tools
+    else:
+        tools = db_tools
 
     if allow_dashboard_edit:
 
         @tool
         def get_dashboard(dashboard_id: str) -> str:
             """Get a stored dashboard spec by id."""
-            return _run(dashboard_tools.get_dashboard, dashboard_id=dashboard_id)
+            return _run_mcp("get_dashboard", dashboard_id=dashboard_id)
 
         @tool
         def update_dashboard(dashboard_id: str, spec: Dict[str, Any]) -> str:
             """Replace a stored dashboard spec with a complete revised spec."""
-            return _run(dashboard_tools.update_dashboard, dashboard_id=dashboard_id, spec=spec)
+            return _run_mcp("update_dashboard", dashboard_id=dashboard_id, spec=spec)
 
         tools += [get_dashboard, update_dashboard]
     return tools
 
 
-def _build_graph(llm, tools, agent_id: Optional[str] = None):
+def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool: bool = False):
     """Build a LangGraph agent + tools graph compiled with the module-level MemorySaver."""
     bound = llm.bind_tools(tools)
+    first_bound = llm.bind_tools(tools, tool_choice="required") if require_first_tool else bound
     tools_by_name = {t.name: t for t in tools}
+
+    def _needs_first_tool(state: MessagesState) -> bool:
+        return require_first_tool and not any(isinstance(message, ToolMessage) for message in state["messages"])
+
+    def _latest_user_text(state: MessagesState) -> str:
+        for message in reversed(state["messages"]):
+            if isinstance(message, HumanMessage):
+                return str(message.content)
+        return ""
+
+    def _tool_call_for_text(text: str) -> Dict[str, Any]:
+        lower = text.lower()
+        names = set(tools_by_name)
+        if "extract_or_fix_python_code" in names and ("fix" in lower or "python code" in lower or "dataframe" in lower):
+            return {"name": "extract_or_fix_python_code", "args": {"raw_text": text}, "id": str(uuid.uuid4())}
+        if "generate_plot_code" in names and any(word in lower for word in ("plot", "chart", "graph")):
+            return {"name": "generate_plot_code", "args": {"query": text}, "id": str(uuid.uuid4())}
+        if "run_workflow_query" in names and "workflow" in lower:
+            return {"name": "run_workflow_query", "args": {"query": text}, "id": str(uuid.uuid4())}
+        if "generate_result_df" in names:
+            return {"name": "generate_result_df", "args": {"query": text}, "id": str(uuid.uuid4())}
+        if "get_task_summary" in names and any(word in lower for word in ("how many", "count", "summary", "duration")):
+            return {"name": "get_task_summary", "args": {}, "id": str(uuid.uuid4())}
+        return {"name": next(iter(tools_by_name)), "args": {}, "id": str(uuid.uuid4())}
+
+    def _enforce_first_tool(response: AIMessage, state: MessagesState) -> AIMessage:
+        if not _needs_first_tool(state) or getattr(response, "tool_calls", None):
+            return response
+        return AIMessage(content="", tool_calls=[_tool_call_for_text(_latest_user_text(state))])
 
     if INSTRUMENTATION_ENABLED and agent_id is not None:
         from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM
@@ -148,7 +226,12 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None):
 
         def call_model(state: MessagesState):
             """Agent node: invoke the LLM with current messages (instrumented)."""
-            return {"messages": [instrumented_llm.invoke(state["messages"])]}
+            active_llm = (
+                FlowceptLLM(first_bound, agent_id=agent_id, return_response_object=True)
+                if _needs_first_tool(state)
+                else instrumented_llm
+            )
+            return {"messages": [_enforce_first_tool(active_llm.invoke(state["messages"]), state)]}
 
         def call_tools(state: MessagesState):
             """Tools node: execute all pending tool calls with provenance capture."""
@@ -162,7 +245,7 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None):
                 with FlowceptTask(
                     activity_id=name,
                     subtype=PROV_AGENT.AGENT_TOOL,
-                    used=args,
+                    used=sanitize_json_like(args, mongo_safe_keys=True),
                     agent_id=agent_id,
                 ) as task:
                     output = (
@@ -178,7 +261,8 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None):
 
         def call_model(state: MessagesState):
             """Agent node: invoke the LLM with current messages."""
-            return {"messages": [bound.invoke(state["messages"])]}
+            response = (first_bound if _needs_first_tool(state) else bound).invoke(state["messages"])
+            return {"messages": [_enforce_first_tool(response, state)]}
 
         def call_tools(state: MessagesState):
             """Tools node: execute all pending tool calls and return ToolMessages."""
@@ -304,16 +388,26 @@ def run_chat(
         "recursion_limit": MAX_TOOL_ITERATIONS * 2 + 2,
     }
 
-    graph = _build_graph(llm, tools, agent_id=agent_id)
+    graph = _build_graph(
+        llm,
+        tools,
+        agent_id=agent_id,
+        require_first_tool=(context or {}).get("tool_context", "db") in {"db", "df"},
+    )
     lc_messages = _prepare_input_messages(messages, context, thread_id)
 
     # Each LangGraph execution gets its own Flowcept workflow so all AI model
     # invocations and tool calls within this call share a single workflow_id.
-    # start_persistence=False: no consumer started here; the interceptor singleton
-    # (already started by FlowceptAgent or the webservice) handles the buffer.
+    # Chat owns its persistence lifecycle so HTTP requests, tests, and deployed
+    # webservice instances all record agent provenance without external state.
     from flowcept.flowcept_api.flowcept_controller import Flowcept as _FC
 
-    with _FC(workflow_name="langgraph_chat", start_persistence=False, save_workflow=True):
+    with _FC(
+        workflow_name=CHAT_WORKFLOW_NAME,
+        start_persistence=True,
+        save_workflow=True,
+        agent_name="FlowceptAgent",
+    ):
         accumulated_tool_results: List[str] = []
         try:
             for chunk in graph.stream({"messages": lc_messages}, config=config, stream_mode="updates"):
@@ -338,6 +432,7 @@ def run_chat(
                             try:
                                 parsed = json.loads(tm.content)
                                 summary["code"] = parsed.get("code")
+                                summary["tool_name"] = parsed.get("tool_name")
                                 if name == "make_chart" and isinstance(parsed.get("result"), dict):
                                     yield {"event": "card", "data": parsed["result"]}
                                 if name == "highlight_lineage" and isinstance(parsed.get("result"), dict):
@@ -354,8 +449,7 @@ def run_chat(
                 summary_prompt = (
                     "The following tool results were retrieved. "
                     "Write a concise final answer to the user's question based solely on this data. "
-                    "Do not call any tools.\n\n"
-                    + "\n\n".join(accumulated_tool_results)
+                    "Do not call any tools.\n\n" + "\n\n".join(accumulated_tool_results)
                 )
                 try:
                     response = llm.invoke([HumanMessage(content=summary_prompt)])

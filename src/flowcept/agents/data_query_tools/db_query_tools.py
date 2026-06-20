@@ -103,9 +103,7 @@ def _sanitize_projection(projection: Optional[List[str]]) -> Optional[List[str]]
     for field in projection:
         parts = field.split(".")
         # keep this field only if none of its parent paths is already included
-        parent_already_included = any(
-            ".".join(parts[:i]) in projection for i in range(1, len(parts))
-        )
+        parent_already_included = any(".".join(parts[:i]) in projection for i in range(1, len(parts)))
         if not parent_already_included:
             result.append(field)
     return result or None
@@ -140,12 +138,15 @@ def query_tasks(
     proj_holder = [_sanitize_projection(projection)]
 
     def _execute():
-        return DBAPI().task_query(
-            filter=filter or {},
-            projection=proj_holder[0],
-            limit=limit,
-            sort=sort_tuples,
-        ) or []
+        return (
+            DBAPI().task_query(
+                filter=filter or {},
+                projection=proj_holder[0],
+                limit=limit,
+                sort=sort_tuples,
+            )
+            or []
+        )
 
     def _fix(exc, attempt):
         # Only auto-fix MongoDB projection path-collision errors; let others propagate.
@@ -273,11 +274,14 @@ def highlight_lineage(
     # Fetch activity names for the resolved task IDs so the LLM can describe the lineage.
     activity_map: Dict[str, str] = {}
     try:
-        detail_docs = db.task_query(
-            filter={"task_id": {"$in": resolved_ids}},
-            projection=["task_id", "activity_id", "agent_id"],
-            limit=len(resolved_ids) + 10,
-        ) or []
+        detail_docs = (
+            db.task_query(
+                filter={"task_id": {"$in": resolved_ids}},
+                projection=["task_id", "activity_id", "agent_id"],
+                limit=len(resolved_ids) + 10,
+            )
+            or []
+        )
         for doc in detail_docs:
             tid = doc.get("task_id", "")
             if tid:

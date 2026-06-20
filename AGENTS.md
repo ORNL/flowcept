@@ -154,7 +154,8 @@ flowcept --init-settings --full --dask --mlflow -y
 
 **TDD is mandatory for both Python and UI/frontend.** Write the test first, watch it fail, then implement until it passes.
 
-- **Python**: write a real integration test in `tests/` before the implementation. Guard service-dependent tests with `Flowcept.services_alive()` / `MONGO_ENABLED` skips. No mocks.
+- **Python**: write a real integration test in `tests/` before the implementation. Guard service-dependent tests with skips that use `Flowcept.services_alive()` / *_ENABLED flags available in configs.py.
+- Test the real thing! No mocks. No fakes. Prefer generating new data than relying on synthetic/
 - **UI/Frontend**: write a vitest test in `ui/tests/` before adding new pure logic (store mutations, utility functions, graph algorithms). Use real data fixtures — no mocks, no DOM for pure-function and store tests. Component render tests are discouraged (fragile, high mock cost); test logic at the function/store level instead. Run with `make ui-test`.
 
 Use the `flowcept` conda environment.
