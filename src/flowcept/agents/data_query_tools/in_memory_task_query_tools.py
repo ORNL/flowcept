@@ -169,31 +169,31 @@ def generate_plot_code(
 
     result_code, plot_code, description = None, None, ""
     try:
-        result = safe_json_parse(response)
-        result_code = result["result_code"]
-        plot_code = result["plot_code"]
-        description = result.get("description", "")
-    except ValueError:
+        parsed = safe_json_parse(response)
+        result_code = parsed["result_code"]
+        plot_code = parsed["plot_code"]
+        description = parsed.get("description", "")
+    except (ValueError, KeyError):
         tool_response = extract_or_fix_json_code(llm, response)
-        response = tool_response.result
-        if tool_response.code == 201:
-            try:
-                result = safe_json_parse(response)
-                assert "result_code" in result
-                assert "plot_code" in result
-                ToolResult(code=301, result=result, extra=plot_prompt)
-            except ValueError as e:
+        if tool_response.code != 201:
+            return ToolResult(code=499, result=tool_response.result)
+        try:
+            parsed = safe_json_parse(tool_response.result)
+            result_code = parsed.get("result_code")
+            plot_code = parsed.get("plot_code")
+            description = parsed.get("description", "")
+            if not result_code or not plot_code:
                 return ToolResult(
                     code=405,
-                    result=f"Tried to parse this as JSON: {response}, but got Error: {e}",
+                    result=f"Fixed JSON missing result_code or plot_code: {parsed}",
                     extra=plot_prompt,
                 )
-            except AssertionError as e:
-                return ToolResult(code=405, result=str(e), extra=plot_prompt)
-        else:
-            return ToolResult(code=499, result=tool_response.result)
-    except AssertionError as e:
-        return ToolResult(code=405, result=str(e), extra=plot_prompt)
+        except ValueError as e:
+            return ToolResult(
+                code=405,
+                result=f"Tried to parse this as JSON: {tool_response.result}, but got Error: {e}",
+                extra=plot_prompt,
+            )
     except Exception as e:
         return ToolResult(code=499, result=str(e), extra=plot_prompt)
 

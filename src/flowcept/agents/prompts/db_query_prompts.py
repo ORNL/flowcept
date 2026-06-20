@@ -68,7 +68,7 @@ Only these operators are allowed:
 
 ## Output format
 Return a single JSON object (the filter). Example:
-{{"activity_id": "train_model", "telemetry_summary.duration_sec": {{"$gt": 60}}}}
+{{"activity_id": "process_data", "telemetry_summary.duration_sec": {{"$gt": 60}}}}
 
 User query:
 {query}

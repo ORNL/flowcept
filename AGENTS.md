@@ -3,6 +3,12 @@
 This file is the single source of truth for code-assistant behavior in this repository.
 Each major module and the UI also has its own `README.md` (under `src/flowcept/*/`, `ui/`, `tests/`, `deployment/`, `examples/`) with deeper subsystem context; read the relevant one before working in that area.
 
+## Agent Prompt Design Rule
+
+Prompts in `src/flowcept/agents/prompts/` must remain domain- and application-agnostic. Adding app-specific fields or activity names to fix one test is a design failure.
+
+Do not add few-shots to fix specific queries; revisit the prompting strategy instead.
+
 Do not duplicate these rules in `CLAUDE.md`, `.cursor/rules`, `GEMINI.md`, `SKILL.md`, or other agent files.
 If a tool requires its own file, make that file (which should immediately go to .gitignore) a thin pointer to this one.
 

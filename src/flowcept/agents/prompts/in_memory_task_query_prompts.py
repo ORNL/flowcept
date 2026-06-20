@@ -151,7 +151,7 @@ def build_plot_code_prompt(query, dynamic_schema, example_values, current_fields
 
         - When plotting from a grouped or aggregated result, set an appropriate column (like activity_id, started_at, etc.) as the index before plotting to ensure x-axis labels are correct.
         - When aggregating by "activity_id", remember to include .set_index('activity_id') in your response.
-        - Prefer bar charts (`st.bar_chart`) when the x-axis has ≤10 discrete categories (e.g., config IDs, learning rate values). Use line charts only for continuous/time-series data.
+        - Prefer bar charts (`st.bar_chart`) when the x-axis has ≤10 discrete categories (e.g., category labels, discrete parameter values). Use line charts only for continuous/time-series data.
 
         ### 4. Output Format
 
@@ -165,10 +165,9 @@ def build_plot_code_prompt(query, dynamic_schema, example_values, current_fields
           - `"plot_code"`: the code that creates the Streamlit plot
           - `"description"`: a one-sentence natural-language caption. It MUST include:
             (1) the chart type (e.g., "bar chart", "line chart"),
-            (2) the exact field names from result_code verbatim (e.g., "generated.val_accuracy", "used.learning_rate"),
+            (2) the exact field names from result_code verbatim (e.g., "generated.output_field", "used.input_param"),
             (3) the grouping/index column name,
-            (4) if config IDs are involved, list them (e.g., "cfg_1 through cfg_5").
-            Example: "A bar chart of generated.val_accuracy by config_id for cfg_1 through cfg_5."
+            (4) if discrete categories are involved, list them explicitly.
         ---
 
         ### 5. Few-Shot Examples
@@ -198,9 +197,9 @@ def build_plot_code_prompt(query, dynamic_schema, example_values, current_fields
 
 
 JOB = "You will generate a pandas dataframe code to solve the query."
-ROLE = """You are an expert in HPC workflow provenance data analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems.
+ROLE = """You are an expert in scientific and engineering workflow provenance data analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems.
             You are analyzing provenance data from a complex workflow consisting of numerous tasks."""
-OBJECT_ROLE = """You are an expert in HPC workflow provenance data analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems.
+OBJECT_ROLE = """You are an expert in scientific and engineering workflow provenance data analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems.
             You are analyzing object metadata records from a workflow provenance buffer."""
 QUERY_GUIDELINES = """
 
@@ -240,10 +239,10 @@ QUERY_GUIDELINES = """
 
     - **Do not include metadata columns unless explicitly required by the user query.**
 
-    - **For filter+aggregate queries** (e.g., "average X for items where Y > Z"): return a DataFrame showing every row that passed the filter (with its key identification columns like config_id and the filtered field), not just a scalar aggregate. Include the aggregate as a new column or let the summary describe it.
+    - **For filter+aggregate queries** (e.g., "average X for items where Y > Z"): return a DataFrame showing every row that passed the filter (with its key identification columns like item_id or entity_id and the filtered field), not just a scalar aggregate. Include the aggregate as a new column or let the summary describe it.
     - **For compound queries asking multiple questions in one sentence**: return a single DataFrame that captures all parts. NEVER return a Python list, tuple, or mixed-type collection. Instead build a structured DataFrame.
     - **To count output fields per activity**: use `gen_cols = [c for c in df.columns if c.startswith('generated.')]` to get generated columns, then use `df.groupby('activity_id')[gen_cols].apply(lambda g: int(g.notna().sum().sum()))` to count the total number of non-null generated field values per activity (this accounts for how many tasks of each activity ran, so a task type that ran 5 times will rank higher than one that ran once even if each has the same number of fields).
-    - **For filter+aggregate queries on train_and_validate tasks**: ALWAYS include `used.config_id` in the result DataFrame as the primary identifier (not task_id). This lets the reader know which config each row corresponds to (e.g., cfg_3, cfg_4, cfg_5).
+    - **For filter+aggregate queries**: ALWAYS include the primary identifier column(s) for the activity (e.g., any config, item, or entity ID from the schema) in the result DataFrame, so the reader can identify each row without relying on task_id.
 """
 
 OBJECT_QUERY_GUIDELINES = """
@@ -266,14 +265,6 @@ FEW_SHOTS = """
 
     # Q: How many tasks for each activity?
     result = df['activity_id'].value_counts()
-
-    # Q: How many train_and_validate tasks ran, and which activity generated the most output fields?
-    gen_cols = [c for c in df.columns if c.startswith('generated.')]
-    tv_count = int((df['activity_id'] == 'train_and_validate').sum())
-    per_act = df.groupby('activity_id')[gen_cols].apply(lambda g: int(g.notna().any(axis=0).sum())).reset_index()
-    per_act.columns = ['activity_id', 'n_output_fields']
-    per_act.insert(0, 'train_and_validate_task_count', tv_count)
-    result = per_act.sort_values('n_output_fields', ascending=False)
 
 """
 
@@ -416,14 +407,15 @@ def build_dataframe_summarizer_prompt(
     1. Mirror the user's exact vocabulary. If the query says "best", write "best" (not "highest" or "top").
        If the query says "worst", write "worst" (not "lowest").
     2. For queries that find an extremal result (best, worst, highest, lowest, max, min, first, last):
-       - Name the full set that was searched by consulting the schema's example values
-         (e.g., "among cfg_1 through cfg_5" or "across all 5 train_and_validate tasks").
+       - Name the full set that was searched (e.g., "across all tasks of that activity_id" or "among all records returned").
        - Describe the method: "found by sorting on [column name verbatim] in [ascending/descending] order".
     3. For queries that filter by a condition:
        - Explicitly enumerate every item that passed the filter with its relevant field values
-         (e.g., "cfg_3 (epochs=6), cfg_4 (epochs=10), and cfg_5 (epochs=14)").
+         (e.g., "item_a (field=value_a), item_b (field=value_b), and item_c (field=value_c)").
        - Then state the aggregate result.
-    4. Always include column names verbatim using dot-notation (e.g., "generated.val_accuracy", "used.epochs").
+    4. Always include column names verbatim using dot-notation (e.g., "generated.metric_a", "used.param_a").
+       When code uses wildcards like "generated.*", look up the actual field names from the schema
+       and enumerate key specific fields. Use the word "including" when listing output field names.
 
     In the end, conclude by giving your concise answer as follows: **Response**: <YOUR ANSWER>
 

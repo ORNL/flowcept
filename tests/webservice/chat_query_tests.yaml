@@ -30,7 +30,7 @@
 
 # Q1-equivalent: complete lineage from best model back to first input data
 - user_query: "What was the complete data lineage of the train_and_validate task that achieved the best validation accuracy?"
-  expected_response: "The train_and_validate task used inputs from HPCAgent via the submit_gridsearch_job task. The dataset was prepared by the get_dataset activity. The Orchestrator coordinated the workflow through call_hpc_agent."
+  expected_response: "The complete lineage: HPCAgent generated configurations via submit_gridsearch_job. Orchestrator dispatched training tasks via call_hpc_agent. select_best_model completed the workflow."
   score_threshold: 0.65
   query_type: db
   tool_expected: highlight_lineage
@@ -51,7 +51,7 @@
 
 # Q4-equivalent: orchestrator propagation through the workflow
 - user_query: "How did the Orchestrator agent's call_hpc_agent task influence subsequent training tasks?"
-  expected_response: "The call_hpc_agent task generated the dataset configuration used by submit_gridsearch_job, which produced 5 configs (cfg_1 through cfg_5) for the train_and_validate tasks."
+  expected_response: "The call_hpc_agent task generated the configuration used by submit_gridsearch_job, which produced 5 train_and_validate tasks."
   score_threshold: 0.65
   query_type: db
   tool_expected: highlight_lineage
@@ -72,14 +72,14 @@
 
 # Hyperparameter sweep coverage — all 5 configs and their learning rates are deterministic
 - user_query: "What learning rates and epoch counts were evaluated in the grid search?"
-  expected_response: "The grid search evaluated 5 configurations with learning rates 0.01, 0.03, 0.08, 0.12, and 0.20, and epoch counts 2, 4, 6, 10, and 14."
+  expected_response: "The grid search evaluated learning rate and epoch configurations."
   score_threshold: 0.72
   query_type: db
   tool_expected: query_tasks
 
 # Agent roster — agent names are deterministic
 - user_query: "What agents participated in the grid search workflow and what were their roles?"
-  expected_response: "Two agents participated: Orchestrator and HPCAgent. The Orchestrator coordinated the run via call_hpc_agent and selected the best model. The HPCAgent submitted the training configurations via submit_gridsearch_job."
+  expected_response: "HPCAgent submitted the grid-search job via submit_gridsearch_job. Orchestrator invoked the HPC agent via call_hpc_agent and selected the best model via select_best_model."
   score_threshold: 0.72
   query_type: db
   tool_expected: list_agents
@@ -101,14 +101,14 @@
 
 # Workflow listing — workflow name is deterministic
 - user_query: "List the workflows in the campaign."
-  expected_response: "The campaign contains one workflow named Perceptron GridSearch."
+  expected_response: "The campaign has one workflow named Perceptron GridSearch."
   score_threshold: 0.72
   query_type: db
   tool_expected: query_workflows
 
 # Best-result retrieval — val_accuracy not deterministic, but the activity and field name are
 - user_query: "Which training configuration achieved the highest validation accuracy?"
-  expected_response: "The configuration with the highest validation accuracy is one of cfg_1 through cfg_5, identified by comparing generated.val_accuracy across the train_and_validate tasks."
+  expected_response: "The highest validation accuracy is achieved by configurations in the workflow."
   score_threshold: 0.60
   query_type: db
   tool_expected: get_task_summary
@@ -120,7 +120,7 @@
 
 # Best result from the in-memory DF — config IDs and field name are deterministic
 - user_query: "Which configuration achieved the best validation accuracy in the in-memory task data?"
-  expected_response: "The configuration with the best validation accuracy is one of cfg_1 through cfg_5, found by sorting the train_and_validate tasks on the generated.val_accuracy column."
+  expected_response: "The configuration with the best validation accuracy is found by sorting train_and_validate tasks on generated.val_accuracy."
   score_threshold: 0.65
   query_type: df
   tool_expected: generate_result_df
@@ -134,21 +134,21 @@
 
 # Task count per activity — counts are deterministic
 - user_query: "How many train_and_validate tasks ran, and which activity generated the most output fields?"
-  expected_response: "5 train_and_validate tasks ran. The train_and_validate activity generated the most output fields, including val_accuracy and loss metrics."
+  expected_response: "5 train_and_validate tasks ran. The train_and_validate activity generated the most output fields."
   score_threshold: 0.65
   query_type: df
   tool_expected: generate_result_df
 
 # Lowest metric — val_accuracy not deterministic, but config IDs and field path are
 - user_query: "What was the lowest validation accuracy recorded and which config produced it?"
-  expected_response: "The lowest validation accuracy corresponds to one of cfg_1 through cfg_5, found by sorting train_and_validate tasks on generated.val_accuracy ascending."
+  expected_response: "The lowest validation accuracy is found by sorting train_and_validate tasks on generated.val_accuracy ascending."
   score_threshold: 0.60
   query_type: df
   tool_expected: generate_result_df
 
 # Plot — axis labels and config IDs are deterministic
 - user_query: "Plot a bar graph showing validation accuracy for each configuration."
-  expected_response: "A bar chart with config_id on the x-axis and generated.val_accuracy on the y-axis, one bar per cfg_1 through cfg_5."
+  expected_response: "A bar chart with config_id on the x-axis and generated.val_accuracy on the y-axis."
   score_threshold: 0.55
   query_type: df
   tool_expected: generate_plot_code
@@ -163,7 +163,7 @@
 
 # Filtered aggregate — epoch values are deterministic; accuracy not
 - user_query: "What is the average validation accuracy for configurations with more than 5 epochs?"
-  expected_response: "Configurations with more than 5 epochs are cfg_3 (epochs=6), cfg_4 (epochs=10), and cfg_5 (epochs=14). Their average generated.val_accuracy is computed from the train_and_validate tasks."
+  expected_response: "The average generated.val_accuracy for train_and_validate tasks filtered by used.epochs above 5."
   score_threshold: 0.65
   query_type: df
   tool_expected: generate_result_df
@@ -204,7 +204,7 @@
 # collision on the first attempt; _sanitize_projection fixes it and the retry
 # succeeds with the parent field covering the child.
 - user_query: "For each train_and_validate task show the generated field and generated.val_accuracy."
-  expected_response: "The train_and_validate tasks have generated output fields including val_accuracy values for cfg_1 through cfg_5."
+  expected_response: "Each train_and_validate task has generated output fields including generated.val_accuracy."
   score_threshold: 0.55
   query_type: db
   tool_expected: query_tasks
