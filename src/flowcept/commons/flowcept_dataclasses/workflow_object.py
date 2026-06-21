@@ -69,6 +69,9 @@ class WorkflowObject:
     custom_metadata: Dict = None
     """User-defined metadata dictionary with additional annotations."""
 
+    workflow_domain_data_schema: Dict = None
+    """Workflow-scoped observed task schema snapshot. Mainly used by Flowcept Agent queries."""
+
     environment_id: str = None
     """Identifier for the runtime environment (e.g., conda env, container)."""
 
@@ -193,6 +196,7 @@ class WorkflowObject:
             f"interceptor_ids={repr(self.interceptor_ids)}, "
             f"name={repr(self.name)}, "
             f"workflow_description={repr(self.workflow_description)}, "
+            f"workflow_domain_data_schema={repr(self.workflow_domain_data_schema)}, "
             f"used={repr(self.used)}, "
             f"generated={repr(self.generated)}, "
             f"custom_metadata={repr(self.custom_metadata)})"

@@ -121,6 +121,11 @@ class DocumentDBDAO(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def update_workflow_fields(self, workflow_id: str, fields: Dict):
+        """Update selected workflow fields without replacing the full document."""
+        raise NotImplementedError
+
+    @abstractmethod
     def insert_or_update_agent(self, agent_obj: AgentObject):
         """Insert or update an agent object.
 

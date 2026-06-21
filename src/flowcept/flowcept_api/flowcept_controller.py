@@ -196,19 +196,7 @@ class Flowcept(object):
         self.parent_workflow_id = parent_workflow_id
         self.agent_id = agent_id
         self.agent_name = agent_name
-
-        if self.agent_id is not None:
-            from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
-
-            agent_obj = AgentObject(agent_id=self.agent_id, name=self.agent_name)
-            agent_obj.enrich()
-
-            try:
-                from flowcept.flowcept_api.db_api import DBAPI
-
-                DBAPI().insert_or_update_agent(agent_obj)
-            except Exception as e:
-                self.logger.error(f"Error storing agent: {e}")
+        self._agent_saved = False
 
         should_delete_buffer_file = (
             flowcept.configs.DELETE_BUFFER_FILE if delete_buffer_file is None else delete_buffer_file
@@ -247,6 +235,10 @@ class Flowcept(object):
                     Flowcept.buffer = self.buffer = interceptor_inst._mq_dao.buffer.current_buffer
                 else:
                     Flowcept.buffer = self.buffer = interceptor_inst._mq_dao.buffer
+
+                if (self.agent_id is not None or self.agent_name is not None) and not self._agent_saved:
+                    self.agent_id = self.save_agent(name=self.agent_name, agent_id=self.agent_id)
+                    self._agent_saved = True
 
                 if self._should_save_workflow and not self._workflow_saved:
                     self.save_workflow(interceptor, interceptor_inst)

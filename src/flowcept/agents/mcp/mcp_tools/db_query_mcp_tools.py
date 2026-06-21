@@ -41,13 +41,24 @@ def get_task_summary(filter: Optional[Dict[str, Any]] = None) -> ToolResult:
 
 @mcp_flowcept.tool()
 @agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
-def list_campaigns() -> ToolResult:
+def list_campaigns(campaign_id: Optional[str] = None) -> ToolResult:
     """List derived campaign summaries (campaigns group workflows and tasks)."""
-    return db_query_tools.list_campaigns()
+    return db_query_tools.list_campaigns(campaign_id=campaign_id)
 
 
 @mcp_flowcept.tool()
 @agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
-def list_agents() -> ToolResult:
+def list_agents(filter: Optional[Dict[str, Any]] = None) -> ToolResult:
     """List derived agent summaries (agents observed in task provenance)."""
-    return db_query_tools.list_agents()
+    return db_query_tools.list_agents(filter=filter)
+
+
+@mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+def highlight_lineage(
+    task_ids: Optional[List[str]] = None,
+    filter: Optional[Dict[str, Any]] = None,
+    workflow_id: Optional[str] = None,
+) -> ToolResult:
+    """Return seed tasks for UI lineage highlighting."""
+    return db_query_tools.highlight_lineage(task_ids=task_ids, filter=filter, workflow_id=workflow_id)

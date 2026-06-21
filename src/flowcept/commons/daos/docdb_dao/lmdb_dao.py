@@ -138,6 +138,20 @@ class LMDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
+    def update_workflow_fields(self, workflow_id: str, fields: Dict):
+        """Update selected workflow fields without replacing the full document."""
+        try:
+            with self._env.begin(write=True, db=self._workflows_db) as txn:
+                key = workflow_id.encode()
+                existing = txn.get(key)
+                doc = json.loads(existing.decode()) if existing else {"workflow_id": workflow_id, "type": "workflow"}
+                doc.update(fields)
+                txn.put(key, json.dumps(doc).encode())
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
     def insert_or_update_agent(self, agent_obj: AgentObject):
         """Insert or update an agent document.
 

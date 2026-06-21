@@ -188,6 +188,17 @@ class DBAPI(object):
         else:
             return WorkflowObject.from_dict(wfobs[0])
 
+    def save_workflow_domain_data_schema(self, workflow_id: str, snapshot: Dict) -> bool:
+        """Persist a workflow-scoped dynamic schema snapshot."""
+        return DBAPI._dao().update_workflow_fields(workflow_id, {"dynamic_schema_snapshot": snapshot})
+
+    def get_workflow_domain_data_schema(self, workflow_id: str) -> Dict | None:
+        """Return the persisted dynamic schema snapshot for a workflow."""
+        workflow_obj = self.get_workflow_object(workflow_id)
+        if workflow_obj is None:
+            return None
+        return workflow_obj.workflow_domain_data_schema
+
     def workflow_query(self, filter) -> List[Dict]:
         """Query the ``workflows`` collection.
 

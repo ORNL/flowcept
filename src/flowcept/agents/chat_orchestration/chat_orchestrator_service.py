@@ -83,13 +83,23 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
 
     @tool
     def list_campaigns(campaign_id: Optional[str] = None) -> str:
-        """List derived campaign summaries (campaigns group workflows and tasks)."""
-        return _run_mcp("list_campaigns", campaign_id=campaign_id)
+        """List derived campaign summaries (campaigns group workflows and tasks).
+
+        campaign_id: when provided, returns only that campaign's summary.
+        Always pass the campaign_id from the user context to scope the result.
+        """
+        effective_id = campaign_id or (context or {}).get("campaign_id")
+        return _run_mcp("list_campaigns", campaign_id=effective_id)
 
     @tool
     def list_agents() -> str:
-        """List derived agent summaries (agents observed in task provenance)."""
-        return _run_mcp("list_agents")
+        """List derived agent summaries (agents observed in task provenance).
+
+        Automatically scoped to the current workflow when workflow_id is in context.
+        """
+        workflow_id = (context or {}).get("workflow_id")
+        effective_filter = {"workflow_id": workflow_id} if workflow_id else None
+        return _run_mcp("list_agents", filter=effective_filter)
 
     @tool
     def make_chart(card_spec: Dict[str, Any]) -> str:

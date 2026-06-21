@@ -758,6 +758,22 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
+    def update_workflow_fields(self, workflow_id: str, fields: Dict) -> bool:
+        """Update selected workflow fields without replacing the full document."""
+        if workflow_id is None:
+            self.logger.exception("The workflow identifier cannot be none.")
+            return False
+        try:
+            result = self._wfs_collection.update_one(
+                {WorkflowObject.workflow_id_field(): workflow_id},
+                {"$set": fields},
+                upsert=True,
+            )
+            return result.matched_count > 0 or result.upserted_id is not None
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
     def insert_or_update_agent(self, agent_obj: AgentObject) -> bool:
         """Insert or update agent."""
         _dict = agent_obj.to_dict().copy()

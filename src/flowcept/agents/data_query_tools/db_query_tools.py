@@ -219,15 +219,20 @@ def list_campaigns(campaign_id: Optional[str] = None) -> ToolResult:
 
 
 @_guarded("list_agents")
-def list_agents() -> ToolResult:
+def list_agents(filter: Dict = None) -> ToolResult:
     """List derived agent summaries (agents observed in task provenance).
+
+    Parameters
+    ----------
+    filter : dict, optional
+        Mongo-style filter to scope the agent derivation (e.g., ``{"workflow_id": "..."}``).
 
     Returns
     -------
     ToolResult
         ``result`` holds ``{"items": [...], "count": int}``.
     """
-    items = _normalize(DBAPI().derive_agents())
+    items = _normalize(DBAPI().derive_agents(filter))
     return ToolResult(code=301, result={"items": items, "count": len(items)}, tool_name="list_agents")
 
 
