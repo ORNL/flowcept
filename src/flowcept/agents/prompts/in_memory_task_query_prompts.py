@@ -5,25 +5,11 @@ All functions are plain Python — no MCP framework decorators.
 The ``@mcp_flowcept.prompt()`` registration lives in ``prompts/mcp_prompts.py``.
 """
 
-from flowcept.agents.provenance_schema_manager.static_schema_builder import SCHEMA_CONTEXT
-
-
-def _build_task_field_table(current_fields) -> str:
-    """Build a markdown table of task fields using SCHEMA_CONTEXT, filtered to current_fields."""
-    rows = [
-        "   | Column                        | Data Type | Description |",
-        "   |-------------------------------|-----------|-------------|",
-    ]
-    for field in SCHEMA_CONTEXT.get("task_fields", []):
-        if field["name"] in current_fields:
-            rows.append(f"   | `{field['name']:<30}` | {field['type']:<9} | {field['description']} |")
-    for field in SCHEMA_CONTEXT.get("telemetry_summary_fields", []):
-        full_name = f"telemetry_summary.{field['name']}"
-        if full_name in current_fields:
-            rows.append(f"   | `{full_name:<30}` | {field['type']:<9} | {field['description']} |")
-    if any(f.startswith("telemetry_summary.cpu") for f in current_fields):
-        rows.append("   \n For any queries involving CPU, use fields that begin with telemetry_summary.cpu")
-    return "\n".join(rows)
+from flowcept.agents.prompts.schema_prompt_context import (
+    build_allowed_fields_prompt,
+    build_example_values_prompt,
+    build_task_structure_prompt,
+)
 
 
 def get_df_form(context_kind="tasks"):
@@ -33,34 +19,17 @@ def get_df_form(context_kind="tasks"):
     return "The user has a pandas DataFrame called `df`, created from flattened task objects using `pd.json_normalize`."
 
 
-CURRENT_DF_COLUMNS_PROMPT = """
-### ABSOLUTE FIELD CONSTRAINT -- THIS IS CRITICAL
-
-The following list is the ONLY valid field names in df. Treat this as the schema:
-
-ALLOWED_FIELDS = [COLS]
-
-You MUST treat this list as authoritative.
-
-- You may only use fields names that appear EXACTLY (string match) in ALLOWED_FIELDS.
-- You are NOT allowed to create new field names by:
-  - adding or removing prefixes like "used." or "generated."
-  - combining words
-  - guessing.
-- If a field name is not in ALLOWED_FIELDS, you MUST NOT use it.
-- If the query cannot be answered using ALLOWED_FIELDS, return exactly: result = "info not available"
-"""
+def build_current_df_columns_prompt(current_fields) -> str:
+    """Build the authoritative DataFrame field constraint."""
+    return (
+        build_allowed_fields_prompt(current_fields, target_name="df")
+        + '- If the query cannot be answered using ALLOWED_FIELDS, return exactly: result = "info not available"\n'
+    )
 
 
 def get_example_values_prompt(example_values):
     """Return example values prompt string."""
-    return f"""
-           Now, this other dictionary below provides type (t), up to 3 example values (v), and, for lists, shape (s) and element type (et) for each field.
-           Field names do not include `used.` or `generated.` They represent the unprefixed form shared across roles. String values may be truncated if they exceed the length limit.
-           ```python
-           {example_values}
-           ```
-       """
+    return build_example_values_prompt(example_values)
 
 
 def get_object_schema_prompt(example_values, current_fields):
@@ -88,36 +57,12 @@ def get_df_schema_prompt(dynamic_schema, example_values, current_fields, context
     if context_kind == "objects":
         return get_object_schema_prompt(example_values, current_fields)
 
-    schema_prompt = f"""
-     ## DATAFRAME STRUCTURE
-
-        Each row in `df` represents a single task.
-
-        ### 1. Structured task fields:
-
-        - **in**: input parameters (columns starting with `used.`)
-        - **out**: output metrics/results (columns starting with `generated.`)
-
-        The schema for these fields is defined in the dictionary below.
-        It maps each activity ID to its inputs (i) and outputs (o), using flattened field names that include `used.` or `generated.` prefixes to indicate the role the field played in the task. These names match the columns in the dataframe `df`.
-
-        {dynamic_schema}
-        Use this schema and fields to understand what inputs and outputs are valid for each activity.
-
-        IMPORTANT: The user might say used for outputs or generated for inputs, which might confuse you. Do not get tricked by the user.
-         Ignore the natural-language words "used" and "generated".
-            - The English phrase "used in the calculation" does NOT mean you must use a `used.` column.
-            - The English word "generated" in the question does NOT force you to use a `generated.` column either.
-
-         ALWAYS CHECK THE ALLOWED_FIELDS list before proceeding. THIS IS CRITICAL.
-
-        ### 2. Additional fields for tasks:
-
-        {_build_task_field_table(current_fields)}
-        ---
-    """
-
-    return schema_prompt + get_example_values_prompt(example_values)
+    return build_task_structure_prompt(
+        dynamic_schema=dynamic_schema,
+        example_values=example_values,
+        current_fields=current_fields,
+        record_description="Each row in `df` represents a single task.",
+    )
 
 
 def build_plot_code_prompt(query, dynamic_schema, example_values, current_fields, context_kind="tasks") -> str:
@@ -333,7 +278,7 @@ def build_pandas_code_prompt(
     else:
         custom_user_guidance_prompt = ""
 
-    curr_cols = CURRENT_DF_COLUMNS_PROMPT.replace("[COLS]", str(current_fields))
+    curr_cols = build_current_df_columns_prompt(current_fields)
     role = OBJECT_ROLE if context_kind == "objects" else ROLE
     query_guidelines = OBJECT_QUERY_GUIDELINES if context_kind == "objects" else QUERY_GUIDELINES
     few_shots = OBJECT_FEW_SHOTS if context_kind == "objects" else FEW_SHOTS

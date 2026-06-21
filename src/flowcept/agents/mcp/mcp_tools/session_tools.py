@@ -5,7 +5,21 @@ from typing import List
 
 from flowcept.agents.tool_result import ToolResult
 from flowcept.agents.llm.builders import build_llm_model
-from flowcept.agents.mcp.context_manager import mcp_flowcept
+from flowcept.agents.mcp.context_manager import ctx_manager, mcp_flowcept
+
+
+def _with_message_type(message: dict) -> dict:
+    """Return a message with Flowcept type inferred for persisted DB documents."""
+    if message.get("type"):
+        return message
+    typed = dict(message)
+    if typed.get("object_id"):
+        typed["type"] = "object"
+    elif typed.get("task_id") or typed.get("activity_id"):
+        typed["type"] = "task"
+    elif typed.get("workflow_id"):
+        typed["type"] = "workflow"
+    return typed
 
 
 @mcp_flowcept.tool()
@@ -22,8 +36,7 @@ def get_latest(n: int = None) -> str:
     str
         JSON-encoded task(s).
     """
-    ctx = mcp_flowcept.get_context()
-    tasks = ctx.request_context.lifespan_context.tasks
+    tasks = ctx_manager.context.tasks
     if not tasks:
         return "No tasks available."
     if n is None:
@@ -69,9 +82,8 @@ def record_guidance(message: str) -> ToolResult:
     -------
     ToolResult
     """
-    ctx = mcp_flowcept.get_context()
     message = message.replace("@record", "")
-    custom_guidance: List = ctx.request_context.lifespan_context.custom_guidance
+    custom_guidance: List = ctx_manager.context.custom_guidance
     custom_guidance.append(message)
     return ToolResult(code=201, result=f"Ok. I recorded in my memory: {message}")
 
@@ -85,8 +97,7 @@ def show_records() -> ToolResult:
     ToolResult
     """
     try:
-        ctx = mcp_flowcept.get_context()
-        custom_guidance: List = ctx.request_context.lifespan_context.custom_guidance
+        custom_guidance: List = ctx_manager.context.custom_guidance
         if not custom_guidance:
             message = "There is no recorded user guidance."
         else:
@@ -106,8 +117,7 @@ def reset_records() -> ToolResult:
     ToolResult
     """
     try:
-        ctx = mcp_flowcept.get_context()
-        ctx.request_context.lifespan_context.custom_guidance = []
+        ctx_manager.context.custom_guidance = []
         return ToolResult(code=201, result="Custom guidance reset.")
     except Exception as e:
         return ToolResult(code=499, result=str(e))
@@ -122,8 +132,19 @@ def reset_context() -> ToolResult:
     ToolResult
     """
     try:
-        ctx = mcp_flowcept.get_context()
-        ctx.request_context.lifespan_context.reset_context()
+        ctx_manager.reset_context()
         return ToolResult(code=201, result="Context reset.")
+    except Exception as e:
+        return ToolResult(code=499, result=str(e))
+
+
+@mcp_flowcept.tool()
+def load_buffer_messages(messages: List[dict]) -> ToolResult:
+    """Replace active MCP context with provided Flowcept buffer messages."""
+    try:
+        ctx_manager.reset_context()
+        for msg_obj in messages:
+            ctx_manager.message_handler(_with_message_type(msg_obj))
+        return ToolResult(code=201, result={"count": len(messages)})
     except Exception as e:
         return ToolResult(code=499, result=str(e))

@@ -179,7 +179,11 @@ def run_workflow_query(query: str, workflow_msg_obj: dict, custom_user_guidance=
         nl_response = llm.invoke(nl_prompt)
         nl_answer = nl_response.content if hasattr(nl_response, "content") else str(nl_response)
     except Exception:
-        nl_answer = extraction.result.get("answer", str(extraction.result)) if isinstance(extraction.result, dict) else str(extraction.result)
+        nl_answer = (
+            extraction.result.get("answer", str(extraction.result))
+            if isinstance(extraction.result, dict)
+            else str(extraction.result)
+        )
 
     return ToolResult(
         code=301,

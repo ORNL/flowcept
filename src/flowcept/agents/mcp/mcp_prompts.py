@@ -3,9 +3,12 @@
 Separated from the prompt builders in ``prompts/`` so those files have no MCP imports.
 """
 
-from flowcept.agents.mcp.context_manager import mcp_flowcept, get_df_context, EMPTY_DF_MESSAGE
+from flowcept.agents.mcp.context_manager import ctx_manager, mcp_flowcept, get_df_context, EMPTY_DF_MESSAGE
 from flowcept.agents.prompts.in_memory_task_query_prompts import build_pandas_code_prompt
-from flowcept.agents.prompts.in_memory_workflow_query_prompts import EMPTY_WORKFLOW_MESSAGE
+from flowcept.agents.prompts.in_memory_workflow_query_prompts import (
+    EMPTY_WORKFLOW_MESSAGE,
+    build_workflow_query_prompt as build_workflow_query_prompt_text,
+)
 
 
 @mcp_flowcept.prompt(
@@ -61,9 +64,7 @@ def build_workflow_query_prompt(query: str) -> str:
     str
         Prompt text, or empty-workflow message when no workflow is active.
     """
-    ctx = mcp_flowcept.get_context()
-    lifespan = ctx.request_context.lifespan_context
-    workflow_msg_obj = lifespan.workflow_msg_obj
+    workflow_msg_obj = ctx_manager.context.workflow_msg_obj
     if not workflow_msg_obj:
         return EMPTY_WORKFLOW_MESSAGE
-    return build_workflow_query_prompt(query, workflow_msg_obj, lifespan.custom_guidance)
+    return build_workflow_query_prompt_text(query, workflow_msg_obj, ctx_manager.context.custom_guidance)

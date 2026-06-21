@@ -5,14 +5,12 @@ MCP context lookup (workflow_msg_obj, custom_guidance) happens here.
 """
 
 from flowcept.agents.tool_result import ToolResult
-from flowcept.agents.mcp.context_manager import mcp_flowcept
+from flowcept.agents.mcp.context_manager import ctx_manager, mcp_flowcept
 from flowcept.agents.data_query_tools import in_memory_workflow_query_tools as _core
 
 
 def _get_workflow_context():
-    ctx = mcp_flowcept.get_context()
-    lifespan = ctx.request_context.lifespan_context
-    return lifespan.workflow_msg_obj, lifespan.custom_guidance
+    return ctx_manager.context.workflow_msg_obj, ctx_manager.context.custom_guidance
 
 
 @mcp_flowcept.tool()

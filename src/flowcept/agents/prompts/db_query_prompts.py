@@ -5,6 +5,10 @@ All functions are plain Python — no MCP framework imports.
 """
 
 from flowcept.agents.provenance_schema_manager.static_schema_builder import SCHEMA_CONTEXT
+from flowcept.agents.prompts.schema_prompt_context import (
+    build_allowed_fields_prompt,
+    build_task_structure_prompt,
+)
 
 ALLOWED_FILTER_OPERATORS = frozenset(
     {
@@ -33,7 +37,32 @@ def _build_task_field_list() -> str:
     return "\n".join(f"  - {name}" for name in fields) if fields else "  *(schema not yet loaded)*"
 
 
-def build_db_filter_prompt(query: str, collection: str = "tasks") -> str:
+def build_db_schema_context(
+    dynamic_schema: dict = None,
+    example_values: dict = None,
+    current_fields: list[str] = None,
+) -> str:
+    """Build shared schema context for database-backed query prompts."""
+    if current_fields:
+        context = build_allowed_fields_prompt(current_fields, target_name="database task records")
+        if dynamic_schema is not None:
+            context += build_task_structure_prompt(
+                dynamic_schema=dynamic_schema,
+                example_values=example_values or {},
+                current_fields=current_fields,
+                record_description="Each database task record represents one task.",
+            )
+        return context
+    return "## Valid field names\n" + _build_task_field_list()
+
+
+def build_db_filter_prompt(
+    query: str,
+    collection: str = "tasks",
+    dynamic_schema: dict = None,
+    example_values: dict = None,
+    current_fields: list[str] = None,
+) -> str:
     """Build a prompt that asks an LLM to generate a Mongo-style filter JSON for a DB query.
 
     Parameters
@@ -55,8 +84,7 @@ The user wants to query the ``{collection}`` collection.
 Only these operators are allowed:
 {", ".join(sorted(ALLOWED_FILTER_OPERATORS))}
 
-## Valid field names
-{_build_task_field_list()}
+{build_db_schema_context(dynamic_schema=dynamic_schema, example_values=example_values, current_fields=current_fields)}
 
 ## Rules
 - Use only field names from the list above.

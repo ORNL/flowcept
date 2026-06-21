@@ -2,6 +2,8 @@
 
 import json
 import os
+import socket
+import time
 from threading import Thread
 
 from flowcept.agents.mcp.mcp_client import run_tool
@@ -10,9 +12,11 @@ from flowcept.agents.mcp.context_manager import mcp_flowcept, ctx_manager
 # Import all mcp_tools modules so their @mcp_flowcept.tool() decorators fire
 from flowcept.agents.mcp.mcp_tools.session_tools import check_liveness
 import flowcept.agents.mcp.mcp_tools.db_query_mcp_tools  # noqa: F401
+import flowcept.agents.mcp.mcp_tools.dashboard_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.in_memory_task_query_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.in_memory_workflow_query_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.report_tools  # noqa: F401
+import flowcept.agents.mcp.mcp_tools.schema_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_prompts  # noqa: F401
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import AGENT_HOST, AGENT_PORT, DUMP_BUFFER_PATH
@@ -22,11 +26,11 @@ from uuid import uuid4
 import uvicorn
 
 
-class FlowceptAgent:
+class FlowceptMCPServer:
     """Flowcept agent server wrapper with optional offline buffer loading."""
 
     def __init__(self, buffer_path: str | None = None, buffer_messages: list[dict] | None = None):
-        """Initialize a FlowceptAgent.
+        """Initialize a Flowcept MCP server.
 
         Parameters
         ----------
@@ -59,6 +63,15 @@ class FlowceptAgent:
             count += 1
         self.logger.info(f"Loaded {count} messages from buffer list.")
         return count
+
+    def reset_context(self):
+        """Reset the MCP agent context without restarting the HTTP server."""
+        ctx_manager.reset_context()
+
+    def load_buffer_messages(self, messages: list[dict]) -> int:
+        """Replace the active MCP context with the provided buffer messages."""
+        self.reset_context()
+        return self._load_buffer_messages(messages)
 
     def _load_buffer_once(self) -> int:
         """Load messages from a JSONL buffer file into the agent context.
@@ -106,19 +119,43 @@ class FlowceptAgent:
 
         Returns
         -------
-        FlowceptAgent
+        FlowceptMCPServer
             The current instance.
         """
-        if self.buffer_path is not None:
-            if self.buffer_messages is not None:
-                self._load_buffer_messages(self.buffer_messages)
-            else:
-                self._load_buffer_once()
+        if self.buffer_path is not None or self.buffer_messages is not None:
+            self.reset_context()
+        if self.buffer_messages is not None:
+            self._load_buffer_messages(self.buffer_messages)
+        elif self.buffer_path is not None:
+            self._load_buffer_once()
 
         self._server_thread = Thread(target=self._run_server, daemon=True)
         self._server_thread.start()
-        self.logger.info(f"Flowcept agent server started on {AGENT_HOST}:{AGENT_PORT}")
+        self._wait_until_ready()
+        self.logger.info(f"Flowcept mcp server started on {AGENT_HOST}:{AGENT_PORT}")
         return self
+
+    def _wait_until_ready(self, timeout_sec: float = 10.0):
+        """Wait until the local MCP TCP listener accepts connections."""
+        deadline = time.time() + timeout_sec
+        while time.time() < deadline:
+            try:
+                with socket.create_connection((AGENT_HOST, AGENT_PORT), timeout=0.2):
+                    return
+            except OSError:
+                time.sleep(0.05)
+        raise TimeoutError(f"Flowcept MCP server did not start on {AGENT_HOST}:{AGENT_PORT}.")
+
+    def _wait_until_stopped(self, timeout_sec: float = 10.0):
+        """Wait until the local MCP TCP listener stops accepting connections."""
+        deadline = time.time() + timeout_sec
+        while time.time() < deadline:
+            try:
+                with socket.create_connection((AGENT_HOST, AGENT_PORT), timeout=0.2):
+                    time.sleep(0.05)
+            except OSError:
+                return
+        self.logger.warning(f"Flowcept MCP server still appears reachable on {AGENT_HOST}:{AGENT_PORT}.")
 
     def stop(self):
         """Stop the agent server and wait briefly for shutdown."""
@@ -130,6 +167,7 @@ class FlowceptAgent:
             self._server_thread.join(timeout=5)
             if self._server_thread.is_alive():
                 self.logger.warning("Agent server thread did not stop within 5s; continuing shutdown.")
+        self._wait_until_stopped()
 
     def wait(self):
         """Block until the server thread exits."""
@@ -139,7 +177,7 @@ class FlowceptAgent:
 
 def main():
     """Start the MCP server."""
-    agent = FlowceptAgent().start()
+    agent = FlowceptMCPServer().start()
     print(run_tool(check_liveness, host=AGENT_HOST, port=AGENT_PORT)[0])
     agent.wait()
 

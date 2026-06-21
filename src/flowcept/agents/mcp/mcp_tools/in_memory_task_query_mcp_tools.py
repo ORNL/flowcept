@@ -67,3 +67,20 @@ def execute_generated_df_code(user_code: str, context_kind: str = "tasks") -> To
     if df is None or not len(df):
         return ToolResult(code=404, result=EMPTY_DF_MESSAGE)
     return _core.execute_df_code(user_code=user_code, df=df)
+
+
+@mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+def extract_or_fix_python_code(raw_text: str, runtime_error: str = None, context_kind: str = "tasks") -> ToolResult:
+    """Extract or repair pandas code using the current agent DataFrame columns."""
+    from flowcept.agents.llm.builders import build_llm_model
+
+    df, _, _, _ = get_df_context(context_kind=context_kind)
+    if df is None or not len(df):
+        return ToolResult(code=404, result=EMPTY_DF_MESSAGE)
+    return _core.extract_or_fix_python_code(
+        build_llm_model(track_tools=False),
+        raw_text,
+        list(df.columns),
+        runtime_error=runtime_error,
+    )

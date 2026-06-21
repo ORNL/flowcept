@@ -196,6 +196,11 @@ def get_task_summary(filter: Optional[Dict[str, Any]] = None) -> ToolResult:
         ``result`` holds the summary dict.
     """
     summary = DBAPI().task_summary(filter or {})
+    activity_stats = summary.get("activity_stats") or []
+    summary["activity_ids"] = [row.get("activity_id") for row in activity_stats if row.get("activity_id")]
+    summary["activity_counts"] = {
+        row.get("activity_id"): row.get("count") for row in activity_stats if row.get("activity_id")
+    }
     return ToolResult(code=301, result=_normalize([summary])[0], tool_name="get_task_summary")
 
 

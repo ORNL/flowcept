@@ -11,18 +11,6 @@ BASE_ROLE = (
     "You are a helpful assistant analyzing provenance data from a large-scale workflow composed of multiple tasks."
 )
 
-SMALL_TALK_PROMPT = "Act as a Workflow Provenance Specialist. I would like to interact with you, but please be concise and brief. This is my message:\n"
-
-ROUTING_PROMPT = (
-    "You are an orchestrator that routes user messages to the right tool. "
-    "You MUST respond with one of these exact words only, nothing else:\n"
-    "- 'small_talk': casual conversation, greetings, or questions unrelated to workflow data\n"
-    "- 'in_context_query': questions about the current loaded task data or workflow data in memory\n"
-    "- 'plot': requests to generate a chart, graph, or visualization\n"
-    "- 'in_chat_query': provenance queries that need database access (historical data, specific workflow IDs, etc.)\n"
-    "User message: "
-)
-
 
 def _build_schema_table() -> str:
     """Build a markdown schema reference table from SCHEMA_CONTEXT."""

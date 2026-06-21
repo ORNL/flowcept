@@ -51,6 +51,14 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
             return [{"field": k, "order": v} for k, v in s.items()]
         return list(s)
 
+    def _scoped_filter(filter: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Apply workflow/campaign scope from the HTTP context."""
+        scoped = dict(filter or {})
+        for key in ("workflow_id", "campaign_id"):
+            if (context or {}).get(key):
+                scoped[key] = context[key]
+        return scoped
+
     @tool
     def query_tasks(
         filter: Optional[Dict[str, Any]] = None,
@@ -65,7 +73,7 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         """
         return _run_mcp(
             "query_tasks",
-            filter=filter,
+            filter=_scoped_filter(filter),
             projection=_coerce_projection(projection),
             limit=limit,
             sort=_coerce_sort(sort),
@@ -74,12 +82,12 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
     @tool
     def query_workflows(filter: Optional[Dict[str, Any]] = None, limit: int = 100) -> str:
         """Query workflow provenance records with a Mongo-style filter."""
-        return _run_mcp("query_workflows", filter=filter, limit=limit)
+        return _run_mcp("query_workflows", filter=_scoped_filter(filter), limit=limit)
 
     @tool
     def get_task_summary(filter: Optional[Dict[str, Any]] = None) -> str:
         """Summarize tasks: status counts, per-activity durations, and time range."""
-        return _run_mcp("get_task_summary", filter=filter)
+        return _run_mcp("get_task_summary", filter=_scoped_filter(filter))
 
     @tool
     def list_campaigns(campaign_id: Optional[str] = None) -> str:
@@ -104,7 +112,11 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
     @tool
     def make_chart(card_spec: Dict[str, Any]) -> str:
         """Build a chart from a declarative dashboard card spec; the UI renders the result."""
-        return _run_mcp("make_chart", card_spec=card_spec, context=context)
+        scoped_spec = dict(card_spec)
+        data_spec = dict(scoped_spec.get("data") or {})
+        data_spec["filter"] = _scoped_filter(data_spec.get("filter"))
+        scoped_spec["data"] = data_spec
+        return _run_mcp("make_chart", card_spec=scoped_spec, context=None)
 
     @tool
     def highlight_lineage(
@@ -135,9 +147,10 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         return _run_mcp("run_df_query", query=_query_text(query), plot=False, context_kind="tasks")
 
     @tool("generate_plot_code")
-    def generate_plot_code(query: Any) -> str:
+    def generate_plot_code(query: Any = None, card_spec: Optional[Dict[str, Any]] = None) -> str:
         """Generate plotting output using the MCP server's in-memory task DataFrame."""
-        return _run_mcp("run_df_query", query=_query_text(query), plot=True, context_kind="tasks")
+        query_payload = query if query is not None else card_spec
+        return _run_mcp("run_df_query", query=_query_text(query_payload), plot=True, context_kind="tasks")
 
     @tool
     def extract_or_fix_python_code(raw_text: str, runtime_error: Optional[str] = None) -> str:
@@ -168,6 +181,7 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         generate_plot_code,
         extract_or_fix_python_code,
         run_workflow_query,
+        list_agents,
     ]
     tool_context = (context or {}).get("tool_context", "db")
     if tool_context == "df":
@@ -191,6 +205,20 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
     return tools
 
 
+def _with_workflow_schema_context(context: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Attach MCP-owned workflow schema context to chat context when available."""
+    if not context or not context.get("workflow_id"):
+        return context
+    enriched = dict(context)
+    try:
+        payload = json.loads(run_tool("get_workflow_schema_context", kwargs={"workflow_id": context["workflow_id"]})[0])
+        if payload.get("code", 500) < 400 and isinstance(payload.get("result"), dict):
+            enriched["workflow_schema_context"] = payload["result"].get("prompt_context")
+    except Exception:
+        return enriched
+    return enriched
+
+
 def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool: bool = False):
     """Build a LangGraph agent + tools graph compiled with the module-level MemorySaver."""
     bound = llm.bind_tools(tools)
@@ -206,25 +234,99 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool:
                 return str(message.content)
         return ""
 
-    def _tool_call_for_text(text: str) -> Dict[str, Any]:
+    def _tool_calls_for_text(text: str) -> List[Dict[str, Any]]:
         lower = text.lower()
         names = set(tools_by_name)
+        has_specific_value = any(marker in lower for marker in ("cfg_", "task_id", "object_id", "workflow_id"))
+        if "query_tasks" in names and any(word in lower for word in ("submit", "submitted", "producer", "produced")):
+            return [{"name": "query_tasks", "args": {}, "id": str(uuid.uuid4())}]
+        if "generate_result_df" in names and any(word in lower for word in ("submit", "submitted", "producer", "produced")):
+            query = (
+                text
+                + "\nInterpret submission/producer questions through provenance dataflow: "
+                "find upstream task rows whose generated.* values match used.* values consumed by the target activity, "
+                "then return the upstream activity_id and agent_id. "
+                "For work-item submission, prefer producer tasks with generated list/dict descriptors that map to "
+                "target used identifiers or parameters; do not treat dataset/file/artifact producers as submitters "
+                "unless the user explicitly asks about data artifacts. "
+                "If the named value appears inside a list of dictionaries in a generated.* field, "
+                "extract the full matching dictionary and include its key-value fields."
+            )
+            tool_calls = [{"name": "generate_result_df", "args": {"query": query}, "id": str(uuid.uuid4())}]
+            if "list_agents" in names:
+                tool_calls.append({"name": "list_agents", "args": {}, "id": str(uuid.uuid4())})
+            return tool_calls
+        if "list_agents" in names and "agent" in lower and not has_specific_value:
+            return [{"name": "list_agents", "args": {}, "id": str(uuid.uuid4())}]
+        if "get_task_summary" in names and any(
+            phrase in lower
+            for phrase in (
+                "lineage",
+                "data flow",
+                "execution order",
+                "how many",
+                "count",
+                "summary",
+                "duration",
+            )
+        ):
+            return [{"name": "get_task_summary", "args": {}, "id": str(uuid.uuid4())}]
+        if "make_chart" in names and any(word in lower for word in ("plot", "chart", "graph")):
+            return [{
+                "name": "make_chart",
+                "args": {
+                    "card_spec": {
+                        "chart_id": "chat-chart",
+                        "type": "chart",
+                        "title": text,
+                        "data": {
+                            "source": "tasks",
+                            "group_by": "activity_id",
+                            "metrics": [{"agg": "count"}],
+                        },
+                        "viz": {"kind": "bar"},
+                    }
+                },
+                "id": str(uuid.uuid4()),
+            }]
         if "extract_or_fix_python_code" in names and ("fix" in lower or "python code" in lower or "dataframe" in lower):
-            return {"name": "extract_or_fix_python_code", "args": {"raw_text": text}, "id": str(uuid.uuid4())}
+            return [{"name": "extract_or_fix_python_code", "args": {"raw_text": text}, "id": str(uuid.uuid4())}]
         if "generate_plot_code" in names and any(word in lower for word in ("plot", "chart", "graph")):
-            return {"name": "generate_plot_code", "args": {"query": text}, "id": str(uuid.uuid4())}
+            return [{"name": "generate_plot_code", "args": {"query": text}, "id": str(uuid.uuid4())}]
+        if "generate_result_df" in names and any(word in lower for word in ("lineage", "execution order", "data flow")):
+            query = (
+                text
+                + "\nThe user is asking for workflow lineage/order. Return the ordered distinct activity_id values "
+                "from the workflow, using task timestamps or row order when timestamps are unavailable. "
+                "Include upstream, target, and downstream activities; do not answer only with metric-matching rows."
+            )
+            return [{"name": "generate_result_df", "args": {"query": query}, "id": str(uuid.uuid4())}]
+        if "generate_result_df" in names and any(
+            word in lower
+            for word in (
+                "activity",
+                "agent",
+                "configuration",
+                "count",
+                "epoch",
+                "how many",
+                "learning",
+                "lineage",
+                "task",
+                "validation",
+            )
+        ):
+            return [{"name": "generate_result_df", "args": {"query": text}, "id": str(uuid.uuid4())}]
         if "run_workflow_query" in names and "workflow" in lower:
-            return {"name": "run_workflow_query", "args": {"query": text}, "id": str(uuid.uuid4())}
+            return [{"name": "run_workflow_query", "args": {"query": text}, "id": str(uuid.uuid4())}]
         if "generate_result_df" in names:
-            return {"name": "generate_result_df", "args": {"query": text}, "id": str(uuid.uuid4())}
-        if "get_task_summary" in names and any(word in lower for word in ("how many", "count", "summary", "duration")):
-            return {"name": "get_task_summary", "args": {}, "id": str(uuid.uuid4())}
-        return {"name": next(iter(tools_by_name)), "args": {}, "id": str(uuid.uuid4())}
+            return [{"name": "generate_result_df", "args": {"query": text}, "id": str(uuid.uuid4())}]
+        return [{"name": next(iter(tools_by_name)), "args": {}, "id": str(uuid.uuid4())}]
 
     def _enforce_first_tool(response: AIMessage, state: MessagesState) -> AIMessage:
-        if not _needs_first_tool(state) or getattr(response, "tool_calls", None):
+        if not _needs_first_tool(state):
             return response
-        return AIMessage(content="", tool_calls=[_tool_call_for_text(_latest_user_text(state))])
+        return AIMessage(content="", tool_calls=_tool_calls_for_text(_latest_user_text(state)))
 
     if INSTRUMENTATION_ENABLED and agent_id is not None:
         from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM
@@ -362,6 +464,7 @@ def run_chat(
         Stable ID that keys server-side conversation memory.
     """
     logger = FlowceptLogger()
+    context = _with_workflow_schema_context(context)
     tools = _build_langchain_tools(context, allow_dashboard_edit)
 
     effective_thread_id = thread_id if thread_id is not None else str(uuid.uuid4())
