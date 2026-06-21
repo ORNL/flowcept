@@ -46,7 +46,7 @@ class TestAgent(unittest.TestCase):
             TestAgent.offline_buffer_task(1, 2)
             f.dump_buffer(path=buffer_path)
 
-        agent = agent_module.FlowceptAgent(buffer_path=buffer_path)
+        agent = agent_module.FlowceptMCPServer(buffer_path=buffer_path)
         agent.start()
         try:
             from flowcept.agents.mcp.mcp_client import run_tool
@@ -87,7 +87,7 @@ class TestAgent(unittest.TestCase):
             sleep(0.5)
             deadline -= 1
 
-        agent = agent_module.FlowceptAgent()
+        agent = agent_module.FlowceptMCPServer()
         agent.start()
         try:
             resp = run_tool("query_tasks", kwargs={"filter": {"workflow_id": workflow_id}})[0]
@@ -303,7 +303,7 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
             TestAgent.offline_buffer_task(1, 2)
             f.dump_buffer(path=buffer_path)
 
-        agent = agent_module.FlowceptAgent(buffer_path=buffer_path)
+        agent = agent_module.FlowceptMCPServer(buffer_path=buffer_path)
         agent.start()
         try:
             from flowcept.agents.mcp.mcp_client import run_tool
@@ -518,8 +518,8 @@ class TestRefactoredAgentStructure(unittest.TestCase):
 
     # ── C1: mcp_server.py (was flowcept_agent.py) ─────────────────────────
     def test_c1_mcp_server_importable(self):
-        from flowcept.agents.mcp.mcp_server import FlowceptAgent
-        self.assertTrue(callable(FlowceptAgent))
+        from flowcept.agents.mcp.mcp_server import FlowceptMCPServer
+        self.assertTrue(callable(FlowceptMCPServer))
 
     # ── C2: mcp_client.py (was agent_client.py) ───────────────────────────
     def test_c2_mcp_client_importable(self):
@@ -606,6 +606,33 @@ class TestRefactoredAgentStructure(unittest.TestCase):
         result = build_db_filter_prompt("find tasks in error")
         self.assertIsInstance(result, str)
         self.assertGreater(len(result), 0)
+
+    def test_f3_schema_prompt_context_is_domain_neutral_and_shared(self):
+        from flowcept.agents.prompts.schema_prompt_context import (
+            build_allowed_fields_prompt,
+            build_example_values_prompt,
+            build_task_static_field_table,
+            build_task_structure_prompt,
+        )
+
+        current_fields = ["activity_id", "used.input_value", "generated.output_value"]
+        examples = {"input_value": {"t": "int", "v": [1]}, "output_value": {"t": "float", "v": [2.0]}}
+        allowed = build_allowed_fields_prompt(current_fields, target_name="df")
+        table = build_task_static_field_table(current_fields)
+        values = build_example_values_prompt(examples)
+        structure = build_task_structure_prompt(
+            dynamic_schema={"step_a": {"i": ["used.input_value"], "o": ["generated.output_value"]}},
+            example_values=examples,
+            current_fields=current_fields,
+            record_description="Each record represents one task.",
+        )
+
+        combined = "\n".join([allowed, table, values, structure]).lower()
+        self.assertIn("allowed_fields", combined)
+        self.assertIn("used.input_value", combined)
+        self.assertIn("generated.output_value", combined)
+        for forbidden in ("gridsearch", "hyperparameter", "training", "model", "cfg_"):
+            self.assertNotIn(forbidden, combined)
 
     # ── G4: agent_mode setting ────────────────────────────────────────────
     def test_g4_agent_mode_setting_in_configs(self):
@@ -756,6 +783,60 @@ class TestProvAgentInstrumentation(unittest.TestCase):
         self.assertNotIn('"agent_task"', src)
         self.assertIn("PROV_AGENT", src)
 
+    def test_context_manager_caches_dynamic_schema_by_workflow_id(self):
+        from flowcept.agents.mcp.context_manager import FlowceptAgentContextManager
+
+        manager = FlowceptAgentContextManager()
+        manager.message_handler(
+            {
+                "type": "task",
+                "workflow_id": "wf-a",
+                "activity_id": "step_a",
+                "used": {"input_value": 1},
+                "generated": {"output_value": 2},
+            }
+        )
+        manager.message_handler(
+            {
+                "type": "task",
+                "workflow_id": "wf-b",
+                "activity_id": "step_b",
+                "used": {"other_input": "x"},
+                "generated": {"other_output": "y"},
+            }
+        )
+
+        wf_a = manager.get_workflow_schema_snapshot("wf-a")
+        wf_b = manager.get_workflow_schema_snapshot("wf-b")
+
+        self.assertIn("step_a", wf_a["dynamic_schema"])
+        self.assertNotIn("step_b", wf_a["dynamic_schema"])
+        self.assertIn("used.input_value", wf_a["current_fields"])
+        self.assertIn("step_b", wf_b["dynamic_schema"])
+        self.assertNotIn("step_a", wf_b["dynamic_schema"])
+
+    def test_schema_mcp_tool_returns_workflow_prompt_context(self):
+        from flowcept.agents.mcp.context_manager import ctx_manager
+        from flowcept.agents.mcp.mcp_tools.schema_mcp_tools import get_workflow_schema_context
+
+        ctx_manager.reset_context()
+        ctx_manager.message_handler(
+            {
+                "type": "task",
+                "workflow_id": "wf-schema-tool",
+                "activity_id": "step_a",
+                "used": {"input_value": 1},
+                "generated": {"output_value": 2},
+            }
+        )
+
+        result = get_workflow_schema_context(workflow_id="wf-schema-tool")
+
+        self.assertEqual(result.code, 301)
+        self.assertIn("prompt_context", result.result)
+        self.assertIn("used.input_value", result.result["prompt_context"])
+        self.assertIn("generated.output_value", result.result["prompt_context"])
+
     def test_mcp_db_query_tools_use_agent_flowcept_task(self):
         import inspect
         import flowcept.agents.mcp_tools.db_query_mcp_tools as m
@@ -788,22 +869,92 @@ class TestProvAgentInstrumentation(unittest.TestCase):
         self.assertIn("hello", result)
         self.assertIn("sys", result)
 
+    def test_extract_llm_usage_normalizes_langchain_response_metadata(self):
+        from langchain_core.messages import AIMessage
+
+        from flowcept.instrumentation.flowcept_agent_task import extract_llm_usage
+
+        response = AIMessage(
+            content="answer text",
+            usage_metadata={"input_tokens": 3, "output_tokens": 2, "total_tokens": 5},
+            response_metadata={"model_name": "gpt-test", "finish_reason": "stop", "id": "req-123"},
+        )
+
+        usage = extract_llm_usage(response, input_text="abc", output_text=response.content)
+
+        self.assertEqual(usage["model"], "gpt-test")
+        self.assertEqual(usage["input_tokens"], 3)
+        self.assertEqual(usage["output_tokens"], 2)
+        self.assertEqual(usage["total_tokens"], 5)
+        self.assertEqual(usage["input_chars"], 3)
+        self.assertEqual(usage["output_chars"], 11)
+        self.assertEqual(usage["finish_reason"], "stop")
+        self.assertEqual(usage["provider_request_id"], "req-123")
+        self.assertEqual(usage["llm_model"], "gpt-test")
+        self.assertEqual(usage["llm_total_tokens"], 5)
+
+    def test_extract_llm_usage_estimates_missing_provider_tokens_from_text(self):
+        from langchain_core.messages import AIMessage
+
+        from flowcept.instrumentation.flowcept_agent_task import extract_llm_usage
+
+        usage = extract_llm_usage(
+            AIMessage(content="abcd" * 5),
+            fallback_model="model-without-token-usage",
+            input_text="abcd" * 10,
+            output_text="abcd" * 5,
+        )
+
+        self.assertEqual(usage["model"], "model-without-token-usage")
+        self.assertEqual(usage["input_tokens"], 10)
+        self.assertEqual(usage["output_tokens"], 5)
+        self.assertEqual(usage["total_tokens"], 15)
+        self.assertEqual(usage["token_count_source"], "estimated_from_chars")
+
+    def test_llm_metadata_config_drops_api_keys(self):
+        from flowcept.instrumentation.flowcept_agent_task import _extract_llm_metadata
+
+        class MinimalLLMConfig:
+            def model_dump(self):
+                return {
+                    "model": "gpt-test",
+                    "openai_api_key": "secret-key",
+                    "nested": {"api_key": "secret-key-2"},
+                }
+
+        metadata = _extract_llm_metadata(MinimalLLMConfig())
+
+        self.assertEqual(metadata["config"]["model"], "gpt-test")
+        self.assertNotIn("openai_api_key", metadata["config"])
+        self.assertNotIn("api_key", metadata["config"]["nested"])
+
+    def test_flowcept_llm_records_provider_call_as_ai_model_invocation(self):
+        import inspect
+
+        from flowcept.commons.vocabulary import PROV_AGENT
+        from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM
+
+        src = inspect.getsource(FlowceptLLM._our_call)
+
+        self.assertIn("subtype=PROV_AGENT.AI_MODEL_INVOCATION", src)
+        self.assertEqual(PROV_AGENT.AI_MODEL_INVOCATION.value, "ai_model_invocation")
+
     def test_run_chat_wraps_graph_in_flowcept_context(self):
         """Each LangGraph execution is wrapped in a Flowcept context to get its own workflow_id."""
         import inspect
-        from flowcept.webservice.services import chat_orchestrator_service as svc
+        from flowcept.agents.chat_orchestration import chat_orchestrator_service as svc
 
         src = inspect.getsource(svc.run_chat)
         # Must use Flowcept context manager, not manual WorkflowObject
-        self.assertIn("langgraph_chat", src)
+        self.assertEqual(svc.CHAT_WORKFLOW_NAME, "Flowcept LangGraph Chat")
         self.assertNotIn("WorkflowObject", src)
-        self.assertIn("start_persistence=False", src)
+        self.assertIn("start_persistence=True", src)
         self.assertIn("save_workflow=True", src)
 
     def test_build_graph_does_not_accept_workflow_id(self):
         """workflow_id is not threaded through _build_graph — Flowcept.current_workflow_id is used instead."""
         import inspect
-        from flowcept.webservice.services import chat_orchestrator_service as svc
+        from flowcept.agents.chat_orchestration import chat_orchestrator_service as svc
 
         sig = inspect.signature(svc._build_graph)
         self.assertNotIn("workflow_id", sig.parameters)

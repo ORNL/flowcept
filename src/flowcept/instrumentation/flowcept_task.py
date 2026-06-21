@@ -138,6 +138,8 @@ def flowcept_task(func=None, **decorator_kwargs):
         decorator_kwargs.get("agent_name", None)
         source_agent_id = decorator_kwargs.get("source_agent_id", None)
         decorator_kwargs.get("source_agent_name", None)
+        capture_telemetry = decorator_kwargs.get("capture_telemetry", None)
+        task_should_capture_telemetry = TELEMETRY_ENABLED if capture_telemetry is None else capture_telemetry
 
         # --- shared helpers for sync+async wrappers -------------------------
 
@@ -178,7 +180,7 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.task_id = str(task_obj.started_at)
             _thread_local._flowcept_current_context_task_id = task_obj.task_id
 
-            if TELEMETRY_ENABLED:
+            if task_should_capture_telemetry:
                 # capture telemetry at start
                 task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
 
@@ -246,7 +248,7 @@ def flowcept_task(func=None, **decorator_kwargs):
 
             task_obj.ended_at = time()
 
-            if TELEMETRY_ENABLED:
+            if task_should_capture_telemetry:
                 # capture telemetry at end
                 task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
 

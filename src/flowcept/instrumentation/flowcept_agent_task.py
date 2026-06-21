@@ -12,7 +12,7 @@ from langchain_core.runnables import Runnable
 
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.utils import replace_non_serializable
+from flowcept.commons.utils import replace_non_serializable, sanitize_json_like
 from flowcept.commons.vocabulary import PROV_AGENT, Status
 from flowcept.configs import (
     INSTRUMENTATION_ENABLED,
@@ -60,6 +60,8 @@ def agent_flowcept_task(func=None, **decorator_kwargs):
             args_handler = decorator_kwargs.get("args_handler", default_args_handler)
             custom_metadata = decorator_kwargs.get("custom_metadata", None)
             tags = decorator_kwargs.get("tags", None)
+            capture_telemetry = decorator_kwargs.get("capture_telemetry", None)
+            task_should_capture_telemetry = TELEMETRY_ENABLED if capture_telemetry is None else capture_telemetry
 
             task_obj = TaskObject()
             task_obj.subtype = decorator_kwargs.get("subtype", PROV_AGENT.AGENT_TOOL)
@@ -73,7 +75,7 @@ def agent_flowcept_task(func=None, **decorator_kwargs):
             task_obj.custom_metadata = custom_metadata or {}
             task_obj.task_id = str(task_obj.started_at)
             _thread_local._flowcept_current_context_task = task_obj
-            if TELEMETRY_ENABLED:
+            if task_should_capture_telemetry:
                 task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
             task_obj.agent_id = BaseAgentContextManager.agent_id
 
@@ -87,7 +89,7 @@ def agent_flowcept_task(func=None, **decorator_kwargs):
                 task_obj.stderr = str(e)
             task_obj.ended_at = time()
 
-            if TELEMETRY_ENABLED:
+            if task_should_capture_telemetry:
                 task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
             try:
                 if result is not None:
@@ -133,20 +135,32 @@ def _extract_llm_metadata(llm: LLM) -> Dict:
     dict
         Dictionary containing class name, module, model name, and configuration if available.
     """
+    config = llm.model_dump() if hasattr(llm, "model_dump") else llm.dict() if hasattr(llm, "dict") else {}
     llm_metadata = {
         "class_name": llm.__class__.__name__,
         "module": llm.__class__.__module__,
-        "config": llm.dict() if hasattr(llm, "dict") else {},
+        "config": sanitize_json_like(replace_non_serializable(config), drop_sensitive_keys=True),
     }
     return llm_metadata
 
 
-def extract_llm_usage(response: Any, fallback_model: str | None = None) -> Dict[str, Any]:
+def _estimate_tokens_from_text(text: str | None) -> int | None:
+    if text is None:
+        return None
+    return max(1, round(len(text) / 4)) if text else 0
+
+
+def extract_llm_usage(
+    response: Any,
+    fallback_model: str | None = None,
+    input_text: str | None = None,
+    output_text: str | None = None,
+) -> Dict[str, Any]:
     """Normalize provider-specific token metadata from an LLM response."""
     usage = {}
     usage.update(getattr(response, "usage_metadata", {}) or {})
 
-    response_metadata = getattr(response, "response_metadata", {}) or {}
+    response_metadata = sanitize_json_like(replace_non_serializable(getattr(response, "response_metadata", {}) or {}))
     token_usage = response_metadata.get("token_usage") or response_metadata.get("usage") or {}
 
     input_tokens = usage.get("input_tokens") or token_usage.get("prompt_tokens") or token_usage.get("input_tokens")
@@ -154,15 +168,41 @@ def extract_llm_usage(response: Any, fallback_model: str | None = None) -> Dict[
         usage.get("output_tokens") or token_usage.get("completion_tokens") or token_usage.get("output_tokens")
     )
     total_tokens = usage.get("total_tokens") or token_usage.get("total_tokens")
+    provider_reported_tokens = input_tokens is not None or output_tokens is not None or total_tokens is not None
+    if input_tokens is None:
+        input_tokens = _estimate_tokens_from_text(input_text)
+    if output_tokens is None:
+        output_tokens = _estimate_tokens_from_text(output_text)
     if total_tokens is None and input_tokens is not None and output_tokens is not None:
         total_tokens = input_tokens + output_tokens
+    token_count_source = "provider" if provider_reported_tokens else "estimated_from_chars"
 
-    return {
-        "llm_model": response_metadata.get("model_name") or response_metadata.get("model") or fallback_model,
-        "llm_input_tokens": input_tokens,
-        "llm_output_tokens": output_tokens,
-        "llm_total_tokens": total_tokens,
+    model = response_metadata.get("model_name") or response_metadata.get("model") or fallback_model
+    finish_reason = response_metadata.get("finish_reason")
+    provider_request_id = response_metadata.get("id") or response_metadata.get("request_id")
+    normalized = {
+        "model": model,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": total_tokens,
+        "input_chars": len(input_text) if input_text is not None else None,
+        "output_chars": len(output_text) if output_text is not None else None,
+        "finish_reason": finish_reason,
+        "provider_request_id": provider_request_id,
+        "provider_response_metadata": response_metadata,
+        "token_count_source": token_count_source,
     }
+    normalized.update(
+        {
+            "llm_model": model,
+            "llm_input_tokens": input_tokens,
+            "llm_output_tokens": output_tokens,
+            "llm_total_tokens": total_tokens,
+            "llm_input_chars": normalized["input_chars"],
+            "llm_output_chars": normalized["output_chars"],
+        }
+    )
+    return normalized
 
 
 class FlowceptLLM(Runnable):
@@ -285,16 +325,22 @@ class FlowceptLLM(Runnable):
             campaign_id=self.campaign_id,
             workflow_id=self.worflow_id,
             parent_task_id=self.parent_task_id,
+            capture_telemetry=False,
         ) as task:
             response = self.llm.invoke(messages, **kwargs)
             response_str = response.content if hasattr(response, "content") else str(response)
-            usage = extract_llm_usage(response, fallback_model=self.metadata.get("config", {}).get("model"))
+            usage = extract_llm_usage(
+                response,
+                fallback_model=self.metadata.get("config", {}).get("model"),
+                input_text=messages_str,
+                output_text=response_str,
+            )
             generated = {"response": response_str}
 
             if hasattr(response, "usage_metadata"):
-                task._task.custom_metadata["usage_metadata"] = response.usage_metadata
+                task._task.custom_metadata["usage_metadata"] = replace_non_serializable(response.usage_metadata)
             if hasattr(response, "response_metadata"):
-                task._task.custom_metadata["response_metadata"] = response.response_metadata
+                task._task.custom_metadata["response_metadata"] = replace_non_serializable(response.response_metadata)
             task._task.custom_metadata["llm_usage"] = usage
 
             task.end(generated=generated)

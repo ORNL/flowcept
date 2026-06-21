@@ -132,11 +132,11 @@ def submit_gridsearch_job(
 ):
     """Simulate submitting a training job to an HPC system."""
     configs = [
-        {"epochs": 2, "learning_rate": 0.01, "n_input_neurons": 1},
-        {"epochs": 4, "learning_rate": 0.03, "n_input_neurons": 1},
-        {"epochs": 6, "learning_rate": 0.08, "n_input_neurons": 2},
-        {"epochs": 10, "learning_rate": 0.12, "n_input_neurons": 2},
-        {"epochs": 14, "learning_rate": 0.20, "n_input_neurons": 2},
+        {"config_id": "cfg_1", "epochs": 2, "learning_rate": 0.01, "n_input_neurons": 1},
+        {"config_id": "cfg_2", "epochs": 4, "learning_rate": 0.03, "n_input_neurons": 1},
+        {"config_id": "cfg_3", "epochs": 6, "learning_rate": 0.08, "n_input_neurons": 2},
+        {"config_id": "cfg_4", "epochs": 10, "learning_rate": 0.12, "n_input_neurons": 2},
+        {"config_id": "cfg_5", "epochs": 14, "learning_rate": 0.20, "n_input_neurons": 2},
     ]
     configs = configs[:n_configs]
     assert len(configs) == n_configs
@@ -330,7 +330,7 @@ def run_gridsearch_experiment(campaign_id=None):
                 y_val=y_val,
                 dataset_id=dataset_id,
                 checkpoint_check=2,
-                config_id=f"cfg_{idx}",
+                config_id=cfg["config_id"],
                 torch_only=True,
             )
             results.append({"torch_model_object_id": result.get("torch_model_object_id")})

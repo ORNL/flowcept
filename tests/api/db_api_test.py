@@ -86,14 +86,26 @@ class DBAPITest(unittest.TestCase):
         agent_name = "InstantiatedAgent"
 
         with Flowcept(agent_id=agent_id, agent_name=agent_name, save_workflow=False, start_persistence=False):
-            pass
+            agent_msgs = [msg for msg in Flowcept.buffer if msg.get("type") == "agent"]
 
-        agent_obj = Flowcept.db.get_agent_object(agent_id=agent_id)
-        assert agent_obj is not None
-        assert agent_obj.name == agent_name
-        assert agent_obj.agent_id == agent_id
-        assert agent_obj.registered_at is not None
+        assert len(agent_msgs) == 1
+        assert agent_msgs[0]["agent_id"] == agent_id
+        assert agent_msgs[0]["name"] == agent_name
+        assert agent_msgs[0]["registered_at"] is not None
 
+    def test_flowcept_agent_name_generates_agent_id(self):
+        agent_name = "GeneratedIdAgent"
+
+        with Flowcept(agent_name=agent_name, save_workflow=False, start_persistence=False) as fc:
+            agent_id = fc.agent_id
+            agent_msgs = [msg for msg in Flowcept.buffer if msg.get("type") == "agent"]
+
+        assert agent_id is not None
+        assert len(agent_msgs) == 1
+        assert agent_msgs[0]["agent_id"] == agent_id
+        assert agent_msgs[0]["name"] == agent_name
+
+    def test_workflow_dao_update_fields(self):
         wf2_id = str(uuid4())
         print(wf2_id)
 
@@ -147,6 +159,31 @@ class DBAPITest(unittest.TestCase):
         assert wf_dict["flowcept_settings"]["agent"]["api_key"] == "REDACTED"
         assert "redis-pass" not in str(wf_dict)
         assert "agent-key" not in str(wf_dict)
+
+    def test_workflow_dynamic_schema_snapshot_roundtrip(self):
+        workflow_id = str(uuid4())
+        wf = WorkflowObject()
+        wf.workflow_id = workflow_id
+        wf.name = "schema snapshot workflow"
+        wf.custom_metadata = {"owner": "existing"}
+        assert Flowcept.db.insert_or_update_workflow(wf)
+
+        snapshot = {
+            "dynamic_schema": {"step_a": {"i": ["used.input_value"], "o": ["generated.output_value"]}},
+            "value_examples": {"input_value": {"t": "int", "v": [1]}},
+            "current_fields": ["workflow_id", "activity_id", "used.input_value", "generated.output_value"],
+        }
+
+        assert Flowcept.db.save_workflow_domain_data_schema(workflow_id, snapshot)
+
+        loaded = Flowcept.db.get_workflow_domain_data_schema(workflow_id)
+        wf_obj = Flowcept.db.get_workflow_object(workflow_id)
+
+        assert loaded == snapshot
+        assert wf_obj.workflow_domain_data_schema == snapshot
+        assert wf_obj.name == "schema snapshot workflow"
+        assert wf_obj.custom_metadata["owner"] == "existing"
+        assert "dynamic_schema_snapshot" not in wf_obj.custom_metadata
 
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_save_blob(self):

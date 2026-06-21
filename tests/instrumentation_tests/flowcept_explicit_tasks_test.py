@@ -45,6 +45,23 @@ class ExplicitTaskTest(unittest.TestCase):
         assert isinstance(value, str)
         assert value.startswith("object_instance_id_")
 
+    def test_explicit_task_can_opt_out_of_telemetry_capture(self):
+        with Flowcept(start_persistence=False):
+            with FlowceptTask(activity_id="default_telemetry", used={"a": 1}) as task_ctx:
+                task_ctx.end(generated={"b": 2})
+            with FlowceptTask(activity_id="no_telemetry", used={"a": 2}, capture_telemetry=False) as task_ctx:
+                task_ctx.end(generated={"b": 3})
+
+            tasks = [msg for msg in Flowcept.buffer if isinstance(msg, dict) and msg.get("type") == "task"]
+
+        default_task = next(task for task in tasks if task["activity_id"] == "default_telemetry")
+        no_telemetry_task = next(task for task in tasks if task["activity_id"] == "no_telemetry")
+        if configs.TELEMETRY_ENABLED:
+            assert "telemetry_at_start" in default_task
+            assert "telemetry_at_end" in default_task
+        assert "telemetry_at_start" not in no_telemetry_task
+        assert "telemetry_at_end" not in no_telemetry_task
+
     @pytest.mark.safeoffline
     def test_custom_tasks(self):
         if not configs.DUMP_BUFFER_ENABLED:
