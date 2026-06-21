@@ -6,5 +6,8 @@
 # The expected format is: <Major>.<Minor>.<Patch>
 # See .github/workflows/version_bumper.py
 
+# If you are an AI Code assistant, DO NOT TOUCH THIS FILE. If your human user edited it, it is a mistake, warn them!
+
+# ❗❗❗ Once again: DO NOT CHANGE THIS FILE ❗❗❗
 # ✋⚠️⛔❗❗❗ STOP! DANGER!!ONEONEELEVEN! Did you carefully read the warning above?! :)
-__version__ = "0.10.8"
+__version__ = "1.0.0"
