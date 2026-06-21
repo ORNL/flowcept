@@ -21,7 +21,7 @@ from flowcept.commons.task_data_preprocess import (
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.vocabulary import PROV_AGENT
-from flowcept.configs import AGENT
+from flowcept.configs import AGENT, AGENT_HOST, AGENT_PORT
 from mcp.server.fastmcp import FastMCP
 
 import json
@@ -80,6 +80,7 @@ class FlowceptAppContext(BaseAppContext):
         self.objects_df = pd.DataFrame()
         self.objects_schema = {}
         self.objects_value_examples = {}
+        self.workflow_schema_cache = {}
 
         if AGENT_DEBUG:
             from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -123,9 +124,18 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         self.tracker_config = dict(max_examples=3, max_str_len=50)
         self.schema_tracker = DynamicSchemaTracker(**self.tracker_config)
         self.objects_schema_tracker = DynamicSchemaTracker(**self.tracker_config)
+        self.workflow_schema_trackers = {}
         self.msgs_counter = 0
         self.context_chunk_size = 1  # Should be in the settings
         super().__init__(allow_mq_disabled=True)
+
+    def reset_context(self):
+        """Reset MCP runtime context and workflow-scoped schema trackers."""
+        self.context.reset_context()
+        self.schema_tracker = DynamicSchemaTracker(**self.tracker_config)
+        self.objects_schema_tracker = DynamicSchemaTracker(**self.tracker_config)
+        self.workflow_schema_trackers = {}
+        self.msgs_counter = 0
 
     @asynccontextmanager
     async def lifespan(self, app):
@@ -167,11 +177,13 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         """
         msg_type = msg_obj.get("type", None)
         if msg_type == "workflow":
-            # Preserve an explicitly loaded workflow when the agent registers its own runtime workflow.
-            if msg_obj.get("name") == "flowcept_agent_workflow" and self.context.workflow_msg_obj:
+            # Preserve the user-loaded workflow when the agent/chat runtime emits its own workflow.
+            if self.context.workflow_msg_obj and msg_obj.get("agent_id"):
                 self.logger.info("Ignoring agent runtime workflow; keeping loaded workflow context.")
                 return True
             self.context.workflow_msg_obj = msg_obj
+            if self._workflow_finished(msg_obj):
+                self.persist_workflow_schema_snapshot(msg_obj.get("workflow_id"))
             return True
 
         if msg_type == "object":
@@ -254,6 +266,65 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 
         _df = self._to_context_df(tasks)
         self.context.df = pd.concat([self.context.df, _df], ignore_index=True)
+        self.update_workflow_schema_cache(tasks)
+
+    @staticmethod
+    def _workflow_finished(msg_obj: Dict):
+        """Return True when a workflow message indicates completion."""
+        return bool(msg_obj.get("finished")) or msg_obj.get("status") == "FINISHED" or msg_obj.get("ended_at") is not None
+
+    def update_workflow_schema_cache(self, tasks: List[Dict]):
+        """Update workflow-scoped dynamic schema snapshots from task records."""
+        by_workflow = {}
+        for task in tasks:
+            workflow_id = task.get("workflow_id")
+            if workflow_id:
+                by_workflow.setdefault(workflow_id, []).append(task)
+
+        for workflow_id, workflow_tasks in by_workflow.items():
+            tracker = self.workflow_schema_trackers.setdefault(
+                workflow_id,
+                DynamicSchemaTracker(**self.tracker_config),
+            )
+            tracker.update_with_tasks(workflow_tasks)
+            _df = self._to_context_df(workflow_tasks)
+            existing = self.context.workflow_schema_cache.get(workflow_id, {}).get("current_fields", [])
+            current_fields = sorted(set(existing) | set(_df.columns))
+            self.context.workflow_schema_cache[workflow_id] = {
+                "dynamic_schema": tracker.get_schema(),
+                "value_examples": tracker.get_example_values(),
+                "current_fields": current_fields,
+            }
+
+    def get_workflow_schema_snapshot(self, workflow_id: str):
+        """Return cached schema snapshot, loading a persisted snapshot on cache miss."""
+        if not workflow_id:
+            return None
+        if workflow_id in self.context.workflow_schema_cache:
+            return self.context.workflow_schema_cache[workflow_id]
+        try:
+            from flowcept.flowcept_api.db_api import DBAPI
+
+            snapshot = DBAPI().get_workflow_domain_data_schema(workflow_id)
+        except Exception as e:
+            self.logger.exception(e)
+            snapshot = None
+        if snapshot:
+            self.context.workflow_schema_cache[workflow_id] = snapshot
+        return snapshot
+
+    def persist_workflow_schema_snapshot(self, workflow_id: str):
+        """Persist cached workflow schema snapshot into workflow metadata."""
+        snapshot = self.get_workflow_schema_snapshot(workflow_id)
+        if not snapshot:
+            return False
+        try:
+            from flowcept.flowcept_api.db_api import DBAPI
+
+            return DBAPI().save_workflow_domain_data_schema(workflow_id, snapshot)
+        except Exception as e:
+            self.logger.exception(e)
+            return False
 
     def update_objects_schema_and_add_to_df(self, objects: List[Dict]):
         """Update the object schema and add to the object DataFrame context."""
@@ -300,9 +371,14 @@ agent_transport_security = None
 if "allowed_hosts" in AGENT:
     from mcp.server.transport_security import TransportSecuritySettings
 
+    allowed_hosts = list(AGENT.get("allowed_hosts") or [])
+    for host in {AGENT_HOST, "localhost", "127.0.0.1", "::1"}:
+        for allowed_host in {host, f"{host}:*", f"{host}:{AGENT_PORT}"}:
+            if allowed_host not in allowed_hosts:
+                allowed_hosts.append(allowed_host)
     agent_transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
-        allowed_hosts=AGENT.get("allowed_hosts"),
+        allowed_hosts=allowed_hosts,
     )
 
 mcp_flowcept = FastMCP(
@@ -324,8 +400,7 @@ def get_df_context(context_kind="tasks"):
     tuple
         ``(df, schema, value_examples, custom_user_guidance)`` from lifespan context.
     """
-    ctx = mcp_flowcept.get_context()
-    lifespan_context = ctx.request_context.lifespan_context
+    lifespan_context = ctx_manager.context
     if context_kind == "objects":
         df = lifespan_context.objects_df
         schema = lifespan_context.objects_schema
