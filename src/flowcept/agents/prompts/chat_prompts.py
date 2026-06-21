@@ -75,8 +75,10 @@ def build_chat_system_prompt(context: Optional[Dict[str, Any]] = None) -> str:
 - When the user context includes workflow_id/campaign_id, ALWAYS scope your queries with it.
 - For campaigns: ALWAYS call list_campaigns to get campaign details including the human-readable
   campaign name. Never answer a campaign question from context alone — the context only has IDs.
-- For workflows: ALWAYS display the `name` field value when reporting workflows. Never say
-  "no name recorded" when the name field has a value.
+- For workflows: when reporting any workflow result, ALWAYS include both the `workflow_id`
+  raw value and the `name` field value explicitly, using their field labels. For a single
+  result write: "workflow_id: <id>, name: <name>". For multiple results use a markdown
+  table with `workflow_id` and `name` as columns. Never omit either field.
 - When answering about workflow activities, lineage, or execution order, use only activity_id
   values returned by provenance tools. MCP/chat tool names are not workflow activities unless
   they explicitly appear as activity_id values in the returned provenance records.
@@ -136,7 +138,6 @@ def build_chat_system_prompt(context: Optional[Dict[str, Any]] = None) -> str:
   "show lineage in the UI", "visually dim unrelated nodes in the graph").
 - When enumerating discrete parameter values (numeric values, category labels, IDs, etc.):
   ALWAYS list ALL values explicitly rather than giving a range.
-- When there is only 1 result in a list, summarize it in text rather than showing only a table.
 - When asked for a chart/plot, call make_chart with a declarative chart spec:
   {"chart_id": "<short-id>", "type": "chart", "title": "...",
    "data": {"source": "tasks", "filter": {...}, "group_by": "<field>",

@@ -163,9 +163,9 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         )
 
     @tool
-    def run_workflow_query(query: str) -> str:
-        """Answer a natural-language question using the MCP server's active workflow message."""
-        return _run_mcp("run_workflow_query", query=query)
+    def get_workflow_context() -> str:
+        """Return the workflow record(s) loaded in the agent's in-memory context (DF path counterpart to query_workflows)."""
+        return _run_mcp("get_workflow_context")
 
     db_tools = [
         query_tasks,
@@ -180,7 +180,7 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         generate_result_df,
         generate_plot_code,
         extract_or_fix_python_code,
-        run_workflow_query,
+        get_workflow_context,
         list_agents,
     ]
     tool_context = (context or {}).get("tool_context", "db")
@@ -237,10 +237,17 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool:
     def _tool_calls_for_text(text: str) -> List[Dict[str, Any]]:
         lower = text.lower()
         names = set(tools_by_name)
-        has_specific_value = any(marker in lower for marker in ("cfg_", "task_id", "object_id", "workflow_id"))
-        if "query_tasks" in names and any(word in lower for word in ("submit", "submitted", "producer", "produced")):
-            return [{"name": "query_tasks", "args": {}, "id": str(uuid.uuid4())}]
+        has_specific_value = any(marker in lower for marker in ("task_id", "object_id", "workflow_id"))
         if "generate_result_df" in names and any(word in lower for word in ("submit", "submitted", "producer", "produced")):
+            # Pattern B: general attribution — query starts with "which/what" (no specific lookup
+            # value) and asks about the agent. list_agents alone is sufficient.
+            if (
+                "list_agents" in names
+                and "agent" in lower
+                and not has_specific_value
+                and lower.strip().startswith(("which ", "what "))
+            ):
+                return [{"name": "list_agents", "args": {}, "id": str(uuid.uuid4())}]
             query = (
                 text
                 + "\nInterpret submission/producer questions through provenance dataflow: "
@@ -306,19 +313,19 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool:
             for word in (
                 "activity",
                 "agent",
-                "configuration",
                 "count",
-                "epoch",
                 "how many",
-                "learning",
                 "lineage",
                 "task",
-                "validation",
             )
         ):
             return [{"name": "generate_result_df", "args": {"query": text}, "id": str(uuid.uuid4())}]
-        if "run_workflow_query" in names and "workflow" in lower:
-            return [{"name": "run_workflow_query", "args": {"query": text}, "id": str(uuid.uuid4())}]
+        if "query_workflows" in names and "workflow" in lower:
+            return [{"name": "query_workflows", "args": {}, "id": str(uuid.uuid4())}]
+        if "get_workflow_context" in names and any(word in lower for word in ("workflow", "workflows")):
+            # DF path: workflow records live in the MCP context object, not the tasks DataFrame.
+            # get_workflow_context is the DF-path counterpart to query_workflows.
+            return [{"name": "get_workflow_context", "args": {}, "id": str(uuid.uuid4())}]
         if "generate_result_df" in names:
             return [{"name": "generate_result_df", "args": {"query": text}, "id": str(uuid.uuid4())}]
         return [{"name": next(iter(tools_by_name)), "args": {}, "id": str(uuid.uuid4())}]

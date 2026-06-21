@@ -1,8 +1,8 @@
-"""Plain-Python in-memory task query tools.
+"""Plain-Python DF (DataFrame) query tools.
 
 Functions in this module operate on pandas DataFrames and do NOT import from the
 MCP framework (no ``@mcp_flowcept.tool()``). The MCP layer lives in
-``mcp_tools/in_memory_task_query_mcp_tools.py``.
+``mcp_tools/df_query_mcp_tools.py``.
 """
 
 import json
@@ -20,7 +20,7 @@ from flowcept.agents.data_query_tools.pandas_utils import (
     summarize_df,
 )
 
-from flowcept.agents.prompts.in_memory_task_query_prompts import (
+from flowcept.agents.prompts.df_query_prompts import (
     build_plot_code_prompt,
     extract_or_fix_json_code_prompt,
     build_pandas_code_prompt,
@@ -155,6 +155,8 @@ def generate_plot_code(
     -------
     ToolResult
     """
+    if llm is None:
+        llm = build_llm_model()
     plot_prompt = build_plot_code_prompt(
         query,
         dynamic_schema,

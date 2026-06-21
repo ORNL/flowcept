@@ -1,5 +1,5 @@
 # flake8: noqa: E501
-"""Prompt builders for in-memory task DataFrame queries.
+"""Prompt builders for DF (DataFrame) chat query path.
 
 All functions are plain Python — no MCP framework decorators.
 The ``@mcp_flowcept.prompt()`` registration lives in ``prompts/mcp_prompts.py``.
@@ -132,9 +132,8 @@ def build_plot_code_prompt(query, dynamic_schema, example_values, current_fields
           "description": "A line chart of telemetry_summary.duration_sec over started_at."
         }}
 
-        Your response must be only the raw Python code in the format:
-        result = ...
-        Except for the `result` variable, YOU MUST NEVER CREATE ANY OTHER VARIABLE. NEVER!
+        Your response must be ONLY a raw JSON object (no markdown fences, no prose), in this exact format:
+        {{"result_code": "<pandas code that assigns result>", "plot_code": "<Streamlit plotting code>", "description": "<one-sentence caption>"}}
 
         User request:
         {query}

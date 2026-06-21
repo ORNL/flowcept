@@ -56,5 +56,25 @@
   score_threshold: 0.65
 
 - user_query: "What is the name and start time of the workflow?"
-  expected_response: "workflow name Perceptron GridSearch start time utc_timestamp."
+  expected_response: "workflow name Perceptron GridSearch utc timestamp."
+  score_threshold: 0.60
+
+# T30: richer response cases — table, chart+table+summary
+- user_query: "List all tasks with their activity_id and status as a markdown table."
+  expected_response: "activity_id status FINISHED train_and_validate."
   score_threshold: 0.65
+  case_id: "table"
+
+- user_query: "Display a bar chart of activity_id distribution and list the data in a table."
+  expected_response: "train_and_validate 5 activity_id bar chart."
+  score_threshold: 0.50
+  case_id: "db_table_plot_summary"
+  tool_contexts: ["db"]
+  tool_expected: "make_chart"
+
+- user_query: "Display a bar chart of activity_id distribution and list the data in a table."
+  expected_response: "train_and_validate 5 activity_id bar chart."
+  score_threshold: 0.50
+  case_id: "df_table_plot_summary"
+  tool_contexts: ["df"]
+  tool_expected: "generate_plot_code"

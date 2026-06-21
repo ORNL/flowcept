@@ -86,8 +86,30 @@ def _guarded(tool_name: str):
     return decorator
 
 
+_WORKFLOW_HEAVY_FIELDS = frozenset(
+    {
+        "machine_info",
+        "flowcept_settings",
+        "code_repository",
+        "conf",
+        "extra_metadata",
+        "environment_id",
+        "sys_name",
+        "interceptor_ids",
+        "adapter_id",
+        "flowcept_version",
+    }
+)
+
+
 def _normalize(docs: List[Dict]) -> List[Dict]:
     return normalize_docs(docs)
+
+
+def _normalize_workflows(docs: List[Dict]) -> List[Dict]:
+    """Normalize workflow docs, stripping heavy infrastructure-only fields for LLM responses."""
+    pruned = [{k: v for k, v in doc.items() if k not in _WORKFLOW_HEAVY_FIELDS} for doc in docs]
+    return normalize_docs(pruned)
 
 
 def _sanitize_projection(projection: Optional[List[str]]) -> Optional[List[str]]:
@@ -177,7 +199,7 @@ def query_workflows(filter: Optional[Dict[str, Any]] = None, limit: int = 100) -
         ``result`` holds ``{"items": [...], "count": int}``.
     """
     docs = (DBAPI().workflow_query(filter=filter or {}) or [])[:limit]
-    items = _normalize(docs)
+    items = _normalize_workflows(docs)
     return ToolResult(code=301, result={"items": items, "count": len(items)}, tool_name="query_workflows")
 
 

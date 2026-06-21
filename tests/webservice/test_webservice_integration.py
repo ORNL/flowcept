@@ -959,7 +959,7 @@ def _load_gridsearch_context_into_mcp(gridsearch_run_data, mcp_server_instance):
                 "generate_result_df",
                 "generate_plot_code",
                 "extract_or_fix_python_code",
-                "run_workflow_query",
+                "get_workflow_context",
                 "run_df_query",
                 "list_agents",
             },
@@ -983,7 +983,20 @@ def test_chat_endpoint_real_llm_queries(gridsearch_run_data, mcp_server_instance
     client = TestClient(app)
     _load_gridsearch_context_into_mcp(gridsearch_run_data, mcp_server_instance)
 
+    import os
+
+    case_id_filter = {c.strip() for c in os.environ.get("CHAT_TEST_CASE_IDS", "").split(",") if c.strip()}
+
     for case in _load_chat_query_cases():
+        # Skip cases restricted to a different tool_context.
+        allowed_contexts = case.get("tool_contexts", ["db", "df"])
+        if tool_context not in allowed_contexts:
+            continue
+        # Skip cases not in the explicit case_id filter (when set).
+        case_id = case.get("case_id")
+        if case_id_filter and case_id not in case_id_filter:
+            continue
+
         rs = client.post(
             "/api/v1/chat",
             json={
@@ -1008,6 +1021,16 @@ def test_chat_endpoint_real_llm_queries(gridsearch_run_data, mcp_server_instance
             event.get("name") in expected_tool_names or event.get("tool_name") in expected_tool_names
             for event in tool_trace
         ), f"Expected MCP {tool_context} tool path for query {case['user_query']!r}; trace={tool_trace!r}"
+
+        # Optional structured-response assertions.
+        tool_expected = case.get("tool_expected")
+        if tool_expected == "make_chart":
+            cards = body.get("cards") or []
+            assert cards, f"Expected card event for make_chart in query {case['user_query']!r}"
+        elif tool_expected == "generate_plot_code":
+            assert any(
+                e.get("name") == "generate_plot_code" for e in tool_trace
+            ), f"Expected generate_plot_code in tool_trace for query {case['user_query']!r}; trace={tool_trace!r}"
 
     if DocumentDBDAO._instance is not None:
         DocumentDBDAO._instance.close()

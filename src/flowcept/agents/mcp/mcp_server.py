@@ -13,8 +13,7 @@ from flowcept.agents.mcp.context_manager import mcp_flowcept, ctx_manager
 from flowcept.agents.mcp.mcp_tools.session_tools import check_liveness
 import flowcept.agents.mcp.mcp_tools.db_query_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.dashboard_mcp_tools  # noqa: F401
-import flowcept.agents.mcp.mcp_tools.in_memory_task_query_mcp_tools  # noqa: F401
-import flowcept.agents.mcp.mcp_tools.in_memory_workflow_query_mcp_tools  # noqa: F401
+import flowcept.agents.mcp.mcp_tools.df_query_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.report_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.schema_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_prompts  # noqa: F401

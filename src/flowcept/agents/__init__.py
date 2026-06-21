@@ -3,6 +3,5 @@
 
 from flowcept.agents.tool_result import ToolResult  # noqa: F401
 from flowcept.agents.mcp.mcp_tools import *
-from flowcept.agents.mcp.mcp_tools.in_memory_task_query_mcp_tools import *
+from flowcept.agents.mcp.mcp_tools.df_query_mcp_tools import *
 from flowcept.agents.mcp.mcp_tools.db_query_mcp_tools import *
-from flowcept.agents.mcp.mcp_tools.in_memory_workflow_query_mcp_tools import *
