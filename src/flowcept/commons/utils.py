@@ -414,15 +414,30 @@ def _redact_key_value(key: str, value: Any) -> Any:
     return value
 
 
-def sanitize_json_like(value: Any) -> Any:
+def _is_sensitive_key(key: str) -> bool:
+    return any(pat in key.lower() for pat in _SENSITIVE_KEY_PATTERNS)
+
+
+def sanitize_json_like(value: Any, drop_sensitive_keys: bool = False, mongo_safe_keys: bool = False) -> Any:
     """Recursively sanitize dict/list structures, redacting sensitive keys and values."""
     if isinstance(value, dict):
         out: Dict[str, Any] = {}
         for k, v in value.items():
-            out[str(k)] = sanitize_json_like(_redact_key_value(str(k), v))
+            key = str(k)
+            if drop_sensitive_keys and _is_sensitive_key(key):
+                continue
+            output_key = key.replace(".", "_").replace("$", "_") if mongo_safe_keys else key
+            out[output_key] = sanitize_json_like(
+                _redact_key_value(key, v),
+                drop_sensitive_keys=drop_sensitive_keys,
+                mongo_safe_keys=mongo_safe_keys,
+            )
         return out
     if isinstance(value, (list, tuple)):
-        return [sanitize_json_like(v) for v in value]
+        return [
+            sanitize_json_like(v, drop_sensitive_keys=drop_sensitive_keys, mongo_safe_keys=mongo_safe_keys)
+            for v in value
+        ]
     if isinstance(value, str) and _SENSITIVE_VALUE_PATTERN.search(value):
         return "REDACTED"
     return value
