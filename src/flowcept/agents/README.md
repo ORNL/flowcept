@@ -136,9 +136,9 @@ wrapped = FlowceptLLM(llm, agent_id=my_agent_id)
 response = wrapped.invoke("How many tasks failed?")
 ```
 
-**LangGraph chat** — `run_chat` in `webservice/services/chat_orchestrator_service.py`
-wraps each graph execution in a `Flowcept` context (`workflow_name="langgraph_chat"`,
-`start_persistence=False`).  This gives every chat turn its own `workflow_id`.
+**LangGraph chat** — `run_chat` in `chat_orchestration/chat_orchestrator_service.py`
+wraps each graph execution in a `Flowcept` context (`workflow_name="Flowcept LangGraph Chat"`,
+`start_persistence=True`).  This gives every chat turn its own `workflow_id`.
 Within the graph, `call_model` uses `FlowceptLLM` and `call_tools` uses
 `FlowceptTask(subtype=PROV_AGENT.AGENT_TOOL)` — both inherit
 `Flowcept.current_workflow_id` automatically.

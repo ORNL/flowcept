@@ -157,7 +157,8 @@ This is a minimal offline example:
 
    import json
    from flowcept import Flowcept, flowcept_task
-   from flowcept.agents.mcp.mcp_server import FlowceptAgent
+   from flowcept.agents.mcp.mcp_client import run_tool
+   from flowcept.agents.mcp.mcp_server import FlowceptMCPServer
 
    @flowcept_task
    def sum_one(x):
@@ -169,10 +170,10 @@ This is a minimal offline example:
        f.dump_buffer("flowcept_buffer.jsonl")
 
    # Start the agent from the buffer file and query it
-   agent = FlowceptAgent(buffer_path="flowcept_buffer.jsonl")
+   agent = FlowceptMCPServer(buffer_path="flowcept_buffer.jsonl")
    # Or load a list of messages directly
-   # agent = FlowceptAgent(buffer_messages=msgs)
+   # agent = FlowceptMCPServer(buffer_messages=msgs)
    agent.start()
-   resp = agent.query("how many tasks?")
+   resp = run_tool("run_df_query", kwargs={"query": "how many tasks?"})[0]
    print(json.loads(resp))
    agent.stop()
