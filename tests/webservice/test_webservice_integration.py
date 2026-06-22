@@ -160,20 +160,20 @@ def test_webservice_end_to_end_with_flowcept_and_blob_apis(db_cleanup):
             task.end(generated={"y": 2})
 
         workflow_id = Flowcept.current_workflow_id
-        generic_obj_id = Flowcept.db.save_or_update_object(
+        generic_obj_id = Flowcept.insert_or_update_object(
             object=b"generic-blob-payload",
             object_type="artifact",
             save_data_in_collection=True,
             custom_metadata={"kind": "generic"},
         )
 
-        dataset_obj_id = Flowcept.db.save_or_update_dataset(
+        dataset_obj_id = Flowcept.insert_or_update_dataset(
             object=b"dataset-blob-payload",
             save_data_in_collection=True,
             custom_metadata={"split": "train"},
         )
 
-        model_obj_id = Flowcept.db.save_or_update_ml_model(
+        model_obj_id = Flowcept.insert_or_update_ml_model(
             object=b"model-blob-payload",
             save_data_in_collection=True,
             custom_metadata={"framework": "sklearn"},
@@ -422,7 +422,7 @@ def test_webservice_object_versioning_and_unified_query(db_cleanup):
         with FlowceptTask(activity_id="emit", used={"x": 1}) as task:
             task.end(generated={"y": 1})
         for version in range(2):
-            Flowcept.db.save_or_update_object(
+            Flowcept.insert_or_update_object(
                 object=f"payload-v{version}".encode(),
                 object_id=obj_id,
                 object_type="ml_model",
@@ -1127,13 +1127,13 @@ def test_recursive_delete_workflow_and_campaign(db_cleanup):
     with Flowcept(campaign_id=campaign_id, workflow_name=f"del-wf1-{uuid4()}"):
         with FlowceptTask(activity_id="del_task", used={"x": 1}) as t1:
             t1.end(generated={"y": 1})
-        Flowcept.db.save_or_update_object(object=b"blob1", object_type="artifact", save_data_in_collection=True)
+        Flowcept.insert_or_update_object(object=b"blob1", object_type="artifact", save_data_in_collection=True)
         wf1_id = Flowcept.current_workflow_id
 
     with Flowcept(campaign_id=campaign_id, workflow_name=f"del-wf2-{uuid4()}"):
         with FlowceptTask(activity_id="del_task", used={"x": 2}) as t2:
             t2.end(generated={"y": 2})
-        Flowcept.db.save_or_update_object(object=b"blob2", object_type="artifact", save_data_in_collection=True)
+        Flowcept.insert_or_update_object(object=b"blob2", object_type="artifact", save_data_in_collection=True)
         wf2_id = Flowcept.current_workflow_id
 
     assert wf1_id and wf2_id

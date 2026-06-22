@@ -59,7 +59,7 @@ class Flowcept(object):
     campaign_id = None
     buffer = None
     is_started = False
-    current_instance = None
+    _current_instance = None
 
     @ClassProperty
     def db(cls):
@@ -69,6 +69,11 @@ class Flowcept(object):
 
             cls._db = DBAPI()
         return cls._db
+
+    @staticmethod
+    def get_current_instance() -> "Flowcept":
+        """Return the active Flowcept instance, or None if none is running."""
+        return Flowcept._current_instance
 
     def __init__(
         self,
@@ -252,20 +257,10 @@ class Flowcept(object):
 
         else:
             Flowcept.current_workflow_id = None
-        Flowcept.current_instance = self
+        Flowcept._current_instance = self
         Flowcept.is_started = self.is_started = True
         self.logger.debug("Flowcept started successfully.")
         return self
-
-    @staticmethod
-    def emit_message(message: Dict):
-        """Append a message to the active interceptor buffer."""
-        if Flowcept.current_instance is None:
-            return
-        interceptors = Flowcept.current_instance._interceptor_instances or []
-        if not interceptors:
-            return
-        interceptors[0].intercept(message)
 
     def get_buffer(self, return_df: bool = False):
         """
@@ -474,6 +469,240 @@ class Flowcept(object):
             raise Exception("No active interceptors are initialized or registered on this Flowcept instance.")
         self._first_interceptor.send_agent_message(agent_obj)
         return agent_obj.agent_id
+
+    @staticmethod
+    def insert_or_update_object(
+        object,
+        object_id=None,
+        task_id=None,
+        workflow_id=None,
+        object_type=None,
+        custom_metadata=None,
+        save_data_in_collection=False,
+        pickle=False,
+        control_version=False,
+        tags=None,
+    ) -> str:
+        """Persist a blob object and emit its metadata to the active MQ buffer.
+
+        Parameters
+        ----------
+        object : Any
+            Blob payload bytes or serializable object.
+        object_id : str, optional
+            Logical object identifier. Generated when omitted.
+        task_id : str, optional
+            Associated task identifier.
+        workflow_id : str, optional
+            Associated workflow identifier. Defaults to current workflow when available.
+        object_type : str, optional
+            User-defined object category.
+        custom_metadata : dict, optional
+            Arbitrary metadata attached to the object.
+        save_data_in_collection : bool, optional
+            ``True`` stores bytes in-object; ``False`` stores in GridFS.
+        pickle : bool, optional
+            If ``True``, pickle ``object`` before persistence.
+        control_version : bool, optional
+            If ``True``, enable append-only history semantics.
+        tags : list of str, optional
+            Labels to associate with the object.
+
+        Returns
+        -------
+        str
+            Persisted object identifier.
+        """
+        from flowcept.flowcept_api.db_api import DBAPI
+        from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
+
+        fc = Flowcept.get_current_instance()
+        if fc is None or not fc._first_interceptor:
+            raise RuntimeError("insert_or_update_object requires an active Flowcept context with an interceptor.")
+        wf_id = workflow_id or Flowcept.current_workflow_id
+        blob_obj = BlobObject(
+            object_id=object_id,
+            task_id=task_id,
+            workflow_id=wf_id,
+            object_type=object_type,
+            custom_metadata=custom_metadata,
+            tags=tags,
+        )
+        blob_obj = DBAPI()._insert_or_update_object(
+            blob_obj=blob_obj,
+            object=object,
+            save_data_in_collection=save_data_in_collection,
+            pickle=pickle,
+            control_version=control_version,
+        )
+        fc._first_interceptor.send_object_message(blob_obj)
+        return blob_obj.object_id
+
+    @staticmethod
+    def insert_or_update_ml_model(
+        object,
+        object_id=None,
+        task_id=None,
+        workflow_id=None,
+        custom_metadata=None,
+        save_data_in_collection=False,
+        pickle=False,
+        control_version=False,
+        tags=None,
+    ) -> str:
+        """Persist an ML model blob and emit its metadata to the active MQ buffer.
+
+        Parameters
+        ----------
+        object : Any
+            Model payload bytes or serializable object.
+        object_id : str, optional
+            Logical object identifier.
+        task_id : str, optional
+            Associated task identifier.
+        workflow_id : str, optional
+            Associated workflow identifier.
+        custom_metadata : dict, optional
+            Arbitrary metadata attached to the object.
+        save_data_in_collection : bool, optional
+            ``True`` stores bytes in-object; ``False`` stores in GridFS.
+        pickle : bool, optional
+            If ``True``, pickle ``object`` before persistence.
+        control_version : bool, optional
+            Enable append-only history semantics.
+        tags : list of str, optional
+            Labels to associate with the object.
+
+        Returns
+        -------
+        str
+            Persisted object identifier.
+        """
+        return Flowcept.insert_or_update_object(
+            object=object,
+            object_id=object_id,
+            task_id=task_id,
+            workflow_id=workflow_id,
+            object_type="ml_model",
+            custom_metadata=custom_metadata,
+            save_data_in_collection=save_data_in_collection,
+            pickle=pickle,
+            control_version=control_version,
+            tags=tags,
+        )
+
+    @staticmethod
+    def insert_or_update_dataset(
+        object,
+        object_id=None,
+        task_id=None,
+        workflow_id=None,
+        custom_metadata=None,
+        save_data_in_collection=False,
+        pickle=False,
+        control_version=False,
+        tags=None,
+    ) -> str:
+        """Persist a dataset blob and emit its metadata to the active MQ buffer.
+
+        Parameters
+        ----------
+        object : Any
+            Dataset payload bytes or serializable object.
+        object_id : str, optional
+            Logical object identifier.
+        task_id : str, optional
+            Associated task identifier.
+        workflow_id : str, optional
+            Associated workflow identifier.
+        custom_metadata : dict, optional
+            Arbitrary metadata attached to the object.
+        save_data_in_collection : bool, optional
+            ``True`` stores bytes in-object; ``False`` stores in GridFS.
+        pickle : bool, optional
+            If ``True``, pickle ``object`` before persistence.
+        control_version : bool, optional
+            Enable append-only history semantics.
+        tags : list of str, optional
+            Labels to associate with the object.
+
+        Returns
+        -------
+        str
+            Persisted object identifier.
+        """
+        return Flowcept.insert_or_update_object(
+            object=object,
+            object_id=object_id,
+            task_id=task_id,
+            workflow_id=workflow_id,
+            object_type="dataset",
+            custom_metadata=custom_metadata,
+            save_data_in_collection=save_data_in_collection,
+            pickle=pickle,
+            control_version=control_version,
+            tags=tags,
+        )
+
+    @staticmethod
+    def insert_or_update_torch_model(
+        model,
+        object_id=None,
+        task_id=None,
+        workflow_id=None,
+        custom_metadata=None,
+        control_version=False,
+        save_profile=True,
+        tags=None,
+    ) -> str:
+        """Persist a PyTorch model state dictionary and emit its metadata to the active MQ buffer.
+
+        Parameters
+        ----------
+        model : torch.nn.Module
+            PyTorch model whose ``state_dict`` will be persisted.
+        object_id : str, optional
+            Existing object identifier to update.
+        task_id : str, optional
+            Associated task identifier.
+        workflow_id : str, optional
+            Associated workflow identifier.
+        custom_metadata : dict, optional
+            Extra metadata. The model class name is added automatically.
+        control_version : bool, optional
+            Enable append-only history semantics.
+        save_profile : bool, optional
+            If ``True`` (default), adds ``model_profile`` to ``custom_metadata``.
+        tags : list of str, optional
+            Labels to associate with the object.
+
+        Returns
+        -------
+        str
+            Persisted object identifier.
+        """
+        from flowcept.flowcept_api.db_api import DBAPI
+        from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
+
+        fc = Flowcept.get_current_instance()
+        if fc is None or not fc._first_interceptor:
+            raise RuntimeError("insert_or_update_torch_model requires an active Flowcept context with an interceptor.")
+        wf_id = workflow_id or Flowcept.current_workflow_id
+        blob_obj = BlobObject(
+            object_id=object_id,
+            task_id=task_id,
+            workflow_id=wf_id,
+            custom_metadata=custom_metadata,
+            tags=tags,
+        )
+        blob_obj = DBAPI()._insert_or_update_torch_model(
+            model=model,
+            blob_obj=blob_obj,
+            control_version=control_version,
+            save_profile=save_profile,
+        )
+        fc._first_interceptor.send_object_message(blob_obj)
+        return blob_obj.object_id
 
     @staticmethod
     def generate_report(
@@ -744,7 +973,7 @@ class Flowcept(object):
             pass
 
         Flowcept.buffer = self.buffer = None
-        Flowcept.current_instance = None
+        Flowcept._current_instance = None
         Flowcept.is_started = self.is_started = False
         self.logger.debug("All stopped!")
 

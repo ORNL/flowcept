@@ -15,6 +15,7 @@ If a tool requires its own file, make that file (which should immediately go to 
 ## 1. First Principles
 
 - Be surgical. Prefer small, reviewable changes.
+- Before proposing any implementation or design strategy, find how the codebase already solves the same concern — same class type, same data flow, same operation. Replicate that solution exactly. If no existing pattern exists, flag it in the response before implementing.
 - Flowcept is extremely performance-sensitive, especially in the data producer path. Even small ifs, loops, or function calls in hot paths must be avoided at all costs.
 - Reuse above all. Avoid duplication and one-off fixes. Duplicating code or logic is a MAJOR problem. Avoid it at all costs.
 - Separation of concerns is extremely important in this project. Mixing concerns is not acceptable. Each module in the project has a clear and separate concern. Report if you find violations.

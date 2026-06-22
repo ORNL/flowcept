@@ -192,7 +192,8 @@ class DBAPITest(unittest.TestCase):
 
         obj = pickle.dumps(OurObject())
 
-        obj_id = Flowcept.db.save_or_update_object(object=obj, save_data_in_collection=True)
+        blob_obj = Flowcept.db._insert_or_update_object(BlobObject(), object=obj, save_data_in_collection=True)
+        obj_id = blob_obj.object_id
         print(obj_id)
 
         obj_docs = Flowcept.db.query(filter={"object_id": obj_id}, collection="objects")
@@ -203,7 +204,7 @@ class DBAPITest(unittest.TestCase):
     def test_blob_object_query_and_get(self):
         payload = b"blob-content"
         with Flowcept(workflow_name="blob_demo"):
-            obj_id = Flowcept.db.save_or_update_object(
+            obj_id = Flowcept.insert_or_update_object(
                 object=payload,
                 task_id="task_blob_1",
                 object_type="artifact",
@@ -228,35 +229,36 @@ class DBAPITest(unittest.TestCase):
             assert blob.version == 0
 
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
-    def test_save_blob_emits_object_metadata_message(self):
-        object_messages = []
-        with Flowcept(workflow_name="blob_message_demo", start_persistence=False):
-            with patch.object(Flowcept, "emit_message", side_effect=object_messages.append):
-                obj_id = Flowcept.db.save_or_update_object(
-                    object=b"blob-message-content",
-                    task_id="task_blob_message",
-                    object_type="artifact",
-                    custom_metadata={"owner": "tests"},
-                    save_data_in_collection=True,
-                )
+    def test_insert_object_emits_message_with_timing(self):
+        with Flowcept(workflow_name="blob_message_demo", start_persistence=False) as f:
+            obj_id = Flowcept.insert_or_update_object(
+                object=b"blob-message-content",
+                task_id="task_blob_message",
+                object_type="artifact",
+                custom_metadata={"owner": "tests"},
+                save_data_in_collection=True,
+            )
+            msgs = list(f.get_buffer())
 
-        assert len(object_messages) == 1
-        object_msg = object_messages[0]
-        assert object_msg["object_id"] == obj_id
-        assert object_msg["object_type"] == "artifact"
-        assert object_msg["task_id"] == "task_blob_message"
-        assert object_msg["workflow_id"] is not None
-        assert object_msg["custom_metadata"]["owner"] == "tests"
-        assert "data" not in object_msg
+        object_msgs = [m for m in msgs if m.get("type") == "object"]
+        assert len(object_msgs) == 1
+        msg = object_msgs[0]
+        assert msg["object_id"] == obj_id
+        assert msg["object_type"] == "artifact"
+        assert msg["task_id"] == "task_blob_message"
+        assert msg["workflow_id"] is not None
+        assert msg["custom_metadata"]["owner"] == "tests"
+        assert "data" not in msg
+        assert "created_at" in msg
+        assert "updated_at" in msg
 
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_blob_object_version_control(self):
         obj_id = str(uuid4())
         payload_v0 = b"v0"
-        Flowcept.db.save_or_update_object(
+        Flowcept.db._insert_or_update_object(
+            BlobObject(object_id=obj_id, object_type="artifact"),
             object=payload_v0,
-            object_id=obj_id,
-            object_type="artifact",
             save_data_in_collection=True,
         )
         blob_v0 = Flowcept.db.get_blob_object(obj_id)
@@ -265,10 +267,9 @@ class DBAPITest(unittest.TestCase):
         assert doc_v0["data"] == payload_v0
 
         payload_v1 = b"v1"
-        Flowcept.db.save_or_update_object(
+        Flowcept.db._insert_or_update_object(
+            BlobObject(object_id=obj_id, object_type="artifact"),
             object=payload_v1,
-            object_id=obj_id,
-            object_type="artifact",
             save_data_in_collection=True,
         )
         blob_v1 = Flowcept.db.get_blob_object(obj_id)
@@ -281,7 +282,7 @@ class DBAPITest(unittest.TestCase):
         with Flowcept(workflow_name="blob_gridfs_test"):
             expected_wf_id = Flowcept.current_workflow_id
             payload = b"gridfs-content-v0"
-            obj_id = Flowcept.db.save_or_update_object(
+            obj_id = Flowcept.insert_or_update_object(
                 object=payload,
                 task_id="task_gridfs_1",
                 object_type="artifact",
@@ -304,7 +305,7 @@ class DBAPITest(unittest.TestCase):
             expected_wf_id = Flowcept.current_workflow_id
             obj_id = str(uuid4())
             payload_v0 = b"gridfs-content-v0"
-            Flowcept.db.save_or_update_object(
+            Flowcept.insert_or_update_object(
                 object=payload_v0,
                 object_id=obj_id,
                 object_type="artifact",
@@ -316,7 +317,7 @@ class DBAPITest(unittest.TestCase):
             assert retrieved_v0 == payload_v0
 
             payload_v1 = b"gridfs-content-v1"
-            Flowcept.db.save_or_update_object(
+            Flowcept.insert_or_update_object(
                 object=payload_v1,
                 object_id=obj_id,
                 object_type="artifact",
@@ -337,17 +338,17 @@ class DBAPITest(unittest.TestCase):
     def test_blob_fingerprint_and_equality_in_object(self):
         with Flowcept(workflow_name="blob_fingerprint_test"):
             payload = b"equal-payload"
-            obj_id_a = Flowcept.db.save_or_update_object(
+            obj_id_a = Flowcept.insert_or_update_object(
                 object=payload,
                 object_type="artifact",
                 save_data_in_collection=True,
             )
-            obj_id_b = Flowcept.db.save_or_update_object(
+            obj_id_b = Flowcept.insert_or_update_object(
                 object=payload,
                 object_type="artifact",
                 save_data_in_collection=True,
             )
-            obj_id_c = Flowcept.db.save_or_update_object(
+            obj_id_c = Flowcept.insert_or_update_object(
                 object=b"different-payload",
                 object_type="artifact",
                 save_data_in_collection=True,
@@ -365,17 +366,17 @@ class DBAPITest(unittest.TestCase):
     def test_blob_fingerprint_and_equality_gridfs(self):
         with Flowcept(workflow_name="blob_fingerprint_gridfs_test"):
             payload = b"gridfs-equal-payload"
-            obj_id_a = Flowcept.db.save_or_update_object(
+            obj_id_a = Flowcept.insert_or_update_object(
                 object=payload,
                 object_type="artifact",
                 save_data_in_collection=False,
             )
-            obj_id_b = Flowcept.db.save_or_update_object(
+            obj_id_b = Flowcept.insert_or_update_object(
                 object=payload,
                 object_type="artifact",
                 save_data_in_collection=False,
             )
-            obj_id_c = Flowcept.db.save_or_update_object(
+            obj_id_c = Flowcept.insert_or_update_object(
                 object=b"gridfs-different-payload",
                 object_type="artifact",
                 save_data_in_collection=False,
@@ -393,7 +394,7 @@ class DBAPITest(unittest.TestCase):
     def test_ml_model_aliases(self):
         payload = b"model-bytes"
         with Flowcept(workflow_name="ml_model_alias_test"):
-            obj_id = Flowcept.db.save_or_update_ml_model(
+            obj_id = Flowcept.insert_or_update_ml_model(
                 object=payload,
                 task_id="task_model_1",
                 save_data_in_collection=True,
@@ -416,7 +417,7 @@ class DBAPITest(unittest.TestCase):
     def test_dataset_aliases(self):
         payload = b"dataset-bytes"
         with Flowcept(workflow_name="dataset_alias_test"):
-            obj_id = Flowcept.db.save_or_update_dataset(
+            obj_id = Flowcept.insert_or_update_dataset(
                 object=payload,
                 task_id="task_dataset_1",
                 save_data_in_collection=True,
@@ -439,7 +440,7 @@ class DBAPITest(unittest.TestCase):
     def test_save_object_defaults_workflow_id_from_current_workflow(self):
         with Flowcept(workflow_name="blob_default_wf_test"):
             current_wf_id = Flowcept.current_workflow_id
-            obj_id = Flowcept.db.save_or_update_object(
+            obj_id = Flowcept.insert_or_update_object(
                 object=b"default-wf-content",
                 task_id="task_default_wf",
                 object_type="artifact",
@@ -450,10 +451,33 @@ class DBAPITest(unittest.TestCase):
         assert blob.workflow_id == current_wf_id
 
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
+    def test_object_stores_created_at_without_control_version(self):
+        with Flowcept(workflow_name="blob_timestamps"):
+            obj_id = Flowcept.insert_or_update_object(
+                object=b"payload",
+                object_type="artifact",
+                save_data_in_collection=True,
+            )
+            doc = Flowcept.db.query(filter={"object_id": obj_id}, collection="objects")[0]
+            assert "created_at" in doc
+            assert "updated_at" in doc
+            created_at_v0 = doc["created_at"]
+
+            Flowcept.insert_or_update_object(
+                object=b"payload-v1",
+                object_id=obj_id,
+                object_type="artifact",
+                save_data_in_collection=True,
+            )
+            doc_v1 = Flowcept.db.query(filter={"object_id": obj_id}, collection="objects")[0]
+            assert doc_v1["created_at"] == created_at_v0
+            assert doc_v1["updated_at"] >= created_at_v0
+
+    @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_control_version_first_insert(self):
         with Flowcept(workflow_name="blob_control_first_insert"):
             payload = b"cv-v1"
-            obj_id = Flowcept.db.save_or_update_object(
+            obj_id = Flowcept.insert_or_update_object(
                 object=payload,
                 task_id="task_cv_1",
                 object_type="artifact",
@@ -476,13 +500,13 @@ class DBAPITest(unittest.TestCase):
         with Flowcept(workflow_name="blob_control_update_in_object"):
             payload_v1 = b"cv-in-object-v1"
             payload_v2 = b"cv-in-object-v2"
-            obj_id = Flowcept.db.save_or_update_object(
+            obj_id = Flowcept.insert_or_update_object(
                 object=payload_v1,
                 object_type="artifact",
                 save_data_in_collection=True,
                 control_version=True,
             )
-            Flowcept.db.save_or_update_object(
+            Flowcept.insert_or_update_object(
                 object=payload_v2,
                 object_id=obj_id,
                 object_type="artifact",
@@ -506,13 +530,13 @@ class DBAPITest(unittest.TestCase):
         with Flowcept(workflow_name="blob_control_update_gridfs"):
             payload_v1 = b"cv-gridfs-v1"
             payload_v2 = b"cv-gridfs-v2"
-            obj_id = Flowcept.db.save_or_update_object(
+            obj_id = Flowcept.insert_or_update_object(
                 object=payload_v1,
                 object_type="artifact",
                 save_data_in_collection=False,
                 control_version=True,
             )
-            Flowcept.db.save_or_update_object(
+            Flowcept.insert_or_update_object(
                 object=payload_v2,
                 object_id=obj_id,
                 object_type="artifact",
@@ -529,12 +553,12 @@ class DBAPITest(unittest.TestCase):
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_get_object_history(self):
         with Flowcept(workflow_name="blob_list_versions"):
-            obj_id = Flowcept.db.save_or_update_object(
+            obj_id = Flowcept.insert_or_update_object(
                 object=b"lv-v1",
                 save_data_in_collection=True,
                 control_version=True,
             )
-            Flowcept.db.save_or_update_object(
+            Flowcept.insert_or_update_object(
                 object=b"lv-v2",
                 object_id=obj_id,
                 save_data_in_collection=True,
@@ -549,7 +573,7 @@ class DBAPITest(unittest.TestCase):
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_control_version_retry_on_cas_mismatch(self):
         with Flowcept(workflow_name="blob_cas_retry"):
-            obj_id = Flowcept.db.save_or_update_object(
+            obj_id = Flowcept.insert_or_update_object(
                 object=b"cas-v1",
                 save_data_in_collection=True,
                 control_version=True,
@@ -565,7 +589,7 @@ class DBAPITest(unittest.TestCase):
                 return original(*args, **kwargs)
 
             with patch.object(dao, "_update_with_optional_transaction", side_effect=flaky_update):
-                Flowcept.db.save_or_update_object(
+                Flowcept.insert_or_update_object(
                     object=b"cas-v2",
                     object_id=obj_id,
                     save_data_in_collection=True,

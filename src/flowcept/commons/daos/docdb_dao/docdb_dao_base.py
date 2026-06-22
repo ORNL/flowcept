@@ -11,6 +11,7 @@ import pandas as pd
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import WorkflowObject
 from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
+from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
 from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED
 
 
@@ -402,39 +403,26 @@ class DocumentDBDAO(ABC):
     @abstractmethod
     def save_or_update_object(
         self,
+        blob_obj,
         object,
-        object_id,
-        task_id,
-        workflow_id,
-        object_type,
-        custom_metadata,
-        save_data_in_collection,
-        pickle_,
+        save_data_in_collection=False,
+        pickle_=False,
         control_version=False,
-        tags=None,
     ):
-        """Save an object with associated metadata.
+        """Save an object with its BlobObject metadata.
 
         Parameters
         ----------
+        blob_obj : BlobObject
+            Metadata for the object. ``object_id`` is generated when ``None``.
         object : Any
-            The object to save.
-        object_id : str
-            Unique identifier for the object.
-        task_id : str
-            Task ID associated with the object.
-        workflow_id : str
-            Workflow ID associated with the object.
-        object_type : str
-            Type of the object.
-        custom_metadata : dict
-            Custom metadata to associate with the object.
-        save_data_in_collection : bool
-            Whether to save the object in a database collection.
-        pickle_ : bool
-            Whether to serialize the object using pickle.
-        tags : list of str, optional
-            Labels to associate with the object.
+            The binary payload to persist.
+        save_data_in_collection : bool, optional
+            Whether to store bytes in-document rather than GridFS.
+        pickle_ : bool, optional
+            Whether to serialize the payload with pickle before storing.
+        control_version : bool, optional
+            If ``True``, enable append-only history semantics.
 
         Raises
         ------

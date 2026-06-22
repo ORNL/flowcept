@@ -8,6 +8,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
+from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
 from flowcept.configs import (
     ENRICH_MESSAGES,
     TELEMETRY_ENABLED,
@@ -163,6 +164,14 @@ class BaseInterceptor(object):
             agent_obj.enrich()
         self.intercept(agent_obj.to_dict())
         return agent_id
+
+    def send_object_message(self, blob_obj: BlobObject):
+        """Send object metadata message to the MQ buffer."""
+        if not self._mq_dao.started:
+            raise Exception(f"This interceptor {id(self)} has never been started!")
+        msg = blob_obj.to_dict()
+        msg["type"] = "object"
+        self.intercept(msg)
 
     def intercept(self, obj_msg: Dict):
         """Intercept a message."""

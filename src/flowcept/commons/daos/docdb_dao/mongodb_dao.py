@@ -6,7 +6,6 @@ from typing import List, Dict, Tuple, Any
 import io
 import json
 from uuid import uuid4
-from datetime import datetime, timezone
 
 import pickle
 import zipfile
@@ -581,11 +580,6 @@ class MongoDBDAO(DocumentDBDAO):
         }
 
     @staticmethod
-    def _utc_now():
-        """Get timezone-aware UTC timestamp."""
-        return datetime.now(timezone.utc)
-
-    @staticmethod
     def _payload_to_bytes(payload):
         """Convert supported payload types to bytes for hashing/size metadata."""
         if isinstance(payload, bytes):
@@ -903,27 +897,25 @@ class MongoDBDAO(DocumentDBDAO):
 
     def save_or_update_object(
         self,
+        blob_obj,
         object,
-        object_id=None,
-        task_id=None,
-        workflow_id=None,
-        object_type=None,
-        custom_metadata=None,
         save_data_in_collection=False,
         pickle_=False,
         control_version=False,
-        tags=None,
     ):
         """Save an object."""
-        if object_id is None:
-            object_id = str(uuid4())
-        now = MongoDBDAO._utc_now()
+        from time import time
         from flowcept.configs import FLOWCEPT_USER
 
-        actor = FLOWCEPT_USER
+        if blob_obj.object_id is None:
+            blob_obj.object_id = str(uuid4())
+        now = time()
+        if blob_obj.created_at is None:
+            blob_obj.created_at = now
+        blob_obj.updated_at = now
 
         obj_doc = {
-            "object_id": object_id,
+            "object_id": blob_obj.object_id,
             **self._build_blob_storage_doc(
                 object_payload=object,
                 save_data_in_collection=save_data_in_collection,
@@ -931,16 +923,16 @@ class MongoDBDAO(DocumentDBDAO):
             ),
         }
 
-        if task_id is not None:
-            obj_doc["task_id"] = task_id
-        if workflow_id is not None:
-            obj_doc["workflow_id"] = workflow_id
-        if object_type is not None:
-            obj_doc["object_type"] = object_type
-        if custom_metadata is not None:
-            obj_doc["custom_metadata"] = custom_metadata
-        if tags is not None:
-            obj_doc["tags"] = list(tags)
+        if blob_obj.task_id is not None:
+            obj_doc["task_id"] = blob_obj.task_id
+        if blob_obj.workflow_id is not None:
+            obj_doc["workflow_id"] = blob_obj.workflow_id
+        if blob_obj.object_type is not None:
+            obj_doc["object_type"] = blob_obj.object_type
+        if blob_obj.custom_metadata is not None:
+            obj_doc["custom_metadata"] = blob_obj.custom_metadata
+        if blob_obj.tags is not None:
+            obj_doc["tags"] = list(blob_obj.tags)
 
         if not control_version:
             update_query = [
@@ -948,32 +940,35 @@ class MongoDBDAO(DocumentDBDAO):
                     "$set": {
                         **obj_doc,
                         "version": {"$add": [{"$ifNull": ["$version", -1]}, 1]},
+                        "created_at": {"$ifNull": ["$created_at", blob_obj.created_at]},
+                        "updated_at": blob_obj.updated_at,
                     }
                 }
             ]
             self._obj_collection.update_one(
-                {"object_id": object_id},
+                {"object_id": blob_obj.object_id},
                 update_query,
                 upsert=True,
             )
-            return object_id
+            return blob_obj.object_id
 
+        actor = FLOWCEPT_USER
         max_attempts = 5
         for attempt in range(max_attempts):
-            latest_doc = self._obj_collection.find_one({"object_id": object_id})
+            latest_doc = self._obj_collection.find_one({"object_id": blob_obj.object_id})
             if latest_doc is None:
                 insert_doc = {
                     **obj_doc,
                     "version": 0,
                     "prev_version": None,
-                    "created_at": now,
+                    "created_at": blob_obj.created_at,
                     "created_by": actor,
-                    "updated_at": now,
+                    "updated_at": blob_obj.updated_at,
                     "updated_by": actor,
                 }
                 try:
                     self._obj_collection.insert_one(insert_doc)
-                    return object_id
+                    return blob_obj.object_id
                 except Exception:
                     if attempt == max_attempts - 1:
                         raise
@@ -985,20 +980,20 @@ class MongoDBDAO(DocumentDBDAO):
                 **obj_doc,
                 "version": expected_version + 1,
                 "prev_version": expected_version,
-                "created_at": latest_doc.get("created_at", now),
+                "created_at": latest_doc.get("created_at", blob_obj.created_at),
                 "created_by": latest_doc.get("created_by", actor),
-                "updated_at": now,
+                "updated_at": blob_obj.updated_at,
                 "updated_by": actor,
             }
             try:
                 matched_count = self._update_with_optional_transaction(
-                    object_id=object_id,
+                    object_id=blob_obj.object_id,
                     expected_version=expected_version,
                     latest_doc=latest_doc,
                     update_doc=update_doc,
                 )
                 if matched_count == 1:
-                    return object_id
+                    return blob_obj.object_id
                 # CAS failed; remove potential duplicate history append on next trial by ignoring dup insert.
                 sleep(0.02 * (attempt + 1))
             except Exception as e:
@@ -1008,7 +1003,7 @@ class MongoDBDAO(DocumentDBDAO):
                 sleep(0.02 * (attempt + 1))
                 continue
 
-        raise ValueError(f"Could not update object_id={object_id} due to repeated concurrent CAS failures.")
+        raise ValueError(f"Could not update object_id={blob_obj.object_id} due to repeated concurrent CAS failures.")
 
     def update_object_metadata(
         self,
@@ -1024,10 +1019,11 @@ class MongoDBDAO(DocumentDBDAO):
         if object_id is None:
             raise ValueError("object_id must not be None.")
 
+        from time import time
         from flowcept.configs import FLOWCEPT_USER
 
         actor = FLOWCEPT_USER
-        now = MongoDBDAO._utc_now()
+        now = time()
         set_fields = {}
 
         if custom_metadata is not None:

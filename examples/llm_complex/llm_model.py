@@ -229,7 +229,7 @@ def model_train(
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             if with_persistence:
-                best_obj_id = Flowcept.db.save_or_update_torch_model(
+                best_obj_id = Flowcept.insert_or_update_torch_model(
                     model,
                     object_id=best_obj_id,
                     task_id=epochs_loop.get_current_iteration_id(),

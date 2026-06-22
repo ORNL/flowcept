@@ -91,7 +91,7 @@ def get_dataset(n_samples, split_ratio):
     y_train, y_val = y[:n_train], y[n_train:]
     dataset_task_id = get_current_context_task_id()
     custom_metadata = {"n_samples": n_samples, "split_ratio": split_ratio}
-    dataset_object_id = Flowcept.db.save_or_update_dataset(
+    dataset_object_id = Flowcept.insert_or_update_dataset(
         object={
             "x_train": x_train,
             "y_train": y_train,
@@ -193,7 +193,7 @@ def train_and_validate(
             }
             if config_id is not None:
                 custom_metadata["config_id"] = config_id
-            torch_model_object_id = Flowcept.db.save_or_update_torch_model(
+            torch_model_object_id = Flowcept.insert_or_update_torch_model(
                 model=model,
                 object_id=torch_model_object_id,
                 task_id=current_task_id,
@@ -201,7 +201,7 @@ def train_and_validate(
                 control_version=True,
             )
             if not torch_only:
-                ml_model_object_id = Flowcept.db.save_or_update_ml_model(
+                ml_model_object_id = Flowcept.insert_or_update_ml_model(
                     object=model.state_dict(),
                     object_id=ml_model_object_id,
                     task_id=current_task_id,

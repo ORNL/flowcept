@@ -973,16 +973,11 @@ class LMDBDAO(DocumentDBDAO):
 
     def save_or_update_object(
         self,
+        blob_obj,
         object,
-        object_id,
-        task_id,
-        workflow_id,
-        object_type,
-        custom_metadata,
-        save_data_in_collection,
-        pickle_,
+        save_data_in_collection=False,
+        pickle_=False,
         control_version=False,
-        tags=None,
     ):
         """Save object."""
         raise NotImplementedError
