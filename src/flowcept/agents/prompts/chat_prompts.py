@@ -6,9 +6,21 @@ import json
 from typing import Any, Dict, Optional
 
 _TASK_KEY_FIELDS = {
-    "task_id", "activity_id", "workflow_id", "campaign_id", "agent_id",
-    "status", "started_at", "ended_at", "used", "generated",
-    "hostname", "tags", "parent_task_id", "telemetry_at_start", "telemetry_at_end",
+    "task_id",
+    "activity_id",
+    "workflow_id",
+    "campaign_id",
+    "agent_id",
+    "status",
+    "started_at",
+    "ended_at",
+    "used",
+    "generated",
+    "hostname",
+    "tags",
+    "parent_task_id",
+    "telemetry_at_start",
+    "telemetry_at_end",
 }
 _WORKFLOW_KEY_FIELDS = {"workflow_id", "name", "campaign_id", "user", "utc_timestamp"}
 _BLOB_KEY_FIELDS = {"object_id", "object_type", "task_id", "workflow_id", "tags", "version"}
@@ -21,6 +33,7 @@ def _build_schema_section() -> str:
             SCHEMA_CONTEXT,
             build_schema_context,
         )
+
         ctx = SCHEMA_CONTEXT if SCHEMA_CONTEXT else build_schema_context()
     except Exception:
         ctx = {}
@@ -38,11 +51,7 @@ def _build_schema_section() -> str:
     blob_line = _fmt(ctx.get("blob_fields", []), _BLOB_KEY_FIELDS)
 
     if task_line and wf_line and blob_line:
-        return (
-            f"Key task fields: {task_line}.\n"
-            f"Key workflow fields: {wf_line}.\n"
-            f"Key object fields: {blob_line}."
-        )
+        return f"Key task fields: {task_line}.\nKey workflow fields: {wf_line}.\nKey object fields: {blob_line}."
     # fallback (SCHEMA_CONTEXT not yet populated)
     return (
         "Key task fields: `task_id`, `activity_id` (function name), `workflow_id`, "

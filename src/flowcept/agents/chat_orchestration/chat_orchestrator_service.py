@@ -164,7 +164,9 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
 
     @tool
     def get_workflow_context() -> str:
-        """Return the workflow record(s) loaded in the agent's in-memory context (DF path counterpart to query_workflows)."""
+        """Return the workflow record(s) loaded in the agent's in-memory context
+        (DF path counterpart to query_workflows).
+        """
         return _run_mcp("get_workflow_context")
 
     db_tools = [
@@ -238,7 +240,9 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool:
         lower = text.lower()
         names = set(tools_by_name)
         has_specific_value = any(marker in lower for marker in ("task_id", "object_id", "workflow_id"))
-        if "generate_result_df" in names and any(word in lower for word in ("submit", "submitted", "producer", "produced")):
+        if "generate_result_df" in names and any(
+            word in lower for word in ("submit", "submitted", "producer", "produced")
+        ):
             # Pattern B: general attribution — query starts with "which/what" (no specific lookup
             # value) and asks about the agent. list_agents alone is sufficient.
             if (
@@ -249,8 +253,7 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool:
             ):
                 return [{"name": "list_agents", "args": {}, "id": str(uuid.uuid4())}]
             query = (
-                text
-                + "\nInterpret submission/producer questions through provenance dataflow: "
+                text + "\nInterpret submission/producer questions through provenance dataflow: "
                 "find upstream task rows whose generated.* values match used.* values consumed by the target activity, "
                 "then return the upstream activity_id and agent_id. "
                 "For work-item submission, prefer producer tasks with generated list/dict descriptors that map to "
@@ -279,23 +282,25 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool:
         ):
             return [{"name": "get_task_summary", "args": {}, "id": str(uuid.uuid4())}]
         if "make_chart" in names and any(word in lower for word in ("plot", "chart", "graph")):
-            return [{
-                "name": "make_chart",
-                "args": {
-                    "card_spec": {
-                        "chart_id": "chat-chart",
-                        "type": "chart",
-                        "title": text,
-                        "data": {
-                            "source": "tasks",
-                            "group_by": "activity_id",
-                            "metrics": [{"agg": "count"}],
-                        },
-                        "viz": {"kind": "bar"},
-                    }
-                },
-                "id": str(uuid.uuid4()),
-            }]
+            return [
+                {
+                    "name": "make_chart",
+                    "args": {
+                        "card_spec": {
+                            "chart_id": "chat-chart",
+                            "type": "chart",
+                            "title": text,
+                            "data": {
+                                "source": "tasks",
+                                "group_by": "activity_id",
+                                "metrics": [{"agg": "count"}],
+                            },
+                            "viz": {"kind": "bar"},
+                        }
+                    },
+                    "id": str(uuid.uuid4()),
+                }
+            ]
         if "extract_or_fix_python_code" in names and ("fix" in lower or "python code" in lower or "dataframe" in lower):
             return [{"name": "extract_or_fix_python_code", "args": {"raw_text": text}, "id": str(uuid.uuid4())}]
         if "generate_plot_code" in names and any(word in lower for word in ("plot", "chart", "graph")):

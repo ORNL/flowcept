@@ -89,8 +89,33 @@ class ExplicitTaskTest(unittest.TestCase):
             read_args["workflow_id"] = workflow_id
 
         flowcept_messages = Flowcept.read_buffer_file(**read_args)
-        assert len(flowcept_messages) == 4
+        # 1 workflow start + 3 tasks + 1 workflow end = 5
+        assert len(flowcept_messages) == 5
 
+    @pytest.mark.safeoffline
+    def test_workflow_start_end_fields(self):
+        """Workflow messages must carry started_at on start and ended_at+status=FINISHED on stop."""
+        if not configs.DUMP_BUFFER_ENABLED:
+            self.skipTest("Skipping: project.dump_buffer.enabled is false.")
+
+        flowcept = Flowcept(start_persistence=False, save_workflow=True).start()
+        workflow_id = Flowcept.current_workflow_id
+        flowcept.stop()
+
+        read_args = {"file_path": configs.DUMP_BUFFER_PATH}
+        if configs.APPEND_WORKFLOW_ID_TO_PATH or configs.APPEND_ID_TO_PATH:
+            read_args["consolidate"] = True
+            read_args["workflow_id"] = workflow_id
+
+        messages = Flowcept.read_buffer_file(**read_args)
+        wf_messages = [m for m in messages if m.get("type") == "workflow"]
+
+        start_msg = next((m for m in wf_messages if "started_at" in m and "ended_at" not in m), None)
+        end_msg = next((m for m in wf_messages if "ended_at" in m), None)
+
+        assert start_msg is not None, "No workflow start message with started_at found."
+        assert end_msg is not None, "No workflow end message with ended_at found."
+        assert end_msg.get("status") == Status.FINISHED, "Workflow end message must have status=FINISHED."
 
     @pytest.mark.safeoffline
     def test_data_files(self):

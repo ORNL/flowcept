@@ -958,3 +958,66 @@ class TestProvAgentInstrumentation(unittest.TestCase):
 
         sig = inspect.signature(svc._build_graph)
         self.assertNotIn("workflow_id", sig.parameters)
+
+
+class TestContextManager(unittest.TestCase):
+
+    def test_workflow_schema_updates_on_new_activity(self):
+        """Schema cache updates when a finished task with a new activity_id arrives."""
+        from flowcept.agents.mcp.context_manager import FlowceptAgentContextManager
+        from flowcept.commons.vocabulary import Status
+
+        cm = FlowceptAgentContextManager()
+        wf_id = "test-wf-schema"
+
+        # Task with activity_id "train" — finished, has both used and generated.
+        task1 = {
+            "type": "task",
+            "task_id": "t1",
+            "workflow_id": wf_id,
+            "activity_id": "train",
+            "used": {"lr": 0.01},
+            "generated": {"loss": 0.5},
+            "ended_at": 1.0,
+            "status": Status.FINISHED,
+        }
+        cm.message_handler(task1)
+        assert wf_id in cm.context.workflow_schema_cache
+        cache_after_first = cm.context.workflow_schema_cache[wf_id]
+        assert cache_after_first is not None
+
+        # Same activity_id again — schema cache should NOT update again.
+        task2 = dict(task1, task_id="t2", used={"lr": 0.001}, generated={"loss": 0.4})
+        cm.message_handler(task2)
+        assert cm.context.workflow_schema_cache[wf_id] is cache_after_first
+
+        # New activity_id "evaluate" — schema cache SHOULD update.
+        task3 = {
+            "type": "task",
+            "task_id": "t3",
+            "workflow_id": wf_id,
+            "activity_id": "evaluate",
+            "used": {"model": "best"},
+            "generated": {"accuracy": 0.95},
+            "ended_at": 2.0,
+            "status": Status.FINISHED,
+        }
+        cm.message_handler(task3)
+        assert cm.context.workflow_schema_cache[wf_id] is not cache_after_first
+
+    def test_workflow_finish_triggers_schema_persist(self):  # noqa: D102
+        """A workflow message with status=FINISHED triggers persist_workflow_schema_snapshot."""
+        from unittest.mock import patch
+        from flowcept.agents.mcp.context_manager import FlowceptAgentContextManager
+        from flowcept.commons.vocabulary import Status
+
+        cm = FlowceptAgentContextManager()
+        wf_id = "test-wf-finish"
+
+        # Seed schema cache so persist has something to work with.
+        cm.context.workflow_schema_cache[wf_id] = {"dynamic_schema": {}, "value_examples": {}, "current_fields": []}
+
+        wf_msg = {"type": "workflow", "workflow_id": wf_id, "status": Status.FINISHED}
+        with patch.object(cm, "persist_workflow_schema_snapshot") as mock_persist:
+            cm.message_handler(wf_msg)
+            mock_persist.assert_called_once_with(wf_id)

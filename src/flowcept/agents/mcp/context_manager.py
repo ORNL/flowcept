@@ -125,6 +125,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         self.schema_tracker = DynamicSchemaTracker(**self.tracker_config)
         self.objects_schema_tracker = DynamicSchemaTracker(**self.tracker_config)
         self.workflow_schema_trackers = {}
+        self._seen_activities: dict = {}
         self.msgs_counter = 0
         self.context_chunk_size = 1  # Should be in the settings
         super().__init__(allow_mq_disabled=True)
@@ -135,6 +136,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         self.schema_tracker = DynamicSchemaTracker(**self.tracker_config)
         self.objects_schema_tracker = DynamicSchemaTracker(**self.tracker_config)
         self.workflow_schema_trackers = {}
+        self._seen_activities = {}
         self.msgs_counter = 0
 
     @asynccontextmanager
@@ -182,7 +184,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                 self.logger.info("Ignoring agent runtime workflow; keeping loaded workflow context.")
                 return True
             self.context.workflow_msg_obj = msg_obj
-            if self._workflow_finished(msg_obj):
+            if WorkflowObject.from_dict(msg_obj).workflow_is_finished():
                 self.persist_workflow_schema_snapshot(msg_obj.get("workflow_id"))
             return True
 
@@ -254,6 +256,19 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                     self.logger.error(f"Could not add these tasks to buffer!\n{task_slice}")
                     self.logger.exception(e)
 
+                activity_id = msg_obj.get("activity_id")
+                workflow_id = msg_obj.get("workflow_id")
+                if (
+                    activity_id
+                    and workflow_id
+                    and msg_obj.get("ended_at")
+                    and msg_obj.get("used")
+                    and msg_obj.get("generated")
+                    and activity_id not in self._seen_activities.get(workflow_id, set())
+                ):
+                    self.update_workflow_schema_cache([msg_obj])
+                    self._seen_activities.setdefault(workflow_id, set()).add(activity_id)
+
                 # self.monitor_chunk()
 
         return True
@@ -266,12 +281,6 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 
         _df = self._to_context_df(tasks)
         self.context.df = pd.concat([self.context.df, _df], ignore_index=True)
-        self.update_workflow_schema_cache(tasks)
-
-    @staticmethod
-    def _workflow_finished(msg_obj: Dict):
-        """Return True when a workflow message indicates completion."""
-        return bool(msg_obj.get("finished")) or msg_obj.get("status") == "FINISHED" or msg_obj.get("ended_at") is not None
 
     def update_workflow_schema_cache(self, tasks: List[Dict]):
         """Update workflow-scoped dynamic schema snapshots from task records."""

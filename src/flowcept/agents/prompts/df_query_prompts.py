@@ -417,8 +417,7 @@ def build_extract_or_fix_python_code_prompt(raw_text, current_fields, runtime_er
         Formatted prompt.
     """
     error_section = (
-        f"\n    The code previously raised this runtime error — you MUST fix it:\n"
-        f"    {runtime_error}\n"
+        f"\n    The code previously raised this runtime error — you MUST fix it:\n    {runtime_error}\n"
         if runtime_error
         else ""
     )

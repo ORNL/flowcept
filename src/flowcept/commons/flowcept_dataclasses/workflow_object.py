@@ -4,6 +4,7 @@ from typing import Dict, AnyStr, List
 import msgpack
 from omegaconf import OmegaConf, DictConfig
 
+from flowcept.commons.vocabulary import Status
 from flowcept.version import __version__
 from flowcept.commons.utils import get_utc_now, get_git_info
 from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -96,12 +97,20 @@ class WorkflowObject:
     subtype: AnyStr = None
     """Optional subtype of the workflow (e.g., data_prep_workflow, ml_workflow)."""
 
+    started_at: float = None
+    """Timestamp when the workflow execution started."""
+
+    ended_at: float = None
+    """Timestamp when the workflow execution ended."""
+
+    status: Status = None
+    """Execution status of the workflow (e.g., FINISHED, ERROR)."""
+
     def __init__(self, workflow_id=None, name=None, used=None, generated=None):
         self.workflow_id = workflow_id
         self.name = name
         self.used = used
         self.generated = generated
-        self.utc_timestamp = get_utc_now()
 
     @staticmethod
     def workflow_id_field():
@@ -113,8 +122,14 @@ class WorkflowObject:
         """Convert from dictionary."""
         wf_obj = WorkflowObject()
         for k, v in dict_obj.items():
+            if k == "status" and isinstance(v, str):
+                v = Status(v)
             setattr(wf_obj, k, v)
         return wf_obj
+
+    def workflow_is_finished(self) -> bool:
+        """Return True when this workflow has completed."""
+        return self.status in {Status.FINISHED, Status.ERROR}
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -189,7 +204,6 @@ class WorkflowObject:
             f"machine_info={repr(self.machine_info)}, "
             f"flowcept_settings={repr(self.flowcept_settings)}, "
             f"flowcept_version={repr(self.flowcept_version)}, "
-            f"utc_timestamp={repr(self.utc_timestamp)}, "
             f"user={repr(self.user)}, "
             f"campaign_id={repr(self.campaign_id)}, "
             f"adapter_id={repr(self.adapter_id)}, "

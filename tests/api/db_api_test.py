@@ -5,6 +5,7 @@ from unittest.mock import patch
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept import BlobObject, Flowcept, WorkflowObject, AgentObject
+from flowcept.commons.vocabulary import Status
 from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED
 from flowcept.flowceptor.telemetry_capture import TelemetryCapture
 
@@ -752,3 +753,24 @@ class DBAPITest(unittest.TestCase):
         assert get_nested({"a": {"b": 1}}, "a.b") == 1
         assert get_nested({"a": {"b": 1}}, "a.c") is None
         assert get_nested({"a": 1}, "a.b") is None
+
+    def test_workflow_is_finished(self):
+        # A freshly constructed WorkflowObject (as sent through the MQ) is never finished.
+        wf = WorkflowObject()
+        assert not wf.workflow_is_finished(), (
+            "WorkflowObject.to_dict() never sets status, so workflow_is_finished() "
+            "must return False for a plain workflow message — if this fails, "
+            "the MQ publish path now sets status=FINISHED and the dead-logic is resolved."
+        )
+
+        # Only an explicit status=FINISHED makes it finished.
+        wf_finished = WorkflowObject.from_dict({"status": Status.FINISHED})
+        assert wf_finished.workflow_is_finished()
+
+        # Raw string value (as stored in DB docs) also matches because Status is a str enum.
+        wf_finished_str = WorkflowObject.from_dict({"status": "FINISHED"})
+        assert wf_finished_str.workflow_is_finished()
+
+        # Any other status is not finished.
+        wf_running = WorkflowObject.from_dict({"status": "RUNNING"})
+        assert not wf_running.workflow_is_finished()

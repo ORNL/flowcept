@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 from uuid import uuid4
 
 import flowcept
@@ -13,12 +13,15 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from time import time
+
 from flowcept.commons.utils import (
     ClassProperty,
     buffer_to_disk,
     resolve_dump_buffer_path,
     generate_pseudo_id,
 )
+from flowcept.commons.vocabulary import Status
 from flowcept.configs import (
     MQ_INSTANCES,
     INSTRUMENTATION_ENABLED,
@@ -69,7 +72,7 @@ class Flowcept(object):
 
     def __init__(
         self,
-        interceptors: List[str] = None,
+        interceptors: Union[List[str], str, None] = None,
         bundle_exec_id: str = None,
         campaign_id: str = None,
         workflow_id: str = None,
@@ -95,10 +98,10 @@ class Flowcept(object):
 
         Parameters
         ----------
-        interceptors : Union[BaseInterceptor, List[BaseInterceptor], str], optional
+        interceptors : Union[List[str], str, None], optional
             A list of interceptor kinds (or a single interceptor kind) to apply.
             Examples: "instrumentation", "dask", "mlflow", ...
-            The order of interceptors matters — place the outer-most interceptor first,
+            The order of interceptors matters — place the outermost interceptor first,
 
         bundle_exec_id : str, optional
             Identifier for grouping interceptors in a bundle, essential for the correct initialization and stop of
@@ -167,19 +170,21 @@ class Flowcept(object):
         self.args = args
         self.kwargs = kwargs
 
-        if interceptors:
-            self._interceptors = interceptors
-            if not isinstance(self._interceptors, list):
-                self._interceptors = [self._interceptors]
-        else:
+        self._interceptors: Union[List[str], None] = None
+        if interceptors is None:
             if not INSTRUMENTATION_ENABLED:
-                self._interceptors = None
                 self.enabled = False
             else:
                 self._interceptors = ["instrumentation"]
+        elif isinstance(interceptors, list):
+            self._interceptors = interceptors
+        else:
+            self._interceptors = [interceptors]
 
         self._interceptor_instances = None
+        self._first_interceptor: BaseInterceptor = None
         self._should_save_workflow = save_workflow
+        self._current_workflow_obj: WorkflowObject = None
         self._workflow_saved = False  # This is to ensure that the wf is saved only once.
         self.current_workflow_id = workflow_id or str(uuid4())
         self.campaign_id = campaign_id or str(uuid4())
@@ -231,6 +236,8 @@ class Flowcept(object):
                 interceptor_inst = BaseInterceptor.build(interceptor)
                 interceptor_inst.start(bundle_exec_id=self.bundle_exec_id, check_safe_stops=self._check_safe_stops)
                 self._interceptor_instances.append(interceptor_inst)
+                if self._first_interceptor is None:
+                    self._first_interceptor = interceptor_inst
                 if isinstance(interceptor_inst._mq_dao.buffer, AutoflushBuffer):
                     Flowcept.buffer = self.buffer = interceptor_inst._mq_dao.buffer.current_buffer
                 else:
@@ -463,11 +470,9 @@ class Flowcept(object):
             workflow_id=workflow_id or self.current_workflow_id,
             campaign_id=campaign_id or self.campaign_id,
         )
-
-        interceptors = self._interceptor_instances or []
-        if not interceptors:
+        if not self._first_interceptor:
             raise Exception("No active interceptors are initialized or registered on this Flowcept instance.")
-        interceptors[0].send_agent_message(agent_obj)
+        self._first_interceptor.send_agent_message(agent_obj)
         return agent_obj.agent_id
 
     @staticmethod
@@ -656,35 +661,40 @@ class Flowcept(object):
         -------
         None
         """
-        wf_obj = WorkflowObject()
-        wf_obj.workflow_id = Flowcept.current_workflow_id
-        wf_obj.campaign_id = Flowcept.campaign_id
-        wf_obj.parent_workflow_id = self.parent_workflow_id
-        wf_obj.agent_id = self.agent_id
+        self._current_workflow_obj = WorkflowObject()
+        self._current_workflow_obj.workflow_id = Flowcept.current_workflow_id
+        self._current_workflow_obj.started_at = time()
+        self._current_workflow_obj.status = Status.RUNNING
+        self._current_workflow_obj.campaign_id = Flowcept.campaign_id
+        self._current_workflow_obj.parent_workflow_id = self.parent_workflow_id
+        self._current_workflow_obj.agent_id = self.agent_id
         if self.workflow_name:
-            wf_obj.name = self.workflow_name
+            self._current_workflow_obj.name = self.workflow_name
         if self.workflow_description:
-            wf_obj.workflow_description = self.workflow_description
+            self._current_workflow_obj.workflow_description = self.workflow_description
         if self.workflow_subtype:
-            wf_obj.subtype = self.workflow_subtype
+            self._current_workflow_obj.subtype = self.workflow_subtype
         if self.workflow_args:
-            wf_obj.used = self.workflow_args
+            self._current_workflow_obj.used = self.workflow_args
 
         if interceptor == "dask":
             dask_client = self.kwargs.get("dask_client", None)
             if dask_client:
                 from flowcept.flowceptor.adapters.dask.dask_plugins import set_workflow_info_on_workers
 
-                wf_obj.adapter_id = "dask"
+                self._current_workflow_obj.adapter_id = "dask"
                 scheduler_info = dict(dask_client.scheduler_info())
-                wf_obj.custom_metadata = {"n_workers": len(scheduler_info["workers"]), "scheduler": scheduler_info}
-                set_workflow_info_on_workers(dask_client, wf_obj)
+                self._current_workflow_obj.custom_metadata = {
+                    "n_workers": len(scheduler_info["workers"]),
+                    "scheduler": scheduler_info,
+                }
+                set_workflow_info_on_workers(dask_client, self._current_workflow_obj)
             else:
                 raise Exception("You must provide the argument `dask_client` so we can correctly link the workflow.")
 
         if KVDB_ENABLED:
             interceptor_instance._mq_dao.set_campaign_id(Flowcept.campaign_id)
-        interceptor_instance.send_workflow_message(wf_obj)
+        interceptor_instance.send_workflow_message(self._current_workflow_obj)
         self._workflow_saved = True
 
     def _init_persistence(self, mq_host=None, mq_port=None):
@@ -702,6 +712,15 @@ class Flowcept(object):
         if not self.is_started or not self.enabled:
             self.logger.warning("Flowcept is already stopped or may never have been started!")
             return
+
+        if (
+            self._should_save_workflow
+            and self._first_interceptor is not None
+            and self._current_workflow_obj is not None
+        ):
+            self._current_workflow_obj.ended_at = time()
+            self._current_workflow_obj.status = Status.FINISHED
+            self._first_interceptor.intercept(self._current_workflow_obj.to_dict())
 
         if self._interceptors and len(self._interceptor_instances):
             for interceptor in self._interceptor_instances:
