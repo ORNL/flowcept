@@ -15,10 +15,12 @@ If a tool requires its own file, make that file (which should immediately go to 
 ## 1. First Principles
 
 - Be surgical. Prefer small, reviewable changes.
+- Flowcept is extremely performance-sensitive, especially in the data producer path. Even small ifs, loops, or function calls in hot paths must be avoided at all costs.
 - Reuse above all. Avoid duplication and one-off fixes. Duplicating code or logic is a MAJOR problem. Avoid it at all costs.
 - Separation of concerns is extremely important in this project. Mixing concerns is not acceptable. Each module in the project has a clear and separate concern. Report if you find violations.
 - Do not overengineer.
 - Prefer visible failures over fallback code that hides contract mismatches.
+- Never add defensive type checks, isinstance guards, or fallback values unless explicitly asked. Let the code break loudly.
 - Prefer `settings.yaml` over hardcoded behavior.
 - Avoid dependency pins unless there is a proven direct reason and no better practical fix.
 - Do not commit personal absolute paths.
@@ -28,11 +30,12 @@ If a tool requires its own file, make that file (which should immediately go to 
 
 ## 2. Interaction Rules
 
+- Answer questions in text only. Questions ("why", "how", "is X", "should we", "assess") are never commands to write code.
+- Never edit more than what was explicitly named in the request.
+- If fixing X reveals problem Y, report Y — do not fix it.
 - Keep responses under 50 words unless the user asks for detail.
-- Do not dump large code or long explanations unless explicitly asked.
 - Before long-running operations, warn the user and ask permission.
-- During approved long operations, provide brief status updates about every minute.
-- The human user is the owner and responsible for all actions in this code. Explain tradeoffs clearly, then follow decisions.
+- The human user is the owner. Explain tradeoffs clearly, then follow decisions.
 
 ## 3. Editing Rules
 
