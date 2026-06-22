@@ -57,7 +57,7 @@ dashboards, workflow cards, and natural-language provenance exploration.
 
 ## Why Flowcept?
 
-- **Distributed by design**: MQ-based provenance streaming with Redis, Kafka, and MOFKA, plus database-backed storage for online querying.
+- **Distributed by design**: MQ-based provenance streaming with [Redis](https://redis.io) (default), [RabbitMQ](https://www.rabbitmq.com), [Kafka](https://kafka.apache.org), and [Mofka](https://mofka.readthedocs.io), plus database-backed storage for online querying.
 - **Low-overhead HPC capture**: buffer and stream provenance with low interference in large-scale jobs.
 - **Plugin-friendly capture**: instrument native code or use adapters, including PyTorch, Dask, MLflow, TensorBoard, and more.
 - **AI/ML-ready semantics**: preserve workflow, task, parameter, metric, model, tensor, artifact, telemetry, and resource-usage context.
@@ -183,7 +183,7 @@ Flowcept supports several capture styles. Use the least invasive one that answer
 | Loop capture | `FlowceptLoop` |
 | ML model and tensor semantics | PyTorch instrumentation |
 | Tool/framework observability | Dask, MLflow, TensorBoard, MCP, and other adapters |
-| Distributed runtime stream | Redis, Kafka, or MOFKA message queues |
+| Distributed runtime stream | [Redis](https://redis.io), [RabbitMQ](https://www.rabbitmq.com), [Kafka](https://kafka.apache.org), or [Mofka](https://mofka.readthedocs.io) message queues |
 | Queryable persistent store | MongoDB or LMDB |
 
 Read [Provenance Capture Methods](https://flowcept.readthedocs.io/en/latest/prov_capture.html) for examples.
@@ -195,7 +195,7 @@ Flowcept can run fully offline or as an online distributed system.
 | Mode | What happens |
 |---|---|
 | Offline JSONL | Provenance is captured locally and can be loaded later. |
-| MQ stream | Runtime records are streamed through Redis, Kafka, or MOFKA. |
+| MQ stream | Runtime records are streamed through [Redis](https://redis.io), [RabbitMQ](https://www.rabbitmq.com), [Kafka](https://kafka.apache.org), or [Mofka](https://mofka.readthedocs.io). |
 | MongoDB | Rich online queries, web UI, dashboards, workflow cards, and agent chat. |
 | LMDB | Lightweight local persistence without an external database service. |
 
@@ -237,6 +237,7 @@ pip install "flowcept[mongo]"         # MongoDB support
 pip install "flowcept[webservice]"    # REST API and web UI
 pip install "flowcept[dask]"          # Dask adapter
 pip install "flowcept[mlflow]"        # MLflow adapter
+pip install "flowcept[rabbitmq]"      # RabbitMQ MQ
 pip install "flowcept[kafka]"         # Kafka MQ
 pip install "flowcept[telemetry]"     # CPU/memory telemetry
 pip install "flowcept[lmdb]"          # LMDB storage

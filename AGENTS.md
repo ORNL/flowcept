@@ -224,7 +224,7 @@ Important CI surfaces:
 - `run-tests.yml`: broad Redis and Kafka path on push/schedule.
 - `run-tests-simple.yml`: Redis without Mongo.
 - `run-tests-offline.yml`: full offline profile.
-- `run-tests-kafka.yml`: Kafka + Mongo.
+- `run-tests-kafka-and-rabbit-mq.yml`: Kafka + RabbitMQ + Mongo.
 - `run-tests-all-dbs.yml`: Mongo and LMDB coverage.
 - `run-tests-in-container.yml`: Docker image tests.
 - `run-tests-py313.yml`: Python 3.13 subset.
