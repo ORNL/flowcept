@@ -28,6 +28,22 @@ CHAT_WORKFLOW_NAME = "Flowcept LangGraph Chat"
 _memory = MemorySaver()
 
 
+def _format_error(exc: BaseException, _depth: int = 0) -> str:
+    """Return a user-facing error string, unwrapping ExceptionGroup to its real cause."""
+    if _depth > 5:
+        return str(exc) or type(exc).__name__
+    if hasattr(exc, "exceptions"):  # ExceptionGroup / BaseExceptionGroup (Python 3.11+)
+        inner = "; ".join(_format_error(sub, _depth + 1) for sub in exc.exceptions)
+        return (
+            f"A tool call failed ({inner}). "
+            "This may be a transient service error — try rephrasing your question "
+            "or narrowing the scope (e.g. add a workflow_id or campaign_id)."
+        )
+    if exc.__cause__ is not None:
+        return _format_error(exc.__cause__, _depth + 1)
+    return str(exc) or type(exc).__name__
+
+
 def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_edit: bool):
     """Wrap MCP tools as LangChain tools."""
     from langchain_core.tools import tool
@@ -381,8 +397,7 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool:
             return [{"name": "generate_result_df", "args": {"query": query}, "id": str(uuid.uuid4())}]
         if "generate_result_df" in names and "how many" in lower and any(w in lower for w in ("task", "tasks")):
             query = (
-                text
-                + "\nReturn a self-descriptive DataFrame, e.g. result = pd.DataFrame({'task_count': [len(df)]})"
+                text + "\nReturn a self-descriptive DataFrame, e.g. result = pd.DataFrame({'task_count': [len(df)]})"
                 " so the count is clearly labeled."
             )
             return [{"name": "generate_result_df", "args": {"query": query}, "id": str(uuid.uuid4())}]
@@ -665,4 +680,4 @@ def run_chat(
             yield {"event": "done"}
         except Exception as e:
             logger.exception(e)
-            yield {"event": "error", "data": str(e)}
+            yield {"event": "error", "data": _format_error(e)}
