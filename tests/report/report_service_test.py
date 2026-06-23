@@ -427,8 +427,15 @@ class ReportServiceTests(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[2]
         env = os.environ.copy()
         with tempfile.TemporaryDirectory() as td:
-            env.pop("FLOWCEPT_SETTINGS_PATH", None)
-            env.pop("FLOWCEPT_USE_DEFAULT", None)
+            for _k in (
+                "FLOWCEPT_SETTINGS_PATH",
+                "FLOWCEPT_USE_DEFAULT",
+                "LMDB_ENABLED",
+                "MONGO_ENABLED",
+                "MQ_ENABLED",
+                "DB_FLUSH_MODE",
+            ):
+                env.pop(_k, None)
             env["HOME"] = td
             env["PYTHONPATH"] = str(repo_root / "src")
             result = subprocess.run(

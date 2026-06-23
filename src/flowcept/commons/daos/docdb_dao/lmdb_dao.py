@@ -642,17 +642,17 @@ class LMDBDAO(DocumentDBDAO):
             rows.append(group)
         return _merge_summary_rows(rows)
 
-    def derive_campaigns(self) -> List[Dict]:
+    def derive_campaigns(self, campaign_id: str = None) -> List[Dict]:
         """Derive campaign summaries via in-process aggregation (LMDB path)."""
         from flowcept.commons.daos.docdb_dao.docdb_dao_utils import to_epoch
 
         campaigns: Dict = {}
 
-        def _campaign(campaign_id):
+        def _campaign(cid):
             return campaigns.setdefault(
-                campaign_id,
+                cid,
                 {
-                    "campaign_id": campaign_id,
+                    "campaign_id": cid,
                     "workflow_count": 0,
                     "task_count": 0,
                     "users": set(),
@@ -671,6 +671,8 @@ class LMDBDAO(DocumentDBDAO):
                 record["last_ts"] = val if record["last_ts"] is None else max(record["last_ts"], val)
 
         wf_filter = {"campaign_id": {"$exists": True, "$ne": None}}
+        if campaign_id is not None:
+            wf_filter["campaign_id"] = campaign_id
         for doc in self.workflow_query(filter=wf_filter) or []:
             if not doc.get("campaign_id"):
                 continue
