@@ -186,9 +186,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             loaded_wf_id = (self.context.workflow_msg_obj or {}).get("workflow_id")
             incoming_wf_id = msg_obj.get("workflow_id")
             if loaded_wf_id and incoming_wf_id and loaded_wf_id != incoming_wf_id:
-                self.logger.info(
-                    "Ignoring runtime workflow (different workflow_id); keeping loaded workflow context."
-                )
+                self.logger.info("Ignoring runtime workflow (different workflow_id); keeping loaded workflow context.")
                 return True
             self.context.workflow_msg_obj = msg_obj
             if WorkflowObject.from_dict(msg_obj).workflow_is_finished():
