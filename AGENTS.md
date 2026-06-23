@@ -9,6 +9,10 @@ Prompts in `src/flowcept/agents/prompts/` must remain domain- and application-ag
 
 Do not add few-shots to fix specific queries; revisit the prompting strategy instead.
 
+## Test Failure Rule
+
+Fix the system or the expectation — never the test data.
+
 Do not duplicate these rules in `CLAUDE.md`, `.cursor/rules`, `GEMINI.md`, `SKILL.md`, or other agent files.
 If a tool requires its own file, make that file (which should immediately go to .gitignore) a thin pointer to this one.
 
@@ -17,7 +21,8 @@ If a tool requires its own file, make that file (which should immediately go to 
 - Be surgical. Prefer small, reviewable changes.
 - Before proposing any implementation or design strategy, find how the codebase already solves the same concern — same class type, same data flow, same operation. Replicate that solution exactly. If no existing pattern exists, flag it in the response before implementing.
 - Flowcept is extremely performance-sensitive, especially in the data producer path. Even small ifs, loops, or function calls in hot paths must be avoided at all costs.
-- Reuse above all. Avoid duplication and one-off fixes. Duplicating code or logic is a MAJOR problem. Avoid it at all costs.
+- Reuse above all. Avoid duplication and one-off fixes. Duplicating code or logic is a MAJOR problem. Avoid it at all costs. 
+- You often solve the main problem being addressed by silently injecting several other problems. Before editing a file, you need to assess the impact it will have in other parts of the code. One-off solutions bring more problems than resolve anything.
 - Separation of concerns is extremely important in this project. Mixing concerns is not acceptable. Each module in the project has a clear and separate concern. Report if you find violations.
 - Do not overengineer.
 - Prefer visible failures over fallback code that hides contract mismatches.
@@ -37,6 +42,7 @@ If a tool requires its own file, make that file (which should immediately go to 
 - Keep responses under 50 words unless the user asks for detail.
 - Before long-running operations, warn the user and ask permission.
 - The human user is the owner. Explain tradeoffs clearly, then follow decisions.
+ 
 
 ## 3. Editing Rules
 

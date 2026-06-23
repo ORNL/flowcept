@@ -55,6 +55,22 @@ def list_agents(filter: Optional[Dict[str, Any]] = None) -> ToolResult:
 
 @mcp_flowcept.tool()
 @agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+def query_objects(
+    filter: Optional[Dict[str, Any]] = None,
+    projection: Optional[Any] = None,
+    limit: int = 100,
+) -> ToolResult:
+    """Query stored data-object records (ML models, datasets, blobs) with a Mongo-style filter.
+
+    Use for model parameters, dataset metadata, artifact sizes, or file types.
+    """
+    if isinstance(projection, dict):
+        projection = [k for k, v in projection.items() if v]
+    return db_query_tools.query_objects(filter=filter, projection=projection or None, limit=limit)
+
+
+@mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
 def highlight_lineage(
     task_ids: Optional[List[str]] = None,
     filter: Optional[Dict[str, Any]] = None,

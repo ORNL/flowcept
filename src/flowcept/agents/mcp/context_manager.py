@@ -180,8 +180,15 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         msg_type = msg_obj.get("type", None)
         if msg_type == "workflow":
             # Preserve the user-loaded workflow when the agent/chat runtime emits its own workflow.
-            if self.context.workflow_msg_obj and msg_obj.get("agent_id"):
-                self.logger.info("Ignoring agent runtime workflow; keeping loaded workflow context.")
+            # Compare workflow_ids: if we have a loaded workflow and the incoming message belongs to
+            # a different workflow, ignore it so runtime chat/agent workflows never overwrite the
+            # explicitly loaded provenance workflow.
+            loaded_wf_id = (self.context.workflow_msg_obj or {}).get("workflow_id")
+            incoming_wf_id = msg_obj.get("workflow_id")
+            if loaded_wf_id and incoming_wf_id and loaded_wf_id != incoming_wf_id:
+                self.logger.info(
+                    "Ignoring runtime workflow (different workflow_id); keeping loaded workflow context."
+                )
                 return True
             self.context.workflow_msg_obj = msg_obj
             if WorkflowObject.from_dict(msg_obj).workflow_is_finished():

@@ -22,6 +22,30 @@ def _wait_for_tasks(workflow_id: str, min_count: int, timeout: float = 60.0) -> 
     return False
 
 
+def _wait_for_objects(workflow_id: str, min_count: int, timeout: float = 60.0) -> bool:
+    from flowcept.flowcept_api.db_api import DBAPI
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        count = len(DBAPI().blob_object_query(filter={"workflow_id": workflow_id}) or [])
+        if count >= min_count:
+            return True
+        time.sleep(0.5)
+    return False
+
+
+def _wait_for_agents(workflow_id: str, min_count: int, timeout: float = 60.0) -> bool:
+    from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        count = len(MongoDBDAO().agent_query(filter={"workflow_id": workflow_id}) or [])
+        if count >= min_count:
+            return True
+        time.sleep(0.5)
+    return False
+
+
 @pytest.fixture(scope="session")
 def gridsearch_run_data():
     """Run the Perceptron GridSearch experiment once and yield its artifacts.
@@ -59,6 +83,22 @@ def gridsearch_run_data():
     if not ok:
         count = len(Flowcept.db.task_query(filter={"workflow_id": workflow_id}) or [])
         logger.warning(f"gridsearch fixture: only {count} tasks persisted after timeout.")
+
+    # Wait for blob objects (dataset + ml_model checkpoints) — needed by DF-path object queries.
+    ok = _wait_for_objects(workflow_id, min_count=2)
+    if not ok:
+        from flowcept.flowcept_api.db_api import DBAPI
+
+        count = len(DBAPI().blob_object_query(filter={"workflow_id": workflow_id}) or [])
+        logger.warning(f"gridsearch fixture: only {count} objects persisted after timeout.")
+
+    # Wait for agents (HPCAgent + Orchestrator) — needed by list_agents tool calls.
+    ok = _wait_for_agents(workflow_id, min_count=2)
+    if not ok:
+        from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+
+        count = len(MongoDBDAO().agent_query(filter={"workflow_id": workflow_id}) or [])
+        logger.warning(f"gridsearch fixture: only {count} agents persisted after timeout.")
 
     yield run_data
 

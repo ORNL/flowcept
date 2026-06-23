@@ -41,7 +41,6 @@ class DBAPI(object):
             return value
         return str(value)
 
-
     @classmethod
     def _dao(cls) -> DocumentDBDAO:
         """Return the configured document DAO singleton."""

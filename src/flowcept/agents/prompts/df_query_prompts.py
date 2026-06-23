@@ -42,9 +42,9 @@ def get_object_schema_prompt(example_values, current_fields):
         Important object fields:
         - `object_type`: semantic object category, such as input_file, dataset, artifact, or ml_model.
         - `type`: Flowcept message type. For object rows this is usually "object"; do not use it as the object category.
-        - `object_size_bytes`: object payload size in bytes.
         - `file_path`: object path when available.
         - `workflow_id`: workflow associated with the object.
+        - `custom_metadata.*`: user-defined metadata (e.g. model_profile.params, n_samples, split_ratio).
 
         ALWAYS CHECK THE ALLOWED_FIELDS list before proceeding.
         ---
@@ -194,8 +194,8 @@ OBJECT_QUERY_GUIDELINES = """
 
     - Use `df` as the base DataFrame.
     - Use `object_type` for object category questions.
-    - Use `object_size_bytes` for object size questions.
     - Use `file_path` for file path questions.
+    - Use `custom_metadata.*` fields for model/dataset metadata (check ALLOWED_FIELDS for available sub-fields).
     - Use `workflow_id` when the query asks for workflow-specific objects.
     - The column `type` is the Flowcept message type, not the object category.
     - Explicitly list selected columns unless the user asks for all columns.
@@ -218,8 +218,8 @@ OBJECT_FEW_SHOTS = """
     # Q: How many objects are available?
     result = len(df)
 
-    # Q: List all input files larger than 100 MB
-    result = df[(df['object_type'] == 'input_file') & (df['object_size_bytes'] > 100 * 1000 * 1000)][['workflow_id', 'file_path', 'object_size_bytes']]
+    # Q: List all distinct object types
+    result = df['object_type'].dropna().unique()
 
 """
 

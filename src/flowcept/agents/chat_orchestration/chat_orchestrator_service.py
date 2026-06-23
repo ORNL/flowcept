@@ -143,7 +143,15 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
 
     @tool("generate_result_df")
     def generate_result_df(query: Any) -> str:
-        """Answer a natural-language question using the MCP server's in-memory task DataFrame."""
+        """Answer questions about task execution using the in-memory tasks DataFrame.
+
+        Use for questions about WHAT HAPPENED during the workflow: activities, task inputs/outputs,
+        timing, telemetry, agent actions, configuration parameters passed as task inputs, task counts,
+        lineage, and execution order. Each DataFrame row is a task record.
+
+        Do NOT use for questions about the inherent properties of stored data artifacts (models,
+        datasets, files) — use generate_objects_df for those.
+        """
         return _run_mcp("run_df_query", query=_query_text(query), plot=False, context_kind="tasks")
 
     @tool("generate_plot_code")
@@ -164,10 +172,58 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
 
     @tool
     def get_workflow_context() -> str:
-        """Return the workflow record(s) loaded in the agent's in-memory context
-        (DF path counterpart to query_workflows).
+        """Return the workflow record loaded in the agent's in-memory context (DF path counterpart to query_workflows).
+
+        Use this tool ONLY when the question is specifically about workflow-level metadata: workflow name,
+        campaign, start/end timestamps, owner/user, description, hardware, or workflow structure.
+        Do NOT call this tool for questions about tasks, activities, agents, data artifacts, or model parameters —
+        use generate_result_df or generate_objects_df for those instead.
         """
         return _run_mcp("get_workflow_context")
+
+    @tool
+    def query_objects(
+        filter: Optional[Dict[str, Any]] = None,
+        projection: Optional[Any] = None,
+        limit: int = 100,
+    ) -> str:
+        """Query stored data-object records (ML models, datasets, blobs) by their inherent properties.
+
+        Use when the question asks about WHAT AN ARTIFACT IS — e.g. model training technique,
+        optimizer, number of parameters or weights, purpose or designed uses, science domain, loss,
+        dataset sample count or split ratio, object type, file size, or any custom_metadata field.
+        Filter by ``workflow_id`` or ``object_type`` (``"ml_model"``, ``"dataset"``).
+        ``custom_metadata`` sub-fields use dot-notation, e.g. ``custom_metadata.model_profile.params``.
+
+        Do NOT use for questions about task execution — use query_tasks for those.
+        """
+        # Objects have no campaign_id field; scope by workflow_id only.
+        obj_filter = dict(filter or {})
+        if (context or {}).get("workflow_id"):
+            obj_filter["workflow_id"] = context["workflow_id"]
+        return _run_mcp(
+            "query_objects",
+            filter=obj_filter,
+            projection=_coerce_projection(projection),
+            limit=limit,
+        )
+
+    @tool("generate_objects_df")
+    def generate_objects_df(query: Any) -> str:
+        """Answer questions about the inherent properties of stored data artifacts using the objects DataFrame.
+
+        Use when the question asks about WHAT AN ARTIFACT IS or WHAT IT CONTAINS — not what task
+        processed it. Examples: model training technique (custom_metadata.finetuning_technique),
+        parameter count (custom_metadata.n_params or custom_metadata.model_profile.params),
+        purpose or designed uses (custom_metadata.task_type), science domain
+        (custom_metadata.science_domain), loss, dataset sample count or split ratio, object type,
+        file size, or any field stored in custom_metadata. Each DataFrame row is an object record
+        with fields like object_type, custom_metadata.*, file_path, and workflow_id.
+
+        Do NOT use for questions about task execution (who ran tasks, timing, agent actions, task
+        inputs) — use generate_result_df for those.
+        """
+        return _run_mcp("run_df_query", query=_query_text(query), plot=False, context_kind="objects")
 
     db_tools = [
         query_tasks,
@@ -177,6 +233,7 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         list_agents,
         make_chart,
         highlight_lineage,
+        query_objects,
     ]
     df_tools = [
         generate_result_df,
@@ -184,6 +241,7 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
         extract_or_fix_python_code,
         get_workflow_context,
         list_agents,
+        generate_objects_df,
     ]
     tool_context = (context or {}).get("tool_context", "db")
     if tool_context == "df":
@@ -301,6 +359,14 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool:
                     "id": str(uuid.uuid4()),
                 }
             ]
+        if "query_objects" in names and any(
+            phrase in lower for phrase in ("object type", "blob object", "artifact type", "object_type")
+        ):
+            return [{"name": "query_objects", "args": {}, "id": str(uuid.uuid4())}]
+        if "generate_objects_df" in names and any(
+            phrase in lower for phrase in ("object type", "blob object", "artifact type", "object_type")
+        ):
+            return [{"name": "generate_objects_df", "args": {"query": text}, "id": str(uuid.uuid4())}]
         if "extract_or_fix_python_code" in names and ("fix" in lower or "python code" in lower or "dataframe" in lower):
             return [{"name": "extract_or_fix_python_code", "args": {"raw_text": text}, "id": str(uuid.uuid4())}]
         if "generate_plot_code" in names and any(word in lower for word in ("plot", "chart", "graph")):
@@ -311,6 +377,13 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool:
                 + "\nThe user is asking for workflow lineage/order. Return the ordered distinct activity_id values "
                 "from the workflow, using task timestamps or row order when timestamps are unavailable. "
                 "Include upstream, target, and downstream activities; do not answer only with metric-matching rows."
+            )
+            return [{"name": "generate_result_df", "args": {"query": query}, "id": str(uuid.uuid4())}]
+        if "generate_result_df" in names and "how many" in lower and any(w in lower for w in ("task", "tasks")):
+            query = (
+                text
+                + "\nReturn a self-descriptive DataFrame, e.g. result = pd.DataFrame({'task_count': [len(df)]})"
+                " so the count is clearly labeled."
             )
             return [{"name": "generate_result_df", "args": {"query": query}, "id": str(uuid.uuid4())}]
         if "generate_result_df" in names and any(

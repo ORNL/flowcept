@@ -263,6 +263,47 @@ def list_agents(filter: Dict = None) -> ToolResult:
     return ToolResult(code=301, result={"items": items, "count": len(items)}, tool_name="list_agents")
 
 
+@_guarded("query_objects")
+def query_objects(
+    filter: Optional[Dict[str, Any]] = None,
+    projection: Optional[List[str]] = None,
+    limit: int = 100,
+) -> ToolResult:
+    """Query stored data-object provenance records with a Mongo-style filter.
+
+    Data objects include ML models (``object_type="ml_model"``), datasets
+    (``object_type="dataset"``), and generic blobs.  Their ``custom_metadata``
+    field carries artifact-specific information such as ``model_profile.params``,
+    ``n_input_neurons``, ``loss``, ``split_ratio``, and ``n_samples``.
+    Use this tool when the user asks about model parameters, dataset size, file
+    types, artifact sizes, or any stored artifact metadata.
+
+    Parameters
+    ----------
+    filter : dict, optional
+        Mongo-style filter.  Common fields: ``object_type``, ``workflow_id``,
+        ``task_id``, ``tags``.  ``custom_metadata`` sub-fields use dot-notation,
+        e.g. ``{"custom_metadata.model_profile.params": {"$gt": 2}}``.
+    projection : list of str, optional
+        Fields to include (dot-notation accepted).
+    limit : int, optional
+        Maximum records (capped by settings).
+
+    Returns
+    -------
+    ToolResult
+        ``result`` holds ``{"items": [...], "count": int}``.
+    """
+    capped = min(limit, MAX_QUERY_LIMIT)
+    docs = (DBAPI().blob_object_query(filter=filter or {}) or [])[:capped]
+    items = _normalize(docs)
+    if projection:
+        safe_proj = set(_sanitize_projection(projection) or [])
+        if safe_proj:
+            items = [{k: v for k, v in d.items() if k in safe_proj} for d in items]
+    return ToolResult(code=301, result={"items": items, "count": len(items)}, tool_name="query_objects")
+
+
 @_guarded("highlight_lineage")
 def highlight_lineage(
     task_ids: Optional[List[str]] = None,

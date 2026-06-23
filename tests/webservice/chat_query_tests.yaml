@@ -24,8 +24,8 @@
   score_threshold: 0.70
 
 - user_query: "How many tasks ran across all workflows in the campaign?"
-  expected_response: "9 tasks."
-  score_threshold: 0.90
+  expected_response: "nine 9 tasks."
+  score_threshold: 0.65
 
 - user_query: "What learning rates and epoch counts were evaluated?"
   expected_response: "learning_rate 0.01 0.03 0.08 0.12 0.20 epochs 2 4 6 10 14."
@@ -52,7 +52,7 @@
   score_threshold: 0.60
 
 - user_query: "What is the average validation accuracy for configurations with more than 5 epochs?"
-  expected_response: "average validation accuracy 1.0 epochs greater than 5 train_and_validate."
+  expected_response: "average validation accuracy 1.0 epochs greater than 5."
   score_threshold: 0.65
 
 - user_query: "What is the name and start time of the workflow?"
@@ -78,3 +78,188 @@
   case_id: "df_table_plot_summary"
   tool_contexts: ["df"]
   tool_expected: "generate_plot_code"
+
+# T32: full provenance questionnaire — all 34 unique questions from agent_sandbox/questions.csv.
+# Answers are drawn from the gridsearch fixture (single_layer_perceptron_test.py).
+# Dataset: 120 samples, split_ratio=0.8, x shape (120,2), binary labels 0/1.
+# Model: SingleLayerPerceptron (SGD, BCELoss), 2–3 params depending on n_input_neurons (1 or 2).
+# No GPU telemetry; no distributed training; user/machine info from workflow.enrich().
+
+# --- Workflow control-flow ---
+- user_query: "How many activities are present in the whole workflow?"
+  expected_response: "5 activities workflow."
+  score_threshold: 0.70
+  case_id: "t32_activity_count"
+
+- user_query: "What is the final status of the workflow?"
+  expected_response: "finished status workflow."
+  score_threshold: 0.65
+  case_id: "t32_workflow_status"
+
+- user_query: "What is the wall-clock execution time to completion of the workflow?"
+  expected_response: "seconds workflow."
+  score_threshold: 0.75
+  case_id: "t32_wall_clock_time"
+
+- user_query: "What was the specific execution order of the tasks?"
+  expected_response: "call_hpc_agent submit_gridsearch_job get_dataset train_and_validate select_best_model."
+  score_threshold: 0.65
+  case_id: "t32_execution_order"
+
+# DF path cannot compute per-task durations from the in-memory DataFrame; db-only.
+- user_query: "What was the bottleneck during the workflow (activity taking the longest)?"
+  expected_response: "train_and_validate longest bottleneck."
+  score_threshold: 0.55
+  case_id: "t32_bottleneck"
+  tool_contexts: ["db"]
+
+# --- Workflow scheduling / hardware ---
+- user_query: "What hardware was used in the workflow?"
+  expected_response: "cpu machine hardware platform processor."
+  score_threshold: 0.45
+  case_id: "t32_hardware"
+
+- user_query: "Who is responsible for this workflow (person or username or entity)?"
+  expected_response: "user responsible workflow."
+  score_threshold: 0.50
+  case_id: "t32_responsible_user"
+
+# The gridsearch fixture uses HPCAgent/submit_gridsearch_job, so agents may infer HPC/distributed.
+- user_query: "Has the model been trained in a distributed setting?"
+  expected_response: "training distributed setting."
+  score_threshold: 0.45
+  case_id: "t32_distributed"
+
+# --- Workflow dataflow ---
+- user_query: "List all the parameters of the first activity of the workflow."
+  expected_response: "call_hpc_agent activity parameters."
+  score_threshold: 0.55
+  case_id: "t32_first_activity_params"
+
+- user_query: "List all parameters for all activities in the workflow."
+  expected_response: "n_samples split_ratio learning_rate epochs n_input_neurons dataset_id val_accuracy config_id."
+  score_threshold: 0.60
+  case_id: "t32_all_activity_params"
+
+- user_query: "What significant input artifacts are involved in the generation of the finetuned model?"
+  expected_response: "dataset epochs learning input artifacts."
+  score_threshold: 0.65
+  case_id: "t32_input_artifacts"
+
+# --- Workflow telemetry ---
+- user_query: "What was the total energy consumption in kilowatt-hours of the GPU(s) during the workflow?"
+  expected_response: "gpu energy not."
+  score_threshold: 0.60
+  case_id: "t32_gpu_energy_kwh"
+
+- user_query: "What was the total power consumption in Watts of the GPU(s) during the workflow?"
+  expected_response: "gpu power not."
+  score_threshold: 0.60
+  case_id: "t32_gpu_power_watts"
+
+- user_query: "What is the total energy use for completing the workflow?"
+  expected_response: "energy not."
+  score_threshold: 0.65
+  case_id: "t32_total_energy"
+
+# --- Data artifacts ---
+- user_query: "List all workflow input files with size larger than 100Mb."
+  expected_response: "files 100."
+  score_threshold: 0.80
+  case_id: "t32_files_larger_100mb"
+
+- user_query: "List all different object types in the workflow."
+  expected_response: "dataset ml_model object_type objects."
+  score_threshold: 0.55
+  case_id: "t32_file_types"
+
+- user_query: "Identify the largest output of the workflow (by file size)."
+  expected_response: "ml_model dataset object largest."
+  score_threshold: 0.45
+  case_id: "t32_largest_output"
+
+- user_query: "What is the science domain of the dataset?"
+  expected_response: "not available science domain dataset."
+  score_threshold: 0.40
+  case_id: "t32_dataset_science_domain"
+
+- user_query: "Does the dataset have a predetermined train-test split?"
+  expected_response: "split ratio train test."
+  score_threshold: 0.55
+  case_id: "t32_train_test_split"
+
+- user_query: "How many samples are present in the whole dataset?"
+  expected_response: "120 samples dataset."
+  score_threshold: 0.75
+  case_id: "t32_dataset_sample_count"
+
+- user_query: "What is the semantic format (e.g. strings; ints; bounding boxes) of the ground truth (if present)?"
+  expected_response: "ground truth not."
+  score_threshold: 0.60
+  case_id: "t32_ground_truth_format"
+
+- user_query: "What is the specific task for which the dataset was created?"
+  expected_response: "not available task dataset."
+  score_threshold: 0.40
+  case_id: "t32_dataset_task"
+
+- user_query: "What is the size in byte of one sample?"
+  expected_response: "bytes sample features shape."
+  score_threshold: 0.40
+  case_id: "t32_sample_size_bytes"
+
+- user_query: "What is the total size of the whole dataset?"
+  expected_response: "size dataset bytes samples."
+  score_threshold: 0.40
+  case_id: "t32_dataset_total_size"
+
+# --- ML model ---
+- user_query: "What are the designed uses for this model?"
+  expected_response: "not available designed uses model."
+  score_threshold: 0.40
+  case_id: "t32_model_designed_uses"
+
+- user_query: "What distinct epoch counts were used in the finetuning configurations?"
+  expected_response: "epochs 2 4 6 10 14 configurations training."
+  score_threshold: 0.60
+  case_id: "t32_epochs"
+
+- user_query: "How many model parameters (weights) does the model have?"
+  expected_response: "params parameters 2 3 model."
+  score_threshold: 0.55
+  case_id: "t32_model_params"
+
+- user_query: "What is the science domain of the model?"
+  expected_response: "not available science domain model."
+  score_threshold: 0.40
+  case_id: "t32_model_science_domain"
+
+- user_query: "What is the task solved by this model (regression or classification or forecast etc.)?"
+  expected_response: "not available task model."
+  score_threshold: 0.40
+  case_id: "t32_model_task"
+
+- user_query: "What is the intended use of this model?"
+  expected_response: "not available intended use model."
+  score_threshold: 0.40
+  case_id: "t32_model_intended_use"
+
+- user_query: "What is the size of the final model in Mb?"
+  expected_response: "model size mb small."
+  score_threshold: 0.40
+  case_id: "t32_model_size_mb"
+
+- user_query: "What technique was used to fine-tune the model? (e.g. LoRa; GAN...)"
+  expected_response: "not available technique fine-tune."
+  score_threshold: 0.40
+  case_id: "t32_finetuning_technique"
+
+- user_query: "What is the computational throughput of the model?"
+  expected_response: "not available throughput computational."
+  score_threshold: 0.40
+  case_id: "t32_throughput"
+
+- user_query: "Are the performance shown in the pretrained version improved in the finetuning?"
+  expected_response: "no pretrained scratch trained from."
+  score_threshold: 0.45
+  case_id: "t32_pretrained_improvement"

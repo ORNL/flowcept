@@ -45,6 +45,20 @@ def get_workflow_context() -> ToolResult:
     if not wf:
         return ToolResult(code=404, result="No workflow loaded in agent context.", tool_name="get_workflow_context")
     pruned = {k: v for k, v in wf.items() if k not in _WORKFLOW_HEAVY_FIELDS}
+    # Add a lightweight hardware_summary from machine_info so hardware questions can be answered.
+    machine_info = wf.get("machine_info")
+    if machine_info and isinstance(machine_info, dict):
+        for node_data in machine_info.values():
+            if isinstance(node_data, dict):
+                hw: dict = {}
+                if "platform" in node_data:
+                    hw["platform"] = node_data["platform"]
+                if "cpu" in node_data:
+                    cpu = node_data["cpu"]
+                    hw["cpu"] = {k: cpu[k] for k in ("brand_raw", "arch", "count") if k in cpu}
+                if hw:
+                    pruned["hardware_summary"] = hw
+                break
     return ToolResult(code=301, result={"items": [pruned], "count": 1}, tool_name="get_workflow_context")
 
 

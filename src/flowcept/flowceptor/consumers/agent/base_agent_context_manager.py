@@ -1,3 +1,4 @@
+import threading
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Dict, List
@@ -34,6 +35,10 @@ class BaseAgentContextManager(BaseConsumer):
     """
     Base class for any MCP Agent that wants to participate in the Flowcept ecosystem.
 
+    With ``stateless_http=True`` (FastMCP), the lifespan runs once per HTTP request.
+    A class-level lock prevents concurrent requests from racing to stop the shared
+    Flowcept instance when multiple tool calls execute simultaneously.
+
     Agents inheriting from this class can:
     - Subscribe to and consume messages from the Flowcept-compatible message queue (MQ)
     - Handle task-related messages and accumulate them in context
@@ -47,6 +52,7 @@ class BaseAgentContextManager(BaseConsumer):
     """
 
     agent_id = None
+    _stop_lock = threading.Lock()
 
     def __init__(self, allow_mq_disabled: bool = False):
         """
@@ -131,7 +137,14 @@ class BaseAgentContextManager(BaseConsumer):
         try:
             yield self.context
         finally:
-            self.stop_consumption()
-            if getattr(self, "flowcept_instance", None) is not None:
-                self.flowcept_instance.stop()
-                self.flowcept_instance = None
+            try:
+                self.stop_consumption()
+            except Exception as e:
+                self.logger.warning(f"stop_consumption raised during lifespan teardown: {e}")
+            with BaseAgentContextManager._stop_lock:
+                if getattr(self, "flowcept_instance", None) is not None:
+                    try:
+                        self.flowcept_instance.stop()
+                    except Exception as e:
+                        self.logger.warning(f"flowcept_instance.stop() raised during lifespan teardown: {e}")
+                    self.flowcept_instance = None

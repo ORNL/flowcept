@@ -11,7 +11,6 @@ import pandas as pd
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import WorkflowObject
 from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
-from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
 from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED
 
 
