@@ -18,14 +18,6 @@ function AgentsPage() {
   const totalPages = Math.ceil(visible.length / PAGE_SIZE);
   const pageItems = visible.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-<<<<<<< agent_refactor
-  // Key the color map by the resolved agent name, not the raw ID containing unique UUIDs.
-  // This ensures identical agent types/names share the exact same color.
-  const colorMap = new Map(
-    visible.map((a) => {
-      const label = a.name || getAgentNameFromId(a.agent_id);
-      return [label, agentColor(undefined, label)];
-=======
   // Key the color map the same way agentIconStyle looks it up:
   //   a.name  OR  getAgentNameFromId(a.agent_id)
   // This keeps colors coherent across graphs (DagView, DataflowView, CoarseDataflowView)
@@ -34,7 +26,6 @@ function AgentsPage() {
     visible.map((a) => {
       const agentName = a.name || getAgentNameFromId(a.agent_id);
       return [agentName, agentColor(undefined, agentName)];
->>>>>>> fc_ui
     }),
   );
 
