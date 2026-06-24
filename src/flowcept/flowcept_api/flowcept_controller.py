@@ -471,6 +471,27 @@ class Flowcept(object):
         return agent_obj.agent_id
 
     @staticmethod
+    def _get_interceptor():
+        """Return the active interceptor for object/model message emission.
+
+        Tries the current Flowcept instance first; falls back to InstrumentationInterceptor
+        (needed when called from a Dask worker where no Flowcept context is registered).
+        Raises RuntimeError when neither is available.
+        """
+        fc = Flowcept.get_current_instance()
+        if fc is not None and fc._first_interceptor:
+            return fc._first_interceptor
+        from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
+
+        interceptor = InstrumentationInterceptor.get_instance()
+        if interceptor is None or not interceptor.started:
+            raise RuntimeError(
+                "No active Flowcept context or InstrumentationInterceptor found. "
+                "Ensure Flowcept is started before calling this method."
+            )
+        return interceptor
+
+    @staticmethod
     def insert_or_update_object(
         object,
         object_id=None,
@@ -516,9 +537,7 @@ class Flowcept(object):
         from flowcept.flowcept_api.db_api import DBAPI
         from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
 
-        fc = Flowcept.get_current_instance()
-        if fc is None or not fc._first_interceptor:
-            raise RuntimeError("insert_or_update_object requires an active Flowcept context with an interceptor.")
+        interceptor = Flowcept._get_interceptor()
         wf_id = workflow_id or Flowcept.current_workflow_id
         blob_obj = BlobObject(
             object_id=object_id,
@@ -535,7 +554,7 @@ class Flowcept(object):
             pickle=pickle,
             control_version=control_version,
         )
-        fc._first_interceptor.send_object_message(blob_obj)
+        interceptor.send_object_message(blob_obj)
         return blob_obj.object_id
 
     @staticmethod
@@ -684,9 +703,7 @@ class Flowcept(object):
         from flowcept.flowcept_api.db_api import DBAPI
         from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
 
-        fc = Flowcept.get_current_instance()
-        if fc is None or not fc._first_interceptor:
-            raise RuntimeError("insert_or_update_torch_model requires an active Flowcept context with an interceptor.")
+        interceptor = Flowcept._get_interceptor()
         wf_id = workflow_id or Flowcept.current_workflow_id
         blob_obj = BlobObject(
             object_id=object_id,
@@ -701,7 +718,7 @@ class Flowcept(object):
             control_version=control_version,
             save_profile=save_profile,
         )
-        fc._first_interceptor.send_object_message(blob_obj)
+        interceptor.send_object_message(blob_obj)
         return blob_obj.object_id
 
     @staticmethod
