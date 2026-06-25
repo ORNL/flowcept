@@ -37,7 +37,6 @@ from flowcept.configs import (
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 
-
 class Flowcept(object):
     """Main Flowcept controller class."""
 

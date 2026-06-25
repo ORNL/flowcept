@@ -267,13 +267,13 @@ class LMDBDAO(DocumentDBDAO):
         from flowcept.commons.daos.docdb_dao.docdb_dao_utils import ALLOWED_FILTER_OPERATORS
 
         _field_ops = {
-            "$eq":  lambda v, o: v == o,
-            "$ne":  lambda v, o: v != o,
-            "$gt":  lambda v, o: v is not None and v > o,
+            "$eq": lambda v, o: v == o,
+            "$ne": lambda v, o: v != o,
+            "$gt": lambda v, o: v is not None and v > o,
             "$gte": lambda v, o: v is not None and v >= o,
-            "$lt":  lambda v, o: v is not None and v < o,
+            "$lt": lambda v, o: v is not None and v < o,
             "$lte": lambda v, o: v is not None and v <= o,
-            "$in":  lambda v, o: v in o,
+            "$in": lambda v, o: v in o,
             "$nin": lambda v, o: v not in o,
         }
 
