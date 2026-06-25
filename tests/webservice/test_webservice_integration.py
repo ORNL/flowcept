@@ -1070,8 +1070,8 @@ def test_chat_endpoint_records_ai_model_usage_tasks(gridsearch_run_data, db_clea
     from flowcept.agents.chat_orchestration.chat_orchestrator_service import CHAT_WORKFLOW_NAME
     from flowcept.commons.vocabulary import PROV_AGENT
 
-    services = Flowcept.services_alive()
-    if not services:
+    services = Flowcept.services_status()
+    if not all(v == "ok" for v in services.values()):
         pytest.skip(f"Flowcept services are not alive: {services}")
     if services.get("llm") != "ok":
         pytest.skip(f"LLM provider is not configured or not alive: {services}")

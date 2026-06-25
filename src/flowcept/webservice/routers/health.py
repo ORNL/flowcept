@@ -26,11 +26,11 @@ def ready() -> JSONResponse:
     """
     from flowcept.flowcept_api.flowcept_controller import Flowcept
 
-    result = Flowcept.services_alive()
-    status = "ready" if result else "degraded"
+    services = Flowcept.services_status()
+    ok = all(v == "ok" for v in services.values())
     return JSONResponse(
-        status_code=200 if result else 503,
-        content={"status": status, "services": dict(result)},
+        status_code=200 if ok else 503,
+        content={"status": "ready" if ok else "degraded", "services": services},
     )
 
 

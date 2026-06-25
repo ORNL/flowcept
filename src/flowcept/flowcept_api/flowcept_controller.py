@@ -37,18 +37,6 @@ from flowcept.configs import (
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
 
-class ServicesAliveResult(dict):
-    """Dict of ``{service: "ok" | "unavailable"}`` that also evaluates as a ``bool``.
-
-    ``True`` when every checked service is ``"ok"`` (or when no services are enabled
-    and the dict is empty).  Returned by :meth:`Flowcept.services_alive` so callers
-    can use it as a plain bool *or* inspect per-service status.
-    """
-
-    def __bool__(self) -> bool:
-        """Return True when all checked services report 'ok' (empty dict → True)."""
-        return all(v == "ok" for v in self.values())
-
 
 class Flowcept(object):
     """Main Flowcept controller class."""
@@ -1004,28 +992,15 @@ class Flowcept(object):
         self.stop()
 
     @staticmethod
-    def services_alive() -> "ServicesAliveResult":
-        """Check liveness of all enabled services, including the LLM provider when configured.
+    def services_status() -> Dict[str, str]:
+        """Return per-service liveness as ``{service: "ok" | "unavailable"}``.
 
-        Which services are checked is driven entirely by settings.yaml / env vars — no
-        parameters needed:
-
-        - ``mq.enabled`` → message queue.
-        - ``kv_db.enabled`` → key-value store.
-        - ``databases.mongodb.enabled`` → MongoDB.
-        - ``databases.lmdb.enabled`` → LMDB.
-        - ``agent.chat_enabled`` **and** a non-placeholder ``agent.api_key`` → LLM provider.
-
-        Returns
-        -------
-        ServicesAliveResult
-            A dict subclass mapping each checked service to ``"ok"`` or ``"unavailable"``.
-            Evaluates as ``True`` when every checked service is ``"ok"`` (or no services
-            are enabled), so all existing ``if not Flowcept.services_alive():`` guards
-            continue to work unchanged.  Per-service errors are also logged at ERROR level.
+        Which services are checked is driven entirely by settings.yaml / env vars:
+        ``mq.enabled``, ``kv_db.enabled``, ``databases.mongodb.enabled``,
+        ``databases.lmdb.enabled``, and ``agent.chat_enabled`` with a valid API key.
         """
         logger = FlowceptLogger()
-        result = ServicesAliveResult()
+        result: Dict[str, str] = {}
         mq = MQDao.build()
 
         if MQ_ENABLED:
@@ -1068,6 +1043,11 @@ class Flowcept(object):
                     logger.error(f"LLM provider not reachable: {exc}")
 
         return result
+
+    @staticmethod
+    def services_alive() -> bool:
+        """Return True when all enabled services are reachable (or none are enabled)."""
+        return all(v == "ok" for v in Flowcept.services_status().values())
 
     @staticmethod
     def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: bool = False, consumers: List = None):
