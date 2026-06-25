@@ -752,7 +752,7 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
-    def update_workflow_fields(self, workflow_id: str, fields: Dict) -> bool:
+    def save_workflow_domain_data_schema(self, workflow_id: str, fields: Dict) -> bool:
         """Update selected workflow fields without replacing the full document."""
         if workflow_id is None:
             self.logger.exception("The workflow identifier cannot be none.")

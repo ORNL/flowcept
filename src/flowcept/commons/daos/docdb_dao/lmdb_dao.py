@@ -138,7 +138,7 @@ class LMDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
-    def update_workflow_fields(self, workflow_id: str, fields: Dict):
+    def save_workflow_domain_data_schema(self, workflow_id: str, fields: Dict):
         """Update selected workflow fields without replacing the full document."""
         try:
             with self._env.begin(write=True, db=self._workflows_db) as txn:

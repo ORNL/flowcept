@@ -121,7 +121,7 @@ class DocumentDBDAO(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def update_workflow_fields(self, workflow_id: str, fields: Dict):
+    def save_workflow_domain_data_schema(self, workflow_id: str, fields: Dict):
         """Update selected workflow fields without replacing the full document."""
         raise NotImplementedError
 

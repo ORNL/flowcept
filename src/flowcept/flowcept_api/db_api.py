@@ -168,7 +168,7 @@ class DBAPI(object):
 
     def save_workflow_domain_data_schema(self, workflow_id: str, snapshot: Dict) -> bool:
         """Persist a workflow-scoped dynamic schema snapshot."""
-        return DBAPI._dao().update_workflow_fields(workflow_id, {"workflow_domain_data_schema": snapshot})
+        return DBAPI._dao().save_workflow_domain_data_schema(workflow_id, {"workflow_domain_data_schema": snapshot})
 
     def get_workflow_domain_data_schema(self, workflow_id: str) -> Dict | None:
         """Return the persisted dynamic schema snapshot for a workflow."""
