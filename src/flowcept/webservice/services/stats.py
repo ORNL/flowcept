@@ -91,6 +91,7 @@ def task_summary(db: DBAPI, filter: Dict[str, Any]) -> Dict[str, Any]:
 
 def _task_summary_mongo(dao, filter: Dict[str, Any]) -> Dict[str, Any]:
     match = [{"$match": filter}] if filter else []
+    duration_seconds = {"$divide": [{"$subtract": ["$ended_at", "$started_at"]}, 1000]}
     rows = (
         dao.raw_pipeline(
             match
@@ -99,10 +100,10 @@ def _task_summary_mongo(dao, filter: Dict[str, Any]) -> Dict[str, Any]:
                     "$group": {
                         "_id": {"activity_id": "$activity_id", "status": "$status"},
                         "count": {"$sum": 1},
-                        "avg_duration": {"$avg": {"$subtract": ["$ended_at", "$started_at"]}},
-                        "min_duration": {"$min": {"$subtract": ["$ended_at", "$started_at"]}},
-                        "max_duration": {"$max": {"$subtract": ["$ended_at", "$started_at"]}},
-                        "sum_duration": {"$sum": {"$subtract": ["$ended_at", "$started_at"]}},
+                        "avg_duration": {"$avg": duration_seconds},
+                        "min_duration": {"$min": duration_seconds},
+                        "max_duration": {"$max": duration_seconds},
+                        "sum_duration": {"$sum": duration_seconds},
                         "min_started_at": {"$min": "$started_at"},
                         "max_ended_at": {"$max": "$ended_at"},
                     }
