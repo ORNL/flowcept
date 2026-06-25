@@ -4,6 +4,7 @@ FROM condaforge/miniforge3:23.11.0-0
 
 ARG PYTHON_VERSION="3.11.10"
 ARG EXTRAS="all"
+ARG BUILD_UI="true"
 ARG FLOWCEPT_CMD="bash"
 
 WORKDIR /flowcept
@@ -14,6 +15,7 @@ COPY resources ./resources
 COPY notebooks ./notebooks
 COPY tests ./tests
 COPY examples ./examples
+COPY ui ./ui
 
 ENV FLOWCEPT_SETTINGS_PATH=/flowcept/resources/sample_settings.yaml
 ENV FLOWCEPT_CMD=${FLOWCEPT_CMD}
@@ -29,10 +31,16 @@ RUN if [ -n "$EXTRAS" ]; then \
         conda run -n flowcept pip install -e .; \
     fi
 
-# 5000: legacy/default Flowcept web server port from sample settings.
+RUN if [ "$BUILD_UI" = "true" ]; then \
+        conda install -n flowcept -c conda-forge nodejs -y \
+        && conda run -n flowcept make ui-install \
+        && conda run -n flowcept make ui-build; \
+    fi
+
 # 8000: default Flowcept MCP/agent service port.
 # 8003: common deployment override for the MCP/agent service.
-# 8008: local FastAPI webservice port used by `make webservice`.
-EXPOSE 5000 8000 8003 8008
+# 8008: FastAPI webservice and packaged web UI (`flowcept --start-webservice`).
+# 5173: Vite UI development server (`make ui-dev` / `flowcept --start-ui`).
+EXPOSE 8000 8003 8008 5173
 
 CMD ["/bin/bash", "-lc", "conda run --no-capture-output -n flowcept ${FLOWCEPT_CMD}"]
