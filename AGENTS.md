@@ -170,7 +170,7 @@ flowcept --init-settings --full --dask --mlflow -y
 
 **TDD is mandatory for both Python and UI/frontend.** Write the test first, watch it fail, then implement until it passes.
 
-- **Python**: write a real integration test in `tests/` before the implementation. Guard service-dependent tests with skips that use `Flowcept.services_alive()` / *_ENABLED flags available in configs.py.
+- **Python**: real integration tests are in `tests/`. Before the implementation, check if what you are about to implement is already covered in both unit and the integration tests. If not, they must be. Guard service-dependent tests with skips that use `Flowcept.services_alive()` / *_ENABLED flags available in configs.py.
 - Test the real thing! No mocks. No fakes. Prefer generating new data than relying on synthetic/
 - **UI/Frontend**: write a vitest test in `ui/tests/` before adding new pure logic (store mutations, utility functions, graph algorithms). Use real data fixtures — no mocks, no DOM for pure-function and store tests. Component render tests are discouraged (fragile, high mock cost); test logic at the function/store level instead. Run with `make ui-test`.
 
@@ -219,7 +219,7 @@ Do not run tests from scratch/sandbox directories. Target `tests/` explicitly.
 - Prefer real tests over mocks. Use real services, real data, and real LLMs when feasible.
 - Avoid mock-heavy tests unless there is no practical alternative.
 - When a test fails, the correct fix is almost always to fix the implementation code, not the test; the test itself is very rarely the culprit. Always resolve warnings at their source rather than silencing them.
-- **NEVER lower test thresholds or broaden expected responses just to make a failing test pass.** Doing so hides real bugs and degrades the test suite over time. If a test fails, fix the underlying behavior. The only legitimate reason to update an expected response is when the system behavior is provably correct and the expectation was written incorrectly to begin with — and that case must be explained explicitly in the commit message.
+- **NEVER lower test thresholds or broaden expected responses just to make a failing test pass.** Doing so hides real bugs and degrades the test suite over time. If a test fails, fix the underlying behavior.
 - **Periodically recommend running the full integration test suites** (`make tests` and `E2E_LIVE=1 make ui-e2e`) — especially after merges, significant backend or UI changes, or when the user has been iterating quickly on a feature. Mocked tests alone are not sufficient to catch regressions against real services.
 - **Tests must verify meaningful system behavior**, not code structure (file paths, imports, `hasattr` checks).
 
