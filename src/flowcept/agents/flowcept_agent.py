@@ -167,7 +167,13 @@ def main():
     """
     agent = FlowceptAgent().start()
     # Wake up tool call
-    print(run_tool(check_liveness, host=AGENT_HOST, port=AGENT_PORT)[0])
+    # Flowcept liveness check was calling: http://0.0.0.0:8003/mcp
+    # This caused error:
+    # httpx.HTTPStatusError: Client error '421 Misdirected Request' for url 'http://0.0.0.0:8003/mcp'
+    # The server binds to AGENT_HOST, but wildcard bind addresses (0.0.0.0, ::) are not routable
+    # as a client destination, so fall back to localhost; otherwise honor the configured host.
+    liveness_host = "localhost" if AGENT_HOST in ("0.0.0.0", "::", "") else AGENT_HOST
+    print(run_tool(check_liveness, host=liveness_host, port=AGENT_PORT)[0])
     agent.wait()
 
 

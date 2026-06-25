@@ -2,6 +2,10 @@
 # Use conda-forge base image consistently across local/CI.
 FROM condaforge/miniforge3:23.11.0-0
 
+ARG PYTHON_VERSION="3.11.10"
+ARG EXTRAS="all"
+ARG FLOWCEPT_CMD="bash"
+
 WORKDIR /flowcept
 
 COPY pyproject.toml Makefile README.md ./
@@ -11,13 +15,24 @@ COPY notebooks ./notebooks
 COPY tests ./tests
 COPY examples ./examples
 
-RUN export FLOWCEPT_SETTINGS_PATH=$(realpath resources/sample_settings.yaml) \
-    && echo "export FLOWCEPT_SETTINGS_PATH=$FLOWCEPT_SETTINGS_PATH" >> ~/.bashrc
+ENV FLOWCEPT_SETTINGS_PATH=/flowcept/resources/sample_settings.yaml
+ENV FLOWCEPT_CMD=${FLOWCEPT_CMD}
 
-RUN conda create -n flowcept python=3.11.10 -y \
+RUN conda create -n flowcept python=${PYTHON_VERSION} -y \
     && echo "conda activate flowcept" >> ~/.bashrc
 
-# The following command is an overkill and will install many things you might not need. Please modify this Dockerfile in case you do not need to install "all" dependencies.
-RUN conda run -n flowcept pip install -e .[all]
+# Keep [all] as the default because CI container tests exercise Redis, Kafka,
+# MongoDB, LMDB, and dev/test dependencies. Pass EXTRAS="" to install only core.
+RUN if [ -n "$EXTRAS" ]; then \
+        conda run -n flowcept pip install -e ".[${EXTRAS}]"; \
+    else \
+        conda run -n flowcept pip install -e .; \
+    fi
 
-CMD ["bash"]
+# 5000: legacy/default Flowcept web server port from sample settings.
+# 8000: default Flowcept MCP/agent service port.
+# 8003: common deployment override for the MCP/agent service.
+# 8008: local FastAPI webservice port used by `make webservice`.
+EXPOSE 5000 8000 8003 8008
+
+CMD ["/bin/bash", "-lc", "conda run --no-capture-output -n flowcept ${FLOWCEPT_CMD}"]
