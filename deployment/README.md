@@ -64,6 +64,14 @@ The Dockerfile exposes:
 - `8008`: FastAPI webservice and packaged web UI.
 - `5173`: Vite UI development server.
 
+When `BUILD_UI=true`, Docker runs the same npm commands used by the Makefile UI
+targets:
+
+```bash
+npm ci --prefix ui --no-audit --no-fund
+npm run build --prefix ui
+```
+
 ## Why So Many Compose Files?
 
 Flowcept supports several MQ/DB combinations. The compose files are intentionally

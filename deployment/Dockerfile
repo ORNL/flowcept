@@ -33,8 +33,8 @@ RUN if [ -n "$EXTRAS" ]; then \
 
 RUN if [ "$BUILD_UI" = "true" ]; then \
         conda install -n flowcept -c conda-forge nodejs -y \
-        && conda run -n flowcept make ui-install \
-        && conda run -n flowcept make ui-build; \
+        && conda run -n flowcept npm ci --prefix ui --no-audit --no-fund \
+        && conda run -n flowcept npm run build --prefix ui; \
     fi
 
 # 8000: default Flowcept MCP/agent service port.
