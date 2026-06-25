@@ -47,3 +47,4 @@ SKILLS.md
 .cursor/rules/
 .claude/
 input_data/
+node_modules/
