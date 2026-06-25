@@ -40,6 +40,22 @@ def _build_data_schema_prompt() -> str:
     )
 
 
+_ANALYSIS_CORE = (
+    "Correlations involving 'used' vs 'generated' data are especially important. "
+    "So are relationships between (used or generated) data and resource metrics. "
+    "Highlight outliers or critical information and give actionable insights or recommendations."
+)
+
+
+def _build_prompt(role_suffix: str, job: str, data_label: str, data) -> str:
+    return (
+        f"{BASE_ROLE}{role_suffix}\n\n"
+        f"{_build_data_schema_prompt()}\n\n"
+        f"{job} {_ANALYSIS_CORE}\n\n"
+        f"{data_label}:\n```json\n{data}\n```"
+    )
+
+
 def build_single_task_prompt(task_obj: dict) -> str:
     """Build a prompt for single-task analysis using the live schema context.
 
@@ -53,16 +69,15 @@ def build_single_task_prompt(task_obj: dict) -> str:
     str
         Formatted analysis prompt.
     """
-    return (
-        f"{BASE_ROLE} You are focusing now on a particular task object.\n\n"
-        f"{_build_data_schema_prompt()}\n\n"
-        "Your job is to analyze this single task. Find any anomalies, relationships, or correlations between input, "
-        "output, resource usage metrics, task duration, and task placement. "
-        "Correlations involving 'used' vs 'generated' data are especially important. "
-        "So are relationships between (used or generated) data and resource metrics. "
-        "Highlight outliers or critical information and give actionable insights or recommendations. "
-        "Explain what this task may be doing, using the data provided.\n\n"
-        f"Task object:\n```json\n{task_obj}\n```"
+    return _build_prompt(
+        role_suffix=" You are focusing now on a particular task object.",
+        job=(
+            "Your job is to analyze this single task. Find any anomalies, relationships, or correlations between "
+            "input, output, resource usage metrics, task duration, and task placement. "
+            "Explain what this task may be doing, using the data provided."
+        ),
+        data_label="Task object",
+        data=task_obj,
     )
 
 
@@ -79,15 +94,14 @@ def build_multitask_prompt(task_objs: list) -> str:
     str
         Formatted analysis prompt.
     """
-    return (
-        f"{BASE_ROLE}\n\n"
-        f"{_build_data_schema_prompt()}\n\n"
-        "Your job is to analyze a list of task objects to identify patterns across tasks, anomalies, relationships, "
-        "or correlations between inputs, outputs, resource usage, duration, and task placement. "
-        "Correlations involving 'used' vs 'generated' data are especially important. "
-        "So are relationships between (used or generated) data and resource metrics. "
-        "Try to infer the purpose of the workflow. "
-        "Highlight outliers or critical tasks and give actionable insights or recommendations. "
-        "Use the data provided to justify your analysis.\n\n"
-        f"Task objects:\n```json\n{task_objs}\n```"
+    return _build_prompt(
+        role_suffix="",
+        job=(
+            "Your job is to analyze a list of task objects to identify patterns across tasks, anomalies, "
+            "relationships, or correlations between inputs, outputs, resource usage, duration, and task placement. "
+            "Try to infer the purpose of the workflow. "
+            "Use the data provided to justify your analysis."
+        ),
+        data_label="Task objects",
+        data=task_objs,
     )

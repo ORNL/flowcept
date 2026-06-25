@@ -52,14 +52,15 @@ def _build_schema_section() -> str:
 
     if task_line and wf_line and blob_line:
         return f"Key task fields: {task_line}.\nKey workflow fields: {wf_line}.\nKey object fields: {blob_line}."
-    # fallback (SCHEMA_CONTEXT not yet populated)
+
+    # fallback when SCHEMA_CONTEXT is not yet populated — derived from the key-field sets
+    def _static(key_set):
+        return ", ".join(f"`{n}`" for n in sorted(key_set))
+
     return (
-        "Key task fields: `task_id`, `activity_id` (function name), `workflow_id`, "
-        "`campaign_id`, `agent_id`, `status` (FINISHED/ERROR/RUNNING), `started_at`, "
-        "`ended_at`, `used.*` (inputs), `generated.*` (outputs), "
-        "`telemetry_at_start/end` (cpu, memory, disk, network), `hostname`, `tags`.\n"
-        "Key workflow fields: `workflow_id`, `name`, `campaign_id`, `user`, `utc_timestamp`.\n"
-        "Key object fields: `object_id`, `object_type`, `task_id`, `workflow_id`, `tags`, `version`."
+        f"Key task fields: {_static(_TASK_KEY_FIELDS)}.\n"
+        f"Key workflow fields: {_static(_WORKFLOW_KEY_FIELDS)}.\n"
+        f"Key object fields: {_static(_BLOB_KEY_FIELDS)}."
     )
 
 
