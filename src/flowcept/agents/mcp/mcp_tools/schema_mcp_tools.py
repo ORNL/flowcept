@@ -13,7 +13,7 @@ from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task
 @agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
 def get_workflow_schema_context(workflow_id: Optional[str] = None) -> ToolResult:
     """Return workflow-scoped dynamic schema context for DB and runtime queries."""
-    snapshot = ctx_manager.get_workflow_schema_snapshot(workflow_id)
+    snapshot = ctx_manager.schema_manager.get_workflow_schema_snapshot(workflow_id)
     if not snapshot:
         return ToolResult(code=404, result="No workflow schema context is available.")
     prompt_context = build_db_schema_context(

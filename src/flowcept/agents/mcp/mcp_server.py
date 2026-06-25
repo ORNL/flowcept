@@ -26,7 +26,7 @@ import uvicorn
 
 
 class FlowceptMCPServer:
-    """Flowcept agent server wrapper with optional offline buffer loading."""
+    """Flowcept mcp server wrapper with optional offline buffer loading."""
 
     def __init__(self, buffer_path: str | None = None, buffer_messages: list[dict] | None = None):
         """Initialize a Flowcept MCP server.

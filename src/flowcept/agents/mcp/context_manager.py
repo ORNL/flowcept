@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from flowcept.agents.provenance_schema_manager.dynamic_schema_tracker import DynamicSchemaTracker
+from flowcept.agents.provenance_schema_manager.context_schema_manager import ContextSchemaManager
 from flowcept.agents.provenance_schema_manager.static_schema_builder import (
     SCHEMA_CONTEXT,
     assert_schema_documented,
@@ -122,9 +122,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
     def __init__(self):
         self.context = FlowceptAppContext()
         self.tracker_config = dict(max_examples=3, max_str_len=50)
-        self.schema_tracker = DynamicSchemaTracker(**self.tracker_config)
-        self.objects_schema_tracker = DynamicSchemaTracker(**self.tracker_config)
-        self.workflow_schema_trackers = {}
+        self.schema_manager = ContextSchemaManager(self.context, self.tracker_config)
         self._seen_activities: dict = {}
         self.msgs_counter = 0
         self.context_chunk_size = 1  # Should be in the settings
@@ -133,9 +131,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
     def reset_context(self):
         """Reset MCP runtime context and workflow-scoped schema trackers."""
         self.context.reset_context()
-        self.schema_tracker = DynamicSchemaTracker(**self.tracker_config)
-        self.objects_schema_tracker = DynamicSchemaTracker(**self.tracker_config)
-        self.workflow_schema_trackers = {}
+        self.schema_manager.reset()
         self._seen_activities = {}
         self.msgs_counter = 0
 
@@ -190,12 +186,12 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                 return True
             self.context.workflow_msg_obj = msg_obj
             if WorkflowObject.from_dict(msg_obj).workflow_is_finished():
-                self.persist_workflow_schema_snapshot(msg_obj.get("workflow_id"))
+                self.schema_manager.persist_workflow_schema_snapshot(msg_obj.get("workflow_id"))
             return True
 
         if msg_type == "object":
             self.context.objects.append(msg_obj)
-            self.update_objects_schema_and_add_to_df(objects=[msg_obj])
+            self.schema_manager.update_objects_schema_and_add_to_df(objects=[msg_obj])
             return True
 
         if msg_type == "task":
@@ -249,7 +245,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                     f"Going to add to index! {(self.msgs_counter - self.context_chunk_size, self.msgs_counter)}"
                 )
                 try:
-                    self.update_schema_and_add_to_df(
+                    self.schema_manager.update_schema_and_add_to_df(
                         tasks=self.context.task_summaries[
                             self.msgs_counter - self.context_chunk_size : self.msgs_counter
                         ]
@@ -271,91 +267,12 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                     and msg_obj.get("generated")
                     and activity_id not in self._seen_activities.get(workflow_id, set())
                 ):
-                    self.update_workflow_schema_cache([msg_obj])
+                    self.schema_manager.update_workflow_schema_cache([msg_obj])
                     self._seen_activities.setdefault(workflow_id, set()).add(activity_id)
 
                 # self.monitor_chunk()
 
         return True
-
-    def update_schema_and_add_to_df(self, tasks: List[Dict]):
-        """Update the schema and add to the DataFrame in context."""
-        self.schema_tracker.update_with_tasks(tasks)
-        self.context.tasks_schema = self.schema_tracker.get_schema()
-        self.context.value_examples = self.schema_tracker.get_example_values()
-
-        _df = self._to_context_df(tasks)
-        self.context.df = pd.concat([self.context.df, _df], ignore_index=True)
-
-    def update_workflow_schema_cache(self, tasks: List[Dict]):
-        """Update workflow-scoped dynamic schema snapshots from task records."""
-        by_workflow = {}
-        for task in tasks:
-            workflow_id = task.get("workflow_id")
-            if workflow_id:
-                by_workflow.setdefault(workflow_id, []).append(task)
-
-        for workflow_id, workflow_tasks in by_workflow.items():
-            tracker = self.workflow_schema_trackers.setdefault(
-                workflow_id,
-                DynamicSchemaTracker(**self.tracker_config),
-            )
-            tracker.update_with_tasks(workflow_tasks)
-            _df = self._to_context_df(workflow_tasks)
-            existing = self.context.workflow_schema_cache.get(workflow_id, {}).get("current_fields", [])
-            current_fields = sorted(set(existing) | set(_df.columns))
-            self.context.workflow_schema_cache[workflow_id] = {
-                "dynamic_schema": tracker.get_schema(),
-                "value_examples": tracker.get_example_values(),
-                "current_fields": current_fields,
-            }
-
-    def get_workflow_schema_snapshot(self, workflow_id: str):
-        """Return cached schema snapshot, loading a persisted snapshot on cache miss."""
-        if not workflow_id:
-            return None
-        if workflow_id in self.context.workflow_schema_cache:
-            return self.context.workflow_schema_cache[workflow_id]
-        try:
-            from flowcept.flowcept_api.db_api import DBAPI
-
-            snapshot = DBAPI().get_workflow_domain_data_schema(workflow_id)
-        except Exception as e:
-            self.logger.exception(e)
-            snapshot = None
-        if snapshot:
-            self.context.workflow_schema_cache[workflow_id] = snapshot
-        return snapshot
-
-    def persist_workflow_schema_snapshot(self, workflow_id: str):
-        """Persist cached workflow schema snapshot into workflow metadata."""
-        snapshot = self.get_workflow_schema_snapshot(workflow_id)
-        if not snapshot:
-            return False
-        try:
-            from flowcept.flowcept_api.db_api import DBAPI
-
-            return DBAPI().save_workflow_domain_data_schema(workflow_id, snapshot)
-        except Exception as e:
-            self.logger.exception(e)
-            return False
-
-    def update_objects_schema_and_add_to_df(self, objects: List[Dict]):
-        """Update the object schema and add to the object DataFrame context."""
-        self.objects_schema_tracker.update_with_tasks(objects)
-        self.context.objects_schema = self.objects_schema_tracker.get_schema()
-        self.context.objects_value_examples = self.objects_schema_tracker.get_example_values()
-
-        _df = self._to_context_df(objects)
-        self.context.objects_df = pd.concat([self.context.objects_df, _df], ignore_index=True)
-
-    @staticmethod
-    def _to_context_df(records: List[Dict]):
-        _df = pd.json_normalize(records)
-        for col in _df.columns:
-            if _df[col].apply(lambda v: isinstance(v, list)).any():
-                _df[col] = _df[col].apply(lambda v: tuple(v) if isinstance(v, list) else v)
-        return pd.DataFrame(_df)
 
     def monitor_chunk(self):
         """
