@@ -11,45 +11,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from flowcept.agents.tool_result import ToolResult
+from flowcept.commons.daos.docdb_dao.docdb_dao_utils import validate_filter as _validate_filter
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.utils import normalize_docs
 from flowcept.flowcept_api.db_api import DBAPI
-
-ALLOWED_FILTER_OPERATORS = {
-    "$and",
-    "$or",
-    "$nor",
-    "$not",
-    "$exists",
-    "$eq",
-    "$ne",
-    "$gt",
-    "$gte",
-    "$lt",
-    "$lte",
-    "$in",
-    "$nin",
-    "$regex",
-}
-
-
-def _validate_filter(filter_doc: Optional[Dict[str, Any]]) -> None:
-    """Validate a Mongo-style filter against the safe-operator allowlist."""
-
-    def _walk(value: Any) -> None:
-        if isinstance(value, dict):
-            for key, item in value.items():
-                if key.startswith("$"):
-                    if key not in ALLOWED_FILTER_OPERATORS:
-                        raise ValueError(f"Unsupported filter operator: {key}")
-                    if key in {"$and", "$or", "$nor"} and not isinstance(item, list):
-                        raise ValueError(f"{key} must be a list.")
-                _walk(item)
-        elif isinstance(value, list):
-            for item in value:
-                _walk(item)
-
-    _walk(filter_doc or {})
 
 
 def _guarded(tool_name: str):

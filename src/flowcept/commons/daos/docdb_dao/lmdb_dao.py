@@ -259,61 +259,43 @@ class LMDBDAO(DocumentDBDAO):
 
     @staticmethod
     def _match_filter(entry, filter):
-        """
-        Check if an entry matches the filter criteria.
+        """Check if an entry matches a Mongo-style filter dict.
 
-        Parameters
-        ----------
-        entry : dict
-            The data entry to check.
-        filter : dict
-            The filter criteria.
-
-        Returns
-        -------
-        bool
-            True if the entry matches the filter, otherwise False.
+        Supports: ``$and``, ``$or``, ``$eq``, ``$ne``, ``$gt``, ``$gte``,
+        ``$lt``, ``$lte``, ``$in``, ``$nin``, and plain equality.
         """
+        from flowcept.commons.daos.docdb_dao.docdb_dao_utils import ALLOWED_FILTER_OPERATORS
+
+        _field_ops = {
+            "$eq":  lambda v, o: v == o,
+            "$ne":  lambda v, o: v != o,
+            "$gt":  lambda v, o: v is not None and v > o,
+            "$gte": lambda v, o: v is not None and v >= o,
+            "$lt":  lambda v, o: v is not None and v < o,
+            "$lte": lambda v, o: v is not None and v <= o,
+            "$in":  lambda v, o: v in o,
+            "$nin": lambda v, o: v not in o,
+        }
+
         if not filter:
             return True
 
         for key, value in filter.items():
             if key == "$or":
-                if not isinstance(value, list) or not any(LMDBDAO._match_filter(entry, clause) for clause in value):
+                if not any(LMDBDAO._match_filter(entry, clause) for clause in value):
                     return False
             elif key == "$and":
-                if not isinstance(value, list) or not all(LMDBDAO._match_filter(entry, clause) for clause in value):
+                if not all(LMDBDAO._match_filter(entry, clause) for clause in value):
                     return False
+            elif key.startswith("$"):
+                if key not in ALLOWED_FILTER_OPERATORS:
+                    raise ValueError(f"Unsupported filter operator: {key}")
             elif isinstance(value, dict):
                 entry_val = entry.get(key)
                 for op, op_val in value.items():
-                    if op == "$in":
-                        if not isinstance(op_val, (list, set, tuple)) or entry_val not in op_val:
-                            return False
-                    elif op == "$nin":
-                        if not isinstance(op_val, (list, set, tuple)) or entry_val in op_val:
-                            return False
-                    elif op == "$eq":
-                        if entry_val != op_val:
-                            return False
-                    elif op == "$ne":
-                        if entry_val == op_val:
-                            return False
-                    elif op == "$gt":
-                        if entry_val is None or entry_val <= op_val:
-                            return False
-                    elif op == "$gte":
-                        if entry_val is None or entry_val < op_val:
-                            return False
-                    elif op == "$lt":
-                        if entry_val is None or entry_val >= op_val:
-                            return False
-                    elif op == "$lte":
-                        if entry_val is None or entry_val > op_val:
-                            return False
-                    else:
-                        if entry_val != value:
-                            return False
+                    fn = _field_ops.get(op)
+                    if fn is None or not fn(entry_val, op_val):
+                        return False
             else:
                 if entry.get(key) != value:
                     return False

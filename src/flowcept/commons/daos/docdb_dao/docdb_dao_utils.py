@@ -12,6 +12,46 @@ from typing import Any, Dict, List, Optional
 
 from flowcept.commons.utils import to_epoch  # re-exported; defined in commons/utils.py
 
+ALLOWED_FILTER_OPERATORS = {
+    "$and",
+    "$or",
+    "$nor",
+    "$not",
+    "$exists",
+    "$eq",
+    "$ne",
+    "$gt",
+    "$gte",
+    "$lt",
+    "$lte",
+    "$in",
+    "$nin",
+    "$regex",
+}
+
+
+def validate_filter(filter_doc: Optional[Dict[str, Any]]) -> None:
+    """Validate a Mongo-style filter doc against the safe-operator allowlist.
+
+    Raises ValueError for any unsupported ``$`` operator or a logical operator
+    (``$and``, ``$or``, ``$nor``) whose value is not a list.
+    """
+
+    def _walk(value: Any) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key.startswith("$"):
+                    if key not in ALLOWED_FILTER_OPERATORS:
+                        raise ValueError(f"Unsupported filter operator: {key}")
+                    if key in {"$and", "$or", "$nor"} and not isinstance(item, list):
+                        raise ValueError(f"{key} must be a list.")
+                _walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                _walk(item)
+
+    _walk(filter_doc or {})
+
 
 def get_nested(item: Dict[str, Any], field: str) -> Any:
     """Read a dot-notated field value from a document."""
