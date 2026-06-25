@@ -25,7 +25,7 @@ def _as_sortable_number(value: Any) -> float | None:
 
 
 def sort_docs_by_first_date_field(docs: List[Dict[str, Any]], date_fields: List[str]) -> List[Dict[str, Any]]:
-    """Sort docs ascending by the first available date field from a priority list."""
+    """Sort docs descending (newest first) by the first available date field from a priority list."""
     if len(docs) <= 1:
         return docs
 
@@ -41,8 +41,9 @@ def sort_docs_by_first_date_field(docs: List[Dict[str, Any]], date_fields: List[
     return sorted(
         docs,
         key=lambda doc: (
-            (0, _as_sortable_number(doc.get(chosen_field)))
+            (1, _as_sortable_number(doc.get(chosen_field)))
             if _as_sortable_number(doc.get(chosen_field)) is not None
-            else (1, float("inf"))
+            else (0, float("-inf"))
         ),
+        reverse=True,
     )

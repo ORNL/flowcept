@@ -16,9 +16,8 @@ This directory contains the runtime package. Use this README as a code-orientati
 - `flowceptor/`: interceptors, adapters, consumers, telemetry capture.
 - `commons/`: shared dataclasses, DAOs, buffers, logging, serialization, sanitization.
 - `agents/`: MCP agent server/client/tools/prompts.
-- `report/`: provenance card and PDF report generation.
+- `report/`: workflow card and PDF report generation.
 - `webservice/`: FastAPI read-only REST API.
-- `analytics/`: plotting and analysis helpers.
 
 ## Code Rules
 

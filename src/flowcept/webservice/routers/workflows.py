@@ -12,6 +12,8 @@ from flowcept import Flowcept
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.schemas.common import ListResponse, QueryRequest
+from flowcept.webservice.services.dataflow import build_dataflow
+from flowcept.webservice.services.reports import workflow_card_response
 from flowcept.webservice.services.serializers import normalize_docs
 from flowcept.webservice.services.sorting import sort_docs_by_first_date_field
 
@@ -71,6 +73,15 @@ def get_workflow(workflow_id: str, db: DBAPI = Depends(get_db_api)) -> Dict[str,
     return normalized[0]
 
 
+@router.delete("/{workflow_id}", response_model=Dict[str, Any])
+def delete_workflow(workflow_id: str, db: DBAPI = Depends(get_db_api)) -> Dict[str, Any]:
+    """Recursively delete a workflow and all its tasks and objects."""
+    if db.get_workflow_object(workflow_id) is None:
+        raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
+    counts = DBAPI._dao().delete_workflow_data(workflow_id)
+    return {"deleted": counts}
+
+
 @router.post("/query", response_model=ListResponse)
 def query_workflows(payload: QueryRequest, db: DBAPI = Depends(get_db_api)) -> ListResponse:
     """Run an advanced read-only workflows query."""
@@ -89,18 +100,43 @@ def query_workflows(payload: QueryRequest, db: DBAPI = Depends(get_db_api)) -> L
     return ListResponse(items=normalized, count=len(normalized), limit=payload.limit)
 
 
-@router.post("/{workflow_id}/reports/provenance-card/download")
-def download_workflow_provenance_card(workflow_id: str, db: DBAPI = Depends(get_db_api)) -> Response:
-    """Generate and download a workflow provenance card markdown file."""
+@router.get("/{workflow_id}/dataflow", response_model=Dict[str, Any])
+def get_workflow_dataflow(
+    workflow_id: str,
+    db: DBAPI = Depends(get_db_api),
+) -> Dict[str, Any]:
+    """Get the PROV-style dataflow graph derived from tasks' used/generated fields."""
+    graph = build_dataflow(db, workflow_id)
+    if graph is None:
+        raise HTTPException(status_code=404, detail=f"No dataflow data for workflow: {workflow_id}")
+    return graph
+
+
+@router.get("/{workflow_id}/workflow_card")
+def get_workflow_card(
+    workflow_id: str,
+    format: str = Query(default="json"),
+    db: DBAPI = Depends(get_db_api),
+) -> Response:
+    """Get a workflow card as structured JSON or rendered markdown."""
+    wf_obj = db.get_workflow_object(workflow_id)
+    if wf_obj is None:
+        raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
+    return workflow_card_response(format=format, workflow_id=workflow_id)
+
+
+@router.post("/{workflow_id}/reports/workflow-card/download")
+def download_workflow_card(workflow_id: str, db: DBAPI = Depends(get_db_api)) -> Response:
+    """Generate and download a workflow card markdown file."""
     wf_obj = db.get_workflow_object(workflow_id)
     if wf_obj is None:
         raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
 
-    fd, output_path = tempfile.mkstemp(prefix=f"provenance_card_{workflow_id}_", suffix=".md")
+    fd, output_path = tempfile.mkstemp(prefix=f"workflow_card_{workflow_id}_", suffix=".md")
     os.close(fd)
     try:
         Flowcept.generate_report(
-            report_type="provenance_card",
+            report_type="workflow_card",
             format="markdown",
             output_path=output_path,
             workflow_id=workflow_id,
@@ -110,16 +146,45 @@ def download_workflow_provenance_card(workflow_id: str, db: DBAPI = Depends(get_
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Could not generate provenance card: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"Could not generate workflow card: {exc}") from exc
     finally:
         try:
             os.remove(output_path)
         except Exception:
             pass
 
-    filename = f"provenance_card_{workflow_id}.md"
+    filename = f"workflow_card_{workflow_id}.md"
     return Response(
         content=payload,
         media_type="text/markdown; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/{workflow_id}/node_positions", response_model=Dict[str, Any])
+def get_node_positions(
+    workflow_id: str,
+    graph_type: str = Query(..., description="Graph type: 'dataflow', 'task', or 'activity'"),
+    db: DBAPI = Depends(get_db_api),
+) -> Dict[str, Any]:
+    """Get node positions for a workflow graph type."""
+    if db.get_workflow_object(workflow_id) is None:
+        raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
+    return db.get_node_positions(workflow_id, graph_type)
+
+
+@router.post("/{workflow_id}/node_positions", response_model=Dict[str, Any])
+def save_node_positions(
+    workflow_id: str,
+    payload: Dict[str, Any],
+    db: DBAPI = Depends(get_db_api),
+) -> Dict[str, Any]:
+    """Save node positions for a workflow graph type."""
+    if db.get_workflow_object(workflow_id) is None:
+        raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
+    graph_type = payload.get("graph_type")
+    positions = payload.get("positions")
+    if not graph_type or positions is None:
+        raise HTTPException(status_code=400, detail="Missing graph_type or positions in payload")
+    success = db.save_node_positions(workflow_id, graph_type, positions)
+    return {"success": success}

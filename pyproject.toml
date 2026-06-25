@@ -55,10 +55,8 @@ redis = ["redis<8"]
 lmdb = ["lmdb"]
 telemetry = ["psutil>=6.1.1", "py-cpuinfo"]
 extras = ["flowcept[redis]", "flowcept[telemetry]", "flowcept[mongo]", "GitPython", "pandas", "pyarrow", "requests", "rich"]
-webservice = ["fastapi", "uvicorn", "pyyaml"]
-legacy_webservice = ["flask-restful"]
+webservice = ["fastapi", "uvicorn", "pyyaml", "sse-starlette"]
 
-analytics = ["seaborn", "plotly", "scipy", "matplotlib"]
 report_pdf = ["matplotlib", "reportlab", "networkx"]
 mongo = ["pymongo", "pyarrow"]
 dask = ["tomli", "dask[distributed]<=2024.10.0"]
@@ -86,8 +84,10 @@ dev = [
     "pytest",
     "pytest-timeout",
     "ruff",
-    "pyyaml"
+    "pyyaml",
+    "httpx2"
 ]
+
 # Torch and some other ML-specific libs are only used for dev/test workflows.
 ml_dev = [
     "torch>=2.6.0",
@@ -103,7 +103,6 @@ all = [
     "flowcept[redis]",
     "flowcept[lmdb]",
     "flowcept[mongo]",
-    "flowcept[analytics]",
     "flowcept[dask]",
     "flowcept[kafka]",
     "flowcept[mlflow]",
@@ -130,6 +129,8 @@ convention = "numpy"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/flowcept"]
+# Built web UI assets (created by `make ui-build` into the package dir); gitignored but shipped.
+artifacts = ["src/flowcept/webservice/ui_build/**"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "resources/sample_settings.yaml" = "resources/sample_settings.yaml"

@@ -124,6 +124,8 @@ class BaseAgentContextManager(BaseConsumer):
             self.flowcept_instance.logger.info(
                 f"This section's workflow_id={Flowcept.current_workflow_id}, campaign_id={Flowcept.campaign_id}"
             )
+            # Daemon consumer: the agent has no flush-on-stop obligations (persistence is off),
+            # and a blocked MQ listen must never prevent the hosting process from exiting.
             self.start(daemon=True)
 
         try:

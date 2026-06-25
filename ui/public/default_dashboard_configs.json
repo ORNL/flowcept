@@ -1,0 +1,180 @@
+[
+  {
+    "dashboard_id": "default-common-workflow",
+    "dashboard_type": "common_workflow",
+    "target": null,
+    "name": "Common Workflow Charts",
+    "charts": [
+      {
+        "chart_id": "wf-tasks-by-activity",
+        "type": "chart",
+        "title": "Tasks by activity",
+        "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "", "agg": "count" }], "limit": 500 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-tasks-by-host",
+        "type": "chart",
+        "title": "Tasks by host",
+        "data": { "source": "tasks", "group_by": "hostname", "metrics": [{ "field": "", "agg": "count" }], "limit": 500 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-task-count",
+        "type": "metric",
+        "title": "Total tasks",
+        "data": { "source": "tasks", "metrics": [{ "field": "", "agg": "count" }], "limit": 1 }
+      },
+      {
+        "chart_id": "wf-avg-duration-by-activity",
+        "type": "chart",
+        "title": "Avg task duration by activity (s)",
+        "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "elapsed", "agg": "avg" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-cpu-by-activity",
+        "type": "chart",
+        "title": "CPU by activity (%)",
+        "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "telemetry_at_end.cpu.percent_all", "agg": "avg" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-memory-by-activity",
+        "type": "chart",
+        "title": "Memory by activity",
+        "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "telemetry_at_end.memory.virtual.used", "agg": "avg" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-disk-by-activity",
+        "type": "chart",
+        "title": "Disk I/O by activity",
+        "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "telemetry_at_end.disk.io_sum.read_bytes", "agg": "sum" }, { "field": "telemetry_at_end.disk.io_sum.write_bytes", "agg": "sum" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-network-by-activity",
+        "type": "chart",
+        "title": "Network I/O by activity",
+        "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "telemetry_at_end.network.netio_sum.bytes_sent", "agg": "sum" }, { "field": "telemetry_at_end.network.netio_sum.bytes_recv", "agg": "sum" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-gpu-by-activity",
+        "type": "chart",
+        "title": "GPU memory by activity",
+        "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "telemetry_at_end.gpu.gpu_0.used", "agg": "avg" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-data-sizes-by-type",
+        "type": "chart",
+        "title": "Artifacts size by type",
+        "data": { "source": "objects", "group_by": "object_type", "metrics": [{ "field": "object_size_bytes", "agg": "sum" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-collection-sizes",
+        "type": "chart",
+        "title": "Data per collection",
+        "data": { "source": "collection_sizes", "group_by": "collection", "metrics": [{ "field": "bytes", "agg": "sum" }], "limit": 10 },
+        "viz": { "kind": "bar", "stacked": false }
+      }
+    ],
+    "created_at": null,
+    "updated_at": null
+  },
+  {
+    "dashboard_id": "default-common-campaign",
+    "dashboard_type": "common_campaign",
+    "target": null,
+    "name": "Common Campaign Charts",
+    "charts": [
+      {
+        "chart_id": "camp-tasks-by-workflow",
+        "type": "chart",
+        "title": "Tasks by workflow",
+        "data": { "source": "tasks", "group_by": "workflow_id", "metrics": [{ "field": "", "agg": "count" }], "limit": 500 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "camp-top-activities",
+        "type": "chart",
+        "title": "Top activities",
+        "data": { "source": "tasks", "group_by": "activity_id", "metrics": [{ "field": "", "agg": "count" }], "limit": 20 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "camp-task-count",
+        "type": "metric",
+        "title": "Total tasks",
+        "data": { "source": "tasks", "metrics": [{ "field": "", "agg": "count" }], "limit": 1 }
+      }
+    ],
+    "created_at": null,
+    "updated_at": null
+  },
+  {
+    "dashboard_id": "default-custom-workflow-perceptron",
+    "dashboard_type": "custom_workflow",
+    "target": "Perceptron GridSearch",
+    "name": "Perceptron GridSearch Charts",
+    "charts": [
+      {
+        "chart_id": "wf-val-accuracy-by-config",
+        "type": "chart",
+        "title": "Val accuracy by config",
+        "data": { "source": "tasks", "group_by": "generated.config_id", "metrics": [{ "field": "generated.val_accuracy", "agg": "avg" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-val-loss-by-config",
+        "type": "chart",
+        "title": "Val loss by config",
+        "data": { "source": "tasks", "group_by": "generated.config_id", "metrics": [{ "field": "generated.val_loss", "agg": "avg" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "wf-loss-vs-epochs",
+        "type": "chart",
+        "title": "Loss vs epochs",
+        "data": { "source": "tasks", "x": "used.epochs", "y": ["generated.val_loss"], "limit": 200 },
+        "viz": { "kind": "line", "stacked": false }
+      },
+      {
+        "chart_id": "wf-accuracy-vs-loss",
+        "type": "chart",
+        "title": "Val accuracy vs val loss",
+        "data": { "source": "tasks", "x": "generated.val_accuracy", "y": ["generated.val_loss"], "limit": 200 },
+        "viz": { "kind": "scatter", "stacked": false }
+      }
+    ],
+    "created_at": null,
+    "updated_at": null
+  },
+  {
+    "dashboard_id": "default-custom-campaign-gridsearch",
+    "dashboard_type": "custom_campaign",
+    "target": "GridSearchCampaign",
+    "name": "GridSearchCampaign Charts",
+    "charts": [
+      {
+        "chart_id": "camp-val-accuracy-by-config",
+        "type": "chart",
+        "title": "Val accuracy by config",
+        "data": { "source": "tasks", "group_by": "generated.config_id", "metrics": [{ "field": "generated.val_accuracy", "agg": "avg" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      },
+      {
+        "chart_id": "camp-val-loss-by-config",
+        "type": "chart",
+        "title": "Val loss by config",
+        "data": { "source": "tasks", "group_by": "generated.config_id", "metrics": [{ "field": "generated.val_loss", "agg": "avg" }], "limit": 50 },
+        "viz": { "kind": "bar", "stacked": false }
+      }
+    ],
+    "created_at": null,
+    "updated_at": null
+  }
+]

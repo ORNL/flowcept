@@ -54,7 +54,7 @@ For programmatic access inside scripts and notebooks, Flowcept exposes a databas
 For blob/object persistence, versioning, and retrieval APIs, see
 `Blob data docs <blob_data.html>`_.
 
-For summarized report generation (for example, provenance cards), see
+For summarized report generation (for example, workflow cards), see
 `Reporting docs <reporting.html>`_.
 
 Below is a typical usage pattern:
@@ -246,9 +246,14 @@ Grafana can also connect directly to Redis or Kafka for near‑real‑time strea
 Querying via the LLM‑based Flowcept Agent
 -----------------------------------------
 
-Flowcept’s agentic querying (powered by language models) is under active development. The agent will allow natural‑language queries over provenance data, with interactive guidance and summarisation. Documentation will be released in a future version. In the meantime, use the CLI or Python API for querying tasks and workflows.
+Flowcept Agent provides MCP tools for querying the active in-memory provenance context with either Flowcept's
+configured internal LLM or an external assistant that calls Flowcept MCP prompts and tools. It can query task records,
+object records, and the active workflow message object.
+
+Use this path when you want natural-language exploration during a live run or from a JSONL buffer file. See
+:doc:`agent` for the internal and external orchestration flows.
 
 Conclusion
 ----------
 
-Flowcept offers several ways to query provenance data depending on your environment and requirements. For quick inspection, use the in‑memory buffer or offline message files. For interactive scripts or notebooks, `Flowcept.db` provides a high‑level API to MongoDB or LMDB. For more sophisticated queries, connect directly to MongoDB using the CLI or standard MongoDB tools. Grafana integration lets you build dashboards on live data. As Flowcept evolves, additional capabilities—such as LLM‑based query agents—will expand the ways you can explore your provenance.
+Flowcept offers several ways to query provenance data depending on your environment and requirements. For quick inspection, use the in‑memory buffer or offline message files. For interactive scripts or notebooks, `Flowcept.db` provides a high‑level API to MongoDB or LMDB. For more sophisticated queries, connect directly to MongoDB using the CLI or standard MongoDB tools. Grafana integration lets you build dashboards on live data. Flowcept Agent adds MCP-based natural-language exploration on top of the same provenance context.

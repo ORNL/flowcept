@@ -10,6 +10,7 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
 )
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
+from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
 
 
@@ -109,6 +110,27 @@ class DBAPI(object):
         else:
             return workflow_obj
 
+    def insert_or_update_agent(self, agent_obj: AgentObject) -> AgentObject:
+        """Insert or update an agent document.
+
+        Parameters
+        ----------
+        agent_obj : AgentObject
+            Agent object to persist.
+
+        Returns
+        -------
+        AgentObject or None
+            The persisted agent object, or ``None`` on failure.
+        """
+        self.logger.debug(f"DB API going to save agent {agent_obj}")
+        ret = DBAPI._dao().insert_or_update_agent(agent_obj)
+        if not ret:
+            self.logger.error("Sorry, couldn't update or insert agent.")
+            return None
+        else:
+            return agent_obj
+
     def get_workflow_object(self, workflow_id) -> WorkflowObject:
         """Get a workflow object by workflow identifier.
 
@@ -123,8 +145,10 @@ class DBAPI(object):
             Matching workflow object, or ``None`` when not found.
         """
         wfobs = self.workflow_query(filter={WorkflowObject.workflow_id_field(): workflow_id})
-        if wfobs is None or len(wfobs) == 0:
+        if wfobs is None:
             self.logger.error("Could not retrieve workflow with that filter.")
+            return None
+        elif len(wfobs) == 0:
             return None
         else:
             return WorkflowObject.from_dict(wfobs[0])
@@ -147,6 +171,67 @@ class DBAPI(object):
             self.logger.error("Could not retrieve workflows with that filter.")
             return None
         return results
+
+    def get_agent_object(self, agent_id) -> AgentObject:
+        """Get an agent object by agent identifier.
+
+        Parameters
+        ----------
+        agent_id : str
+            Agent identifier.
+
+        Returns
+        -------
+        AgentObject or None
+            Matching agent object, or ``None`` when not found.
+        """
+        agobs = self.agent_query(filter={AgentObject.agent_id_field(): agent_id})
+        if agobs is None:
+            self.logger.error("Could not retrieve agent with that filter.")
+            return None
+        elif len(agobs) == 0:
+            return None
+        else:
+            return AgentObject.from_dict(agobs[0])
+
+    def agent_query(self, filter) -> List[Dict]:
+        """Query the ``agents`` collection.
+
+        Parameters
+        ----------
+        filter : dict
+            Mongo/DAO filter expression.
+
+        Returns
+        -------
+        list of dict or None
+            Matching agent records, or ``None`` on error.
+        """
+        results = self.query(collection="agents", filter=filter)
+        if results is None:
+            self.logger.error("Could not retrieve agents with that filter.")
+            return None
+        return results
+
+    def delete_agents_with_filter(self, filter) -> bool:
+        """Delete agents matching the filter.
+
+        Parameters
+        ----------
+        filter : dict
+            DAO filter expression.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+        """
+        dao = DBAPI._dao()
+        try:
+            return dao.delete_agents_with_filter(filter)
+        except Exception as e:
+            self.logger.error(f"Could not delete agents with filter {filter}: {e}")
+            return False
 
     def get_tasks_from_current_workflow(self):
         """Get tasks belonging to ``Flowcept.current_workflow_id``.
@@ -255,7 +340,6 @@ class DBAPI(object):
             obj_doc = None if objs is None or len(objs) == 0 else objs[0]
 
         if obj_doc is None:
-            self.logger.error("Could not retrieve blob object with that filter.")
             return None
         return BlobObject.from_dict(obj_doc)
 
@@ -712,10 +796,13 @@ class DBAPI(object):
 
         Returns
         -------
-        list of dict or None
-            Query results from the backend DAO.
+        list of dict
+            Query results from the backend DAO; empty list when nothing matches or on error.
         """
-        return DBAPI._dao().query(filter, projection, limit, sort, aggregation, remove_json_unserializables, collection)
+        result = DBAPI._dao().query(
+            filter, projection, limit, sort, aggregation, remove_json_unserializables, collection
+        )
+        return result or []
 
     def save_or_update_ml_model(
         self,
@@ -938,3 +1025,45 @@ class DBAPI(object):
         model._flowcept_model_object = {k: v for k, v in doc.items() if k != "data"}
 
         return doc
+
+    def save_node_positions(self, workflow_id: str, graph_type: str, positions: dict) -> bool:
+        """Save node positions for a workflow graph type.
+
+        Parameters
+        ----------
+        workflow_id : str
+            Workflow identifier.
+        graph_type : str
+            Graph type: 'dataflow', 'task', or 'activity'.
+        positions : dict
+            Dict mapping node IDs to coordinates.
+
+        Returns
+        -------
+        bool
+            True on success, False otherwise.
+        """
+        dao = DBAPI._dao()
+        if hasattr(dao, "save_node_positions"):
+            return dao.save_node_positions(workflow_id, graph_type, positions)
+        return False
+
+    def get_node_positions(self, workflow_id: str, graph_type: str) -> dict:
+        """Get node positions for a workflow graph type.
+
+        Parameters
+        ----------
+        workflow_id : str
+            Workflow identifier.
+        graph_type : str
+            Graph type.
+
+        Returns
+        -------
+        dict
+            Dict mapping node IDs to coordinates.
+        """
+        dao = DBAPI._dao()
+        if hasattr(dao, "get_node_positions"):
+            return dao.get_node_positions(workflow_id, graph_type)
+        return {}

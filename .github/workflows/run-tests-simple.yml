@@ -59,7 +59,7 @@ jobs:
           rm -f "${FLOWCEPT_SETTINGS_PATH:-$HOME/.flowcept/settings.yaml}"
           flowcept --init-settings --full --dask --mlflow -y
           flowcept --config-profile full-online -y
-          pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb" --ignore="notebooks/analytics.ipynb" --ignore=notebooks/tensorboard.ipynb
+          pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb" --ignore=notebooks/tensorboard.ipynb
 
       - name: Shut down docker compose
         run: make services-stop

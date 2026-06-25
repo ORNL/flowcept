@@ -5,21 +5,6 @@ info:
     tasks, and objects endpoints with query support.
   version: 1.0.0
 paths:
-  /:
-    get:
-      tags:
-      - health
-      summary: Root
-      operationId: root__get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                additionalProperties: true
-                type: object
-                title: Response Root  Get
   /api/v1/health/live:
     get:
       tags:
@@ -52,6 +37,143 @@ paths:
                 additionalProperties: true
                 type: object
                 title: Response Ready Api V1 Health Ready Get
+  /api/v1/info:
+    get:
+      tags:
+      - health
+      summary: Info
+      description: Service name and installed version.
+      operationId: info_api_v1_info_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Info Api V1 Info Get
+  /api/v1/campaigns:
+    get:
+      tags:
+      - campaigns
+      summary: List Campaigns
+      description: List derived campaign summaries, most recently active first.
+      operationId: list_campaigns_api_v1_campaigns_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 100
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/campaigns/{campaign_id}:
+    get:
+      tags:
+      - campaigns
+      summary: Get Campaign
+      description: 'Get one campaign: derived summary, its workflows, and a task summary.'
+      operationId: get_campaign_api_v1_campaigns__campaign_id__get
+      parameters:
+      - name: campaign_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Campaign Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Campaign Api V1 Campaigns  Campaign Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - campaigns
+      summary: Delete Campaign
+      description: Recursively delete a campaign and all its workflows, tasks, and
+        objects.
+      operationId: delete_campaign_api_v1_campaigns__campaign_id__delete
+      parameters:
+      - name: campaign_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Campaign Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Delete Campaign Api V1 Campaigns  Campaign Id  Delete
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/campaigns/{campaign_id}/workflow_card:
+    get:
+      tags:
+      - campaigns
+      summary: Get Campaign Workflow Card
+      description: Get a campaign workflow card as structured JSON or rendered markdown.
+      operationId: get_campaign_workflow_card_api_v1_campaigns__campaign_id__workflow_card_get
+      parameters:
+      - name: campaign_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Campaign Id
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+          default: json
+          title: Format
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/workflows:
     get:
       tags:
@@ -151,6 +273,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - workflows
+      summary: Delete Workflow
+      description: Recursively delete a workflow and all its tasks and objects.
+      operationId: delete_workflow_api_v1_workflows__workflow_id__delete
+      parameters:
+      - name: workflow_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workflow Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Delete Workflow Api V1 Workflows  Workflow Id  Delete
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/workflows/query:
     post:
       tags:
@@ -177,13 +327,77 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /api/v1/workflows/{workflow_id}/reports/provenance-card/download:
+  /api/v1/workflows/{workflow_id}/dataflow:
+    get:
+      tags:
+      - workflows
+      summary: Get Workflow Dataflow
+      description: Get the PROV-style dataflow graph derived from tasks' used/generated
+        fields.
+      operationId: get_workflow_dataflow_api_v1_workflows__workflow_id__dataflow_get
+      parameters:
+      - name: workflow_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workflow Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Workflow Dataflow Api V1 Workflows  Workflow Id  Dataflow
+                  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/workflows/{workflow_id}/workflow_card:
+    get:
+      tags:
+      - workflows
+      summary: Get Workflow Card
+      description: Get a workflow card as structured JSON or rendered markdown.
+      operationId: get_workflow_card_api_v1_workflows__workflow_id__workflow_card_get
+      parameters:
+      - name: workflow_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workflow Id
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+          default: json
+          title: Format
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/workflows/{workflow_id}/reports/workflow-card/download:
     post:
       tags:
       - workflows
-      summary: Download Workflow Provenance Card
-      description: Generate and download a workflow provenance card markdown file.
-      operationId: download_workflow_provenance_card_api_v1_workflows__workflow_id__reports_provenance_card_download_post
+      summary: Download Workflow Card
+      description: Generate and download a workflow card markdown file.
+      operationId: download_workflow_card_api_v1_workflows__workflow_id__reports_workflow_card_download_post
       parameters:
       - name: workflow_id
         in: path
@@ -413,14 +627,14 @@ paths:
           - type: string
           - type: 'null'
           title: Task Id
-      - name: type
+      - name: object_type
         in: query
         required: false
         schema:
           anyOf:
           - type: string
           - type: 'null'
-          title: Type
+          title: Object Type
       - name: filter_json
         in: query
         required: false
@@ -660,6 +874,7 @@ paths:
       tags:
       - datasets
       summary: List Datasets
+      description: List dataset objects with optional filters.
       operationId: list_datasets_api_v1_datasets_get
       parameters:
       - name: limit
@@ -728,6 +943,7 @@ paths:
       tags:
       - datasets
       summary: Get Dataset
+      description: Get dataset object metadata by id and optional version.
       operationId: get_dataset_api_v1_datasets__object_id__get
       parameters:
       - name: object_id
@@ -771,6 +987,7 @@ paths:
       tags:
       - datasets
       summary: Get Dataset Version
+      description: Get a specific dataset object version.
       operationId: get_dataset_version_api_v1_datasets__object_id__versions__version__get
       parameters:
       - name: object_id
@@ -812,6 +1029,7 @@ paths:
       tags:
       - datasets
       summary: Download Dataset
+      description: Download dataset payload as a binary attachment.
       operationId: download_dataset_api_v1_datasets__object_id__download_get
       parameters:
       - name: object_id
@@ -845,6 +1063,7 @@ paths:
       tags:
       - datasets
       summary: Query Datasets
+      description: Run an advanced read-only query for dataset objects.
       operationId: query_datasets_api_v1_datasets_query_post
       requestBody:
         content:
@@ -870,6 +1089,7 @@ paths:
       tags:
       - models
       summary: List Models
+      description: List ML model objects with optional filters.
       operationId: list_models_api_v1_models_get
       parameters:
       - name: limit
@@ -938,6 +1158,7 @@ paths:
       tags:
       - models
       summary: Get Model
+      description: Get ML model object metadata by id and optional version.
       operationId: get_model_api_v1_models__object_id__get
       parameters:
       - name: object_id
@@ -981,6 +1202,7 @@ paths:
       tags:
       - models
       summary: Get Model Version
+      description: Get a specific ML model object version.
       operationId: get_model_version_api_v1_models__object_id__versions__version__get
       parameters:
       - name: object_id
@@ -1022,6 +1244,7 @@ paths:
       tags:
       - models
       summary: Download Model
+      description: Download ML model payload as a binary attachment.
       operationId: download_model_api_v1_models__object_id__download_get
       parameters:
       - name: object_id
@@ -1055,6 +1278,7 @@ paths:
       tags:
       - models
       summary: Query Models
+      description: Run an advanced read-only query for ML model objects.
       operationId: query_models_api_v1_models_query_post
       requestBody:
         content:
@@ -1062,6 +1286,592 @@ paths:
             schema:
               $ref: '#/components/schemas/ObjectQueryRequest'
         required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/agents:
+    get:
+      tags:
+      - agents
+      summary: List Agents
+      description: List derived agent summaries, most recently active first.
+      operationId: list_agents_api_v1_agents_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 100
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/agents/{agent_id}:
+    get:
+      tags:
+      - agents
+      summary: Get Agent
+      description: Get one agent's derived summary and per-activity task summary.
+      operationId: get_agent_api_v1_agents__agent_id__get
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Agent Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Agent Api V1 Agents  Agent Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/agents/{agent_id}/tasks:
+    get:
+      tags:
+      - agents
+      summary: Get Agent Tasks
+      description: List tasks executed by or sent from an agent.
+      operationId: get_agent_tasks_api_v1_agents__agent_id__tasks_get
+      parameters:
+      - name: agent_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Agent Id
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 100
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/stats/tasks/summary:
+    get:
+      tags:
+      - stats
+      summary: Get Task Summary
+      description: Summarize tasks (status counts, per-activity durations, time range).
+      operationId: get_task_summary_api_v1_stats_tasks_summary_get
+      parameters:
+      - name: workflow_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workflow Id
+      - name: campaign_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Campaign Id
+      - name: agent_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Agent Id
+      - name: filter_json
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Filter Json
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Task Summary Api V1 Stats Tasks Summary Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/stats/timeseries:
+    post:
+      tags:
+      - stats
+      summary: Post Timeseries
+      description: Extract plottable rows of dot-notated fields from tasks.
+      operationId: post_timeseries_api_v1_stats_timeseries_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimeseriesRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Post Timeseries Api V1 Stats Timeseries Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/stats/chart_data:
+    post:
+      tags:
+      - stats
+      summary: Post Chart Data
+      description: Resolve a declarative dashboard chart data binding into rows.
+      operationId: post_chart_data_api_v1_stats_chart_data_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChartDataRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Post Chart Data Api V1 Stats Chart Data Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/dashboards/resolve:
+    get:
+      tags:
+      - dashboards
+      summary: Resolve Dashboard
+      description: 'Return merged charts for a workflow or campaign.
+
+
+        For a workflow: returns charts from all ``common_workflow`` configs merged
+
+        with charts from any ``custom_workflow`` config whose ``target`` matches
+
+        ``workflow_name``.
+
+
+        For a campaign: returns charts from all ``common_campaign`` configs merged
+
+        with charts from any ``custom_campaign`` config whose ``target`` matches
+
+        ``campaign_id``.'
+      operationId: resolve_dashboard_api_v1_dashboards_resolve_get
+      parameters:
+      - name: workflow_name
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workflow Name
+      - name: campaign_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Campaign Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                title: Response Resolve Dashboard Api V1 Dashboards Resolve Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/dashboards:
+    get:
+      tags:
+      - dashboards
+      summary: List Dashboards
+      description: List all dashboard configs, optionally filtered by ``dashboard_type``.
+      operationId: list_dashboards_api_v1_dashboards_get
+      parameters:
+      - name: dashboard_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dashboard Type
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - dashboards
+      summary: Create Dashboard
+      description: Create a dashboard config; the server assigns its id and timestamps.
+      operationId: create_dashboard_api_v1_dashboards_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardConfig'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Create Dashboard Api V1 Dashboards Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/dashboards/{dashboard_id}:
+    get:
+      tags:
+      - dashboards
+      summary: Get Dashboard
+      description: Get a dashboard config by id.
+      operationId: get_dashboard_api_v1_dashboards__dashboard_id__get
+      parameters:
+      - name: dashboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dashboard Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Get Dashboard Api V1 Dashboards  Dashboard Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    put:
+      tags:
+      - dashboards
+      summary: Update Dashboard
+      description: Replace a dashboard config, preserving its id and creation time.
+      operationId: update_dashboard_api_v1_dashboards__dashboard_id__put
+      parameters:
+      - name: dashboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dashboard Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardConfig'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Update Dashboard Api V1 Dashboards  Dashboard Id  Put
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - dashboards
+      summary: Delete Dashboard
+      description: Delete a dashboard config by id.
+      operationId: delete_dashboard_api_v1_dashboards__dashboard_id__delete
+      parameters:
+      - name: dashboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dashboard Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Delete Dashboard Api V1 Dashboards  Dashboard Id  Delete
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/stream/tasks:
+    get:
+      tags:
+      - stream
+      summary: Stream Tasks
+      description: Stream new/updated tasks as SSE events, optionally scoped by workflow/campaign/agent.
+      operationId: stream_tasks_api_v1_stream_tasks_get
+      parameters:
+      - name: workflow_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workflow Id
+      - name: campaign_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Campaign Id
+      - name: agent_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Agent Id
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Since
+      - name: poll_interval
+        in: query
+        required: false
+        schema:
+          type: number
+          maximum: 60.0
+          minimum: 0.1
+          default: 2.0
+          title: Poll Interval
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/stream/workflows:
+    get:
+      tags:
+      - stream
+      summary: Stream Workflows
+      description: Stream new workflows as SSE events, optionally scoped by campaign.
+      operationId: stream_workflows_api_v1_stream_workflows_get
+      parameters:
+      - name: campaign_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Campaign Id
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Since
+      - name: poll_interval
+        in: query
+        required: false
+        schema:
+          type: number
+          maximum: 60.0
+          minimum: 0.1
+          default: 2.0
+          title: Poll Interval
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/chat:
+    post:
+      tags:
+      - chat
+      summary: Chat
+      description: 'Answer a provenance chat message, optionally streaming SSE events.
+
+
+        Streaming events: ``tool_call``, ``tool_result``, ``card``, ``token``, ``done``,
+        ``error``.
+
+        Non-streaming responses collect the same events into
+
+        ``{"message", "tool_trace", "cards"}``.'
+      operationId: chat_api_v1_chat_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/query/{scope}:
+    post:
+      tags:
+      - query
+      summary: Query Scope
+      description: Run a read-only advanced query over a constrained collection scope.
+      operationId: query_scope_api_v1_query__scope__post
+      parameters:
+      - name: scope
+        in: path
+        required: true
+        schema:
+          enum:
+          - workflows
+          - tasks
+          - objects
+          - models
+          - datasets
+          type: string
+          title: Scope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectQueryRequest'
       responses:
         '200':
           description: Successful Response
@@ -1097,6 +1907,222 @@ components:
       - field
       title: AggregationSpec
       description: Aggregation operator and source field.
+    ChartData:
+      properties:
+        source:
+          type: string
+          enum:
+          - tasks
+          - workflows
+          - objects
+          title: Source
+          default: tasks
+        filter:
+          additionalProperties: true
+          type: object
+          title: Filter
+        group_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Group By
+        metrics:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/MetricSpec'
+            type: array
+          - type: 'null'
+          title: Metrics
+        x:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X
+        y:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Y
+        sort:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/SortSpec'
+            type: array
+          - type: 'null'
+          title: Sort
+        limit:
+          type: integer
+          maximum: 5000.0
+          minimum: 1.0
+          title: Limit
+          default: 500
+      type: object
+      title: ChartData
+      description: 'Declarative data binding for a chart: what to query and how to
+        shape it.'
+    ChartDataRequest:
+      properties:
+        data:
+          $ref: '#/components/schemas/ChartData'
+        context:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Context
+      type: object
+      required:
+      - data
+      title: ChartDataRequest
+      description: Request body for the declarative chart-data resolver.
+    ChatMessage:
+      properties:
+        role:
+          type: string
+          title: Role
+        content:
+          type: string
+          title: Content
+      type: object
+      required:
+      - role
+      - content
+      title: ChatMessage
+      description: One conversation message.
+    ChatRequest:
+      properties:
+        messages:
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+          type: array
+          minItems: 1
+          title: Messages
+        context:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Context
+        stream:
+          type: boolean
+          title: Stream
+          default: true
+        allow_dashboard_edit:
+          type: boolean
+          title: Allow Dashboard Edit
+          default: false
+      type: object
+      required:
+      - messages
+      title: ChatRequest
+      description: 'Chat request: client-passed history plus UI context.'
+    DashboardChart:
+      properties:
+        chart_id:
+          type: string
+          title: Chart Id
+        type:
+          type: string
+          enum:
+          - chart
+          - metric
+          - table
+          - markdown
+          title: Type
+        title:
+          type: string
+          title: Title
+          default: ''
+        live:
+          type: boolean
+          title: Live
+          default: false
+        refresh_interval_sec:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Refresh Interval Sec
+        data:
+          anyOf:
+          - $ref: '#/components/schemas/ChartData'
+          - type: 'null'
+        viz:
+          anyOf:
+          - $ref: '#/components/schemas/VizSpec'
+          - type: 'null'
+        content:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Content
+      type: object
+      required:
+      - chart_id
+      - type
+      title: DashboardChart
+      description: One chart inside a dashboard.
+    DashboardConfig:
+      properties:
+        dashboard_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dashboard Id
+        dashboard_type:
+          type: string
+          enum:
+          - common_workflow
+          - common_campaign
+          - custom_workflow
+          - custom_campaign
+          title: Dashboard Type
+          default: common_workflow
+        target:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Target
+        name:
+          type: string
+          title: Name
+          default: ''
+        description:
+          type: string
+          title: Description
+          default: ''
+        context:
+          additionalProperties: true
+          type: object
+          title: Context
+        charts:
+          items:
+            $ref: '#/components/schemas/DashboardChart'
+          type: array
+          title: Charts
+        layout:
+          items:
+            $ref: '#/components/schemas/LayoutItem'
+          type: array
+          title: Layout
+        created_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Created At
+        updated_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Updated At
+      type: object
+      title: DashboardConfig
+      description: "A dashboard configuration: one of four types (common/custom \xD7\
+        \ workflow/campaign).\n\n``target`` is required for custom types:\n- ``custom_workflow``:\
+        \ the workflow **name** (not id) this config applies to.\n- ``custom_campaign``:\
+        \ the ``campaign_id`` this config applies to.\nCommon types leave ``target``\
+        \ null and apply to every workflow or campaign."
     HTTPValidationError:
       properties:
         detail:
@@ -1106,6 +2132,38 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
+    LayoutItem:
+      properties:
+        chart_id:
+          type: string
+          title: Chart Id
+        x:
+          type: integer
+          maximum: 11.0
+          minimum: 0.0
+          title: X
+        y:
+          type: integer
+          minimum: 0.0
+          title: Y
+        w:
+          type: integer
+          maximum: 12.0
+          minimum: 1.0
+          title: W
+        h:
+          type: integer
+          minimum: 1.0
+          title: H
+      type: object
+      required:
+      - chart_id
+      - x
+      - y
+      - w
+      - h
+      title: LayoutItem
+      description: Grid placement of a chart in a 12-column layout.
     ListResponse:
       properties:
         items:
@@ -1127,6 +2185,26 @@ components:
       - limit
       title: ListResponse
       description: Generic list envelope for collection endpoints.
+    MetricSpec:
+      properties:
+        field:
+          type: string
+          title: Field
+        agg:
+          type: string
+          enum:
+          - avg
+          - sum
+          - min
+          - max
+          - count
+          title: Agg
+      type: object
+      required:
+      - field
+      - agg
+      title: MetricSpec
+      description: A single aggregation over a (dot-notated) field.
     ObjectQueryRequest:
       properties:
         filter:
@@ -1229,6 +2307,32 @@ components:
       - field
       title: SortSpec
       description: Sort field/order pair.
+    TimeseriesRequest:
+      properties:
+        filter:
+          additionalProperties: true
+          type: object
+          title: Filter
+        fields:
+          items:
+            type: string
+          type: array
+          title: Fields
+        x:
+          type: string
+          title: X
+          default: started_at
+        limit:
+          type: integer
+          maximum: 5000.0
+          minimum: 1.0
+          title: Limit
+          default: 1000
+      type: object
+      required:
+      - fields
+      title: TimeseriesRequest
+      description: Request body for telemetry/field timeseries extraction.
     ValidationError:
       properties:
         loc:
@@ -1250,3 +2354,23 @@ components:
       - msg
       - type
       title: ValidationError
+    VizSpec:
+      properties:
+        kind:
+          type: string
+          enum:
+          - line
+          - bar
+          - pie
+          - scatter
+          - area
+          - heatmap
+          title: Kind
+          default: line
+        stacked:
+          type: boolean
+          title: Stacked
+          default: false
+      type: object
+      title: VizSpec
+      description: How a chart renders its rows.

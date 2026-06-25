@@ -23,6 +23,7 @@ from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
+from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.utils import perf_log, get_utc_now_str
@@ -85,6 +86,9 @@ class MongoDBDAO(DocumentDBDAO):
         self._wfs_collection = self._db["workflows"]
         self._obj_collection = self._db["objects"]
         self._obj_history_collection = self._db["object_history"]
+        self._dashboards_collection = self._db["dashboards"]
+        self._agents_collection = self._db["agents"]
+        self._node_positions_collection = self._db["node_positions"]
 
         if create_indices:
             self._create_indices()
@@ -110,6 +114,11 @@ class MongoDBDAO(DocumentDBDAO):
         if "campaign_id" not in existing_indices:
             self._wfs_collection.create_index("campaign_id")
 
+        # Creating agent collection indices:
+        existing_indices = [list(x["key"].keys())[0] for x in self._agents_collection.list_indexes()]
+        if AgentObject.agent_id_field() not in existing_indices:
+            self._agents_collection.create_index(AgentObject.agent_id_field(), unique=True)
+
         # Creating objects collection indices:
         existing_indices = [list(x["key"].keys())[0] for x in self._obj_collection.list_indexes()]
 
@@ -133,6 +142,16 @@ class MongoDBDAO(DocumentDBDAO):
             self._obj_history_collection.create_index("object_id")
         if ["created_at"] not in existing_history_indices:
             self._obj_history_collection.create_index("created_at")
+
+        # Creating dashboards collection indices:
+        existing_indices = [list(x["key"].keys())[0] for x in self._dashboards_collection.list_indexes()]
+        if "dashboard_id" not in existing_indices:
+            self._dashboards_collection.create_index("dashboard_id", unique=True)
+
+        # Creating node_positions collection indices:
+        existing_indices_np = [list(x["key"].keys())[0] for x in self._node_positions_collection.list_indexes()]
+        if "workflow_id" not in existing_indices_np:
+            self._node_positions_collection.create_index([("workflow_id", 1), ("graph_type", 1)], unique=True)
 
     def _pipeline(
         self,
@@ -441,6 +460,15 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
+    def delete_agents_with_filter(self, filter) -> bool:
+        """Delete agent documents that match the specified filter."""
+        try:
+            self._agents_collection.delete_many(filter)
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
     def count_tasks(self) -> int:
         """Count number of docs in tasks collection."""
         try:
@@ -464,6 +492,93 @@ class MongoDBDAO(DocumentDBDAO):
         except Exception as e:
             self.logger.exception(e)
             return -1
+
+    def delete_workflow_data(self, workflow_id: str) -> dict:
+        """Delete all data for one workflow: tasks, objects, workflow doc, and orphaned agents.
+
+        An agent is considered orphaned after this deletion if it has no remaining tasks
+        in any other workflow.
+
+        Parameters
+        ----------
+        workflow_id : str
+            The workflow identifier whose data should be deleted.
+
+        Returns
+        -------
+        dict
+            Per-collection deleted counts:
+            ``{"workflows": x, "tasks": y, "objects": z, "agents": a}``.
+        """
+        agent_ids = self._tasks_collection.distinct(
+            "agent_id", {"workflow_id": workflow_id, "agent_id": {"$exists": True}}
+        )
+        tasks_result = self._tasks_collection.delete_many({"workflow_id": workflow_id})
+        objects_result = self._obj_collection.delete_many({"workflow_id": workflow_id})
+        wfs_result = self._wfs_collection.delete_many({"workflow_id": workflow_id})
+        agents_deleted = self._delete_orphaned_agents(agent_ids)
+        return {
+            "workflows": wfs_result.deleted_count,
+            "tasks": tasks_result.deleted_count,
+            "objects": objects_result.deleted_count,
+            "agents": agents_deleted,
+        }
+
+    def _delete_orphaned_agents(self, agent_ids: list) -> int:
+        """Delete agents from ``agent_ids`` that have no remaining tasks.
+
+        Parameters
+        ----------
+        agent_ids : list
+            Candidate agent IDs to check and potentially remove.
+
+        Returns
+        -------
+        int
+            Number of agent documents deleted.
+        """
+        if not agent_ids:
+            return 0
+        orphans = [aid for aid in agent_ids if self._tasks_collection.count_documents({"agent_id": aid}) == 0]
+        if not orphans:
+            return 0
+        result = self._agents_collection.delete_many({"agent_id": {"$in": orphans}})
+        return result.deleted_count
+
+    def delete_campaign_data(self, campaign_id: str) -> dict:
+        """Delete all data for one campaign: tasks, objects, workflow docs, and orphaned agents.
+
+        An agent is considered orphaned after this deletion if it has no remaining tasks
+        in any workflow.
+
+        Parameters
+        ----------
+        campaign_id : str
+            The campaign identifier whose data should be deleted.
+
+        Returns
+        -------
+        dict
+            Per-collection deleted counts:
+            ``{"workflows": x, "tasks": y, "objects": z, "agents": a}``.
+        """
+        wf_cursor = self._wfs_collection.find({"campaign_id": campaign_id}, {"workflow_id": 1})
+        wf_ids = [doc["workflow_id"] for doc in wf_cursor if "workflow_id" in doc]
+        if not wf_ids:
+            return {"workflows": 0, "tasks": 0, "objects": 0, "agents": 0}
+        agent_ids = self._tasks_collection.distinct(
+            "agent_id", {"workflow_id": {"$in": wf_ids}, "agent_id": {"$exists": True}}
+        )
+        tasks_result = self._tasks_collection.delete_many({"workflow_id": {"$in": wf_ids}})
+        objects_result = self._obj_collection.delete_many({"workflow_id": {"$in": wf_ids}})
+        wfs_result = self._wfs_collection.delete_many({"campaign_id": campaign_id})
+        agents_deleted = self._delete_orphaned_agents(agent_ids)
+        return {
+            "workflows": wfs_result.deleted_count,
+            "tasks": tasks_result.deleted_count,
+            "objects": objects_result.deleted_count,
+            "agents": agents_deleted,
+        }
 
     @staticmethod
     def _utc_now():
@@ -638,6 +753,34 @@ class MongoDBDAO(DocumentDBDAO):
 
         try:
             result = self._wfs_collection.update_one(_filter, update_query, upsert=True)
+            return (result.upserted_id is not None) or result.raw_result["updatedExisting"]
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
+    def insert_or_update_agent(self, agent_obj: AgentObject) -> bool:
+        """Insert or update agent."""
+        _dict = agent_obj.to_dict().copy()
+        agent_id = _dict.pop(AgentObject.agent_id_field(), None)
+        if agent_id is None:
+            self.logger.exception("The agent identifier cannot be none.")
+            return False
+        _filter = {AgentObject.agent_id_field(): agent_id}
+        update_query = {}
+
+        machine_info = _dict.pop("machine_info", None)
+        if machine_info is not None:
+            for k in machine_info:
+                _dict[f"machine_info.{k}"] = machine_info[k]
+
+        update_query.update(
+            {
+                "$set": _dict,
+            }
+        )
+
+        try:
+            result = self._agents_collection.update_one(_filter, update_query, upsert=True)
             return (result.upserted_id is not None) or result.raw_result["updatedExisting"]
         except Exception as e:
             self.logger.exception(e)
@@ -1064,9 +1207,12 @@ class MongoDBDAO(DocumentDBDAO):
             return self.object_query(filter, projection, limit, sort)
         elif collection == "object_history":
             return list(self._obj_history_collection.find(filter))
+        elif collection == "agents":
+            return self.agent_query(filter, projection, limit, sort, remove_json_unserializables)
         else:
             raise Exception(
-                f"You used type={collection}, but MongoDB only stores tasks, workflows, objects, and object_history"
+                f"You used type={collection}, but MongoDB only stores "
+                "tasks, workflows, objects, object_history, and agents"
             )
 
     def raw_task_pipeline(self, pipeline: List[Dict]):
@@ -1115,6 +1261,117 @@ class MongoDBDAO(DocumentDBDAO):
         except Exception as e:
             self.logger.exception(e)
             return None
+
+    def raw_pipeline(self, pipeline: List[Dict], collection: str = "tasks"):
+        """
+        Run a raw MongoDB aggregation pipeline on a chosen collection.
+
+        Generalization of :meth:`raw_task_pipeline` for the other collections
+        (``workflows``, ``objects``, ``object_history``).
+
+        Parameters
+        ----------
+        pipeline : list of dict
+            A MongoDB aggregation pipeline represented as a list of stage documents.
+        collection : str, optional
+            Target collection name. Defaults to ``"tasks"``.
+
+        Returns
+        -------
+        list of dict or None
+            The aggregation results, or ``None`` if an error occurred.
+        """
+        collections = {
+            "tasks": self._tasks_collection,
+            "workflows": self._wfs_collection,
+            "objects": self._obj_collection,
+            "object_history": self._obj_history_collection,
+        }
+        if collection not in collections:
+            raise ValueError(f"Unknown collection: {collection}. Expected one of {sorted(collections)}.")
+        try:
+            return list(collections[collection].aggregate(pipeline))
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def save_dashboard(self, dashboard: Dict) -> bool:
+        """Insert or replace a dashboard document keyed by ``dashboard_id``.
+
+        Parameters
+        ----------
+        dashboard : dict
+            Dashboard spec document containing a ``dashboard_id`` field.
+
+        Returns
+        -------
+        bool
+            True on success, False otherwise.
+        """
+        try:
+            self._dashboards_collection.replace_one({"dashboard_id": dashboard["dashboard_id"]}, dashboard, upsert=True)
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
+    def get_dashboard(self, dashboard_id: str) -> Dict:
+        """Get a dashboard document by id.
+
+        Parameters
+        ----------
+        dashboard_id : str
+            Dashboard identifier.
+
+        Returns
+        -------
+        dict or None
+            The dashboard document, or None when not found.
+        """
+        try:
+            return self._dashboards_collection.find_one({"dashboard_id": dashboard_id}, projection={"_id": 0})
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def list_dashboards(self, filter: Dict = None) -> List[Dict]:
+        """List dashboard documents.
+
+        Parameters
+        ----------
+        filter : dict, optional
+            Mongo-style filter. Defaults to all dashboards.
+
+        Returns
+        -------
+        list of dict
+            Matching dashboard documents.
+        """
+        try:
+            return list(self._dashboards_collection.find(filter or {}, projection={"_id": 0}))
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def delete_dashboard(self, dashboard_id: str) -> bool:
+        """Delete a dashboard document by id.
+
+        Parameters
+        ----------
+        dashboard_id : str
+            Dashboard identifier.
+
+        Returns
+        -------
+        bool
+            True when a document was deleted, False otherwise.
+        """
+        try:
+            result = self._dashboards_collection.delete_one({"dashboard_id": dashboard_id})
+            return result.deleted_count > 0
+        except Exception as e:
+            self.logger.exception(e)
+            return False
 
     def task_query(
         self,
@@ -1175,7 +1432,12 @@ class MongoDBDAO(DocumentDBDAO):
                     _projection[proj_field] = 1
 
             if remove_json_unserializables:
-                _projection.update({"_id": 0, "timestamp": 0})
+                # Mongo only allows excluding `_id` inside an inclusion projection; excluding
+                # other fields (e.g., `timestamp`) is valid only in exclusion-only projections.
+                _projection.pop("timestamp", None)
+                _projection["_id"] = 0
+                if projection is None:
+                    _projection["timestamp"] = 0
             try:
                 rs = self._tasks_collection.find(
                     filter=filter,
@@ -1211,6 +1473,35 @@ class MongoDBDAO(DocumentDBDAO):
             _projection.update({"_id": 0})  # Add here more fields that are non serializable
         try:
             rs = self._wfs_collection.find(
+                filter=filter,
+                projection=_projection,
+                limit=limit,
+                sort=sort,
+            )
+            lst = list(rs)
+            return lst
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def agent_query(
+        self,
+        filter: Dict = None,
+        projection: List[str] = None,
+        limit: int = 0,
+        sort: List[Tuple] = None,
+        remove_json_unserializables=True,
+    ) -> List[Dict]:
+        """Query agents collection in the MongoDB database."""
+        _projection = {}
+        if projection is not None:
+            for proj_field in projection:
+                _projection[proj_field] = 1
+
+        if remove_json_unserializables:
+            _projection.update({"_id": 0})
+        try:
+            rs = self._agents_collection.find(
                 filter=filter,
                 projection=_projection,
                 limit=limit,
@@ -1477,3 +1768,55 @@ class MongoDBDAO(DocumentDBDAO):
                 queue = queue[1:]
             else:
                 break
+
+    def save_node_positions(self, workflow_id: str, graph_type: str, positions: Dict) -> bool:
+        """Save or update node positions for a workflow graph type.
+
+        Parameters
+        ----------
+        workflow_id : str
+            Workflow identifier.
+        graph_type : str
+            Graph type: 'dataflow', 'task', or 'activity'.
+        positions : dict
+            Dict mapping node IDs to coordinates {"x": float, "y": float}.
+
+        Returns
+        -------
+        bool
+            True on success, False otherwise.
+        """
+        try:
+            self._node_positions_collection.replace_one(
+                {"workflow_id": workflow_id, "graph_type": graph_type},
+                {"workflow_id": workflow_id, "graph_type": graph_type, "positions": positions},
+                upsert=True,
+            )
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
+    def get_node_positions(self, workflow_id: str, graph_type: str) -> Dict:
+        """Get node positions for a workflow graph type.
+
+        Parameters
+        ----------
+        workflow_id : str
+            Workflow identifier.
+        graph_type : str
+            Graph type.
+
+        Returns
+        -------
+        dict
+            Dict mapping node IDs to coordinates.
+        """
+        try:
+            doc = self._node_positions_collection.find_one(
+                {"workflow_id": workflow_id, "graph_type": graph_type}, projection={"_id": 0}
+            )
+            return doc.get("positions", {}) if doc else {}
+        except Exception as e:
+            self.logger.exception(e)
+            return {}

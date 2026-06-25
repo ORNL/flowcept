@@ -10,7 +10,7 @@ import lmdb
 import json
 import pandas as pd
 
-from flowcept import WorkflowObject
+from flowcept import WorkflowObject, AgentObject
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import PERF_LOG, LMDB_SETTINGS
@@ -39,11 +39,12 @@ class LMDBDAO(DocumentDBDAO):
         path = LMDB_SETTINGS.get("path", "flowcept_lmdb")
         handle = LMDBDAO._shared_handles.get(path)
         if handle is None:
-            env = lmdb.open(path, map_size=10**12, max_dbs=2)
+            env = lmdb.open(path, map_size=10**12, max_dbs=4)
             handle = {
                 "env": env,
                 "tasks_db": env.open_db(b"tasks"),
                 "workflows_db": env.open_db(b"workflows"),
+                "agents_db": env.open_db(b"agents"),
                 "ref_count": 0,
             }
             LMDBDAO._shared_handles[path] = handle
@@ -53,6 +54,7 @@ class LMDBDAO(DocumentDBDAO):
         self._env = handle["env"]
         self._tasks_db = handle["tasks_db"]
         self._workflows_db = handle["workflows_db"]
+        self._agents_db = handle["agents_db"]
         self._initialized = True
         self._is_closed = False
 
@@ -134,6 +136,30 @@ class LMDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
+    def insert_or_update_agent(self, agent_obj: AgentObject):
+        """Insert or update an agent document.
+
+        Parameters
+        ----------
+        agent_obj : AgentObject
+            Agent object to insert or update.
+
+        Returns
+        -------
+        bool
+            True if the operation succeeds, False otherwise.
+        """
+        try:
+            _dict = agent_obj.to_dict()
+            with self._env.begin(write=True, db=self._agents_db) as txn:
+                key = _dict.get("agent_id").encode()
+                value = json.dumps(_dict).encode()
+                txn.put(key, value)
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
     def delete_task_keys(self, key_name, keys_list: List[str]) -> bool:
         """Delete task documents by a key value list.
 
@@ -157,6 +183,22 @@ class LMDBDAO(DocumentDBDAO):
                         entry = json.loads(value.decode())
                         if entry.get(key_name) in keys_list:
                             cursor.delete()
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
+    def delete_agents_with_filter(self, filter) -> bool:
+        """Delete agent documents that match the specified filter."""
+        if self._is_closed:
+            self._open()
+        try:
+            with self._env.begin(write=True, db=self._agents_db) as txn:
+                cursor = txn.cursor()
+                for key, value in cursor:
+                    entry = json.loads(value.decode())
+                    if LMDBDAO._match_filter(entry, filter):
+                        cursor.delete()
             return True
         except Exception as e:
             self.logger.exception(e)
@@ -205,8 +247,45 @@ class LMDBDAO(DocumentDBDAO):
             return True
 
         for key, value in filter.items():
-            if entry.get(key) != value:
-                return False
+            if key == "$or":
+                if not isinstance(value, list) or not any(LMDBDAO._match_filter(entry, clause) for clause in value):
+                    return False
+            elif key == "$and":
+                if not isinstance(value, list) or not all(LMDBDAO._match_filter(entry, clause) for clause in value):
+                    return False
+            elif isinstance(value, dict):
+                entry_val = entry.get(key)
+                for op, op_val in value.items():
+                    if op == "$in":
+                        if not isinstance(op_val, (list, set, tuple)) or entry_val not in op_val:
+                            return False
+                    elif op == "$nin":
+                        if not isinstance(op_val, (list, set, tuple)) or entry_val in op_val:
+                            return False
+                    elif op == "$eq":
+                        if entry_val != op_val:
+                            return False
+                    elif op == "$ne":
+                        if entry_val == op_val:
+                            return False
+                    elif op == "$gt":
+                        if entry_val is None or entry_val <= op_val:
+                            return False
+                    elif op == "$gte":
+                        if entry_val is None or entry_val < op_val:
+                            return False
+                    elif op == "$lt":
+                        if entry_val is None or entry_val >= op_val:
+                            return False
+                    elif op == "$lte":
+                        if entry_val is None or entry_val > op_val:
+                            return False
+                    else:
+                        if entry_val != value:
+                            return False
+            else:
+                if entry.get(key) != value:
+                    return False
         return True
 
     def to_df(self, collection="tasks", filter=None) -> pd.DataFrame:
@@ -265,6 +344,8 @@ class LMDBDAO(DocumentDBDAO):
             _db = self._tasks_db
         elif collection == "workflows":
             _db = self._workflows_db
+        elif collection == "agents":
+            _db = self._agents_db
         else:
             self.logger.warning(f"LMDB does not support collection '{collection}'. Returning None.")
             return None
@@ -356,6 +437,26 @@ class LMDBDAO(DocumentDBDAO):
         """
         return self.query(
             collection="workflows",
+            filter=filter,
+            projection=projection,
+            limit=limit,
+            sort=sort,
+            aggregation=aggregation,
+            remove_json_unserializables=remove_json_unserializables,
+        )
+
+    def agent_query(
+        self,
+        filter=None,
+        projection=None,
+        limit=None,
+        sort=None,
+        aggregation=None,
+        remove_json_unserializables=None,
+    ):
+        """Query agents collection in the LMDB database."""
+        return self.query(
+            collection="agents",
             filter=filter,
             projection=projection,
             limit=limit,

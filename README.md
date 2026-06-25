@@ -96,7 +96,7 @@ This prints out:
 
 ---
 
-##### Workflow Provenance Card
+##### Workflow Card
 
 ###### Summary
 - Workflow ID: fe546706-ef46-4482-8f70-3af664a7131b
@@ -130,7 +130,7 @@ This prints out:
 
 ---
 
-→ See [Provenance Card](#provenance-card) for details.
+→ See [Workflow Card](#workflow-cards) for details.
 
 That is the simplest, vanilla run of Flowcept, good for quick sanity checks on a laptop, small-scale run. 
 For diskless runs (no JSON files), OpenAPI RESTful services, online querying using databases,
@@ -158,7 +158,7 @@ For an end-to-end workflow developer tutorial (default user guide), start with [
 - [Setup and the Settings File](#setup)
 - [Running with Containers](#running-with-containers)
 - [Examples](#examples)
-- [Provenance Card](#provenance-card)
+- [Workflow Card](#workflow-cards)
 - [Data Persistence](#data-persistence)
 - [Performance Tuning](#performance-tuning-for-performance-evaluation)
 - [AMD GPU Setup](#install-amd-gpu-lib)
@@ -181,6 +181,7 @@ Designed for scenarios involving critical data from multiple, federated workflow
 - Low overhead, suitable for HPC and highly distributed setups
 - Telemetry capture for CPU, GPU, memory, linked to dataflow
 - Pluggable MQ and storage backends (Redis, Kafka, MongoDB, LMDB)
+- Web UI: provenance browser, dashboards, live updates, and an embedded LLM chat agent
 - [W3C PROV](https://www.w3.org/TR/prov-overview/) adherence 
 
 Explore [Jupyter Notebooks](notebooks) and [Examples](examples) for usage.
@@ -216,7 +217,6 @@ pip install flowcept[lmdb]          # LMDB lightweight database
 pip install flowcept[mqtt]          # MQTT support
 pip install flowcept[llm_agent]     # MCP agent, LangChain, Streamlit integration: needed either for MCP capture or for the Flowcept Agent.
 pip install flowcept[llm_google]    # Google GenAI + Flowcept agent support
-pip install flowcept[analytics]     # Extra analytics (seaborn, plotly, scipy)
 pip install flowcept[dev]           # Developer dependencies (docs, tests, lint, etc.)
 ```
 
@@ -413,11 +413,11 @@ They add `adapters.<name>` to the current settings file instead of replacing the
 
  See the [Jupyter Notebooks](notebooks) and [Examples directory](examples) for utilization examples.
 
-## Provenance Cards
+## Workflow Cards
 
-The [Quickstart](#quickstart) example (`python quickstart.py`) shows a provenance card.
+The [Quickstart](#quickstart) example (`python quickstart.py`) shows a workflow card.
 
-Flowcept introduces the Workflow Provenance Card concept: a structured markdown summary of a workflow execution covering:
+Flowcept introduces the Workflow Card concept: a structured markdown summary of a workflow execution covering:
 
 - **Summary** — workflow name, IDs, execution window, elapsed time, host, git info
 - **Workflow-level Summary** — activity count, status counts, top slowest activities
@@ -443,6 +443,27 @@ Flowcept.generate_report(workflow_id="<id>", report_type="provenance_report", fo
 
 See [`docs/reporting.rst`](docs/reporting.rst) and [`src/flowcept/report/README.md`](src/flowcept/report/README.md) for the full reporting reference.
 
+## Web UI
+
+Flowcept ships a built-in web interface for browsing and analyzing provenance data. Start it with:
+
+```bash
+pip install flowcept[webservice]
+flowcept --start-ui        # starts the webservice + dev server; open http://localhost:8008
+```
+
+Key features:
+- **Provenance browser** — campaigns, workflows, tasks, and artifacts with drill-down views
+- **Live updates** — SSE-based streaming so the task table updates while a workflow runs
+- **Dashboards** — per-workflow and per-campaign chart dashboards (configurable, stored in MongoDB)
+- **Dataflow graph** — W3C PROV-style graph of task inputs/outputs; click any node to inspect its provenance
+- **LLM chat agent** — ask natural-language questions about your provenance data; charts render inline; queries are automatically scoped to the current workflow or campaign
+- **Lineage highlighting** — ask the chat agent to highlight the full provenance lineage (ancestors + descendants) of any task directly in the Dataflow graph
+
+The chat agent queries the **persisted store** (MongoDB) and the **live stream** (via near-real-time DB flushes from the MQ). For sub-second in-flight queries, use the MCP agent instead.
+
+See [`docs/web_ui.rst`](docs/web_ui.rst) and [`ui/README.md`](ui/README.md) for the full reference.
+
 # Summary: Observability, Instrumentation, MQs, DBs, and Querying
 
 | Category                           | Supported Options                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -453,7 +474,7 @@ See [`docs/reporting.rst`](docs/reporting.rst) and [`src/flowcept/report/README.
 | **Custom Task Creation**           | `FlowceptTask(activity_id=<id>, used=<inputs>, generated=<outputs>, ...)` <br/><br/>Use for fully customizable task instrumentation. Publishes directly to the MQ either via context management (`with FlowceptTask(...)`) or by calling `send()`. It needs to have a `Flowcept().start()` first (or within a `with Flowcept()` context). See [example](examples/consumers/ping_pong_example.py).                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | **Message Queues (MQ)**            | - **Disabled** (offline mode: provenance events stay in an in-memory buffer, not accessible to external processes) <br> - [Redis](https://redis.io) → default, lightweight, easy to run anywhere <br> - [Kafka](https://kafka.apache.org) → for distributed, production setups <br> - [Mofka](https://mofka.readthedocs.io) → optimized for HPC runs <br><br> _Setup example:_ [docker compose](https://github.com/ORNL/flowcept/blob/main/deployment/compose.yml)                                                                                                                                                                                                                                                                                                                                                      |
 | **Databases**                      | - **Disabled** → Flowcept runs in ephemeral mode (data only in MQ, no persistence) <br> - **[MongoDB](https://www.mongodb.com)** → default, rich queries and efficient bulk writes <br> - **[LMDB](https://lmdb.readthedocs.io)** → lightweight, file-based, no external service, basic query support                                                                                                                                                                                                                                                                                                                                                     |
-| **Querying and Monitoring**        | - **[Grafana](deployment/compose-grafana.yml)** → dashboarding via MongoDB connector <br> - **MCP Flowcept Agent** → LLM-based querying of provenance data                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | 
+| **Querying and Monitoring**        | - **[Web UI](docs/web_ui.rst)** → browser-based provenance browser with dashboards, live updates, and an embedded LLM chat agent that queries the persisted store and highlights provenance lineage in the Dataflow graph <br> - **[Grafana](deployment/compose-grafana.yml)** → dashboarding via MongoDB connector <br> - **MCP Flowcept Agent** → LLM-based querying of the live MQ stream (Redis/Kafka/Mofka) via external assistants (Claude Code, Codex, etc.) or offline JSONL buffer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | 
 | **Custom Consumer**                | You can implement your own consumer to monitor or query the provenance stream in real time. Useful for custom analytics, monitoring, debugging, or to persist the data in a different data model (e.g., graph) . See [example](examples/consumers/simple_consumer.py).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 

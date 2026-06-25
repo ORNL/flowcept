@@ -7,6 +7,16 @@ import pytest
 from flowcept.configs import PROJECT_NAME
 
 
+def pytest_addoption(parser):
+    """Register Flowcept-specific pytest flags."""
+    parser.addoption(
+        "--keep-webservice-test-data",
+        action="store_true",
+        default=False,
+        help="Keep MongoDB data created by webservice integration tests for UI inspection.",
+    )
+
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config):
     """Route Flowcept logs through pytest's logging capture and CLI output."""

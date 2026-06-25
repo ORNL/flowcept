@@ -120,4 +120,4 @@ telemetry_capture:
 Each run writes to `flowcept_output/`:
 - `lmdb/<job_id>/` — raw LMDB database
 - `tasks/` — parquet + workflow JSON
-- `reports/` — provenance card (MD) and report (PDF)
+- `reports/` — workflow card (MD) and report (PDF)

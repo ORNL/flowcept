@@ -868,20 +868,44 @@ def stop_redis() -> None:
         print(f"Failed to stop Redis: {e}")
 
 
-def start_webservice(webservice_host: str = "127.0.0.1", webservice_port: str = "8008"):
+def _kill_port(port: int) -> None:
+    """Kill any process listening on *port* (best-effort, silent on failure)."""
+    try:
+        result = subprocess.run(
+            ["lsof", "-ti", f"tcp:{port}"],
+            capture_output=True,
+            text=True,
+        )
+        for pid in result.stdout.split():
+            subprocess.run(["kill", pid.strip()], capture_output=True)
+        if result.stdout.strip():
+            import time
+
+            time.sleep(1)
+    except Exception:
+        pass
+
+
+def start_webservice(webservice_host: str = None, webservice_port: str = None):
     """
     Start the Flowcept FastAPI webservice locally.
+
+    Kills any process already bound to the port before starting.
+    Host and port default to ``web_server.host``/``web_server.port`` in
+    settings.yaml (or ``WEBSERVER_HOST``/``WEBSERVER_PORT`` env vars).
 
     Parameters
     ----------
     webservice_host : str, optional
-        Host interface to bind (default: 127.0.0.1).
-    webservice_port : int, optional
-        Port to bind (default: 8008).
+        Host interface to bind. Defaults to settings.yaml ``web_server.host``.
+    webservice_port : str, optional
+        Port to bind. Defaults to settings.yaml ``web_server.port``.
     """
-    host = webservice_host
-    port = webservice_port
+    host = webservice_host or configs.WEBSERVER_HOST
+    port = webservice_port or str(configs.WEBSERVER_PORT)
+    _kill_port(int(port))
     print(f"Starting Flowcept webservice on http://{host}:{port}")
+    print(f"Web UI:       http://{host}:{port}/")
     print(f"Swagger UI:   http://{host}:{port}/docs")
     print(f"ReDoc:        http://{host}:{port}/redoc")
     print(f"OpenAPI JSON: http://{host}:{port}/openapi.json")
@@ -895,6 +919,60 @@ def start_webservice(webservice_host: str = "127.0.0.1", webservice_port: str = 
     from flowcept.webservice.main import app
 
     uvicorn.run(app, host=host, port=int(port))
+
+
+def start_ui(
+    webservice_host: str = None,
+    webservice_port: str = None,
+    ui_dir: str = "ui",
+):
+    """
+    Start the Flowcept webservice and the UI dev server together.
+
+    Kills any previously-running webservice or Vite processes first, then
+    launches the webservice in the background and the Vite dev server in the
+    foreground (Ctrl+C stops both).
+    Host and port default to ``web_server.host``/``web_server.port`` in
+    settings.yaml (or ``WEBSERVER_HOST``/``WEBSERVER_PORT`` env vars).
+
+    Parameters
+    ----------
+    webservice_host : str, optional
+        Host interface for the webservice. Defaults to settings.yaml ``web_server.host``.
+    webservice_port : str, optional
+        Port for the webservice. Defaults to settings.yaml ``web_server.port``.
+    ui_dir : str, optional
+        Path to the UI directory containing package.json (default: ui).
+    """
+    import sys
+    import time
+
+    webservice_host = webservice_host or configs.WEBSERVER_HOST
+    webservice_port = webservice_port or str(configs.WEBSERVER_PORT)
+    _kill_port(int(webservice_port))
+    subprocess.run(["pkill", "-f", "flowcept.*start-webservice"], capture_output=True)
+    subprocess.run(["pkill", "-f", "vite"], capture_output=True)
+    time.sleep(1)
+
+    ws_proc = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "flowcept.cli",
+            "--start-webservice",
+            "--webservice-host",
+            webservice_host,
+            "--webservice-port",
+            webservice_port,
+        ]
+    )
+    print(f"Webservice started (pid {ws_proc.pid}) on http://{webservice_host}:{webservice_port}")
+    print(f"UI dev server starting at http://localhost:5173 (proxies /api → :{webservice_port})")
+    try:
+        subprocess.run(["npm", "run", "dev", "--prefix", ui_dir], check=False)
+    finally:
+        ws_proc.terminate()
+        ws_proc.wait()
 
 
 def generate_report(
@@ -911,7 +989,7 @@ def generate_report(
     format : str, optional
         Output format: markdown (default) or pdf.
     output_path : str, optional
-        Output report path. If omitted, defaults to PROVENANCE_CARD.md for markdown
+        Output report path. If omitted, defaults to WORKFLOW_CARD.md for markdown
         and PROVENANCE_REPORT.pdf for pdf.
     input_path : str, optional
         Path to the Flowcept JSONL buffer file.
@@ -932,10 +1010,10 @@ def generate_report(
         print("Unsupported format. Use 'markdown' or 'pdf'.")
         return
 
-    report_type = "provenance_card" if report_format == "markdown" else "provenance_report"
+    report_type = "workflow_card" if report_format == "markdown" else "provenance_report"
     resolved_output_path = output_path
     if not resolved_output_path:
-        resolved_output_path = "PROVENANCE_CARD.md" if report_format == "markdown" else "PROVENANCE_REPORT.pdf"
+        resolved_output_path = "WORKFLOW_CARD.md" if report_format == "markdown" else "PROVENANCE_REPORT.pdf"
 
     stats = Flowcept.generate_report(
         report_type=report_type,
@@ -950,11 +1028,12 @@ def generate_report(
 
 COMMAND_GROUPS = [
     ("Basic Commands", [version, check_services, show_settings, init_settings, start_services, stop_services]),
+    ("Web Service Commands", [start_webservice, start_ui]),
     ("Consumption Commands", [start_consumption_services, stop_consumption_services, stream_messages]),
     ("Database Commands", [workflow_count, query, get_task]),
     ("Report Commands", [generate_report]),
     ("Agent Commands", [start_agent, agent_client, start_agent_gui]),
-    ("External Services", [start_mongo, start_redis, stop_redis, start_webservice]),
+    ("External Services", [start_mongo, start_redis, stop_redis]),
 ]
 
 COMMANDS = set(f for _, fs in COMMAND_GROUPS for f in fs)

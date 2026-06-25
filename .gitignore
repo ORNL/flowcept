@@ -2,7 +2,9 @@
 .claude/settings.local.json
 **/*mlruns*
 **/*.env*
-**/*build*
+build/
+docs/_build/
+ui/tsconfig.tsbuildinfo
 **/*egg*
 **/*pycache*
 #**/*dist*
@@ -36,8 +38,8 @@ flowcept_code_assistants_memory.md
 uv.lock
 examples/flowcept_messages.jsonl
 agent_sandbox/
-*PROVENANCE_*md
-*PROVENANCE_*pdf
+*WORKFLOW_CARD_*md
+*PROVENANCE_REPORT_*pdf
 CLAUDE.md
 GEMINI.md
 SKILL.md
@@ -47,4 +49,14 @@ SKILLS.md
 .cursor/rules/
 .claude/
 input_data/
+
+# Web UI (Node toolchain + built assets)
 node_modules/
+ui/node_modules/
+ui/dist/
+ui/.vite/
+src/flowcept/webservice/ui_build/
+ui/src/routeTree.gen.ts
+ui/docs/
+ui/test-results/
+ui/playwright-report/
