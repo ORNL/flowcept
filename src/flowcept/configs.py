@@ -285,6 +285,7 @@ INSTRUMENTATION = settings.get("instrumentation", {})
 INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", True)
 
 AGENT = settings.get("agent", {})
+AGENT_API_KEY = _get_env("AGENT_API_KEY", AGENT.get("api_key"))
 AGENT_CHAT_ENABLED = AGENT.get("chat_enabled", True)
 AGENT_CHAT_MAX_TOOL_ITERATIONS = int(AGENT.get("chat_max_tool_iterations", 5))
 AGENT_CHAT_MAX_QUERY_LIMIT = int(AGENT.get("chat_max_query_limit", 1000))

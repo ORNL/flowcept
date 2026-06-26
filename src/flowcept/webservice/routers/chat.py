@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.configs import AGENT, AGENT_CHAT_ENABLED
+from flowcept.configs import AGENT_API_KEY, AGENT_CHAT_ENABLED
 from flowcept.webservice.services.chat_service import run_chat
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -41,7 +41,7 @@ def get_chat_llm():
                 "Chat features are disabled. To enable them, set 'agent.chat_enabled: true' in your settings.yaml file."
             ),
         )
-    api_key = AGENT.get("api_key")
+    api_key = AGENT_API_KEY
     if not api_key or api_key in ("?", "your-api-key-here"):
         raise HTTPException(
             status_code=503,

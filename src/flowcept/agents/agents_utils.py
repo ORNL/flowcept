@@ -6,7 +6,7 @@ from typing import Union, Dict
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
 from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM, get_current_context_task
 
-from flowcept.configs import AGENT
+from flowcept.configs import AGENT, AGENT_API_KEY
 from pydantic import BaseModel
 
 
@@ -141,13 +141,13 @@ def build_llm_model(
         from langchain_community.llms.sambanova import SambaStudio
 
         os.environ["SAMBASTUDIO_URL"] = os.environ.get("SAMBASTUDIO_URL", AGENT.get("llm_server_url"))
-        os.environ["SAMBASTUDIO_API_KEY"] = os.environ.get("SAMBASTUDIO_API_KEY", AGENT.get("api_key"))
+        os.environ["SAMBASTUDIO_API_KEY"] = os.environ.get("SAMBASTUDIO_API_KEY", AGENT_API_KEY)
 
         llm = SambaStudio(model_kwargs=_model_kwargs)
     elif _service_provider == "azure":
         from langchain_openai.chat_models.azure import AzureChatOpenAI
 
-        api_key = os.environ.get("AZURE_OPENAI_API_KEY", AGENT.get("api_key", None))
+        api_key = os.environ.get("AZURE_OPENAI_API_KEY", AGENT_API_KEY)
         service_url = os.environ.get("AZURE_OPENAI_API_ENDPOINT", AGENT.get("llm_server_url", None))
         llm = AzureChatOpenAI(
             azure_deployment=_model_kwargs.get("model"), azure_endpoint=service_url, api_key=api_key, **_model_kwargs
@@ -155,7 +155,7 @@ def build_llm_model(
     elif _service_provider == "openai":
         from langchain_openai import ChatOpenAI
 
-        api_key = os.environ.get("OPENAI_API_KEY", AGENT.get("api_key", None))
+        api_key = os.environ.get("OPENAI_API_KEY", AGENT_API_KEY)
         base_url = os.environ.get("OPENAI_BASE_URL", AGENT.get("llm_server_url") or None)
         org = os.environ.get("OPENAI_ORG_ID", AGENT.get("organization", None))
 
@@ -168,7 +168,7 @@ def build_llm_model(
         llm = ChatOpenAI(**init_kwargs, **_model_kwargs)
     elif _service_provider == "google":
         if "claude" in _model_kwargs["model"]:
-            api_key = os.environ.get("GOOGLE_API_KEY", AGENT.get("api_key", None))
+            api_key = os.environ.get("GOOGLE_API_KEY", AGENT_API_KEY)
             _model_kwargs["model_id"] = _model_kwargs.pop("model")
             _model_kwargs["google_token_auth"] = api_key
             from flowcept.agents.llms.claude_gcp import ClaudeOnGCPLLM
