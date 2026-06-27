@@ -939,7 +939,7 @@ def _load_gridsearch_context_into_mcp(gridsearch_run_data, mcp_server_instance):
     assert '"code": 201' in loaded_result
     loaded = run_tool(
         "run_df_query",
-        kwargs={"query": "result = len(df)", "plot": False, "context_kind": "tasks"},
+        kwargs={"code": "result = len(df)", "context_kind": "tasks"},
     )[0]
     assert "Current df is empty or null" not in loaded
 

@@ -205,51 +205,52 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
             self.request_context.lifespan_context.value_examples = value_examples
             self.request_context.lifespan_context.custom_guidance = custom_user_guidance
 
-    def test_build_df_query_prompt_returns_prompt_payload(self):
-        from flowcept.agents.mcp import mcp_prompts as t
+    def test_get_df_schema_context_returns_prompt_payload(self):
+        from flowcept.agents.mcp.mcp_tools.schema_mcp_tools import get_df_schema_context
+        from flowcept.agents.mcp import context_manager as cm
 
         df = pd.DataFrame({"activity_id": ["a", "b"], "used.x": [1, 2]})
-        schema = {"activity_a": {"i": ["used.x"], "o": []}}
-        value_examples = {"x": {"t": "int", "v": [1, 2]}}
-        guidance = ["prefer concise outputs"]
-        dummy_ctx = self._DummyContext(
-            df=df,
-            schema=schema,
-            value_examples=value_examples,
-            custom_user_guidance=guidance,
-        )
+        cm.ctx_manager.context.df = df
+        cm.ctx_manager.context.tasks_schema = {"activity_a": {"i": ["used.x"], "o": []}}
+        cm.ctx_manager.context.value_examples = {"x": {"t": "int", "v": [1, 2]}}
+        cm.ctx_manager.context.custom_guidance = ["prefer concise outputs"]
 
-        with patch.object(t.mcp_flowcept, "get_context", return_value=dummy_ctx):
-            prompt_text = t.build_df_query_prompt(query="count tasks by activity")
+        result = get_df_schema_context(context_kind="tasks")
 
+        self.assertEqual(result.code, 301)
+        self.assertIn("prompt_context", result.result)
+        prompt_text = result.result["prompt_context"]
         self.assertIsInstance(prompt_text, str)
         self.assertIn("ALLOWED_FIELDS", prompt_text)
         self.assertIn("activity_id", prompt_text)
-        self.assertIn("count tasks by activity", prompt_text)
 
-    def test_build_df_query_prompt_returns_404_when_df_missing(self):
-        from flowcept.agents.mcp import mcp_prompts as t
+        cm.ctx_manager.context.reset_context()
 
-        dummy_ctx = self._DummyContext(df=pd.DataFrame(), schema={}, value_examples={}, custom_user_guidance=[])
-        with patch.object(t.mcp_flowcept, "get_context", return_value=dummy_ctx):
-            prompt_text = t.build_df_query_prompt(query="anything")
+    def test_get_df_schema_context_returns_404_when_df_missing(self):
+        from flowcept.agents.mcp.mcp_tools.schema_mcp_tools import get_df_schema_context
+        from flowcept.agents.mcp import context_manager as cm
 
-        self.assertEqual(prompt_text, "Current df is empty or null.")
+        cm.ctx_manager.context.df = pd.DataFrame()
+        result = get_df_schema_context(context_kind="tasks")
+        self.assertEqual(result.code, 404)
+        self.assertEqual(result.result, cm.EMPTY_DF_MESSAGE)
 
     def test_execute_generated_df_code_runs_against_current_df(self):
-        from flowcept.agents.mcp.mcp_tools import in_memory_task_query_mcp_tools as t
+        from flowcept.agents.mcp.mcp_tools import df_query_mcp_tools as t
+        from flowcept.agents.mcp import context_manager as cm
 
         df = pd.DataFrame({"a": [1, 2, 3], "b": [10, 20, 30]})
-        dummy_ctx = self._DummyContext(df=df, schema={}, value_examples={}, custom_user_guidance=[])
+        cm.ctx_manager.context.df = df
 
-        with patch.object(t.mcp_flowcept, "get_context", return_value=dummy_ctx):
-            tool_result = t.execute_generated_df_code(user_code="result = df[['a']].head(2)")
+        tool_result = t.execute_generated_df_code(user_code="result = df[['a']].head(2)")
 
         self.assertEqual(tool_result.code, 301)
         self.assertIn("result_df", tool_result.result)
         self.assertIn("a", tool_result.result["result_df"])
         self.assertIn("1", tool_result.result["result_df"])
         self.assertIn("2", tool_result.result["result_df"])
+
+        cm.ctx_manager.context.reset_context()
 
     def test_generate_workflow_card_tool(self):
         from flowcept.agents.mcp.mcp_tools import report_tools as g
@@ -538,8 +539,8 @@ class TestRefactoredAgentStructure(unittest.TestCase):
 
     # ── D1: db_query_tools.py ─────────────────────────────────────────────
     def test_d1_db_query_tools_importable(self):
-        from flowcept.agents.data_query_tools.db_query_tools import (
-            query_tasks,
+        from flowcept.agents.data_query_tools.db_query_tools import query_tasks
+        from flowcept.commons.daos.docdb_dao.docdb_dao_utils import (
             ALLOWED_FILTER_OPERATORS,
             validate_filter,
         )
@@ -547,9 +548,9 @@ class TestRefactoredAgentStructure(unittest.TestCase):
         self.assertTrue(callable(query_tasks))
         validate_filter({"status": {"$eq": "FINISHED"}})  # must not raise
 
-    # ── D2: in_memory_task_query_tools.py ─────────────────────────────────
-    def test_d2_in_memory_task_query_tools_importable(self):
-        from flowcept.agents.data_query_tools.in_memory_task_query_tools import (
+    # ── D2: df_query_tools.py ─────────────────────────────────────────────
+    def test_d2_df_query_tools_importable(self):
+        from flowcept.agents.data_query_tools.df_query_tools import (
             run_df_query,
         )
         self.assertTrue(callable(run_df_query))
@@ -561,14 +562,14 @@ class TestRefactoredAgentStructure(unittest.TestCase):
         )
         self.assertTrue(callable(safe_execute))
 
-    # ── D4: in_memory_workflow_query_tools.py ─────────────────────────────
-    def test_d4_in_memory_workflow_query_tools_importable(self):
-        from flowcept.agents.data_query_tools.in_memory_workflow_query_tools import (
-            execute_generated_workflow_query,
-            _resolve_path,
+    # ── D4: df_query_tools.py ─────────────────────────────────────────────
+    def test_d4_df_query_tools_importable(self):
+        from flowcept.agents.data_query_tools.df_query_tools import (
+            execute_df_code,
+            DFQueryTools,
         )
-        self.assertTrue(callable(execute_generated_workflow_query))
-        self.assertEqual(_resolve_path({"a": {"b": 1}}, "a.b"), 1)
+        self.assertTrue(callable(execute_df_code))
+        self.assertTrue(callable(DFQueryTools))
 
     # ── E1: db_query_mcp_tools.py — no _provenance_ infix ─────────────────
     def test_e1_db_query_mcp_tools_importable_and_names_clean(self):
@@ -601,9 +602,9 @@ class TestRefactoredAgentStructure(unittest.TestCase):
 
     # ── F2: db_query_prompts.py ───────────────────────────────────────────
     def test_f2_db_query_prompts_importable(self):
-        from flowcept.agents.prompts.db_query_prompts import build_db_filter_prompt
-        self.assertTrue(callable(build_db_filter_prompt))
-        result = build_db_filter_prompt("find tasks in error")
+        from flowcept.agents.prompts.db_query_prompts import build_db_schema_context
+        self.assertTrue(callable(build_db_schema_context))
+        result = build_db_schema_context()
         self.assertIsInstance(result, str)
         self.assertGreater(len(result), 0)
 
@@ -847,14 +848,14 @@ class TestProvAgentInstrumentation(unittest.TestCase):
 
     def test_report_tools_use_agent_flowcept_task(self):
         import inspect
-        import flowcept.agents.mcp_tools.report_tools as m
+        import flowcept.agents.mcp.mcp_tools.report_tools as m
 
         src = inspect.getsource(m)
         self.assertIn("agent_flowcept_task", src)
 
-    def test_in_memory_task_query_mcp_tools_use_agent_flowcept_task(self):
+    def test_df_query_mcp_tools_use_agent_flowcept_task(self):
         import inspect
-        import flowcept.agents.mcp_tools.in_memory_task_query_mcp_tools as m
+        import flowcept.agents.mcp.mcp_tools.df_query_mcp_tools as m
 
         src = inspect.getsource(m)
         self.assertIn("agent_flowcept_task", src)

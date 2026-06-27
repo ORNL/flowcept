@@ -46,29 +46,28 @@ agents/
     dynamic_schema_tracker.py # Tracks evolving task/object schemas from live messages
 
   data_query_tools/          # Plain-Python tool cores — NO MCP imports
-    db_query_tools.py        # query_tasks, query_workflows, get_task_summary, …
-    in_memory_task_query_tools.py   # run_df_query, generate_result_df, …
-    in_memory_workflow_query_tools.py  # execute_generated_workflow_query, run_workflow_query
+    base_query_tools.py      # BaseQueryTools ABC (DB and DF path contract)
+    db_query_tools.py        # DBQueryTools + query_tasks, query_workflows, get_task_summary, …
+    df_query_tools.py        # DFQueryTools + run_df_query, execute_df_code, generate_result_df, …
     pandas_utils.py          # safe_execute, normalize_output, format_result_df, …
 
   mcp/
     mcp_server.py            # MCP server entry point (start with `flowcept --start-agent`)
-    mcp_client.py            # Client helpers: run_tool(), run_prompt()
+    mcp_client.py            # Client helpers: run_tool()
     mcp_tools/               # Thin MCP wrappers over data_query_tools/
       db_query_mcp_tools.py
-      in_memory_task_query_mcp_tools.py
-      in_memory_workflow_query_mcp_tools.py
+      df_query_mcp_tools.py  # run_df_query (pure executor), execute_generated_df_code
+      schema_mcp_tools.py    # get_workflow_schema_context, get_df_schema_context
       session_tools.py       # check_liveness, check_llm, record_guidance, reset_context, …
       report_tools.py        # generate_workflow_card
+    mcp_prompts.py           # (empty — no MCP prompts registered)
 
   prompts/
     README.md                # Prompt authoring rules
     base_prompts.py          # BASE_ROLE, build_single_task_prompt, build_multitask_prompt
-    db_query_prompts.py      # build_db_filter_prompt
-    in_memory_task_query_prompts.py   # Pandas code / plot prompt builders
-    in_memory_workflow_query_prompts.py  # Workflow message query prompt builders
+    db_query_prompts.py      # build_db_schema_context
+    df_query_prompts.py      # build_pandas_code_prompt, build_plot_code_prompt, …
     chat_prompts.py          # build_chat_system_prompt() for the webservice chat
-    mcp_prompts.py           # @mcp_flowcept.prompt() registrations
 ```
 
 ## One Agent, Two Orchestrators
@@ -103,10 +102,10 @@ is undocumented (`SchemaDocumentationError`).
 
 | Capability | Internal | External |
 |---|---|---|
-| Task DF question | `run_df_query` | `build_df_query_prompt` → LLM → `execute_generated_df_code` |
-| Object DF question | `run_df_query(context_kind="objects")` | same, `context_kind="objects"` |
-| Workflow question | `run_workflow_query` | `build_workflow_query_prompt` → LLM → `execute_generated_workflow_query` |
+| Task DF question | `run_df_query(code=...)` | `get_df_schema_context` → LLM generates code → `run_df_query(code=...)` |
+| Object DF question | `run_df_query(code=..., context_kind="objects")` | same, `context_kind="objects"` |
 | DB provenance | `query_tasks` / `query_workflows` | same tools |
+| DB schema context | `get_workflow_schema_context` | same tool |
 | Reports | `generate_workflow_card` | same tool |
 
 ## PROV-AGENT Instrumentation
@@ -170,12 +169,9 @@ flowcept --start-agent
 ```python
 from flowcept.agents.mcp.mcp_client import run_tool, run_prompt
 
-# Call a tool
-result = run_tool("run_df_query", kwargs={"query": "top 5 slowest activities", "context_kind": "tasks"})
+# Get schema context (external LLM mode)
+schema = run_tool("get_df_schema_context", kwargs={"context_kind": "tasks"})
 
-# Use a prompt builder (external LLM mode)
-prompt = run_prompt(
-  "build_df_query_prompt",
-  args={"query": "top 5 slowest activities", "context_kind": "tasks"},
-)
+# Execute generated pandas code
+result = run_tool("run_df_query", kwargs={"code": "result = df.groupby('activity_id').size()", "context_kind": "tasks"})
 ```

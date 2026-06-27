@@ -16,50 +16,9 @@ from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import AGENT_CHAT_MAX_QUERY_LIMIT
 from flowcept.flowcept_api.db_api import DBAPI
 from flowcept.commons.utils import normalize_docs
-
-ALLOWED_FILTER_OPERATORS = {
-    "$and",
-    "$or",
-    "$nor",
-    "$not",
-    "$exists",
-    "$eq",
-    "$ne",
-    "$gt",
-    "$gte",
-    "$lt",
-    "$lte",
-    "$in",
-    "$nin",
-    "$regex",
-}
+from flowcept.commons.daos.docdb_dao.docdb_dao_utils import validate_filter
 
 MAX_QUERY_LIMIT = AGENT_CHAT_MAX_QUERY_LIMIT
-
-
-def validate_filter(filter_doc: Optional[Dict[str, Any]]) -> None:
-    """Validate a Mongo-style filter against the safe-operator allowlist.
-
-    Raises
-    ------
-    ValueError
-        When the filter uses an operator outside the allowlist or has a bad shape.
-    """
-
-    def _walk(value: Any) -> None:
-        if isinstance(value, dict):
-            for key, item in value.items():
-                if key.startswith("$"):
-                    if key not in ALLOWED_FILTER_OPERATORS:
-                        raise ValueError(f"Unsupported filter operator: {key}")
-                    if key in {"$and", "$or", "$nor"} and not isinstance(item, list):
-                        raise ValueError(f"{key} must be a list.")
-                _walk(item)
-        elif isinstance(value, list):
-            for item in value:
-                _walk(item)
-
-    _walk(filter_doc or {})
 
 
 def _guarded(tool_name: str):
@@ -305,7 +264,7 @@ def query_objects(
 
 
 @_guarded("highlight_lineage")
-def highlight_lineage(
+def highlight_lineage(  # noqa: E302
     task_ids: Optional[List[str]] = None,
     filter: Optional[Dict[str, Any]] = None,
     workflow_id: Optional[str] = None,
@@ -369,3 +328,50 @@ def highlight_lineage(
         result={"task_ids": resolved_ids, "activities": activity_map},
         tool_name="highlight_lineage",
     )
+
+
+class DBQueryTools:
+    """DB-backed query path implementation of BaseQueryTools.
+
+    Delegates to the module-level functions in this module, which are also
+    used directly by the MCP and webservice layers.
+    """
+
+    def query_tasks(self, structured_arg: Optional[Dict[str, Any]] = None) -> ToolResult:
+        """Query tasks with a Mongo-style filter dict."""
+        return query_tasks(filter=structured_arg)
+
+    def query_objects(self, structured_arg: Optional[Dict[str, Any]] = None) -> ToolResult:
+        """Query objects with a Mongo-style filter dict."""
+        return query_objects(filter=structured_arg)
+
+    def query_workflows(self, structured_arg: Optional[Dict[str, Any]] = None) -> ToolResult:
+        """Query workflows with a Mongo-style filter dict."""
+        return query_workflows(filter=structured_arg)
+
+    def generate_plot(self, structured_arg: Any) -> ToolResult:
+        """Generate a chart from a declarative card_spec dict (DB path)."""
+        from flowcept.agents.data_query_tools.dashboard_tools import make_chart
+
+        return make_chart(card_spec=structured_arg)
+
+    def get_schema_context(self) -> str:
+        """Return workflow-scoped DB schema context string."""
+        from flowcept.agents.prompts.db_query_prompts import build_db_schema_context
+
+        return build_db_schema_context()
+
+    def build_query_prompt(self, query: str, schema: str = None) -> str:
+        """Build a Mongo filter-generation prompt for external LLM orchestration."""
+        from flowcept.agents.prompts.db_query_prompts import build_db_schema_context
+
+        schema_ctx = schema or build_db_schema_context()
+        return f"{schema_ctx}\n\nUser query:\n{query}"
+
+    def list_agents(self, filter: Optional[Dict] = None) -> ToolResult:
+        """List derived agent summaries."""
+        return list_agents(filter=filter)
+
+    def list_campaigns(self, campaign_id: Optional[str] = None) -> ToolResult:
+        """List derived campaign summaries."""
+        return list_campaigns(campaign_id=campaign_id)

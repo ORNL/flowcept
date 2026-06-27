@@ -538,6 +538,101 @@ def save_df(df, schema, value_examples) -> ToolResult:
     return ToolResult(code=201, result="Saved df and schema to /tmp directory")
 
 
+class DFQueryTools:
+    """In-memory DataFrame query path implementation of BaseQueryTools.
+
+    All query methods accept pandas code strings and delegate to ``execute_df_code``.
+    """
+
+    def __init__(self, df, schema, value_examples, custom_guidance=None):
+        """Initialize DFQueryTools with DataFrame context.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            The active in-memory DataFrame.
+        schema : dict
+            Dynamic schema of the DataFrame columns.
+        value_examples : dict
+            Example values per column.
+        custom_guidance : list, optional
+            User-provided custom guidance strings.
+        """
+        self._df = df
+        self._schema = schema
+        self._value_examples = value_examples
+        self._custom_guidance = custom_guidance or []
+
+    def query_tasks(self, structured_arg: str) -> ToolResult:
+        """Execute pandas code to query task records."""
+        return execute_df_code(user_code=structured_arg, df=self._df)
+
+    def query_objects(self, structured_arg: str) -> ToolResult:
+        """Execute pandas code to query object records."""
+        return execute_df_code(user_code=structured_arg, df=self._df)
+
+    def query_workflows(self, structured_arg=None) -> ToolResult:
+        """Return an empty-context response; workflow data is in the MCP context object."""
+        return ToolResult(code=404, result="Workflow context must be retrieved via get_workflow_context MCP tool.")
+
+    def generate_plot(self, structured_arg) -> ToolResult:
+        """Execute result_code and return combined data + plot_code.
+
+        Parameters
+        ----------
+        structured_arg : dict
+            Must contain ``result_code`` (pandas code) and ``plot_code`` (visualization code).
+        """
+        if isinstance(structured_arg, dict):
+            result_code = structured_arg.get("result_code", "")
+            plot_code = structured_arg.get("plot_code", "")
+        else:
+            result_code = str(structured_arg)
+            plot_code = ""
+        result = execute_df_code(user_code=result_code, df=self._df)
+        if not result.is_success():
+            return result
+        return ToolResult(
+            code=301,
+            result={**result.result, "plot_code": plot_code},
+            tool_name="generate_plot",
+        )
+
+    def get_schema_context(self) -> str:
+        """Return the DataFrame schema context for injection into the LLM system prompt."""
+        if self._df is None or not len(self._df):
+            return EMPTY_DF_MESSAGE
+        return build_pandas_code_prompt(
+            "",
+            self._schema,
+            self._value_examples,
+            self._custom_guidance,
+            list(self._df.columns),
+        )
+
+    def build_query_prompt(self, query: str, schema: str = None) -> str:
+        """Build a pandas code generation prompt for external LLM orchestration."""
+        return build_pandas_code_prompt(
+            query,
+            self._schema,
+            self._value_examples,
+            self._custom_guidance,
+            list(self._df.columns) if self._df is not None else [],
+        )
+
+    def list_agents(self, filter=None) -> ToolResult:
+        """List derived agent summaries (always DB-backed)."""
+        from flowcept.agents.data_query_tools.db_query_tools import list_agents as _list_agents
+
+        return _list_agents(filter=filter)
+
+    def list_campaigns(self, campaign_id=None) -> ToolResult:
+        """List derived campaign summaries (always DB-backed)."""
+        from flowcept.agents.data_query_tools.db_query_tools import list_campaigns as _list_campaigns
+
+        return _list_campaigns(campaign_id=campaign_id)
+
+
 def query_on_saved_df(query: str, dynamic_schema_path, value_examples_path, df_path):
     """Run a natural language query against a saved DataFrame.
 

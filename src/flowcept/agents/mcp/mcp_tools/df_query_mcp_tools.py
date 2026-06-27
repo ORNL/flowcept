@@ -64,20 +64,17 @@ def get_workflow_context() -> ToolResult:
 
 @mcp_flowcept.tool()
 @agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
-def run_df_query(query: str, llm=None, plot: bool = False, context_kind: str = "tasks") -> ToolResult:
-    r"""Run a natural language query against the current context DataFrame.
+def run_df_query(code: str, context_kind: str = "tasks") -> ToolResult:
+    """Execute pandas code against the current context DataFrame.
 
-    This tool retrieves the active DataFrame, schema, and example values
-    from the MCP Flowcept context and uses an LLM to process the query.
+    Pure executor — no internal LLM call.  The code must assign its output
+    to ``result``.  Use ``get_schema_context`` first to obtain column names
+    and schema context before generating the code.
 
     Parameters
     ----------
-    query : str
-        Natural language query or Python code snippet.
-    llm : callable, optional
-        LLM callable. Built from settings if None.
-    plot : bool, optional
-        If True, generate plotting code.
+    code : str
+        Pandas code that assigns output to ``result``.
     context_kind : str, optional
         "tasks" or "objects".
 
@@ -85,17 +82,10 @@ def run_df_query(query: str, llm=None, plot: bool = False, context_kind: str = "
     -------
     ToolResult
     """
-    df, schema, value_examples, custom_user_guidance = get_df_context(context_kind=context_kind)
-    return _core.run_df_query(
-        query=query,
-        df=df,
-        schema=schema,
-        value_examples=value_examples,
-        custom_user_guidance=custom_user_guidance,
-        llm=llm,
-        plot=plot,
-        context_kind=context_kind,
-    )
+    df, _, _, _ = get_df_context(context_kind=context_kind)
+    if df is None or not len(df):
+        return ToolResult(code=404, result=EMPTY_DF_MESSAGE)
+    return _core.execute_df_code(user_code=code, df=df)
 
 
 @mcp_flowcept.tool()

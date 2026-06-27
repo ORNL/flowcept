@@ -1,7 +1,7 @@
 # Flowcept Code Assistant Instructions
 
 This file is the single source of truth for code-assistant behavior in this repository.
-Each major module and the UI also has its own `README.md` (under `src/flowcept/*/`, `ui/`, `tests/`, `deployment/`, `examples/`) with deeper subsystem context; read the relevant one before working in that area.
+Each major module and the UI also has its own `README.md` (under `src/flowcept/*/`, `ui/`, `tests/`, `deployment/`, `examples/`) with deeper subsystem context. *MUST FOLLOW:* Your first job in this repo is to read all of them.
 
 ## Agent Prompt Design Rule
 

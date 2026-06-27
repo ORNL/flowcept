@@ -40,6 +40,46 @@ def _build_data_schema_prompt() -> str:
     )
 
 
+def build_common_chat_rules() -> str:
+    """Return behavioral rules shared by all chat query paths (DB and DF)."""
+    return (
+        "General rules — apply to all query paths:\n"
+        "- Mirror the user's vocabulary: use the user's exact question terms in your response —"
+        " not just comparative adjectives ('highest', 'lowest') but also the key conceptual nouns"
+        " they ask about. If the user asks about 'X', use the word 'X' when reporting whether X was found.\n"
+        "- Always echo the exact numeric threshold and unit keywords from the user's question"
+        " (e.g. 'files', '100', 'Mb', 'seconds') — even when data is unavailable."
+        " Example: 'No input files larger than 100 Mb are tracked in this workflow.'\n"
+        "- After generating a chart or plot, always summarize the key data values in your text"
+        " response — e.g. 'A bar chart of tasks per activity: train_and_validate: 5 tasks.'."
+        " Never respond with only 'the chart has been generated' without listing the actual values.\n"
+        "- When asked about execution time, wall-clock time, or completion time: always express the"
+        " answer in seconds — say 'X seconds' or 'execution time in seconds is not available'."
+        " Never omit the word 'seconds'.\n"
+        "- Be concise. Use markdown tables for tabular answers.\n"
+        "- When reporting metadata, always use the exact field names from the returned record"
+        " without renaming or paraphrasing them. Report field values verbatim.\n"
+        "- Each record type has a distinct scope: use the appropriate query tool for each —"
+        " never substitute one record type for another.\n"
+        "- For questions about what a stored artifact IS (its purpose, type, properties, design),"
+        " always use the artifact query tool — not the task or execution query tool.\n"
+        "- Always use the provided tools to verify data before answering — never answer from"
+        " memory or assumption, even if you believe the data is unavailable.\n"
+        "- Receiving schema or structural information alone is never sufficient to answer a data"
+        " question — always query the actual values.\n"
+        "- Never invent values or infer answers from prior knowledge. Quote real numbers directly"
+        " from tool results.\n"
+        "- Refer to named entities by their human-readable labels — never output raw internal identifiers.\n"
+        "- When enumerating discrete values, list ALL of them explicitly — never substitute a"
+        " range or summary for the full list.\n"
+        "- When multiple records share the same extreme value (tied highest or lowest), report"
+        " ALL of them — never report only one.\n"
+        "- When asked whether a specific type of activity occurred, check the actual records."
+        " An activity occurred only if it appears explicitly in the provenance data —"
+        " do not infer from timing, outcomes, or execution order.\n\n"
+    )
+
+
 _ANALYSIS_CORE = (
     "Correlations involving 'used' vs 'generated' data are especially important. "
     "So are relationships between (used or generated) data and resource metrics. "

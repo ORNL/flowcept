@@ -26,6 +26,7 @@
 - user_query: "How many tasks ran across all workflows in the campaign?"
   expected_response: "nine 9 tasks."
   score_threshold: 0.65
+  case_id: "campaign_task_count"
 
 - user_query: "What learning rates and epoch counts were evaluated?"
   expected_response: "learning_rate 0.01 0.03 0.08 0.12 0.20 epochs 2 4 6 10 14."
@@ -42,6 +43,7 @@
 - user_query: "List the workflows in the campaign."
   expected_response: "workflow_id name Perceptron GridSearch."
   score_threshold: 0.72
+  case_id: "list_workflows_campaign"
 
 - user_query: "Which configuration achieved the highest validation accuracy?"
   expected_response: "highest validation accuracy 1.0 cfg_2 cfg_3 cfg_4 cfg_5 train_and_validate."
@@ -58,6 +60,7 @@
 - user_query: "What is the name and start time of the workflow?"
   expected_response: "workflow name Perceptron GridSearch utc timestamp."
   score_threshold: 0.60
+  case_id: "workflow_name_start_time"
 
 # T30: richer response cases — table, chart+table+summary
 - user_query: "List all tasks with their activity_id and status as a markdown table."

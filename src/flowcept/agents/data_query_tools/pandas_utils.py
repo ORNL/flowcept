@@ -91,7 +91,8 @@ def safe_execute(df: pd.DataFrame, code: str):
     Returns result or None.
     """
     code = clean_code(code)
-    exec_env = {"df": df, "pd": pd, "np": np}
+    # Use a copy so LLM-generated code cannot mutate the shared context DataFrame.
+    exec_env = {"df": df.copy(), "pd": pd, "np": np}
     exec(code, exec_env, exec_env)
     return exec_env.get("result", None)
 

@@ -256,16 +256,19 @@ def summarize_task(task: Dict, thresholds: Dict = None, logger=None) -> Dict:
             if "image" in mime_type or "application/pdf" in mime_type:
                 task_summary["image"] = task["data"]
 
-    # Special handling for timestamp field
-    try:
-        time_keys = ["started_at", "ended_at"]
-        for time_key in time_keys:
-            timestamp = _safe_get(task, time_key)
-            if timestamp is not None:
+    # Special handling for timestamp field — accepts Unix float or ISO string
+    for time_key in ["started_at", "ended_at"]:
+        timestamp = _safe_get(task, time_key)
+        if timestamp is None:
+            continue
+        try:
+            if isinstance(timestamp, str):
+                task_summary[time_key] = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            else:
                 task_summary[time_key] = datetime.fromtimestamp(timestamp, timezone.utc)
-    except Exception as e:
-        if logger:
-            logger.exception(f"Error {e} converting timestamp for task {task.get('task_id', 'unknown')}")
+        except Exception as e:
+            if logger:
+                logger.exception(f"Error {e} converting timestamp for task {task.get('task_id', 'unknown')}")
 
     try:
         telemetry_summary = summarize_telemetry(task, logger)

@@ -3,508 +3,32 @@
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from typing import Any, Dict, Generator, List, Optional
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import END, MessagesState, StateGraph
-
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.errors import GraphRecursionError
 
+from flowcept.agents.chat_orchestration.graph_builder import _build_graph, memory as _memory
+from flowcept.agents.data_query_tools.base_query_tools import BaseQueryTools
+from flowcept.agents.chat_orchestration.tool_registry import _build_langchain_tools, _format_error
 from flowcept.agents.prompts.chat_prompts import build_chat_system_prompt
-from flowcept.agents.mcp.mcp_client import run_tool
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.commons.utils import sanitize_json_like
-from flowcept.commons.vocabulary import PROV_AGENT
-from flowcept.configs import AGENT_CHAT_MAX_TOOL_ITERATIONS, AGENT_CHAT_MAX_TOOL_RESULT_CHARS, INSTRUMENTATION_ENABLED
+from flowcept.configs import AGENT_CHAT_MAX_TOOL_ITERATIONS, INSTRUMENTATION_ENABLED
 
 MAX_TOOL_ITERATIONS = AGENT_CHAT_MAX_TOOL_ITERATIONS
-# Cap individual tool result strings fed into LangGraph state to prevent context overflow.
-_MAX_TOOL_RESULT_CHARS = AGENT_CHAT_MAX_TOOL_RESULT_CHARS
 CHAT_WORKFLOW_NAME = "Flowcept LangGraph Chat"
 
-# Module-level saver — persists across requests keyed by thread_id.
-_memory = MemorySaver()
-
-
-def _format_error(exc: BaseException, _depth: int = 0) -> str:
-    """Return a user-facing error string, unwrapping ExceptionGroup to its real cause."""
-    if _depth > 5:
-        return str(exc) or type(exc).__name__
-    if hasattr(exc, "exceptions"):  # ExceptionGroup / BaseExceptionGroup (Python 3.11+)
-        inner = "; ".join(_format_error(sub, _depth + 1) for sub in exc.exceptions)
-        return (
-            f"A tool call failed ({inner}). "
-            "This may be a transient service error — try rephrasing your question "
-            "or narrowing the scope (e.g. add a workflow_id or campaign_id)."
-        )
-    if exc.__cause__ is not None:
-        return _format_error(exc.__cause__, _depth + 1)
-    return str(exc) or type(exc).__name__
-
-
-def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_edit: bool):
-    """Wrap MCP tools as LangChain tools."""
-    from langchain_core.tools import tool
-
-    def _run_mcp(tool_name: str, **kwargs) -> str:
-        return run_tool(tool_name, kwargs=kwargs)[0]
-
-    def _coerce_projection(p: Any) -> Optional[List[str]]:
-        """Accept a list of field names or a Mongo projection dict {field: 1}."""
-        if p is None:
-            return None
-        if isinstance(p, dict):
-            return [k for k, v in p.items() if v]
-        return list(p)
-
-    def _coerce_sort(s: Any) -> Optional[List[Dict[str, Any]]]:
-        """Accept [{field, order}] or a Mongo sort dict {field: -1}."""
-        if s is None:
-            return None
-        if isinstance(s, dict):
-            return [{"field": k, "order": v} for k, v in s.items()]
-        return list(s)
-
-    def _scoped_filter(filter: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Apply workflow/campaign scope from the HTTP context."""
-        scoped = dict(filter or {})
-        for key in ("workflow_id", "campaign_id"):
-            if (context or {}).get(key):
-                scoped[key] = context[key]
-        return scoped
-
-    @tool
-    def query_tasks(
-        filter: Optional[Dict[str, Any]] = None,
-        projection: Optional[Any] = None,
-        limit: int = 100,
-        sort: Optional[Any] = None,
-    ) -> str:
-        """Query task provenance records with a Mongo-style filter.
-
-        projection: list of field names, or a Mongo projection dict {"field": 1}.
-        sort: list of {"field": "...", "order": 1|-1}, or a Mongo sort dict {"field": -1}.
-        """
-        return _run_mcp(
-            "query_tasks",
-            filter=_scoped_filter(filter),
-            projection=_coerce_projection(projection),
-            limit=limit,
-            sort=_coerce_sort(sort),
-        )
-
-    @tool
-    def query_workflows(filter: Optional[Dict[str, Any]] = None, limit: int = 100) -> str:
-        """Query workflow provenance records with a Mongo-style filter."""
-        return _run_mcp("query_workflows", filter=_scoped_filter(filter), limit=limit)
-
-    @tool
-    def get_task_summary(filter: Optional[Dict[str, Any]] = None) -> str:
-        """Summarize tasks: status counts, per-activity durations, and time range."""
-        return _run_mcp("get_task_summary", filter=_scoped_filter(filter))
-
-    @tool
-    def list_campaigns(campaign_id: Optional[str] = None) -> str:
-        """List derived campaign summaries (campaigns group workflows and tasks).
-
-        campaign_id: when provided, returns only that campaign's summary.
-        Always pass the campaign_id from the user context to scope the result.
-        """
-        effective_id = campaign_id or (context or {}).get("campaign_id")
-        return _run_mcp("list_campaigns", campaign_id=effective_id)
-
-    @tool
-    def list_agents() -> str:
-        """List derived agent summaries (agents observed in task provenance).
-
-        Automatically scoped to the current workflow when workflow_id is in context.
-        """
-        workflow_id = (context or {}).get("workflow_id")
-        effective_filter = {"workflow_id": workflow_id} if workflow_id else None
-        return _run_mcp("list_agents", filter=effective_filter)
-
-    @tool
-    def make_chart(card_spec: Dict[str, Any]) -> str:
-        """Build a chart from a declarative dashboard card spec; the UI renders the result."""
-        scoped_spec = dict(card_spec)
-        data_spec = dict(scoped_spec.get("data") or {})
-        data_spec["filter"] = _scoped_filter(data_spec.get("filter"))
-        scoped_spec["data"] = data_spec
-        return _run_mcp("make_chart", card_spec=scoped_spec, context=None)
-
-    @tool
-    def highlight_lineage(
-        task_ids: Optional[Any] = None,
-        filter: Optional[Dict[str, Any]] = None,
-    ) -> str:
-        """Highlight the full provenance lineage (ancestors + descendants) of tasks in the Dataflow graph.
-
-        Pass `task_ids` as a list of task ID strings, or a single task ID string.
-        Or use `filter` to find the seed tasks first.
-        The UI will dim all other nodes and visually trace the lineage chain.
-        Always pass a workflow_id in the filter when on a workflow page.
-        """
-        wf_id = (context or {}).get("workflow_id")
-        ids: Optional[List[str]] = None
-        if task_ids is not None:
-            ids = [task_ids] if isinstance(task_ids, str) else list(task_ids)
-        return _run_mcp("highlight_lineage", task_ids=ids, filter=filter, workflow_id=wf_id)
-
-    def _query_text(query: Any) -> str:
-        if isinstance(query, str):
-            return query
-        return json.dumps(query, default=str)
-
-    @tool("generate_result_df")
-    def generate_result_df(query: Any) -> str:
-        """Answer questions about task execution using the in-memory tasks DataFrame.
-
-        Use for questions about WHAT HAPPENED during the workflow: activities, task inputs/outputs,
-        timing, telemetry, agent actions, configuration parameters passed as task inputs, task counts,
-        lineage, and execution order. Each DataFrame row is a task record.
-
-        Do NOT use for questions about the inherent properties of stored data artifacts (models,
-        datasets, files) — use generate_objects_df for those.
-        """
-        return _run_mcp("run_df_query", query=_query_text(query), plot=False, context_kind="tasks")
-
-    @tool("generate_plot_code")
-    def generate_plot_code(query: Any = None, card_spec: Optional[Dict[str, Any]] = None) -> str:
-        """Generate plotting output using the MCP server's in-memory task DataFrame."""
-        query_payload = query if query is not None else card_spec
-        return _run_mcp("run_df_query", query=_query_text(query_payload), plot=True, context_kind="tasks")
-
-    @tool
-    def extract_or_fix_python_code(raw_text: str, runtime_error: Optional[str] = None) -> str:
-        """Extract or repair pandas code using the MCP server's in-memory task DataFrame columns."""
-        return _run_mcp(
-            "extract_or_fix_python_code",
-            raw_text=raw_text,
-            runtime_error=runtime_error,
-            context_kind="tasks",
-        )
-
-    @tool
-    def get_workflow_context() -> str:
-        """Return the workflow record loaded in the agent's in-memory context (DF path counterpart to query_workflows).
-
-        Use this tool ONLY when the question is specifically about workflow-level metadata: workflow name,
-        campaign, start/end timestamps, owner/user, description, hardware, or workflow structure.
-        Do NOT call this tool for questions about tasks, activities, agents, data artifacts, or model parameters —
-        use generate_result_df or generate_objects_df for those instead.
-        """
-        return _run_mcp("get_workflow_context")
-
-    @tool
-    def query_objects(
-        filter: Optional[Dict[str, Any]] = None,
-        projection: Optional[Any] = None,
-        limit: int = 100,
-    ) -> str:
-        """Query stored data-object records (ML models, datasets, blobs) by their inherent properties.
-
-        Use when the question asks about WHAT AN ARTIFACT IS — e.g. model training technique,
-        optimizer, number of parameters or weights, purpose or designed uses, science domain, loss,
-        dataset sample count or split ratio, object type, file size, or any custom_metadata field.
-        Filter by ``workflow_id`` or ``object_type`` (``"ml_model"``, ``"dataset"``).
-        ``custom_metadata`` sub-fields use dot-notation, e.g. ``custom_metadata.model_profile.params``.
-
-        Do NOT use for questions about task execution — use query_tasks for those.
-        """
-        # Objects have no campaign_id field; scope by workflow_id only.
-        obj_filter = dict(filter or {})
-        if (context or {}).get("workflow_id"):
-            obj_filter["workflow_id"] = context["workflow_id"]
-        return _run_mcp(
-            "query_objects",
-            filter=obj_filter,
-            projection=_coerce_projection(projection),
-            limit=limit,
-        )
-
-    @tool("generate_objects_df")
-    def generate_objects_df(query: Any) -> str:
-        """Answer questions about the inherent properties of stored data artifacts using the objects DataFrame.
-
-        Use when the question asks about WHAT AN ARTIFACT IS or WHAT IT CONTAINS — not what task
-        processed it. Examples: model training technique (custom_metadata.finetuning_technique),
-        parameter count (custom_metadata.n_params or custom_metadata.model_profile.params),
-        purpose or designed uses (custom_metadata.task_type), science domain
-        (custom_metadata.science_domain), loss, dataset sample count or split ratio, object type,
-        file size, or any field stored in custom_metadata. Each DataFrame row is an object record
-        with fields like object_type, custom_metadata.*, file_path, and workflow_id.
-
-        Do NOT use for questions about task execution (who ran tasks, timing, agent actions, task
-        inputs) — use generate_result_df for those.
-        """
-        return _run_mcp("run_df_query", query=_query_text(query), plot=False, context_kind="objects")
-
-    db_tools = [
-        query_tasks,
-        query_workflows,
-        get_task_summary,
-        list_campaigns,
-        list_agents,
-        make_chart,
-        highlight_lineage,
-        query_objects,
-    ]
-    df_tools = [
-        generate_result_df,
-        generate_plot_code,
-        extract_or_fix_python_code,
-        get_workflow_context,
-        list_agents,
-        generate_objects_df,
-    ]
-    tool_context = (context or {}).get("tool_context", "db")
-    if tool_context == "df":
-        tools = df_tools
-    else:
-        tools = db_tools
-
-    if allow_dashboard_edit:
-
-        @tool
-        def get_dashboard(dashboard_id: str) -> str:
-            """Get a stored dashboard spec by id."""
-            return _run_mcp("get_dashboard", dashboard_id=dashboard_id)
-
-        @tool
-        def update_dashboard(dashboard_id: str, spec: Dict[str, Any]) -> str:
-            """Replace a stored dashboard spec with a complete revised spec."""
-            return _run_mcp("update_dashboard", dashboard_id=dashboard_id, spec=spec)
-
-        tools += [get_dashboard, update_dashboard]
-    return tools
-
-
-def _with_workflow_schema_context(context: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """Attach MCP-owned workflow schema context to chat context when available."""
-    if not context or not context.get("workflow_id"):
-        return context
-    enriched = dict(context)
-    try:
-        payload = json.loads(run_tool("get_workflow_schema_context", kwargs={"workflow_id": context["workflow_id"]})[0])
-        if payload.get("code", 500) < 400 and isinstance(payload.get("result"), dict):
-            enriched["workflow_schema_context"] = payload["result"].get("prompt_context")
-    except Exception:
-        return enriched
-    return enriched
-
-
-def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool: bool = False):
-    """Build a LangGraph agent + tools graph compiled with the module-level MemorySaver."""
-    bound = llm.bind_tools(tools)
-    first_bound = llm.bind_tools(tools, tool_choice="required") if require_first_tool else bound
-    tools_by_name = {t.name: t for t in tools}
-
-    def _needs_first_tool(state: MessagesState) -> bool:
-        return require_first_tool and not any(isinstance(message, ToolMessage) for message in state["messages"])
-
-    def _latest_user_text(state: MessagesState) -> str:
-        for message in reversed(state["messages"]):
-            if isinstance(message, HumanMessage):
-                return str(message.content)
-        return ""
-
-    def _tool_calls_for_text(text: str) -> List[Dict[str, Any]]:
-        lower = text.lower()
-        names = set(tools_by_name)
-        has_specific_value = any(marker in lower for marker in ("task_id", "object_id", "workflow_id"))
-        if "generate_result_df" in names and any(
-            word in lower for word in ("submit", "submitted", "producer", "produced")
-        ):
-            # Pattern B: general attribution — query starts with "which/what" (no specific lookup
-            # value) and asks about the agent. list_agents alone is sufficient.
-            if (
-                "list_agents" in names
-                and "agent" in lower
-                and not has_specific_value
-                and lower.strip().startswith(("which ", "what "))
-            ):
-                return [{"name": "list_agents", "args": {}, "id": str(uuid.uuid4())}]
-            query = (
-                text + "\nInterpret submission/producer questions through provenance dataflow: "
-                "find upstream task rows whose generated.* values match used.* values consumed by the target activity, "
-                "then return the upstream activity_id and agent_id. "
-                "For work-item submission, prefer producer tasks with generated list/dict descriptors that map to "
-                "target used identifiers or parameters; do not treat dataset/file/artifact producers as submitters "
-                "unless the user explicitly asks about data artifacts. "
-                "If the named value appears inside a list of dictionaries in a generated.* field, "
-                "extract the full matching dictionary and include its key-value fields."
-            )
-            tool_calls = [{"name": "generate_result_df", "args": {"query": query}, "id": str(uuid.uuid4())}]
-            if "list_agents" in names:
-                tool_calls.append({"name": "list_agents", "args": {}, "id": str(uuid.uuid4())})
-            return tool_calls
-        if "list_agents" in names and "agent" in lower and not has_specific_value:
-            return [{"name": "list_agents", "args": {}, "id": str(uuid.uuid4())}]
-        if "get_task_summary" in names and any(
-            phrase in lower
-            for phrase in (
-                "lineage",
-                "data flow",
-                "execution order",
-                "how many",
-                "count",
-                "summary",
-                "duration",
-            )
-        ):
-            return [{"name": "get_task_summary", "args": {}, "id": str(uuid.uuid4())}]
-        if "make_chart" in names and any(word in lower for word in ("plot", "chart", "graph")):
-            return [
-                {
-                    "name": "make_chart",
-                    "args": {
-                        "card_spec": {
-                            "chart_id": "chat-chart",
-                            "type": "chart",
-                            "title": text,
-                            "data": {
-                                "source": "tasks",
-                                "group_by": "activity_id",
-                                "metrics": [{"agg": "count"}],
-                            },
-                            "viz": {"kind": "bar"},
-                        }
-                    },
-                    "id": str(uuid.uuid4()),
-                }
-            ]
-        if "query_objects" in names and any(
-            phrase in lower for phrase in ("object type", "blob object", "artifact type", "object_type")
-        ):
-            return [{"name": "query_objects", "args": {}, "id": str(uuid.uuid4())}]
-        if "generate_objects_df" in names and any(
-            phrase in lower for phrase in ("object type", "blob object", "artifact type", "object_type")
-        ):
-            return [{"name": "generate_objects_df", "args": {"query": text}, "id": str(uuid.uuid4())}]
-        if "extract_or_fix_python_code" in names and ("fix" in lower or "python code" in lower or "dataframe" in lower):
-            return [{"name": "extract_or_fix_python_code", "args": {"raw_text": text}, "id": str(uuid.uuid4())}]
-        if "generate_plot_code" in names and any(word in lower for word in ("plot", "chart", "graph")):
-            return [{"name": "generate_plot_code", "args": {"query": text}, "id": str(uuid.uuid4())}]
-        if "generate_result_df" in names and any(word in lower for word in ("lineage", "execution order", "data flow")):
-            query = (
-                text
-                + "\nThe user is asking for workflow lineage/order. Return the ordered distinct activity_id values "
-                "from the workflow, using task timestamps or row order when timestamps are unavailable. "
-                "Include upstream, target, and downstream activities; do not answer only with metric-matching rows."
-            )
-            return [{"name": "generate_result_df", "args": {"query": query}, "id": str(uuid.uuid4())}]
-        if "generate_result_df" in names and "how many" in lower and any(w in lower for w in ("task", "tasks")):
-            query = (
-                text + "\nReturn a self-descriptive DataFrame, e.g. result = pd.DataFrame({'task_count': [len(df)]})"
-                " so the count is clearly labeled."
-            )
-            return [{"name": "generate_result_df", "args": {"query": query}, "id": str(uuid.uuid4())}]
-        if "generate_result_df" in names and any(
-            word in lower
-            for word in (
-                "activity",
-                "agent",
-                "count",
-                "how many",
-                "lineage",
-                "task",
-            )
-        ):
-            return [{"name": "generate_result_df", "args": {"query": text}, "id": str(uuid.uuid4())}]
-        if "query_workflows" in names and "workflow" in lower:
-            return [{"name": "query_workflows", "args": {}, "id": str(uuid.uuid4())}]
-        if "get_workflow_context" in names and any(word in lower for word in ("workflow", "workflows")):
-            # DF path: workflow records live in the MCP context object, not the tasks DataFrame.
-            # get_workflow_context is the DF-path counterpart to query_workflows.
-            return [{"name": "get_workflow_context", "args": {}, "id": str(uuid.uuid4())}]
-        if "generate_result_df" in names:
-            return [{"name": "generate_result_df", "args": {"query": text}, "id": str(uuid.uuid4())}]
-        return [{"name": next(iter(tools_by_name)), "args": {}, "id": str(uuid.uuid4())}]
-
-    def _enforce_first_tool(response: AIMessage, state: MessagesState) -> AIMessage:
-        if not _needs_first_tool(state):
-            return response
-        return AIMessage(content="", tool_calls=_tool_calls_for_text(_latest_user_text(state)))
-
-    if INSTRUMENTATION_ENABLED and agent_id is not None:
-        from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM
-        from flowcept.instrumentation.task_capture import FlowceptTask
-
-        # workflow_id is resolved automatically from Flowcept.current_workflow_id
-        # which is set by the Flowcept context in run_chat.
-        instrumented_llm = FlowceptLLM(bound, agent_id=agent_id, return_response_object=True)
-
-        def call_model(state: MessagesState):
-            """Agent node: invoke the LLM with current messages (instrumented)."""
-            active_llm = (
-                FlowceptLLM(first_bound, agent_id=agent_id, return_response_object=True)
-                if _needs_first_tool(state)
-                else instrumented_llm
-            )
-            return {"messages": [_enforce_first_tool(active_llm.invoke(state["messages"]), state)]}
-
-        def call_tools(state: MessagesState):
-            """Tools node: execute all pending tool calls with provenance capture."""
-            last = state["messages"][-1]
-            tool_msgs = []
-            for tc in getattr(last, "tool_calls", []):
-                name = tc["name"]
-                args = tc.get("args") or {}
-                call_id = tc.get("id") or name
-                tool_fn = tools_by_name.get(name)
-                with FlowceptTask(
-                    activity_id=name,
-                    subtype=PROV_AGENT.AGENT_TOOL,
-                    used=sanitize_json_like(args, mongo_safe_keys=True),
-                    agent_id=agent_id,
-                ) as task:
-                    output = (
-                        tool_fn.invoke(args) if tool_fn is not None else json.dumps({"error": f"Unknown tool {name}"})
-                    )
-                    task.end(generated={"output": output[:500] if isinstance(output, str) else output})
-                if isinstance(output, str) and len(output) > _MAX_TOOL_RESULT_CHARS:
-                    output = output[:_MAX_TOOL_RESULT_CHARS] + f"... [truncated, {len(output)} chars total]"
-                tool_msgs.append(ToolMessage(content=output, tool_call_id=call_id, name=name))
-            return {"messages": tool_msgs}
-
-    else:
-
-        def call_model(state: MessagesState):
-            """Agent node: invoke the LLM with current messages."""
-            response = (first_bound if _needs_first_tool(state) else bound).invoke(state["messages"])
-            return {"messages": [_enforce_first_tool(response, state)]}
-
-        def call_tools(state: MessagesState):
-            """Tools node: execute all pending tool calls and return ToolMessages."""
-            last = state["messages"][-1]
-            tool_msgs = []
-            for tc in getattr(last, "tool_calls", []):
-                name = tc["name"]
-                args = tc.get("args") or {}
-                call_id = tc.get("id") or name
-                tool_fn = tools_by_name.get(name)
-                output = tool_fn.invoke(args) if tool_fn is not None else json.dumps({"error": f"Unknown tool {name}"})
-                if isinstance(output, str) and len(output) > _MAX_TOOL_RESULT_CHARS:
-                    output = output[:_MAX_TOOL_RESULT_CHARS] + f"... [truncated, {len(output)} chars total]"
-                tool_msgs.append(ToolMessage(content=output, tool_call_id=call_id, name=name))
-            return {"messages": tool_msgs}
-
-    def should_continue(state: MessagesState):
-        """Route to tools if the last AI message has tool calls; otherwise end."""
-        last = state["messages"][-1]
-        if isinstance(last, AIMessage) and getattr(last, "tool_calls", None):
-            return "tools"
-        return END
-
-    graph = StateGraph(MessagesState)
-    graph.add_node("agent", call_model)
-    graph.add_node("tools", call_tools)
-    graph.set_entry_point("agent")
-    graph.add_conditional_edges("agent", should_continue)
-    graph.add_edge("tools", "agent")
-    return graph.compile(checkpointer=_memory)
+# Matches LLM text responses that are Python code instead of natural language.
+# Catches: single-line result = "...", AND multi-line code blocks containing df[ with result assignments.
+_CODE_RESPONSE_RE = re.compile(
+    r"^\s*result\s*=\s*[\"'][^\"']{0,500}[\"'][\s;]*$"  # result = "string"
+    r"|^\s*result\s*=\s*df\b"  # result = df[...]
+    r"|.*\bdf\s*\[.*\bresult\s*="  # multi-line code with df[ before result =
+    r"|^\s*\w+\s*=\s*\[.*\bdf\.columns\b",  # any_var = [...df.columns...]
+    re.DOTALL,
+)
 
 
 def _prepare_input_messages(
@@ -564,7 +88,7 @@ def run_chat(
         Stable ID that keys server-side conversation memory.
     """
     logger = FlowceptLogger()
-    context = _with_workflow_schema_context(context)
+    context = BaseQueryTools.enrich_context(context)
     tools = _build_langchain_tools(context, allow_dashboard_edit)
 
     effective_thread_id = thread_id if thread_id is not None else str(uuid.uuid4())
@@ -611,8 +135,6 @@ def run_chat(
 
     # Each LangGraph execution gets its own Flowcept workflow so all AI model
     # invocations and tool calls within this call share a single workflow_id.
-    # Chat owns its persistence lifecycle so HTTP requests, tests, and deployed
-    # webservice instances all record agent provenance without external state.
     from flowcept.flowcept_api.flowcept_controller import Flowcept as _FC
 
     with _FC(
@@ -635,7 +157,28 @@ def run_chat(
                             for tc in tool_calls:
                                 yield {"event": "tool_call", "data": {"name": tc["name"], "args": tc.get("args", {})}}
                         else:
-                            yield {"event": "token", "data": getattr(last, "content", "")}
+                            content = getattr(last, "content", "")
+                            if _CODE_RESPONSE_RE.match(content.strip()):
+                                user_query = messages[-1].get("content", "") if messages else ""
+                                tool_data = "\n".join(accumulated_tool_results[-3:]) if accumulated_tool_results else ""
+                                try:
+                                    rephrase = llm.invoke([
+                                        HumanMessage(
+                                            content=(
+                                                f"The user asked: {user_query!r}\n"
+                                                + (f"Tool results already retrieved:\n{tool_data}\n" if tool_data else "")
+                                                + f"The LLM produced Python code instead of an answer: {content}\n"
+                                                "Write a single plain English sentence answering the "
+                                                  "user's question using the tool results above. "
+                                                "If the data is not available, say so specifically (mention the metric asked about). "
+                                                "Do not use Python code or variable assignments."
+                                            )
+                                        )
+                                    ])
+                                    content = getattr(rephrase, "content", content) or content
+                                except Exception:
+                                    pass
+                            yield {"event": "token", "data": content}
                             yield {"event": "done"}
                     elif node_name == "tools":
                         for tm in msgs:
@@ -673,7 +216,6 @@ def run_chat(
                         yield {"event": "token", "data": "\n\n".join(accumulated_tool_results[:3])}
                 except Exception as fallback_exc:
                     logger.exception(fallback_exc)
-                    # Synthesis failed — surface raw tool results so the caller gets a 200
                     yield {"event": "token", "data": "\n\n".join(accumulated_tool_results[:3])}
             else:
                 yield {"event": "error", "data": "Reached tool call limit without retrieving any data."}

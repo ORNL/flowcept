@@ -4,29 +4,12 @@
 All functions are plain Python — no MCP framework imports.
 """
 
-from flowcept.agents.provenance_schema_manager.static_schema_builder import SCHEMA_CONTEXT
+import json
+
+from flowcept.agents.provenance_schema_manager.static_schema_builder import SCHEMA_CONTEXT, build_schema_context
 from flowcept.agents.prompts.schema_prompt_context import (
     build_allowed_fields_prompt,
     build_task_structure_prompt,
-)
-
-ALLOWED_FILTER_OPERATORS = frozenset(
-    {
-        "$and",
-        "$or",
-        "$nor",
-        "$not",
-        "$exists",
-        "$eq",
-        "$ne",
-        "$gt",
-        "$gte",
-        "$lt",
-        "$lte",
-        "$in",
-        "$nin",
-        "$regex",
-    }
 )
 
 
@@ -35,6 +18,115 @@ def _build_task_field_list() -> str:
     fields = [f"`{f['name']}`" for f in SCHEMA_CONTEXT.get("task_fields", [])]
     fields += [f"`telemetry_summary.{f['name']}`" for f in SCHEMA_CONTEXT.get("telemetry_summary_fields", [])]
     return "\n".join(f"  - {name}" for name in fields) if fields else "  *(schema not yet loaded)*"
+
+
+def _attribution_projection() -> str:
+    """Return the task field set for attribution queries, derived from the live schema.
+
+    Selects:
+    - Identifier fields (names ending in ``_id``) that are core / non-optional,
+      detected by the absence of "if any" or "nested" in their description.
+    - Dict-typed IO fields whose description marks them as task inputs or outputs.
+    - The execution-status field, detected by type name ``Status``.
+
+    Because the list is built entirely from schema introspection, field renames in
+    the domain class propagate automatically without changes to this function.
+    """
+    ctx = SCHEMA_CONTEXT if SCHEMA_CONTEXT else build_schema_context()
+    fields = []
+    for f in ctx.get("task_fields", []):
+        name, type_str, desc = f["name"], f.get("type", ""), f.get("description", "").lower()
+        is_core_id = (
+            name.endswith("_id")
+            and "if any" not in desc
+            and "nested" not in desc
+            and "loop" not in desc
+        )
+        is_io = type_str == "Dict" and ("inputs" in desc or "outputs" in desc)
+        is_status = type_str == "Status"
+        if is_core_id or is_io or is_status:
+            fields.append(name)
+    return json.dumps(fields) if fields else "[]"
+
+
+def build_db_chat_rules(
+    query_tasks_tool: str,
+    list_campaigns_tool: str,
+    list_agents_tool: str,
+    get_task_summary_tool: str,
+    highlight_lineage_tool: str,
+    make_chart_tool: str,
+    get_dashboard_tool: str,
+    update_dashboard_tool: str,
+) -> str:
+    """Return the DB-mode chat rules block.
+
+    All tool names are passed as parameters so that renames in the tool registry
+    propagate here automatically rather than silently rotting as string literals.
+    The attribution projection is derived from the live schema via
+    :func:`_attribution_projection`, so field renames in the domain class are
+    reflected without manual updates to this function.
+    """
+    proj = _attribution_projection()
+    wf_id = next((f["name"] for f in (SCHEMA_CONTEXT or build_schema_context()).get("workflow_fields", []) if f["name"].endswith("_id")), "workflow_id")
+    campaign_id = next((f["name"] for f in (SCHEMA_CONTEXT or build_schema_context()).get("task_fields", []) if "campaign" in f["name"]), "campaign_id")
+    activity_id = next((f["name"] for f in (SCHEMA_CONTEXT or build_schema_context()).get("task_fields", []) if "activity" in f["name"] and f["name"].endswith("_id")), "activity_id")
+    return (
+        "You have tools to query this data. Rules:\n"
+        "- Use the tools to answer data questions.\n"
+        "- Filters are Mongo-style; allowed operators: $and $or $nor $not $exists $eq $ne $gt $gte $lt"
+        "  $lte $in $nin $regex. Never use $options — for case-insensitive regex use the inline flag:"
+        '  {"field": {"$regex": "(?i)pattern"}}.\n'
+        f"- When the user context includes {wf_id} or {campaign_id}, ALWAYS scope your queries with it.\n"
+        f"- For campaigns: ALWAYS call `{list_campaigns_tool}` to get campaign details including the human-readable"
+        "  campaign name. Never answer a campaign question from context alone — the context only has IDs.\n"
+        f"- For workflows: when reporting any workflow result, ALWAYS include both the {wf_id}"
+        "  raw value and the name field value explicitly, using their field labels. For a single"
+        f'  result write: "{wf_id}: <id>, name: <name>". For multiple results use a markdown'
+        "  table. Never omit either field.\n"
+        f"- When answering about workflow activities, lineage, or execution order, use only {activity_id}"
+        f"  values returned by provenance tools. Tool names are not workflow activities unless"
+        f"  they explicitly appear as {activity_id} values in the returned provenance records.\n"
+        f"- For agents: `{list_agents_tool}` returns agent identifier, human-readable name, activities, task_count.\n\n"
+        "  Two patterns — pick based on whether the question names a SPECIFIC item:\n\n"
+        "  PATTERN A — Specific named value in task data:\n"
+        "    Use EXACTLY 3 tool calls — no shortcuts:\n"
+        f"    (1) Call `{get_task_summary_tool}` scoped to the workflow to discover activity names.\n"
+        f"    (2) Call `{query_tasks_tool}` scoped to the workflow. Do NOT filter by the specific value —"
+        "        you do not know which input or output field stores it. Include"
+        f"        projection={proj}."
+        "        Inspect BOTH input and output fields. If the value appears as output by one task"
+        "        and input by another, the output-side task is the upstream producer.\n"
+        f"    (3) Call `{list_agents_tool}` — MANDATORY for attribution. The task query returns raw"
+        "        agent identifiers; only the agent listing tool maps them to human-readable names.\n"
+        "    Write your final answer ONLY after all 3 calls complete.\n\n"
+        "  PATTERN B — General attribution (no specific value named):\n"
+        f"    Call `{list_agents_tool}` only. Answer directly; do NOT call `{query_tasks_tool}`.\n\n"
+        "- For hardware/system questions: query task data and always include all of these terms in"
+        "  your response (where data is available): machine, cpu, processor, platform, hardware.\n\n"
+        f"- Prefer `{get_task_summary_tool}` for aggregate questions (counts, durations) over fetching all tasks."
+        f"  When reporting task counts, include each {activity_id} and its count. Format as:"
+        f"  'Activity A: N tasks, Activity B: M tasks, … Total: X tasks.'\n"
+        "- For data lineage and data flow questions:\n"
+        f"  Do NOT call `{highlight_lineage_tool}` — it is a UI widget action only.\n"
+        f"  Do NOT call `{query_tasks_tool}` — task-level details are not needed for lineage questions.\n"
+        "  Use EXACTLY 2 tool calls:\n"
+        f"    (1) `{get_task_summary_tool}` — to see all activities and their counts.\n"
+        f"    (2) `{list_agents_tool}` — to see which agent ran which activities.\n"
+        "  Write your final answer ONLY after BOTH calls complete.\n"
+        f"- `{highlight_lineage_tool}` is ONLY for explicit UI highlight requests.\n"
+        f"- When asked for a chart/plot, call `{make_chart_tool}` with a declarative chart spec:\n"
+        '  {"chart_id": "<short-id>", "type": "chart", "title": "...",\n'
+        '   "data": {"source": "tasks", "filter": {...}, "group_by": "<field>",\n'
+        '            "metrics": [{"field": "<dot.path>", "agg": "avg|sum|min|max|count"}]},\n'
+        '   "viz": {"kind": "bar|line|pie|scatter|area"}}\n'
+        f"- To modify the user's dashboard (only when asked), call `{get_dashboard_tool}`, then"
+        f"  `{update_dashboard_tool}` with the complete revised spec; explain what changed.\n"
+        "- State filters you used.\n"
+        "- IMPORTANT: after you receive tool results sufficient to answer the question, write your"
+        "  FINAL ANSWER immediately — UNLESS you are in Pattern A or a lineage question, in which"
+        "  case all required calls must complete before writing your answer.\n"
+    )
 
 
 def build_db_schema_context(
@@ -56,48 +148,3 @@ def build_db_schema_context(
     return "## Valid field names\n" + _build_task_field_list()
 
 
-def build_db_filter_prompt(
-    query: str,
-    collection: str = "tasks",
-    dynamic_schema: dict = None,
-    example_values: dict = None,
-    current_fields: list[str] = None,
-) -> str:
-    """Build a prompt that asks an LLM to generate a Mongo-style filter JSON for a DB query.
-
-    Parameters
-    ----------
-    query : str
-        Natural language question to translate into a filter.
-    collection : str, optional
-        Target collection name ("tasks" or "workflows").
-
-    Returns
-    -------
-    str
-        Formatted prompt.
-    """
-    return f"""You are an expert in MongoDB query construction for workflow provenance data.
-The user wants to query the ``{collection}`` collection.
-
-## Valid filter operators
-Only these operators are allowed:
-{", ".join(sorted(ALLOWED_FILTER_OPERATORS))}
-
-{build_db_schema_context(dynamic_schema=dynamic_schema, example_values=example_values, current_fields=current_fields)}
-
-## Rules
-- Use only field names from the list above.
-- Use only operators from the allowlist.
-- Do NOT invent field names or operators.
-- Return only valid JSON — no markdown, no explanations.
-- For missing information, return an empty filter: {{}}
-- Date/time fields use Unix timestamps (seconds since epoch).
-
-## Output format
-Return a single JSON object (the filter). Example:
-{{"activity_id": "process_data", "telemetry_summary.duration_sec": {{"$gt": 60}}}}
-
-User query:
-{query}
-"""

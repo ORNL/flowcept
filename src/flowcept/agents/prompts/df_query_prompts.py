@@ -12,6 +12,32 @@ from flowcept.agents.prompts.schema_prompt_context import (
 )
 
 
+def build_df_chat_rules(query_tool: str, objects_tool: str) -> str:
+    """Return the DF-mode chat rules block.
+
+    Parameters
+    ----------
+    query_tool : str
+        Name of the tool used to execute pandas queries against the task DataFrame.
+    objects_tool : str
+        Name of the tool used to query artifact/object DataFrames.
+    """
+    return (
+        "DATAFRAME MODE — You are operating in in-memory DataFrame mode.\n"
+        f"RULE 1: Call `{query_tool}(code=<pandas_code>)` to query task data.\n"
+        f"RULE 1b: If `{query_tool}` returns only column names, make a second call"
+        " that queries the actual data values using those column names.\n"
+        "RULE 1c: The DataFrame `df` contains all tasks loaded for the current session."
+        " It is pre-filtered by session setup and requires no additional context-based scoping."
+        " Query the full `df` directly without adding redundant identifier filters.\n"
+        "RULE 2: The pandas code MUST assign output to `result`."
+        " Use ONLY the columns listed in the DataFrame schema below.\n"
+        "RULE 4: NEVER write `result = ...` or Python code in your text response.\n"
+        f"RULE 5: For artifact property questions, call `{objects_tool}` instead of"
+        f" `{query_tool}`. Report all returned field values verbatim.\n"
+    )
+
+
 def get_df_form(context_kind="tasks"):
     """Return DataFrame context description string."""
     if context_kind == "objects":
