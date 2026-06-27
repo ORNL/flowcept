@@ -170,6 +170,7 @@ def _build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_ed
             return result_str
         try:
             import json as _json
+
             parsed = _json.loads(result_str)
             if isinstance(parsed.get("result"), dict):
                 parsed["result"]["plot_code"] = plot_code

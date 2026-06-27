@@ -42,9 +42,10 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool:
 
         # Attribution: list_agents maps agent_id UUIDs to human-readable names and activities.
         # It must be the first call for any agent/submission question without a specific lookup value.
-        if "list_agents" in names and not has_specific_value and (
-            "agent" in lower
-            or any(w in lower for w in ("submit", "submitted", "producer", "produced"))
+        if (
+            "list_agents" in names
+            and not has_specific_value
+            and ("agent" in lower or any(w in lower for w in ("submit", "submitted", "producer", "produced")))
         ):
             return [{"name": "list_agents", "args": {}, "id": str(uuid.uuid4())}]
 

@@ -162,19 +162,26 @@ def run_chat(
                                 user_query = messages[-1].get("content", "") if messages else ""
                                 tool_data = "\n".join(accumulated_tool_results[-3:]) if accumulated_tool_results else ""
                                 try:
-                                    rephrase = llm.invoke([
-                                        HumanMessage(
-                                            content=(
-                                                f"The user asked: {user_query!r}\n"
-                                                + (f"Tool results already retrieved:\n{tool_data}\n" if tool_data else "")
-                                                + f"The LLM produced Python code instead of an answer: {content}\n"
-                                                "Write a single plain English sentence answering the "
-                                                  "user's question using the tool results above. "
-                                                "If the data is not available, say so specifically (mention the metric asked about). "
-                                                "Do not use Python code or variable assignments."
+                                    rephrase = llm.invoke(
+                                        [
+                                            HumanMessage(
+                                                content=(
+                                                    f"The user asked: {user_query!r}\n"
+                                                    + (
+                                                        f"Tool results already retrieved:\n{tool_data}\n"
+                                                        if tool_data
+                                                        else ""
+                                                    )
+                                                    + f"The LLM produced Python code instead of an answer: {content}\n"
+                                                    "Write a single plain English sentence answering the "
+                                                    "user's question using the tool results above. "
+                                                    "If the data is not available, say so specifically"
+                                                    " (mention the metric asked about). "
+                                                    "Do not use Python code or variable assignments."
+                                                )
                                             )
-                                        )
-                                    ])
+                                        ]
+                                    )
                                     content = getattr(rephrase, "content", content) or content
                                 except Exception:
                                     pass

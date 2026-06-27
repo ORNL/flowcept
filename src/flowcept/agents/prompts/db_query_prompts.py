@@ -36,12 +36,7 @@ def _attribution_projection() -> str:
     fields = []
     for f in ctx.get("task_fields", []):
         name, type_str, desc = f["name"], f.get("type", ""), f.get("description", "").lower()
-        is_core_id = (
-            name.endswith("_id")
-            and "if any" not in desc
-            and "nested" not in desc
-            and "loop" not in desc
-        )
+        is_core_id = name.endswith("_id") and "if any" not in desc and "nested" not in desc and "loop" not in desc
         is_io = type_str == "Dict" and ("inputs" in desc or "outputs" in desc)
         is_status = type_str == "Status"
         if is_core_id or is_io or is_status:
@@ -68,9 +63,30 @@ def build_db_chat_rules(
     reflected without manual updates to this function.
     """
     proj = _attribution_projection()
-    wf_id = next((f["name"] for f in (SCHEMA_CONTEXT or build_schema_context()).get("workflow_fields", []) if f["name"].endswith("_id")), "workflow_id")
-    campaign_id = next((f["name"] for f in (SCHEMA_CONTEXT or build_schema_context()).get("task_fields", []) if "campaign" in f["name"]), "campaign_id")
-    activity_id = next((f["name"] for f in (SCHEMA_CONTEXT or build_schema_context()).get("task_fields", []) if "activity" in f["name"] and f["name"].endswith("_id")), "activity_id")
+    wf_id = next(
+        (
+            f["name"]
+            for f in (SCHEMA_CONTEXT or build_schema_context()).get("workflow_fields", [])
+            if f["name"].endswith("_id")
+        ),
+        "workflow_id",
+    )
+    campaign_id = next(
+        (
+            f["name"]
+            for f in (SCHEMA_CONTEXT or build_schema_context()).get("task_fields", [])
+            if "campaign" in f["name"]
+        ),
+        "campaign_id",
+    )
+    activity_id = next(
+        (
+            f["name"]
+            for f in (SCHEMA_CONTEXT or build_schema_context()).get("task_fields", [])
+            if "activity" in f["name"] and f["name"].endswith("_id")
+        ),
+        "activity_id",
+    )
     return (
         "You have tools to query this data. Rules:\n"
         "- Use the tools to answer data questions.\n"
@@ -146,5 +162,3 @@ def build_db_schema_context(
             )
         return context
     return "## Valid field names\n" + _build_task_field_list()
-
-

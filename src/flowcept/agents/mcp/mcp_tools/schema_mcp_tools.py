@@ -49,7 +49,9 @@ def get_schema_context(tool_context: str = "db", workflow_id: Optional[str] = No
     else:
         snapshot = ctx_manager.schema_manager.get_workflow_schema_snapshot(workflow_id)
         if not snapshot:
-            return ToolResult(code=404, result="No workflow schema context is available.", tool_name="get_schema_context")
+            return ToolResult(
+                code=404, result="No workflow schema context is available.", tool_name="get_schema_context"
+            )
         prompt_context = build_db_schema_context(
             dynamic_schema=snapshot.get("dynamic_schema"),
             example_values=snapshot.get("value_examples"),
