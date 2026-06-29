@@ -12,7 +12,12 @@ from flowcept.agents.prompts.schema_prompt_context import (
 )
 
 
-def build_df_chat_rules(query_tool: str, objects_tool: str) -> str:
+def build_df_chat_rules(
+    query_tool: str,
+    objects_tool: str,
+    list_agents_tool: str,
+    workflow_context_tool: str,
+) -> str:
     """Return the DF-mode chat rules block.
 
     Parameters
@@ -21,6 +26,10 @@ def build_df_chat_rules(query_tool: str, objects_tool: str) -> str:
         Name of the tool used to execute pandas queries against the task DataFrame.
     objects_tool : str
         Name of the tool used to query artifact/object DataFrames.
+    list_agents_tool : str
+        Name of the tool used to list agent summaries with human-readable names.
+    workflow_context_tool : str
+        Name of the tool used to retrieve workflow-level metadata.
     """
     return (
         "DATAFRAME MODE — You are operating in in-memory DataFrame mode.\n"
@@ -28,13 +37,40 @@ def build_df_chat_rules(query_tool: str, objects_tool: str) -> str:
         f"RULE 1b: If `{query_tool}` returns only column names, make a second call"
         " that queries the actual data values using those column names.\n"
         "RULE 1c: The DataFrame `df` contains all tasks loaded for the current session."
-        " It is pre-filtered by session setup and requires no additional context-based scoping."
-        " Query the full `df` directly without adding redundant identifier filters.\n"
+        " It is pre-filtered by session setup — NEVER add scope-limiting identifier"
+        " filters (workflow or campaign identifiers) to your pandas code; doing so may"
+        " return 0 results. For total task counts, use `len(df)` on the full df.\n"
         "RULE 2: The pandas code MUST assign output to `result`."
         " Use ONLY the columns listed in the DataFrame schema below.\n"
-        "RULE 4: NEVER write `result = ...` or Python code in your text response.\n"
-        f"RULE 5: For artifact property questions, call `{objects_tool}` instead of"
+        f"RULE 3: For questions that ask for a complete list of all activities in the workflow"
+        f" (full lineage, execution flow, or activity enumeration), call `{query_tool}` to retrieve"
+        f" the distinct activity identifiers from the task data."
+        f" Do NOT attempt to compute upstream/downstream data-flow relationships in pandas"
+        f" — just enumerate all distinct activities.\n"
+        "RULE 4: NEVER write pandas code (`result = ...`) in your text response.\n"
+        f"RULE 5: For artifact property questions — meaning questions about the specifications,"
+        f" properties, design characteristics, or stored metadata of workflow artifacts"
+        f" (stored binary objects, data files, or versioned outputs) — call `{objects_tool}` instead of"
         f" `{query_tool}`. Report all returned field values verbatim.\n"
+        "RULE 6: Task timestamp fields may be stored as ISO-format strings;"
+        " use `pd.to_datetime()` when sorting or computing differences"
+        " (execution order, wall-clock duration).\n"
+        f"RULE 7: For questions about who ran or submitted tasks (agent attribution),"
+        f" call `{list_agents_tool}` as your FIRST step — it returns each agent's name and the"
+        f" activities they ran. If the answer is not yet clear from the agent listing,"
+        f" also call `{query_tool}` to examine input and output fields across tasks"
+        f" to identify which activities provided inputs to the named activity."
+        f" Always report BOTH the submitting activity name AND the agent name"
+        f" verbatim in your answer. Do NOT substitute either with a paraphrase.\n"
+        f"RULE 8: For workflow-level questions (name, campaign, user, timestamps,"
+        f" or listing workflows), call `{workflow_context_tool}` —"
+        " task rows do not contain workflow-level metadata.\n"
+        f"RULE 8b: For questions that explicitly ask about hardware, machine, processor,"
+        f" or platform (NOT questions about activities, lineage, or workflow structure),"
+        f" call `{query_tool}` to query task rows for machine placement and resource data.\n"
+        f"RULE 9: When executing the MANDATORY COMPARISON PROTOCOL (Step 1 search for reference"
+        f" entity Y), your FIRST tool call MUST be `{objects_tool}` — the entity may be a workflow"
+        f" artifact. Only if Y is absent from objects should you then call `{query_tool}` to check tasks.\n"
     )
 
 
@@ -66,11 +102,11 @@ def get_object_schema_prompt(example_values, current_fields):
         Each row in `df` represents one workflow object metadata message.
 
         Important object fields:
-        - `object_type`: semantic object category, such as input_file, dataset, artifact, or ml_model.
+        - `object_type`: semantic object category (user-defined label, e.g. input_file, dataset, artifact).
         - `type`: Flowcept message type. For object rows this is usually "object"; do not use it as the object category.
         - `file_path`: object path when available.
         - `workflow_id`: workflow associated with the object.
-        - `custom_metadata.*`: user-defined metadata (e.g. model_profile.params, n_samples, split_ratio).
+        - `custom_metadata.*`: user-defined metadata fields; check ALLOWED_FIELDS for available sub-fields.
 
         ALWAYS CHECK THE ALLOWED_FIELDS list before proceeding.
         ---
@@ -167,9 +203,9 @@ def build_plot_code_prompt(query, dynamic_schema, example_values, current_fields
 
 
 JOB = "You will generate a pandas dataframe code to solve the query."
-ROLE = """You are an expert in scientific and engineering workflow provenance data analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems.
+ROLE = """You are an expert in workflow provenance data analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems.
             You are analyzing provenance data from a complex workflow consisting of numerous tasks."""
-OBJECT_ROLE = """You are an expert in scientific and engineering workflow provenance data analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems.
+OBJECT_ROLE = """You are an expert in workflow provenance data analysis with a deep knowledge of data lineage tracing, workflow management, and computing systems.
             You are analyzing object metadata records from a workflow provenance buffer."""
 QUERY_GUIDELINES = """
 
@@ -221,7 +257,7 @@ OBJECT_QUERY_GUIDELINES = """
     - Use `df` as the base DataFrame.
     - Use `object_type` for object category questions.
     - Use `file_path` for file path questions.
-    - Use `custom_metadata.*` fields for model/dataset metadata (check ALLOWED_FIELDS for available sub-fields).
+    - Use `custom_metadata.*` fields for object-specific metadata (check ALLOWED_FIELDS for available sub-fields).
     - Use `workflow_id` when the query asks for workflow-specific objects.
     - The column `type` is the Flowcept message type, not the object category.
     - Explicitly list selected columns unless the user asks for all columns.

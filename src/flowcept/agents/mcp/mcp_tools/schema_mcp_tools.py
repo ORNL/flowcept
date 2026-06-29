@@ -63,3 +63,78 @@ def get_schema_context(tool_context: str = "db", workflow_id: Optional[str] = No
         result={"tool_context": tool_context, "prompt_context": prompt_context},
         tool_name="get_schema_context",
     )
+
+
+@mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+def get_df_schema_context(context_kind: str = "tasks") -> ToolResult:
+    """Return the in-memory DataFrame schema context for the DF query path.
+
+    Returns ALLOWED_FIELDS, per-activity inputs/outputs, and example values
+    suitable for writing pandas code against the ``df`` variable.
+
+    Parameters
+    ----------
+    context_kind : str, optional
+        ``"tasks"`` (default) or ``"objects"``.
+
+    Returns
+    -------
+    ToolResult
+        ``result`` holds ``{"prompt_context": ...}`` on success (code 301)
+        or EMPTY_DF_MESSAGE on code 404 when no data is loaded.
+    """
+    from flowcept.agents.prompts.df_query_prompts import build_pandas_code_prompt
+
+    df, schema, value_examples, custom_guidance = get_df_context(context_kind=context_kind)
+    if df is None or not len(df):
+        return ToolResult(code=404, result=EMPTY_DF_MESSAGE, tool_name="get_df_schema_context")
+    prompt_context = build_pandas_code_prompt(
+        "",
+        schema,
+        value_examples,
+        custom_guidance,
+        list(df.columns),
+        context_kind=context_kind,
+    )
+    return ToolResult(
+        code=301,
+        result={"prompt_context": prompt_context},
+        tool_name="get_df_schema_context",
+    )
+
+
+@mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+def get_workflow_schema_context(workflow_id: str) -> ToolResult:
+    """Return the workflow-scoped schema context for the DB query path.
+
+    Returns field names and example values for the given workflow, derived
+    from the runtime schema cache, suitable for constructing Mongo filters.
+
+    Parameters
+    ----------
+    workflow_id : str
+        The workflow whose schema context should be returned.
+
+    Returns
+    -------
+    ToolResult
+        ``result`` holds ``{"prompt_context": ...}`` on success (code 301)
+        or a 404 error when no schema is cached for the workflow.
+    """
+    snapshot = ctx_manager.schema_manager.get_workflow_schema_snapshot(workflow_id)
+    if not snapshot:
+        return ToolResult(
+            code=404, result="No workflow schema context is available.", tool_name="get_workflow_schema_context"
+        )
+    prompt_context = build_db_schema_context(
+        dynamic_schema=snapshot.get("dynamic_schema"),
+        example_values=snapshot.get("value_examples"),
+        current_fields=snapshot.get("current_fields"),
+    )
+    return ToolResult(
+        code=301,
+        result={"prompt_context": prompt_context},
+        tool_name="get_workflow_schema_context",
+    )

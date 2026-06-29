@@ -1,7 +1,8 @@
 """Thin MCP wrappers for DF (DataFrame) query tools.
 
-One-liner delegates to :mod:`flowcept.agents.data_query_tools.df_query_tools`.
-MCP context lookup (df, schema, value_examples, custom_user_guidance) happens here.
+All tools delegate to :mod:`flowcept.agents.data_query_tools.df_query_tools`.
+``run_df_query`` is an internal helper called by the specific ``df_*`` tools;
+it is not referenced directly from ``tool_registry.py``.
 """
 
 from flowcept.agents.tool_result import ToolResult
@@ -26,26 +27,60 @@ _WORKFLOW_HEAVY_FIELDS = frozenset(
 )
 
 
+# ---------------------------------------------------------------------------
+# Internal helper — not exposed to tool_registry.py directly
+# ---------------------------------------------------------------------------
+
+
 @mcp_flowcept.tool()
 @agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
-def get_workflow_context() -> ToolResult:
-    """Return the in-memory workflow record(s) currently loaded in the agent context.
+def run_df_query(code: str, context_kind: str = "tasks") -> ToolResult:
+    """Execute pandas code against the current context DataFrame.
 
-    The DF path stores workflow provenance in the MCP context rather than in the
-    tasks DataFrame.  This tool is the DF-path counterpart to the DB-path
-    ``query_workflows`` tool: both return ``{items, count}`` with heavy
-    infrastructure fields stripped.
+    Pure executor — no internal LLM call.  The code must assign its output
+    to ``result``.
 
-    Returns
-    -------
-    ToolResult
-        ``result`` holds ``{"items": [...], "count": int}``.
+    Parameters
+    ----------
+    code : str
+        Pandas code that assigns output to ``result``.
+    context_kind : str, optional
+        ``"tasks"`` or ``"objects"``.
+    """
+    df, _, _, _ = get_df_context(context_kind=context_kind)
+    if df is None or not len(df):
+        return ToolResult(code=404, result=EMPTY_DF_MESSAGE)
+    return _core.execute_df_code(user_code=code, df=df)
+
+
+# ---------------------------------------------------------------------------
+# DF query tools — symmetric counterparts to db_query_mcp_tools
+# ---------------------------------------------------------------------------
+
+
+@mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+def df_query_tasks(code: str) -> ToolResult:
+    """Query task provenance using pandas code against the in-memory tasks DataFrame.
+
+    ``code`` must be valid pandas code that assigns its output to ``result``.
+    The DataFrame variable is ``df``; its schema is in the system prompt.
+    """
+    return run_df_query(code=code, context_kind="tasks")
+
+
+@mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+def df_query_workflows() -> ToolResult:
+    """Return the workflow record(s) loaded in the agent's in-memory context.
+
+    Strips heavy infrastructure fields; adds a lightweight hardware_summary.
+    Symmetric counterpart to db_query_workflows.
     """
     wf = ctx_manager.context.workflow_msg_obj
     if not wf:
-        return ToolResult(code=404, result="No workflow loaded in agent context.", tool_name="get_workflow_context")
+        return ToolResult(code=404, result="No workflow loaded in agent context.", tool_name="df_query_workflows")
     pruned = {k: v for k, v in wf.items() if k not in _WORKFLOW_HEAVY_FIELDS}
-    # Add a lightweight hardware_summary from machine_info so hardware questions can be answered.
     machine_info = wf.get("machine_info")
     if machine_info and isinstance(machine_info, dict):
         for node_data in machine_info.values():
@@ -59,66 +94,128 @@ def get_workflow_context() -> ToolResult:
                 if hw:
                     pruned["hardware_summary"] = hw
                 break
-    return ToolResult(code=301, result={"items": [pruned], "count": 1}, tool_name="get_workflow_context")
+    return ToolResult(code=301, result={"items": [pruned], "count": 1}, tool_name="df_query_workflows")
 
 
 @mcp_flowcept.tool()
 @agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
-def run_df_query(code: str, context_kind: str = "tasks") -> ToolResult:
-    """Execute pandas code against the current context DataFrame.
+def df_query_objects(code: str) -> ToolResult:
+    """Query stored data-object records using pandas code against the in-memory objects DataFrame.
 
-    Pure executor — no internal LLM call.  The code must assign its output
-    to ``result``.  Use ``get_schema_context`` first to obtain column names
-    and schema context before generating the code.
-
-    Parameters
-    ----------
-    code : str
-        Pandas code that assigns output to ``result``.
-    context_kind : str, optional
-        "tasks" or "objects".
-
-    Returns
-    -------
-    ToolResult
+    ``code`` must assign its output to ``result``.
+    Symmetric counterpart to db_query_objects.
     """
-    df, _, _, _ = get_df_context(context_kind=context_kind)
+    return run_df_query(code=code, context_kind="objects")
+
+
+@mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+def df_get_task_summary() -> ToolResult:
+    """Summarize tasks in the in-memory DataFrame: status counts, per-activity durations, time range.
+
+    Symmetric counterpart to db_get_task_summary.
+    """
+    code = (
+        "import pandas as _pd\n"
+        "summary = {}\n"
+        "if 'status' in df.columns:\n"
+        "    summary['status_counts'] = df['status'].value_counts().to_dict()\n"
+        "if 'activity_id' in df.columns and 'used' in df.columns and 'generated' in df.columns:\n"
+        "    def _dur(row):\n"
+        "        try: return (row['generated'] - row['used'])\n"
+        "        except: return None\n"
+        "    df2 = df.copy()\n"
+        "    df2['_dur'] = df2.apply(_dur, axis=1)\n"
+        "    summary['activity_durations'] = df2.groupby('activity_id')['_dur'].mean().dropna().to_dict()\n"
+        "if 'used' in df.columns:\n"
+        "    summary['time_range'] = {'start': df['used'].min(), 'end': df['used'].max()}\n"
+        "result = summary"
+    )
+    df, _, _, _ = get_df_context(context_kind="tasks")
     if df is None or not len(df):
-        return ToolResult(code=404, result=EMPTY_DF_MESSAGE)
+        return ToolResult(code=404, result=EMPTY_DF_MESSAGE, tool_name="df_get_task_summary")
     return _core.execute_df_code(user_code=code, df=df)
 
 
 @mcp_flowcept.tool()
 @agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
-def execute_generated_df_code(user_code: str, context_kind: str = "tasks") -> ToolResult:
-    """Execute externally generated pandas code against the current agent DataFrame.
+def df_list_campaigns() -> ToolResult:
+    """List campaign summaries derived from the in-memory tasks DataFrame.
 
-    Parameters
-    ----------
-    user_code : str
-        Pandas code expected to assign output to ``result``.
-    context_kind : str, optional
-        "tasks" or "objects".
-
-    Returns
-    -------
-    ToolResult
+    Symmetric counterpart to db_list_campaigns.
     """
-    df, _, _, _ = get_df_context(context_kind=context_kind)
+    code = (
+        "if 'campaign_id' in df.columns:\n"
+        "    result = df.groupby('campaign_id').agg(\n"
+        "        task_count=('task_id', 'count') if 'task_id' in df.columns else ('campaign_id', 'count'),\n"
+        "        workflow_count=('workflow_id', 'nunique') if 'workflow_id' in df.columns else ('campaign_id', 'nunique'),\n"
+        "    ).reset_index().to_dict(orient='records')\n"
+        "else:\n"
+        "    result = []"
+    )
+    df, _, _, _ = get_df_context(context_kind="tasks")
     if df is None or not len(df):
-        return ToolResult(code=404, result=EMPTY_DF_MESSAGE)
-    return _core.execute_df_code(user_code=user_code, df=df)
+        return ToolResult(code=404, result=EMPTY_DF_MESSAGE, tool_name="df_list_campaigns")
+    return _core.execute_df_code(user_code=code, df=df)
 
 
 @mcp_flowcept.tool()
 @agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
-def extract_or_fix_python_code(raw_text: str, runtime_error: str = None, context_kind: str = "tasks") -> ToolResult:
-    """Extract or repair pandas code using the current agent DataFrame columns."""
+def df_list_agents() -> ToolResult:
+    """List agent summaries derived from the in-memory tasks DataFrame.
+
+    Symmetric counterpart to db_list_agents.
+    """
+    code = (
+        "agent_col = 'agent_id' if 'agent_id' in df.columns else None\n"
+        "if agent_col:\n"
+        "    result = df.groupby(agent_col).agg(\n"
+        "        task_count=(agent_col, 'count')\n"
+        "    ).reset_index().to_dict(orient='records')\n"
+        "else:\n"
+        "    result = []"
+    )
+    df, _, _, _ = get_df_context(context_kind="tasks")
+    if df is None or not len(df):
+        return ToolResult(code=404, result=EMPTY_DF_MESSAGE, tool_name="df_list_agents")
+    return _core.execute_df_code(user_code=code, df=df)
+
+
+@mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+def df_highlight_lineage(task_ids: list = None, code: str = None) -> ToolResult:
+    """Return seed task IDs for UI lineage highlighting from the in-memory tasks DataFrame.
+
+    Pass ``task_ids`` directly, or ``code`` (pandas code assigning a list to ``result``)
+    to select seed tasks from the DataFrame.
+    Symmetric counterpart to db_highlight_lineage.
+    """
+    df, _, _, _ = get_df_context(context_kind="tasks")
+    if df is None or not len(df):
+        return ToolResult(code=404, result=EMPTY_DF_MESSAGE, tool_name="df_highlight_lineage")
+    if task_ids:
+        return ToolResult(code=301, result={"task_ids": list(task_ids)}, tool_name="df_highlight_lineage")
+    if code:
+        result = _core.execute_df_code(user_code=code, df=df)
+        if result.code >= 400:
+            return result
+        ids = result.result if isinstance(result.result, list) else []
+        return ToolResult(code=301, result={"task_ids": ids}, tool_name="df_highlight_lineage")
+    return ToolResult(code=400, result="Provide task_ids or code.", tool_name="df_highlight_lineage")
+
+
+@mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+def df_fix_query(raw_text: str, runtime_error: str = None) -> ToolResult:
+    """Extract or repair pandas code using the current agent DataFrame columns.
+
+    Symmetric counterpart to db_fix_query which repairs DB query parameters.
+    """
     from flowcept.agents.llm.builders import build_llm_model
 
-    df, _, _, _ = get_df_context(context_kind=context_kind)
+    df, _, _, _ = get_df_context(context_kind="tasks")
     if df is None or not len(df):
-        return ToolResult(code=404, result=EMPTY_DF_MESSAGE)
+        return ToolResult(code=404, result=EMPTY_DF_MESSAGE, tool_name="df_fix_query")
     return _core.extract_or_fix_python_code(
         build_llm_model(track_tools=False),
         raw_text,

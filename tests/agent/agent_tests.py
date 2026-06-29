@@ -90,13 +90,13 @@ class TestAgent(unittest.TestCase):
         agent = agent_module.FlowceptMCPServer()
         agent.start()
         try:
-            resp = run_tool("query_tasks", kwargs={"filter": {"workflow_id": workflow_id}})[0]
+            resp = run_tool("db_query_tasks", kwargs={"filter": {"workflow_id": workflow_id}})[0]
             tool_result = ToolResult(**json.loads(resp))
             self.assertIn(tool_result.code, {201, 301})
             items = tool_result.result["items"]
             self.assertTrue(any(t["activity_id"] == "mcp_seed" for t in items))
 
-            resp = run_tool("list_campaigns", kwargs={})[0]
+            resp = run_tool("db_list_campaigns", kwargs={})[0]
             tool_result = ToolResult(**json.loads(resp))
             self.assertIn(tool_result.code, {201, 301})
             self.assertTrue(any(c["campaign_id"] == campaign_id for c in tool_result.result["items"]))
@@ -236,21 +236,16 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
         self.assertEqual(result.result, cm.EMPTY_DF_MESSAGE)
 
     def test_execute_generated_df_code_runs_against_current_df(self):
-        from flowcept.agents.mcp.mcp_tools import df_query_mcp_tools as t
-        from flowcept.agents.mcp import context_manager as cm
+        from flowcept.agents.data_query_tools.df_query_tools import execute_df_code
 
         df = pd.DataFrame({"a": [1, 2, 3], "b": [10, 20, 30]})
-        cm.ctx_manager.context.df = df
-
-        tool_result = t.execute_generated_df_code(user_code="result = df[['a']].head(2)")
+        tool_result = execute_df_code(user_code="result = df[['a']].head(2)", df=df)
 
         self.assertEqual(tool_result.code, 301)
         self.assertIn("result_df", tool_result.result)
         self.assertIn("a", tool_result.result["result_df"])
         self.assertIn("1", tool_result.result["result_df"])
         self.assertIn("2", tool_result.result["result_df"])
-
-        cm.ctx_manager.context.reset_context()
 
     def test_generate_workflow_card_tool(self):
         from flowcept.agents.mcp.mcp_tools import report_tools as g
@@ -574,7 +569,7 @@ class TestRefactoredAgentStructure(unittest.TestCase):
     # ── E1: db_query_mcp_tools.py — no _provenance_ infix ─────────────────
     def test_e1_db_query_mcp_tools_importable_and_names_clean(self):
         from flowcept.agents.mcp.mcp_tools import db_query_mcp_tools
-        for name in ("query_tasks", "query_workflows", "get_task_summary", "list_campaigns", "list_agents"):
+        for name in ("db_query_tasks", "db_query_workflows", "db_get_task_summary", "db_list_campaigns", "db_list_agents"):
             self.assertTrue(hasattr(db_query_mcp_tools, name), f"missing {name}")
             self.assertNotIn("provenance", name, f"{name} must not contain 'provenance'")
 
@@ -840,7 +835,7 @@ class TestProvAgentInstrumentation(unittest.TestCase):
 
     def test_mcp_db_query_tools_use_agent_flowcept_task(self):
         import inspect
-        import flowcept.agents.mcp_tools.db_query_mcp_tools as m
+        import flowcept.agents.mcp.mcp_tools.db_query_mcp_tools as m
 
         src = inspect.getsource(m)
         self.assertIn("agent_flowcept_task", src)

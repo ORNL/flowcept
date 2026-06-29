@@ -330,6 +330,36 @@ def highlight_lineage(  # noqa: E302
     )
 
 
+def fix_query(llm, query_params: Dict[str, Any], error: str) -> ToolResult:
+    """Repair bad DB query parameters (filter/projection/sort) that caused a runtime error.
+
+    Parameters
+    ----------
+    llm : callable
+        LLM callable.
+    query_params : dict
+        The original query parameters dict (keys: filter, projection, sort, limit).
+    error : str
+        The error message produced when the query was attempted.
+
+    Returns
+    -------
+    ToolResult
+        ``result`` holds corrected ``query_params`` dict on success.
+    """
+    import json as _json
+    from flowcept.agents.prompts.db_query_prompts import build_fix_query_prompt
+
+    prompt = build_fix_query_prompt(query_params=query_params, error=error)
+    try:
+        response = llm.invoke(prompt)
+        text = response.content if hasattr(response, "content") else str(response)
+        corrected = _json.loads(text)
+        return ToolResult(code=201, result=corrected, tool_name="fix_query")
+    except Exception as e:
+        return ToolResult(code=499, result=str(e), tool_name="fix_query")
+
+
 class DBQueryTools:
     """DB-backed query path implementation of BaseQueryTools.
 

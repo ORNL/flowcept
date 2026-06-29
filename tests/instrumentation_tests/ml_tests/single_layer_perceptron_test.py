@@ -124,7 +124,7 @@ def call_hpc_agent(agent_id=None):
     n_configs = 5
     return dataset_config, n_configs
 
-@flowcept_task(output_names=["configs"], subtype=PROV_AGENT.AGENT_TOOL)
+@flowcept_task(output_names=["configs", "job_id"], subtype=PROV_AGENT.AGENT_TOOL)
 def submit_gridsearch_job(
     n_configs=5,
     agent_id=None,
@@ -140,7 +140,8 @@ def submit_gridsearch_job(
     ]
     configs = configs[:n_configs]
     assert len(configs) == n_configs
-    return configs
+    job_id = "gridsearch_batch_1"
+    return configs, job_id
 
 
 @flowcept_task(subtype=ML_Types.LEARNING)
@@ -313,7 +314,7 @@ def run_gridsearch_experiment(campaign_id=None):
 
         dataset_config, n_configs = call_hpc_agent(agent_id=orchestrator_agent_id)
 
-        configs = submit_gridsearch_job(n_configs=n_configs, agent_id=hpc_agent_id, source_agent_id=orchestrator_agent_id)
+        configs, batch_job_id = submit_gridsearch_job(n_configs=n_configs, agent_id=hpc_agent_id, source_agent_id=orchestrator_agent_id)
 
         x_train, y_train, x_val, y_val, dataset_id = get_dataset(**dataset_config)
 
@@ -331,6 +332,7 @@ def run_gridsearch_experiment(campaign_id=None):
                 dataset_id=dataset_id,
                 checkpoint_check=2,
                 config_id=cfg["config_id"],
+                job_id=batch_job_id,
                 torch_only=True,
             )
             results.append({"torch_model_object_id": result.get("torch_model_object_id")})

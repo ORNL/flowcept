@@ -115,11 +115,12 @@ def build_db_chat_rules(
         "        and input by another, the output-side task is the upstream producer.\n"
         f"    (3) Call `{list_agents_tool}` — MANDATORY for attribution. The task query returns raw"
         "        agent identifiers; only the agent listing tool maps them to human-readable names.\n"
-        "    Write your final answer ONLY after all 3 calls complete.\n\n"
+        "    Write your final answer ONLY after all 3 calls complete."
+        "    Write a direct factual statement using the user's question words and exact identifiers"
+        "    from the data — do NOT write a summary paragraph or report unrelated tool results.\n\n"
         "  PATTERN B — General attribution (no specific value named):\n"
         f"    Call `{list_agents_tool}` only. Answer directly; do NOT call `{query_tasks_tool}`.\n\n"
-        "- For hardware/system questions: query task data and always include all of these terms in"
-        "  your response (where data is available): machine, cpu, processor, platform, hardware.\n\n"
+        "- For hardware/system questions: query task data.\n"
         f"- Prefer `{get_task_summary_tool}` for aggregate questions (counts, durations) over fetching all tasks."
         f"  When reporting task counts, include each {activity_id} and its count. Format as:"
         f"  'Activity A: N tasks, Activity B: M tasks, … Total: X tasks.'\n"
@@ -142,6 +143,33 @@ def build_db_chat_rules(
         "- IMPORTANT: after you receive tool results sufficient to answer the question, write your"
         "  FINAL ANSWER immediately — UNLESS you are in Pattern A or a lineage question, in which"
         "  case all required calls must complete before writing your answer.\n"
+    )
+
+
+def build_fix_query_prompt(query_params: dict, error: str) -> str:
+    """Build a prompt asking the LLM to repair bad DB query parameters.
+
+    Parameters
+    ----------
+    query_params : dict
+        The original query parameters (filter, projection, sort, limit).
+    error : str
+        The error message produced when the query was attempted.
+
+    Returns
+    -------
+    str
+        Prompt string; the LLM must respond with a corrected JSON query_params object.
+    """
+    import json as _json
+
+    return (
+        "You are a MongoDB query repair assistant.\n"
+        "The following query parameters caused a runtime error.\n\n"
+        f"Original query_params:\n```json\n{_json.dumps(query_params, indent=2)}\n```\n\n"
+        f"Error:\n{error}\n\n"
+        "Return ONLY a corrected JSON object with the same keys (filter, projection, sort, limit). "
+        "Do not include any explanation or markdown — raw JSON only."
     )
 
 

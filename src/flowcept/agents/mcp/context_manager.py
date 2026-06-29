@@ -135,6 +135,26 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         self._seen_activities = {}
         self.msgs_counter = 0
 
+    def get_workflow_schema_snapshot(self, workflow_id: str):
+        """Return the cached schema snapshot for the given workflow, or None.
+
+        Parameters
+        ----------
+        workflow_id : str
+            The workflow whose schema snapshot is requested.
+        """
+        return self.schema_manager.get_workflow_schema_snapshot(workflow_id)
+
+    def persist_workflow_schema_snapshot(self, workflow_id: str) -> bool:
+        """Persist the cached schema snapshot for the given workflow.
+
+        Parameters
+        ----------
+        workflow_id : str
+            The workflow whose schema snapshot should be persisted.
+        """
+        return self.schema_manager.persist_workflow_schema_snapshot(workflow_id)
+
     @asynccontextmanager
     async def lifespan(self, app):
         """Start schema assertions before the MCP server begins serving requests.
@@ -186,7 +206,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                 return True
             self.context.workflow_msg_obj = msg_obj
             if WorkflowObject.from_dict(msg_obj).workflow_is_finished():
-                self.schema_manager.persist_workflow_schema_snapshot(msg_obj.get("workflow_id"))
+                self.persist_workflow_schema_snapshot(msg_obj.get("workflow_id"))
             return True
 
         if msg_type == "object":
@@ -269,7 +289,6 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                 if (
                     activity_id
                     and workflow_id
-                    and msg_obj.get("ended_at")
                     and msg_obj.get("used")
                     and msg_obj.get("generated")
                     and activity_id not in self._seen_activities.get(workflow_id, set())

@@ -10,18 +10,22 @@
 - user_query: "What was the complete workflow execution lineage including all activities around the train_and_validate task that achieved the best validation accuracy?"
   expected_response: "call_hpc_agent submit_gridsearch_job get_dataset train_and_validate select_best_model."
   score_threshold: 0.65
+  case_id: "t00_lineage"
 
 - user_query: "For configuration cfg_1, what parameters were used and what agent submitted them?"
   expected_response: "cfg_1 config_id epochs 2 learning_rate 0.01 n_input_neurons 1 submit_gridsearch_job HPCAgent."
   score_threshold: 0.72
+  case_id: "t00_cfg_params"
 
 - user_query: "What input fields were used by the train_and_validate tasks?"
   expected_response: "train_and_validate n_input_neurons epochs x_train y_train x_val y_val dataset_id checkpoint_check learning_rate config_id torch_only job_id."
   score_threshold: 0.72
+  case_id: "t00_input_fields"
 
 - user_query: "Which agent and task submitted the work items for train_and_validate?"
   expected_response: "HPCAgent submit_gridsearch_job."
   score_threshold: 0.70
+  case_id: "t00_agent_attribution"
 
 - user_query: "How many tasks ran across all workflows in the campaign?"
   expected_response: "nine 9 tasks."
@@ -80,7 +84,7 @@
   score_threshold: 0.50
   case_id: "df_table_plot_summary"
   tool_contexts: ["df"]
-  tool_expected: "generate_plot_code"
+  tool_expected: "make_chart"
 
 # T32: full provenance questionnaire — all 34 unique questions from agent_sandbox/questions.csv.
 # Answers are drawn from the gridsearch fixture (single_layer_perceptron_test.py).

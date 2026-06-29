@@ -6,16 +6,16 @@ import json
 from typing import Any, Dict, Optional
 
 from flowcept.agents.chat_orchestration.tool_registry import (
-    DF_QUERY_TOOL,
-    OBJECTS_QUERY_TOOL,
-    QUERY_TASKS_TOOL,
-    LIST_CAMPAIGNS_TOOL,
-    LIST_AGENTS_TOOL,
-    GET_TASK_SUMMARY_TOOL,
-    HIGHLIGHT_LINEAGE_TOOL,
-    MAKE_CHART_TOOL,
-    GET_DASHBOARD_TOOL,
-    UPDATE_DASHBOARD_TOOL,
+    query_tasks,
+    query_objects,
+    query_workflows,
+    list_agents,
+    list_campaigns,
+    get_task_summary,
+    highlight_lineage,
+    make_chart,
+    get_dashboard,
+    update_dashboard,
 )
 from flowcept.agents.prompts.base_prompts import build_common_chat_rules
 from flowcept.agents.prompts.db_query_prompts import build_db_chat_rules
@@ -107,17 +107,22 @@ def build_chat_system_prompt(context: Optional[Dict[str, Any]] = None) -> str:
     common_rules = build_common_chat_rules()
 
     if tool_context_mode == "df":
-        query_rules = build_df_chat_rules(DF_QUERY_TOOL, OBJECTS_QUERY_TOOL)
+        query_rules = build_df_chat_rules(
+            query_tasks.__name__,
+            query_objects.__name__,
+            list_agents_tool=list_agents.__name__,
+            workflow_context_tool=query_workflows.__name__,
+        )
     else:
         query_rules = build_db_chat_rules(
-            query_tasks_tool=QUERY_TASKS_TOOL,
-            list_campaigns_tool=LIST_CAMPAIGNS_TOOL,
-            list_agents_tool=LIST_AGENTS_TOOL,
-            get_task_summary_tool=GET_TASK_SUMMARY_TOOL,
-            highlight_lineage_tool=HIGHLIGHT_LINEAGE_TOOL,
-            make_chart_tool=MAKE_CHART_TOOL,
-            get_dashboard_tool=GET_DASHBOARD_TOOL,
-            update_dashboard_tool=UPDATE_DASHBOARD_TOOL,
+            query_tasks_tool=query_tasks.__name__,
+            list_campaigns_tool=list_campaigns.__name__,
+            list_agents_tool=list_agents.__name__,
+            get_task_summary_tool=get_task_summary.__name__,
+            highlight_lineage_tool=highlight_lineage.__name__,
+            make_chart_tool=make_chart.__name__,
+            get_dashboard_tool=get_dashboard.__name__,
+            update_dashboard_tool=update_dashboard.__name__,
         )
 
     return header + common_rules + query_rules + _build_footer(schema_context, context)
