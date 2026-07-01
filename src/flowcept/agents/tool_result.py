@@ -1,6 +1,6 @@
 """Shared ToolResult wrapper for MCP tools and webservice chat tools."""
 
-from typing import Union, Dict
+from typing import Union, Dict, List, Any
 from pydantic import BaseModel
 
 
@@ -12,11 +12,11 @@ class ToolResult(BaseModel):
     - 2xx: success (string result)
     - 3xx: success (dict result)
     - 4xx: error (string message)
-    - 5xx: error (dict result)
+    - 5xx: error (dict or list result)
     """
 
     code: int | None = None
-    result: Union[str, Dict] = None
+    result: Union[str, Dict, List[Any]] = None
     extra: Dict | str | None = None
     tool_name: str | None = None
 

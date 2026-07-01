@@ -58,7 +58,6 @@ class BaseAgentContextManager(BaseConsumer):
         """
         Initializes the agent and resets its context state.
         """
-        self._started = False
         super().__init__(allow_mq_disabled=allow_mq_disabled)
         if not hasattr(self, "context"):
             self.context: BaseAppContext = None
@@ -94,57 +93,71 @@ class BaseAgentContextManager(BaseConsumer):
 
         return True
 
+    def start_consumer(self):
+        """Start the Flowcept instance and MQ consumer.
+
+        Called by ``FlowceptMCPServer.start()`` so the consumer is live before any HTTP request
+        arrives. Idempotent: a second call is a no-op.
+        """
+        if getattr(self, "_consumer_started", False):
+            return
+        self._consumer_started = True
+        self.agent_id = BaseAgentContextManager.agent_id = str(uuid4())
+        self.logger.info(f"Starting consumer for agent {self.agent_id}.")
+        start_persistence = AGENT.get("start_persistence", False)
+        self.flowcept_instance = Flowcept(
+            start_persistence=start_persistence,
+            save_workflow=False,
+            check_safe_stops=False,
+            workflow_name="flowcept_agent_workflow",
+            agent_id=self.agent_id,
+        )
+        self.agent_workflow_id = self.flowcept_instance.current_workflow_id
+        self.flowcept_instance.start()
+        self.flowcept_instance.logger.info(
+            f"This section’s workflow_id={Flowcept.current_workflow_id}, campaign_id={Flowcept.campaign_id}"
+        )
+        # Daemon thread: the agent has no flush-on-stop obligations (persistence is off), and a
+        # blocked MQ listen must never prevent the hosting process from exiting.
+        self.start(daemon=True)
+
+    def stop_consumer(self):
+        """Stop the MQ consumer and Flowcept instance.
+
+        Called by ``FlowceptMCPServer.stop()``. Idempotent: safe to call multiple times.
+        """
+        if not getattr(self, "_consumer_started", False):
+            return
+        self._consumer_started = False
+        try:
+            self.stop_consumption()
+        except Exception as e:
+            self.logger.warning(f"stop_consumption raised during teardown: {e}")
+        with BaseAgentContextManager._stop_lock:
+            if getattr(self, "flowcept_instance", None) is not None:
+                try:
+                    self.flowcept_instance.stop()
+                except Exception as e:
+                    self.logger.warning(f"flowcept_instance.stop() raised during teardown: {e}")
+                self.flowcept_instance = None
+
     @asynccontextmanager
     async def lifespan(self, app):
         """
-        Async context manager to handle the agent’s lifecycle within an application.
+        Async context manager for the agent’s ASGI lifecycle.
 
-        Starts the message consumption when the context is entered and stops it when exited.
+        The consumer is started externally via ``start_consumer()`` (called by
+        ``FlowceptMCPServer.start()``); this lifespan only exposes the context to the
+        framework and delegates to subclasses for any additional setup.
 
         Parameters
         ----------
         app : Any
-            The application instance using this context (typically unused but included for compatibility).
+            The application instance (included for ASGI compatibility).
 
         Yields
         ------
         BaseAppContext
-            The current application context, including collected tasks.
+            The current application context.
         """
-        if not self._started:
-            self.agent_id = BaseAgentContextManager.agent_id = str(uuid4())
-            self.logger.info(f"Starting lifespan for agent {BaseAgentContextManager.agent_id}.")
-            self._started = True
-
-            start_persistence = AGENT.get("start_persistence", False)
-
-            self.flowcept_instance = Flowcept(
-                start_persistence=start_persistence,
-                save_workflow=True,
-                check_safe_stops=False,
-                workflow_name="flowcept_agent_workflow",
-                agent_id=self.agent_id,
-            )
-            self.agent_workflow_id = self.flowcept_instance.current_workflow_id
-            self.flowcept_instance.start()
-            self.flowcept_instance.logger.info(
-                f"This section's workflow_id={Flowcept.current_workflow_id}, campaign_id={Flowcept.campaign_id}"
-            )
-            # Daemon consumer: the agent has no flush-on-stop obligations (persistence is off),
-            # and a blocked MQ listen must never prevent the hosting process from exiting.
-            self.start(daemon=True)
-
-        try:
-            yield self.context
-        finally:
-            try:
-                self.stop_consumption()
-            except Exception as e:
-                self.logger.warning(f"stop_consumption raised during lifespan teardown: {e}")
-            with BaseAgentContextManager._stop_lock:
-                if getattr(self, "flowcept_instance", None) is not None:
-                    try:
-                        self.flowcept_instance.stop()
-                    except Exception as e:
-                        self.logger.warning(f"flowcept_instance.stop() raised during lifespan teardown: {e}")
-                    self.flowcept_instance = None
+        yield self.context

@@ -127,6 +127,8 @@ class FlowceptMCPServer:
             self._load_buffer_messages(self.buffer_messages)
         elif self.buffer_path is not None:
             self._load_buffer_once()
+        else:
+            ctx_manager.start_consumer()
 
         self._server_thread = Thread(target=self._run_server, daemon=True)
         self._server_thread.start()
@@ -167,6 +169,7 @@ class FlowceptMCPServer:
             if self._server_thread.is_alive():
                 self.logger.warning("Agent server thread did not stop within 5s; continuing shutdown.")
         self._wait_until_stopped()
+        ctx_manager.stop_consumer()
 
     def wait(self):
         """Block until the server thread exits."""

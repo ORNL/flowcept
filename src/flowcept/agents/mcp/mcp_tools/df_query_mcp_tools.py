@@ -164,21 +164,18 @@ def df_list_campaigns() -> ToolResult:
 def df_list_agents() -> ToolResult:
     """List agent summaries derived from the in-memory tasks DataFrame.
 
-    Symmetric counterpart to db_list_agents.
+    Each entry includes the agent_id, task_count, and name (when available from
+    received agent records). Symmetric counterpart to db_list_agents.
     """
-    code = (
-        "agent_col = 'agent_id' if 'agent_id' in df.columns else None\n"
-        "if agent_col:\n"
-        "    result = df.groupby(agent_col).agg(\n"
-        "        task_count=(agent_col, 'count')\n"
-        "    ).reset_index().to_dict(orient='records')\n"
-        "else:\n"
-        "    result = []"
-    )
     df, _, _, _ = get_df_context(context_kind="tasks")
     if df is None or not len(df):
         return ToolResult(code=404, result=EMPTY_DF_MESSAGE, tool_name="df_list_agents")
-    return _core.execute_df_code(user_code=code, df=df)
+    if "agent_id" not in df.columns:
+        return ToolResult(code=200, result=[], tool_name="df_list_agents")
+    summary = df.groupby("agent_id").agg(task_count=("agent_id", "count")).reset_index()
+    agents_store = ctx_manager.context.agents
+    summary["name"] = summary["agent_id"].map(lambda aid: (agents_store.get(aid) or {}).get("name"))
+    return ToolResult(code=200, result=summary.to_dict(orient="records"), tool_name="df_list_agents")
 
 
 @mcp_flowcept.tool()

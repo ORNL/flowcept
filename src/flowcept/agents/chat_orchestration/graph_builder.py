@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import json
-import uuid
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, ToolMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, MessagesState, StateGraph
 
@@ -21,51 +20,19 @@ memory = MemorySaver()
 
 
 def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool: bool = False):
-    """Build a LangGraph agent + tools graph compiled with the module-level MemorySaver."""
+    """Build a LangGraph agent + tools graph compiled with the module-level MemorySaver.
+
+    When *require_first_tool* is True the first agent node uses ``tool_choice="required"``
+    so the LLM is forced to call at least one tool before producing a final answer.
+    Which tool it calls is determined by the system prompt rules — no keyword-based
+    routing is applied here.
+    """
     bound = llm.bind_tools(tools)
     first_bound = llm.bind_tools(tools, tool_choice="required") if require_first_tool else bound
     tools_by_name = {t.name: t for t in tools}
 
     def _needs_first_tool(state: MessagesState) -> bool:
         return require_first_tool and not any(isinstance(message, ToolMessage) for message in state["messages"])
-
-    def _latest_user_text(state: MessagesState) -> str:
-        for message in reversed(state["messages"]):
-            if isinstance(message, HumanMessage):
-                return str(message.content)
-        return ""
-
-    def _tool_calls_for_text(text: str) -> Optional[List[Dict[str, Any]]]:
-        lower = text.lower()
-        names = set(tools_by_name)
-        has_specific_value = any(marker in lower for marker in ("task_id", "object_id", "workflow_id"))
-
-        # Attribution: list_agents maps agent_id UUIDs to human-readable names and activities.
-        # It must be the first call for any agent/submission question without a specific lookup value.
-        if (
-            "list_agents" in names
-            and not has_specific_value
-            and ("agent" in lower or any(w in lower for w in ("submit", "submitted", "producer", "produced")))
-        ):
-            return [{"name": "list_agents", "args": {}, "id": str(uuid.uuid4())}]
-
-        # DB path: aggregate/lineage questions — get_task_summary is more efficient than fetching all tasks.
-        if "get_task_summary" in names and any(
-            phrase in lower
-            for phrase in ("lineage", "data flow", "execution order", "how many", "count", "summary", "duration")
-        ):
-            return [{"name": "get_task_summary", "args": {}, "id": str(uuid.uuid4())}]
-
-        # No structural override — let the LLM choose freely under tool_choice="required".
-        return None
-
-    def _enforce_first_tool(response: AIMessage, state: MessagesState) -> AIMessage:
-        if not _needs_first_tool(state):
-            return response
-        override = _tool_calls_for_text(_latest_user_text(state))
-        if override is None:
-            return response
-        return AIMessage(content="", tool_calls=override)
 
     if INSTRUMENTATION_ENABLED and agent_id is not None:
         from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM
@@ -80,7 +47,7 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool:
                 if _needs_first_tool(state)
                 else instrumented_llm
             )
-            return {"messages": [_enforce_first_tool(active_llm.invoke(state["messages"]), state)]}
+            return {"messages": [active_llm.invoke(state["messages"])]}
 
         def call_tools(state: MessagesState):
             """Tools node: execute all pending tool calls with provenance capture."""
@@ -111,7 +78,7 @@ def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool:
         def call_model(state: MessagesState):
             """Agent node: invoke the LLM with current messages."""
             response = (first_bound if _needs_first_tool(state) else bound).invoke(state["messages"])
-            return {"messages": [_enforce_first_tool(response, state)]}
+            return {"messages": [response]}
 
         def call_tools(state: MessagesState):
             """Tools node: execute all pending tool calls and return ToolMessages."""

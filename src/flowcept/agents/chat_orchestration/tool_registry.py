@@ -184,13 +184,13 @@ def make_chart(
     """
     if tool_context == "df":
         p = query_params or {}
-        return _run_mcp(_df.df_make_chart.__name__, result_code=code or "", plot_code=p.get("plot_code", ""))
+        return _run_mcp(_dash.df_make_chart.__name__, result_code=code or "", plot_code=p.get("plot_code", ""))
     p = query_params or {}
     card_spec = dict(p.get("card_spec") or p)
     data_spec = dict(card_spec.get("data") or {})
     data_spec["filter"] = _scoped_filter(context, data_spec.get("filter"))
     card_spec["data"] = data_spec
-    return _run_mcp(_db.db_make_chart.__name__, card_spec=card_spec, context=None)
+    return _run_mcp(_dash.db_make_chart.__name__, card_spec=card_spec, context=None)
 
 
 def highlight_lineage(
@@ -280,16 +280,26 @@ def _format_error(exc: BaseException, _depth: int = 0) -> str:
     return str(exc) or type(exc).__name__
 
 
+# Parameters hidden from the LLM per mode to prevent ambiguity in the union signature.
+# DB mode exposes query_params; DF mode exposes code.  Hiding the irrelevant parameter
+# prevents the LLM from omitting required arguments when both are Optional.
+_DB_HIDDEN_PARAMS = frozenset({"code"})
+_DF_HIDDEN_PARAMS = frozenset({"query_params"})
+
+
 def _make_tool(fn, tool_context: str, context: Optional[Dict[str, Any]]) -> StructuredTool:
     """Build a LangChain StructuredTool with tool_context and context bound.
 
     Uses an explicit pydantic schema derived from *fn*'s signature (skipping the
     first two bound params) so that LangChain's schema inference never sees a
     ``functools.partial`` object (which ``get_type_hints`` cannot inspect).
+    Mode-irrelevant parameters (``code`` in DB mode, ``query_params`` in DF mode)
+    are excluded from the schema so the LLM receives an unambiguous interface.
     """
+    hidden = _DB_HIDDEN_PARAMS if tool_context == "db" else _DF_HIDDEN_PARAMS
     # Skip tool_context and context — they are bound at build time.
     sig = inspect.signature(fn)
-    user_params = list(sig.parameters.values())[2:]
+    user_params = [p for p in list(sig.parameters.values())[2:] if p.name not in hidden]
     field_defs: Dict[str, Any] = {}
     for p in user_params:
         ann = p.annotation if p.annotation is not inspect.Parameter.empty else Any

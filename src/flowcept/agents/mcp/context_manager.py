@@ -58,6 +58,7 @@ class FlowceptAppContext(BaseAppContext):
     value_examples: Dict | None
     tracker_config: Dict | None
     custom_guidance: List[str] | None
+    agents: Dict | None
 
     def __init__(self):
         self.logger = FlowceptLogger()
@@ -81,6 +82,7 @@ class FlowceptAppContext(BaseAppContext):
         self.objects_schema = {}
         self.objects_value_examples = {}
         self.workflow_schema_cache = {}
+        self.agents = {}
 
         if AGENT_DEBUG:
             from flowcept.commons.flowcept_logger import FlowceptLogger
@@ -157,12 +159,11 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 
     @asynccontextmanager
     async def lifespan(self, app):
-        """Start schema assertions before the MCP server begins serving requests.
+        """Validate schema documentation and expose context for the ASGI lifecycle.
 
-        Validates that all domain-class fields have attribute docstrings, then
-        populates ``SCHEMA_CONTEXT`` for use by prompt builders. Raises
-        ``SchemaDocumentationError`` loudly so the server refuses to start when
-        any field is undocumented.
+        Asserts that all domain-class fields have docstrings, populates ``SCHEMA_CONTEXT``
+        for prompt builders, then yields. The MQ consumer is started externally by
+        ``FlowceptMCPServer.start()`` — not here.
         """
         assert_schema_documented(
             TaskObject,
@@ -207,6 +208,12 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
             self.context.workflow_msg_obj = msg_obj
             if WorkflowObject.from_dict(msg_obj).workflow_is_finished():
                 self.persist_workflow_schema_snapshot(msg_obj.get("workflow_id"))
+            return True
+
+        if msg_type == "agent":
+            agent_id = msg_obj.get("agent_id")
+            if agent_id:
+                self.context.agents[agent_id] = msg_obj
             return True
 
         if msg_type == "object":
