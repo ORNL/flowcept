@@ -1,0 +1,42 @@
+name: Mirror to amsc2 GitLab
+
+# Push-mirror ORNL/flowcept → the amsc2 GitLab mirror so its GitLab CI (.gitlab-ci.yml)
+# builds and pushes the service image to AmSC's ECR. This is the free alternative to GitLab
+# pull-mirroring (which requires GitLab Premium). GitHub stays the authoritative source
+# (per AmSC RFC §556: the authoritative copy must live in AmSC GitLab, which this keeps in sync).
+#
+# Config (Settings → Secrets and variables → Actions):
+#   - variable AMSC_GITLAB_MIRROR_URL  = gitlab.com/amsc2/ai-services/intelligent-interfaces/flowcept.git
+#                                        (no scheme, no creds)
+#   - secret   AMSC_GITLAB_MIRROR_TOKEN = a GitLab token with `write_repository` on the mirror project
+#                                        (Project Access Token or PAT — not a Deploy Token)
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+
+# Avoid overlapping mirror pushes racing each other.
+concurrency:
+  group: mirror-to-gitlab
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # full history + tags for a faithful mirror
+
+      - name: Push main + tags to amsc2 GitLab
+        env:
+          AMSC_GITLAB_MIRROR_URL: ${{ vars.AMSC_GITLAB_MIRROR_URL }}
+          AMSC_GITLAB_MIRROR_TOKEN: ${{ secrets.AMSC_GITLAB_MIRROR_TOKEN }}
+        run: |
+          if [ -z "$AMSC_GITLAB_MIRROR_URL" ] || [ -z "$AMSC_GITLAB_MIRROR_TOKEN" ]; then
+            echo "AMSC_GITLAB_MIRROR_URL (variable) and AMSC_GITLAB_MIRROR_TOKEN (secret) must be set."; exit 1
+          fi
+          git push "https://oauth2:${AMSC_GITLAB_MIRROR_TOKEN}@${AMSC_GITLAB_MIRROR_URL}" \
+            "+refs/heads/main:refs/heads/main" \
+            "+refs/tags/*:refs/tags/*"
