@@ -4,6 +4,7 @@ import copy
 import os
 import socket
 import getpass
+import json
 
 from flowcept.version import __version__
 
@@ -43,6 +44,16 @@ def _get_env(name: str, default=None):
 def _get_env_bool(name: str, default=False) -> bool:
     """Parse truthy env var values, unless strict default mode is enabled."""
     return str(_get_env(name, str(default))).strip().lower() in _TRUE_VALUES
+
+
+def _get_env_list(name: str, default: list[str]) -> list[str]:
+    raw = os.getenv(name)
+    if not raw:
+        return default
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        raise ValueError(f"{name} must be valid JSON array")
 
 
 if USE_DEFAULT:
@@ -281,6 +292,10 @@ AGENT_AUDIO = _get_env_bool("AGENT_AUDIO", settings["agent"].get("audio_enabled"
 AGENT_HOST = _get_env("AGENT_HOST", settings["agent"].get("mcp_host", "localhost"))
 AGENT_PORT = int(_get_env("AGENT_PORT", settings["agent"].get("mcp_port", "8000")))
 AGENT_MODE = _get_env("AGENT_MODE", AGENT.get("agent_mode", "disabled"))
+MCP_ALLOWED_HOSTS = _get_env_list("MCP_ALLOWED_HOSTS", AGENT.get("mcp_allowed_hosts", ["localhost:*", "127.0.0.1:*"]))
+MCP_ALLOWED_ORIGINS = _get_env_list(
+    "MCP_ALLOWED_ORIGINS", AGENT.get("mcp_allowed_origins", ["http://localhost:*", "http://127.0.0.1:*"])
+)
 
 ####################
 # Enabled ADAPTERS #

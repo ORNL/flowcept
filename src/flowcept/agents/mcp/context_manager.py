@@ -21,7 +21,7 @@ from flowcept.commons.task_data_preprocess import (
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.vocabulary import PROV_AGENT
-from flowcept.configs import AGENT, AGENT_HOST, AGENT_PORT
+from flowcept.configs import AGENT, AGENT_HOST, AGENT_PORT, MCP_ALLOWED_HOSTS, MCP_ALLOWED_ORIGINS
 from mcp.server.fastmcp import FastMCP
 
 import json
@@ -332,7 +332,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
 ctx_manager = FlowceptAgentContextManager()
 
 agent_transport_security = None
-if "allowed_hosts" in AGENT:
+if "mcp_allowed_hosts" in AGENT:
     from mcp.server.transport_security import TransportSecuritySettings
 
     allowed_hosts = list(AGENT.get("allowed_hosts") or [])
@@ -342,7 +342,8 @@ if "allowed_hosts" in AGENT:
                 allowed_hosts.append(allowed_host)
     agent_transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
-        allowed_hosts=allowed_hosts,
+        allowed_hosts=MCP_ALLOWED_HOSTS,
+        allowed_origins=MCP_ALLOWED_ORIGINS,
     )
 
 mcp_flowcept = FastMCP(
