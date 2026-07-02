@@ -193,13 +193,19 @@ def run_chat(
             try:
                 _sr = json.loads(_summary_tool.invoke({}))
                 _srv = _sr.get("result") if isinstance(_sr, dict) else None
-                _src = [v for v in _srv.values() if isinstance(v, list)] if isinstance(_srv, dict) else (
-                    [_srv] if isinstance(_srv, list) else []
+                _src = (
+                    [v for v in _srv.values() if isinstance(v, list)]
+                    if isinstance(_srv, dict)
+                    else ([_srv] if isinstance(_srv, list) else [])
                 )
                 for _sl in _src:
                     if _LIST_SIZE_MIN < len(_sl) <= _LIST_SIZE_MAX:
                         for _si in _sl:
-                            if isinstance(_si, str) and _LIST_ITEM_MIN_LEN <= len(_si) <= _LIST_ITEM_MAX_LEN and not _UUID_RE.match(_si):
+                            if (
+                                isinstance(_si, str)
+                                and _LIST_ITEM_MIN_LEN <= len(_si) <= _LIST_ITEM_MAX_LEN
+                                and not _UUID_RE.match(_si)
+                            ):
                                 accumulated_list_items.append(_si)
             except Exception:
                 pass
@@ -241,18 +247,14 @@ def run_chat(
                                     content = tool_data
                             _stripped = content.strip()
                             try:
-                                _is_raw_struct = _stripped.startswith("{") and isinstance(
-                                    json.loads(_stripped), dict
-                                )
+                                _is_raw_struct = _stripped.startswith("{") and isinstance(json.loads(_stripped), dict)
                             except json.JSONDecodeError:
                                 _is_raw_struct = False
                             if _CODE_RESPONSE_RE.match(_stripped) or _is_raw_struct:
                                 user_query = messages[-1].get("content", "") if messages else ""
                                 tool_data = "\n".join(accumulated_tool_results[-3:]) if accumulated_tool_results else ""
                                 _output_desc = (
-                                    "a raw structured payload (JSON object)"
-                                    if _is_raw_struct
-                                    else "Python code"
+                                    "a raw structured payload (JSON object)" if _is_raw_struct else "Python code"
                                 )
                                 try:
                                     rephrase = llm.invoke(
@@ -265,10 +267,13 @@ def run_chat(
                                                         if tool_data
                                                         else ""
                                                     )
-                                                    + f"The LLM produced {_output_desc} instead of a natural language answer: {content}\n"
-                                                    "Using the tool results above, write a single plain English sentence "
+                                                    + f"The LLM produced {_output_desc} instead of a natural language "
+                                                    f"answer: {content}\n"
+                                                    "Using the tool results above, write a single plain English"
+                                                    " sentence "
                                                     "that directly answers the user's question. "
-                                                    "Extract actual values from the tool results — do not repeat code or JSON. "
+                                                    "Extract actual values from the tool results — do not repeat code "
+                                                    "or JSON. "
                                                     "If the data is not available, say so specifically"
                                                     " (mention the metric asked about)."
                                                 )
@@ -328,8 +333,7 @@ def run_chat(
                     f"The user asked: {user_query!r}\n"
                     "The following tool results were retrieved. "
                     "Write a concise final answer addressing all aspects of the user's question "
-                    "based solely on this data. Do not call any tools.\n\n"
-                    + "\n\n".join(accumulated_tool_results)
+                    "based solely on this data. Do not call any tools.\n\n" + "\n\n".join(accumulated_tool_results)
                 )
                 try:
                     response = llm.invoke([HumanMessage(content=summary_prompt)])

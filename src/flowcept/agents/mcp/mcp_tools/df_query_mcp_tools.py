@@ -126,9 +126,7 @@ def df_get_task_summary() -> ToolResult:
         summary["status_counts"] = df["status"].value_counts().to_dict()
     dur_col = next((c for c in ("telemetry_summary.duration_sec",) if c in df.columns), None)
     if dur_col and "activity_id" in df.columns:
-        summary["activity_avg_duration_sec"] = (
-            df.groupby("activity_id")[dur_col].mean().dropna().to_dict()
-        )
+        summary["activity_avg_duration_sec"] = df.groupby("activity_id")[dur_col].mean().dropna().to_dict()
     if "started_at" in df.columns:
         summary["time_range"] = {
             "start": str(df["started_at"].min()),
@@ -169,7 +167,8 @@ def df_list_campaigns() -> ToolResult:
         "if 'campaign_id' in df.columns:\n"
         "    result = df.groupby('campaign_id').agg(\n"
         "        task_count=('task_id', 'count') if 'task_id' in df.columns else ('campaign_id', 'count'),\n"
-        "        workflow_count=('workflow_id', 'nunique') if 'workflow_id' in df.columns else ('campaign_id', 'nunique'),\n"
+        "        workflow_count=('workflow_id', 'nunique') if 'workflow_id' in df.columns else "
+        "('campaign_id', 'nunique'),\n"
         "    ).reset_index().to_dict(orient='records')\n"
         "else:\n"
         "    result = []"

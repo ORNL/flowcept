@@ -348,9 +348,7 @@ _ALL_TOOLS = [
 _DASHBOARD_TOOLS = [get_dashboard, update_dashboard]
 
 
-def build_langchain_tools(
-    context: Optional[Dict[str, Any]], allow_dashboard_edit: bool
-) -> List[StructuredTool]:
+def build_langchain_tools(context: Optional[Dict[str, Any]], allow_dashboard_edit: bool) -> List[StructuredTool]:
     """Wrap all logical tools as LangChain StructuredTools scoped to *context*.
 
     The same tool set is used for both DB and DF modes; ``tool_context`` is
