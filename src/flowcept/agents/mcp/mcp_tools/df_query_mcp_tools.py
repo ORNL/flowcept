@@ -111,30 +111,51 @@ def df_query_objects(code: str) -> ToolResult:
 @mcp_flowcept.tool()
 @agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
 def df_get_task_summary() -> ToolResult:
-    """Summarize tasks in the in-memory DataFrame: status counts, per-activity durations, time range.
+    """Summarize tasks in the in-memory DataFrame: activity types, status counts, time range.
 
     Symmetric counterpart to db_get_task_summary.
     """
-    code = (
-        "import pandas as _pd\n"
-        "summary = {}\n"
-        "if 'status' in df.columns:\n"
-        "    summary['status_counts'] = df['status'].value_counts().to_dict()\n"
-        "if 'activity_id' in df.columns and 'used' in df.columns and 'generated' in df.columns:\n"
-        "    def _dur(row):\n"
-        "        try: return (row['generated'] - row['used'])\n"
-        "        except: return None\n"
-        "    df2 = df.copy()\n"
-        "    df2['_dur'] = df2.apply(_dur, axis=1)\n"
-        "    summary['activity_durations'] = df2.groupby('activity_id')['_dur'].mean().dropna().to_dict()\n"
-        "if 'used' in df.columns:\n"
-        "    summary['time_range'] = {'start': df['used'].min(), 'end': df['used'].max()}\n"
-        "result = summary"
-    )
     df, _, _, _ = get_df_context(context_kind="tasks")
     if df is None or not len(df):
         return ToolResult(code=404, result=EMPTY_DF_MESSAGE, tool_name="df_get_task_summary")
-    return _core.execute_df_code(user_code=code, df=df)
+    summary: dict = {}
+    if "activity_id" in df.columns:
+        summary["activity_ids"] = sorted(df["activity_id"].dropna().unique().tolist())
+        summary["activity_task_counts"] = df["activity_id"].value_counts().to_dict()
+    if "status" in df.columns:
+        summary["status_counts"] = df["status"].value_counts().to_dict()
+    dur_col = next((c for c in ("telemetry_summary.duration_sec",) if c in df.columns), None)
+    if dur_col and "activity_id" in df.columns:
+        summary["activity_avg_duration_sec"] = (
+            df.groupby("activity_id")[dur_col].mean().dropna().to_dict()
+        )
+    if "started_at" in df.columns:
+        summary["time_range"] = {
+            "start": str(df["started_at"].min()),
+            "end": str(df["ended_at"].max()) if "ended_at" in df.columns else None,
+        }
+    return ToolResult(code=301, result=summary, tool_name="df_get_task_summary")
+
+
+@mcp_flowcept.tool()
+@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+def df_get_objects_summary() -> ToolResult:
+    """Summarize stored objects in the in-memory objects DataFrame: available types, counts, and tracked columns.
+
+    Symmetric counterpart to df_get_task_summary but for data objects (artifacts).
+    Call this first when the user asks about artifact properties, to discover what object types
+    and metadata columns are actually tracked before writing a specific query.
+    """
+    df, _, _, _ = get_df_context(context_kind="objects")
+    if df is None or not len(df):
+        return ToolResult(code=404, result=EMPTY_DF_MESSAGE, tool_name="df_get_objects_summary")
+    summary: dict = {"available_columns": sorted(df.columns.tolist())}
+    type_col = next((c for c in ("object_type", "type") if c in df.columns), None)
+    if type_col:
+        summary["object_type_counts"] = df[type_col].value_counts().to_dict()
+        summary["object_types"] = sorted(df[type_col].dropna().unique().tolist())
+    summary["total_objects"] = len(df)
+    return ToolResult(code=301, result=summary, tool_name="df_get_objects_summary")
 
 
 @mcp_flowcept.tool()

@@ -137,17 +137,6 @@ def db_cleanup(request):
         DocumentDBDAO._instance.close()
 
 
-@pytest.fixture(scope="module")
-def mcp_server_instance():
-    """Run one MCP HTTP server per test process; reset context per test as needed."""
-    from flowcept.agents.mcp import mcp_server as agent_module
-
-    agent = agent_module.FlowceptMCPServer().start()
-    try:
-        yield agent
-    finally:
-        agent.stop()
-
 
 def test_webservice_end_to_end_with_flowcept_and_blob_apis(db_cleanup):
     """End-to-end: real workflow + blob objects, then exercise the read APIs."""
@@ -945,28 +934,6 @@ def _chat_response_score(actual: str, expected: str) -> float:
     return matched / len(expected_tokens)
 
 
-def _load_gridsearch_context_into_mcp(gridsearch_run_data, mcp_server_instance):
-    """Load workflow + task + object messages into MCP context for schema and runtime-memory paths."""
-    from flowcept.agents.mcp.mcp_client import run_tool
-    from flowcept.commons.utils import normalize_docs, sanitize_json_like
-    from flowcept.flowcept_api.db_api import DBAPI
-
-    tasks = gridsearch_run_data["tasks"] or []
-    assert tasks, "gridsearch_run_data contains no tasks."
-    workflow_id = gridsearch_run_data["workflow_id"]
-    workflow_obj = Flowcept.db.get_workflow_object(workflow_id)
-    assert workflow_obj is not None
-    # normalize_docs converts BSON ObjectId → str before sanitize_json_like, which does not handle ObjectId
-    objects = normalize_docs(DBAPI().blob_object_query(filter={"workflow_id": workflow_id}) or [])
-    messages = sanitize_json_like([workflow_obj.to_dict(), *tasks, *objects], mongo_safe_keys=True)
-    loaded_result = run_tool("load_buffer_messages", kwargs={"messages": messages})[0]
-    assert '"code": 201' in loaded_result
-    loaded = run_tool(
-        "run_df_query",
-        kwargs={"code": "result = len(df)", "context_kind": "tasks"},
-    )[0]
-    assert "Current df is empty or null" not in loaded
-
 
 @pytest.mark.llm
 @pytest.mark.parametrize(
@@ -992,6 +959,7 @@ def _load_gridsearch_context_into_mcp(gridsearch_run_data, mcp_server_instance):
                 "query_workflows",
                 "query_objects",
                 "get_task_summary",
+                "get_objects_summary",
                 "list_campaigns",
                 "list_agents",
                 "make_chart",
@@ -1015,7 +983,6 @@ def test_chat_endpoint_real_llm_queries(gridsearch_run_data, mcp_server_instance
 
     app = create_app()
     client = TestClient(app)
-    _load_gridsearch_context_into_mcp(gridsearch_run_data, mcp_server_instance)
 
     import os
 
@@ -1055,13 +1022,18 @@ def test_chat_endpoint_real_llm_queries(gridsearch_run_data, mcp_server_instance
             actual = body.get("message", "")
             tool_trace = body.get("tool_trace") or []
             score = _chat_response_score(actual, case["expected_response"])
-            if score >= case["score_threshold"]:
+            if score >= case["score_threshold"] and tool_trace:
                 break
             if attempt < MAX_ATTEMPTS - 1:
-                logger.warning(
-                    f"Score {score:.2f} < {case['score_threshold']:.2f} on attempt {attempt + 1} "
-                    f"for {case['user_query']!r}; retrying."
-                )
+                if not tool_trace:
+                    logger.warning(
+                        f"No tool call on attempt {attempt + 1} for {case['user_query']!r}; retrying."
+                    )
+                else:
+                    logger.warning(
+                        f"Score {score:.2f} < {case['score_threshold']:.2f} on attempt {attempt + 1} "
+                        f"for {case['user_query']!r}; retrying."
+                    )
         assert rs.status_code == 200, f"HTTP error for query: {case['user_query']!r}; body={rs.text}"
         assert actual, f"Empty response for query: {case['user_query']!r}"
         assert tool_trace, f"LLM made no tool call for query: {case['user_query']!r}"
@@ -1493,7 +1465,7 @@ def _parse_sse(text: str) -> list:
     return events
 
 
-def test_chat_highlight_lineage_sse(db_cleanup):
+def test_chat_highlight_lineage_sse(db_cleanup, mcp_server_instance):
     """Full end-to-end: real LLM emits ui:highlight SSE event with the correct seed task IDs.
 
     Creates a two-task workflow (step_a → step_b via shared data), asks the chat

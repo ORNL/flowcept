@@ -19,16 +19,28 @@ _MAX_TOOL_RESULT_CHARS = AGENT_CHAT_MAX_TOOL_RESULT_CHARS
 memory = MemorySaver()
 
 
-def _build_graph(llm, tools, agent_id: Optional[str] = None, require_first_tool: bool = False):
+def _build_graph(
+    llm,
+    tools,
+    agent_id: Optional[str] = None,
+    require_first_tool: bool = False,
+    first_tool_name: Optional[str] = None,
+):
     """Build a LangGraph agent + tools graph compiled with the module-level MemorySaver.
 
     When *require_first_tool* is True the first agent node uses ``tool_choice="required"``
     so the LLM is forced to call at least one tool before producing a final answer.
-    Which tool it calls is determined by the system prompt rules — no keyword-based
-    routing is applied here.
+    When *first_tool_name* is given the LLM is further constrained to call that specific
+    tool first (e.g. to ensure orientation data is fetched before any targeted query).
     """
     bound = llm.bind_tools(tools)
-    first_bound = llm.bind_tools(tools, tool_choice="required") if require_first_tool else bound
+    if first_tool_name:
+        first_choice = {"type": "function", "function": {"name": first_tool_name}}
+        first_bound = llm.bind_tools(tools, tool_choice=first_choice)
+    elif require_first_tool:
+        first_bound = llm.bind_tools(tools, tool_choice="required")
+    else:
+        first_bound = bound
     tools_by_name = {t.name: t for t in tools}
 
     def _needs_first_tool(state: MessagesState) -> bool:

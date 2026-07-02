@@ -12,6 +12,7 @@ from flowcept.agents.chat_orchestration.tool_registry import (
     list_agents,
     list_campaigns,
     get_task_summary,
+    get_objects_summary,
     highlight_lineage,
     make_chart,
     get_dashboard,
@@ -112,6 +113,7 @@ def build_chat_system_prompt(context: Optional[Dict[str, Any]] = None) -> str:
             query_objects.__name__,
             list_agents_tool=list_agents.__name__,
             workflow_context_tool=query_workflows.__name__,
+            objects_summary_tool=get_objects_summary.__name__,
         )
     else:
         query_rules = build_db_chat_rules(

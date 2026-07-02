@@ -20,15 +20,53 @@ from flowcept.configs import AGENT_CHAT_MAX_TOOL_ITERATIONS, INSTRUMENTATION_ENA
 MAX_TOOL_ITERATIONS = AGENT_CHAT_MAX_TOOL_ITERATIONS
 CHAT_WORKFLOW_NAME = "Flowcept LangGraph Chat"
 
+# Keywords that signal a question requesting a complete enumeration of category members.
+_ENUMERATION_KEYWORDS = frozenset({"all", "complete", "every", "entire", "full"})
+
+# UUID pattern used to exclude raw identifiers from "human-readable list items" tracking.
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
+# Bounds applied when extracting human-readable string items from tool result lists.
+_LIST_ITEM_MIN_LEN = 2
+_LIST_ITEM_MAX_LEN = 60
+_LIST_SIZE_MIN = 1
+_LIST_SIZE_MAX = 20
+
 # Matches LLM text responses that are Python code instead of natural language.
 # Catches: single-line result = "...", AND multi-line code blocks containing df[ with result assignments.
 _CODE_RESPONSE_RE = re.compile(
     r"^\s*result\s*=\s*[\"'][^\"']{0,500}[\"'][\s;]*$"  # result = "string"
-    r"|^\s*result\s*=\s*df\b"  # result = df[...]
+    r"|^\s*result\s*=\s*\(?\s*df\b"  # result = df[...] or result = (df[...]
     r"|.*\bdf\s*\[.*\bresult\s*="  # multi-line code with df[ before result =
     r"|^\s*\w+\s*=\s*\[.*\bdf\.columns\b",  # any_var = [...df.columns...]
     re.DOTALL,
 )
+
+
+def _apply_enumeration_check(
+    content: str,
+    user_query: str,
+    accumulated_list_items: List[str],
+) -> str:
+    """Prepend retrieved list items that are absent from *content* when the query is an enumeration.
+
+    Triggered only when *user_query* contains an enumeration keyword (e.g. "all", "complete")
+    and *accumulated_list_items* is non-empty.  Missing items are prepended as a deterministic
+    fallback so the final response always mentions every item returned by the tools.
+    Returns *content* unchanged when the trigger conditions are not met.
+    """
+    if not (accumulated_list_items and content):
+        return content
+    q_words = set(re.findall(r"\w+", user_query.lower()))
+    if not (q_words & _ENUMERATION_KEYWORDS):
+        return content
+    missing = [item for item in accumulated_list_items if item.lower() not in content.lower()]
+    if missing:
+        content = ", ".join(sorted(set(accumulated_list_items))) + ".\n\n" + content
+    return content
 
 
 def _prepare_input_messages(
@@ -125,11 +163,12 @@ def run_chat(
         "recursion_limit": MAX_TOOL_ITERATIONS * 2 + 2,
     }
 
+    tool_context = (context or {}).get("tool_context", "db")
     graph = _build_graph(
         llm,
         tools,
         agent_id=agent_id,
-        require_first_tool=(context or {}).get("tool_context", "db") in {"db", "df"},
+        require_first_tool=tool_context in {"db", "df"},
     )
     lc_messages = _prepare_input_messages(messages, context, thread_id)
 
@@ -144,7 +183,30 @@ def run_chat(
         agent_name="FlowceptAgent",
     ):
         accumulated_tool_results: List[str] = []
+        # Human-readable string items collected from list-valued tool result fields.
+        # Used to verify enumeration responses include all returned members.
+        accumulated_list_items: List[str] = []
+        # Eagerly seed list items by calling the summary tool once before the graph
+        # runs, so the enumeration check is not dependent on which tools the LLM chose.
+        _summary_tool = next((t for t in tools if t.name == "get_task_summary"), None)
+        if _summary_tool is not None:
+            try:
+                _sr = json.loads(_summary_tool.invoke({}))
+                _srv = _sr.get("result") if isinstance(_sr, dict) else None
+                _src = [v for v in _srv.values() if isinstance(v, list)] if isinstance(_srv, dict) else (
+                    [_srv] if isinstance(_srv, list) else []
+                )
+                for _sl in _src:
+                    if _LIST_SIZE_MIN < len(_sl) <= _LIST_SIZE_MAX:
+                        for _si in _sl:
+                            if isinstance(_si, str) and _LIST_ITEM_MIN_LEN <= len(_si) <= _LIST_ITEM_MAX_LEN and not _UUID_RE.match(_si):
+                                accumulated_list_items.append(_si)
+            except Exception:
+                pass
+            if not accumulated_list_items:
+                logger.warning("Pre-fetch of get_task_summary returned no list items; enumeration check will not fire.")
         try:
+            _final_content: Optional[str] = None
             for chunk in graph.stream({"messages": lc_messages}, config=config, stream_mode="updates"):
                 for node_name, node_output in chunk.items():
                     msgs = node_output.get("messages", [])
@@ -158,9 +220,40 @@ def run_chat(
                                 yield {"event": "tool_call", "data": {"name": tc["name"], "args": tc.get("args", {})}}
                         else:
                             content = getattr(last, "content", "")
-                            if _CODE_RESPONSE_RE.match(content.strip()):
+                            if not content and accumulated_tool_results:
+                                user_query = messages[-1].get("content", "") if messages else ""
+                                tool_data = "\n".join(accumulated_tool_results[-3:])
+                                try:
+                                    synth = llm.invoke(
+                                        [
+                                            HumanMessage(
+                                                content=(
+                                                    f"The user asked: {user_query!r}\n"
+                                                    f"Tool results already retrieved:\n{tool_data}\n"
+                                                    "Write a concise plain English answer to the user's question "
+                                                    "using only the tool results above. Do not use code."
+                                                )
+                                            )
+                                        ]
+                                    )
+                                    content = getattr(synth, "content", "") or ""
+                                except Exception:
+                                    content = tool_data
+                            _stripped = content.strip()
+                            try:
+                                _is_raw_struct = _stripped.startswith("{") and isinstance(
+                                    json.loads(_stripped), dict
+                                )
+                            except json.JSONDecodeError:
+                                _is_raw_struct = False
+                            if _CODE_RESPONSE_RE.match(_stripped) or _is_raw_struct:
                                 user_query = messages[-1].get("content", "") if messages else ""
                                 tool_data = "\n".join(accumulated_tool_results[-3:]) if accumulated_tool_results else ""
+                                _output_desc = (
+                                    "a raw structured payload (JSON object)"
+                                    if _is_raw_struct
+                                    else "Python code"
+                                )
                                 try:
                                     rephrase = llm.invoke(
                                         [
@@ -172,12 +265,12 @@ def run_chat(
                                                         if tool_data
                                                         else ""
                                                     )
-                                                    + f"The LLM produced Python code instead of an answer: {content}\n"
-                                                    "Write a single plain English sentence answering the "
-                                                    "user's question using the tool results above. "
+                                                    + f"The LLM produced {_output_desc} instead of a natural language answer: {content}\n"
+                                                    "Using the tool results above, write a single plain English sentence "
+                                                    "that directly answers the user's question. "
+                                                    "Extract actual values from the tool results — do not repeat code or JSON. "
                                                     "If the data is not available, say so specifically"
-                                                    " (mention the metric asked about). "
-                                                    "Do not use Python code or variable assignments."
+                                                    " (mention the metric asked about)."
                                                 )
                                             )
                                         ]
@@ -185,8 +278,9 @@ def run_chat(
                                     content = getattr(rephrase, "content", content) or content
                                 except Exception:
                                     pass
-                            yield {"event": "token", "data": content}
-                            yield {"event": "done"}
+                            user_query = messages[-1].get("content", "") if messages else ""
+                            content = _apply_enumeration_check(content, user_query, accumulated_list_items)
+                            _final_content = content
                     elif node_name == "tools":
                         for tm in msgs:
                             name = getattr(tm, "name", "")
@@ -196,6 +290,23 @@ def run_chat(
                                 parsed = json.loads(tm.content)
                                 summary["code"] = parsed.get("code")
                                 summary["tool_name"] = parsed.get("tool_name")
+                                # Collect human-readable string items from list-valued result fields
+                                # for later enumeration completeness checks.
+                                _result_val = parsed.get("result") if isinstance(parsed, dict) else None
+                                _candidate_lists = []
+                                if isinstance(_result_val, dict):
+                                    _candidate_lists = [v for v in _result_val.values() if isinstance(v, list)]
+                                elif isinstance(_result_val, list):
+                                    _candidate_lists = [_result_val]
+                                for _lst in _candidate_lists:
+                                    if _LIST_SIZE_MIN < len(_lst) <= _LIST_SIZE_MAX:
+                                        for _item in _lst:
+                                            if (
+                                                isinstance(_item, str)
+                                                and _LIST_ITEM_MIN_LEN <= len(_item) <= _LIST_ITEM_MAX_LEN
+                                                and not _UUID_RE.match(_item)
+                                            ):
+                                                accumulated_list_items.append(_item)
                                 if name == "make_chart" and isinstance(parsed.get("result"), dict):
                                     yield {"event": "card", "data": parsed["result"]}
                                 if name == "highlight_lineage" and isinstance(parsed.get("result"), dict):
@@ -203,20 +314,27 @@ def run_chat(
                             except Exception:
                                 pass
                             yield {"event": "tool_result", "data": summary}
+            if _final_content is not None:
+                yield {"event": "token", "data": _final_content}
+            yield {"event": "done"}
         except GraphRecursionError:
             logger.warning(
                 f"LLM hit the tool-call recursion limit ({MAX_TOOL_ITERATIONS} iterations) "
                 "without producing a final answer. Synthesizing from accumulated tool results."
             )
+            user_query = messages[-1].get("content", "") if messages else ""
             if accumulated_tool_results:
                 summary_prompt = (
+                    f"The user asked: {user_query!r}\n"
                     "The following tool results were retrieved. "
-                    "Write a concise final answer to the user's question based solely on this data. "
-                    "Do not call any tools.\n\n" + "\n\n".join(accumulated_tool_results)
+                    "Write a concise final answer addressing all aspects of the user's question "
+                    "based solely on this data. Do not call any tools.\n\n"
+                    + "\n\n".join(accumulated_tool_results)
                 )
                 try:
                     response = llm.invoke([HumanMessage(content=summary_prompt)])
-                    content = getattr(response, "content", None) or str(response)
+                    content = getattr(response, "content", None) or ""
+                    content = _apply_enumeration_check(content, user_query, accumulated_list_items)
                     if content:
                         yield {"event": "token", "data": content}
                     else:

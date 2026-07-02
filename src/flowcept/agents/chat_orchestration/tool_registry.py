@@ -219,6 +219,20 @@ def highlight_lineage(
     )
 
 
+def get_objects_summary(
+    tool_context: str,
+    context: Optional[Dict[str, Any]],
+) -> str:
+    """Summarize stored data objects: available types, counts, and tracked columns.
+
+    Call this first when the user asks about artifact properties to discover which
+    object types and metadata columns are tracked before querying specific properties.
+    """
+    if tool_context == "df":
+        return _run_mcp(_df.df_get_objects_summary.__name__)
+    return _run_mcp(_db.db_query_objects.__name__, filter=_scoped_filter(context, {}), limit=100)
+
+
 def fix_query(
     tool_context: str,
     context: Optional[Dict[str, Any]],
@@ -323,6 +337,7 @@ _ALL_TOOLS = [
     query_workflows,
     query_objects,
     get_task_summary,
+    get_objects_summary,
     list_campaigns,
     list_agents,
     make_chart,
