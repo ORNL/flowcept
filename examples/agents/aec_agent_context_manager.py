@@ -3,7 +3,7 @@ from typing import Dict, List
 import json
 
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
-from flowcept.agents.agent_client import run_tool
+from flowcept.agents.mcp.mcp_client import run_tool
 
 
 @dataclass

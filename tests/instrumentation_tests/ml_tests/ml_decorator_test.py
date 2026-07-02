@@ -6,7 +6,7 @@ pytest.importorskip("torch")
 
 from torch import nn
 
-from flowcept import Flowcept
+from flowcept import BlobObject, Flowcept
 from flowcept.configs import MONGO_ENABLED
 from tests.instrumentation_tests.ml_tests.dl_trainer import ModelTrainer, MyNet
 
@@ -15,7 +15,8 @@ class MLDecoratorTests(unittest.TestCase):
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_torch_save_n_load(self):
         model = nn.Module()
-        model_id = Flowcept.db.save_or_update_torch_model(model)
+        blob_obj = Flowcept.db._insert_or_update_torch_model(model, BlobObject())
+        model_id = blob_obj.object_id
         new_model = nn.Module()
         doc = Flowcept.db.load_torch_model(model=new_model, object_id=model_id)
         print(doc)

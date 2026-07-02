@@ -4,7 +4,6 @@ import os
 import random
 
 import pytest
-from uuid import uuid4
 
 pytest.importorskip("torch")
 
@@ -92,7 +91,7 @@ def get_dataset(n_samples, split_ratio):
     y_train, y_val = y[:n_train], y[n_train:]
     dataset_task_id = get_current_context_task_id()
     custom_metadata = {"n_samples": n_samples, "split_ratio": split_ratio}
-    dataset_object_id = Flowcept.db.save_or_update_dataset(
+    dataset_object_id = Flowcept.insert_or_update_dataset(
         object={
             "x_train": x_train,
             "y_train": y_train,
@@ -125,24 +124,24 @@ def call_hpc_agent(agent_id=None):
     n_configs = 5
     return dataset_config, n_configs
 
-@flowcept_task(output_names=["configs"], subtype=PROV_AGENT.AGENT_TOOL)
+@flowcept_task(output_names=["configs", "job_id"], subtype=PROV_AGENT.AGENT_TOOL)
 def submit_gridsearch_job(
     n_configs=5,
     agent_id=None,
     source_agent_id=None,
 ):
     """Simulate submitting a training job to an HPC system."""
-    from uuid import uuid4
     configs = [
-        {"epochs": 2, "learning_rate": 0.01, "n_input_neurons": 1},
-        {"epochs": 4, "learning_rate": 0.03, "n_input_neurons": 1},
-        {"epochs": 6, "learning_rate": 0.08, "n_input_neurons": 2},
-        {"epochs": 10, "learning_rate": 0.12, "n_input_neurons": 2},
-        {"epochs": 14, "learning_rate": 0.20, "n_input_neurons": 2},
+        {"config_id": "cfg_1", "epochs": 2, "learning_rate": 0.01, "n_input_neurons": 1},
+        {"config_id": "cfg_2", "epochs": 4, "learning_rate": 0.03, "n_input_neurons": 1},
+        {"config_id": "cfg_3", "epochs": 6, "learning_rate": 0.08, "n_input_neurons": 2},
+        {"config_id": "cfg_4", "epochs": 10, "learning_rate": 0.12, "n_input_neurons": 2},
+        {"config_id": "cfg_5", "epochs": 14, "learning_rate": 0.20, "n_input_neurons": 2},
     ]
     configs = configs[:n_configs]
     assert len(configs) == n_configs
-    return configs
+    job_id = "gridsearch_batch_1"
+    return configs, job_id
 
 
 @flowcept_task(subtype=ML_Types.LEARNING)
@@ -195,7 +194,7 @@ def train_and_validate(
             }
             if config_id is not None:
                 custom_metadata["config_id"] = config_id
-            torch_model_object_id = Flowcept.db.save_or_update_torch_model(
+            torch_model_object_id = Flowcept.insert_or_update_torch_model(
                 model=model,
                 object_id=torch_model_object_id,
                 task_id=current_task_id,
@@ -203,7 +202,7 @@ def train_and_validate(
                 control_version=True,
             )
             if not torch_only:
-                ml_model_object_id = Flowcept.db.save_or_update_ml_model(
+                ml_model_object_id = Flowcept.insert_or_update_ml_model(
                     object=model.state_dict(),
                     object_id=ml_model_object_id,
                     task_id=current_task_id,
@@ -315,7 +314,7 @@ def run_gridsearch_experiment(campaign_id=None):
 
         dataset_config, n_configs = call_hpc_agent(agent_id=orchestrator_agent_id)
 
-        configs = submit_gridsearch_job(n_configs=n_configs, agent_id=hpc_agent_id, source_agent_id=orchestrator_agent_id)
+        configs, batch_job_id = submit_gridsearch_job(n_configs=n_configs, agent_id=hpc_agent_id, source_agent_id=orchestrator_agent_id)
 
         x_train, y_train, x_val, y_val, dataset_id = get_dataset(**dataset_config)
 
@@ -332,7 +331,8 @@ def run_gridsearch_experiment(campaign_id=None):
                 y_val=y_val,
                 dataset_id=dataset_id,
                 checkpoint_check=2,
-                config_id=f"cfg_{idx}",
+                config_id=cfg["config_id"],
+                job_id=batch_job_id,
                 torch_only=True,
             )
             results.append({"torch_model_object_id": result.get("torch_model_object_id")})

@@ -54,6 +54,10 @@ class MQDao(object):
             from flowcept.commons.daos.mq_dao.mq_dao_mofka import MQDaoMofka
 
             return MQDaoMofka(*args, **kwargs)
+        elif MQ_TYPE == "rabbitmq":
+            from flowcept.commons.daos.mq_dao.mq_dao_rabbitmq import MQDaoRabbitMQ
+
+            return MQDaoRabbitMQ(*args, **kwargs)
         else:
             raise NotImplementedError
 

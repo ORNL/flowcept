@@ -6,6 +6,7 @@ import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { Bot, ChevronDown, Eraser, Maximize2, Minimize2, Send, Wrench } from "lucide-react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { API_BASE } from "../../api/client";
+import { chatContext, type ChatToolContext } from "../../lib/chatContext";
 import { useChatStore, type ChatMsg } from "../../stores/chatStore";
 import { useHighlightStore } from "../../stores/highlightStore";
 import { EChart } from "../charts/EChart";
@@ -20,16 +21,6 @@ function contextHint(pathname: string): string {
   return "Queries are scoped to the page you're viewing.";
 }
 
-function routeContext(pathname: string): Record<string, string> {
-  const wf = pathname.match(/\/workflows\/([^/?]+)/);
-  if (wf) return { workflow_id: decodeURIComponent(wf[1]) };
-  const camp = pathname.match(/\/campaigns\/([^/?]+)/);
-  if (camp) return { campaign_id: decodeURIComponent(camp[1]) };
-  const dash = pathname.match(/\/dashboards\/([^/?]+)/);
-  if (dash) return { dashboard_id: decodeURIComponent(dash[1]) };
-  return {};
-}
-
 interface ChatPanelProps {
   panelHandle?: PanelImperativeHandle | null;
 }
@@ -38,6 +29,7 @@ export function ChatPanel({ panelHandle }: ChatPanelProps) {
   const { busy, messages, setBusy, push, appendPart, reset } = useChatStore();
   const [input, setInput] = useState("");
   const [isMaximized, setIsMaximized] = useState(false);
+  const [toolContext, setToolContext] = useState<ChatToolContext>("db");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -76,7 +68,7 @@ export function ChatPanel({ panelHandle }: ChatPanelProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: apiMessages,
-          context: routeContext(pathname),
+          context: chatContext(pathname, toolContext),
           stream: true,
           allow_dashboard_edit: pathname.startsWith("/dashboards/"),
         }),
@@ -123,6 +115,15 @@ export function ChatPanel({ panelHandle }: ChatPanelProps) {
             <Bot size={15} /> Flowcept Agent
           </span>
           <div className="flex items-center gap-2">
+            <select
+              value={toolContext}
+              onChange={(e) => setToolContext(e.target.value as ChatToolContext)}
+              title="Choose whether chat queries persisted DB records or the streaming in-memory context"
+              className="bg-surface-2 rounded border border-border px-1.5 py-1 text-[11px] text-fg-muted outline-none hover:text-fg"
+            >
+              <option value="db">DB queries</option>
+              <option value="df">Runtime in-memory queries</option>
+            </select>
             <button onClick={reset} title="Clear conversation" className="text-fg-muted hover:text-fg">
               <Eraser size={14} />
             </button>

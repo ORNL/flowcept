@@ -1,7 +1,17 @@
 # Flowcept Code Assistant Instructions
 
 This file is the single source of truth for code-assistant behavior in this repository.
-Each major module and the UI also has its own `README.md` (under `src/flowcept/*/`, `ui/`, `tests/`, `deployment/`, `examples/`) with deeper subsystem context; read the relevant one before working in that area.
+Each major module and the UI also has its own `README.md` (under `src/flowcept/*/`, `ui/`, `tests/`, `deployment/`, `examples/`) with deeper subsystem context. *MUST FOLLOW:* Your first job in this repo is to read all of them.
+
+## Agent Prompt Design Rule
+
+Prompts in `src/flowcept/agents/prompts/` must remain domain- and application-agnostic. Adding app-specific fields or activity names to fix one test is a design failure.
+
+Do not add few-shots to fix specific queries; revisit the prompting strategy instead.
+
+## Test Failure Rule
+
+Fix the system or the expectation — never the test data.
 
 Do not duplicate these rules in `CLAUDE.md`, `.cursor/rules`, `GEMINI.md`, `SKILL.md`, or other agent files.
 If a tool requires its own file, make that file (which should immediately go to .gitignore) a thin pointer to this one.
@@ -9,9 +19,14 @@ If a tool requires its own file, make that file (which should immediately go to 
 ## 1. First Principles
 
 - Be surgical. Prefer small, reviewable changes.
-- Reuse above all. Avoid duplication and one-off fixes.
+- Before proposing any implementation or design strategy, find how the codebase already solves the same concern — same class type, same data flow, same operation. Replicate that solution exactly. If no existing pattern exists, flag it in the response before implementing.
+- Flowcept is extremely performance-sensitive, especially in the data producer path. Even small ifs, loops, or function calls in hot paths must be avoided at all costs.
+- Reuse above all. Avoid duplication and one-off fixes. Duplicating code or logic is a MAJOR problem. Avoid it at all costs. 
+- You often solve the main problem being addressed by silently injecting several other problems. Before editing a file, you need to assess the impact it will have in other parts of the code. One-off solutions bring more problems than resolve anything.
+- Separation of concerns is extremely important in this project. Mixing concerns is not acceptable. Each module in the project has a clear and separate concern. Report if you find violations.
 - Do not overengineer.
 - Prefer visible failures over fallback code that hides contract mismatches.
+- Never add defensive type checks, isinstance guards, or fallback values unless explicitly asked. Let the code break loudly.
 - Prefer `settings.yaml` over hardcoded behavior.
 - Avoid dependency pins unless there is a proven direct reason and no better practical fix.
 - Do not commit personal absolute paths.
@@ -21,11 +36,13 @@ If a tool requires its own file, make that file (which should immediately go to 
 
 ## 2. Interaction Rules
 
+- Answer questions in text only. Questions ("why", "how", "is X", "should we", "assess") are never commands to write code.
+- Never edit more than what was explicitly named in the request.
+- If fixing X reveals problem Y, report Y — do not fix it.
 - Keep responses under 50 words unless the user asks for detail.
-- Do not dump large code or long explanations unless explicitly asked.
 - Before long-running operations, warn the user and ask permission.
-- During approved long operations, provide brief status updates about every minute.
-- The human user is the owner and responsible for all actions in this code. Explain tradeoffs clearly, then follow decisions.
+- The human user is the owner. Explain tradeoffs clearly, then follow decisions.
+ 
 
 ## 3. Editing Rules
 
@@ -153,7 +170,8 @@ flowcept --init-settings --full --dask --mlflow -y
 
 **TDD is mandatory for both Python and UI/frontend.** Write the test first, watch it fail, then implement until it passes.
 
-- **Python**: write a real integration test in `tests/` before the implementation. Guard service-dependent tests with `Flowcept.services_alive()` / `MONGO_ENABLED` skips. No mocks.
+- **Python**: real integration tests are in `tests/`. Before the implementation, check if what you are about to implement is already covered in both unit and the integration tests. If not, they must be. Guard service-dependent tests with skips that use `Flowcept.services_alive()` / *_ENABLED flags available in configs.py.
+- Test the real thing! No mocks. No fakes. Prefer generating new data than relying on synthetic/
 - **UI/Frontend**: write a vitest test in `ui/tests/` before adding new pure logic (store mutations, utility functions, graph algorithms). Use real data fixtures — no mocks, no DOM for pure-function and store tests. Component render tests are discouraged (fragile, high mock cost); test logic at the function/store level instead. Run with `make ui-test`.
 
 Use the `flowcept` conda environment.
@@ -201,7 +219,9 @@ Do not run tests from scratch/sandbox directories. Target `tests/` explicitly.
 - Prefer real tests over mocks. Use real services, real data, and real LLMs when feasible.
 - Avoid mock-heavy tests unless there is no practical alternative.
 - When a test fails, the correct fix is almost always to fix the implementation code, not the test; the test itself is very rarely the culprit. Always resolve warnings at their source rather than silencing them.
+- **NEVER lower test thresholds or broaden expected responses just to make a failing test pass.** Doing so hides real bugs and degrades the test suite over time. If a test fails, fix the underlying behavior.
 - **Periodically recommend running the full integration test suites** (`make tests` and `E2E_LIVE=1 make ui-e2e`) — especially after merges, significant backend or UI changes, or when the user has been iterating quickly on a feature. Mocked tests alone are not sufficient to catch regressions against real services.
+- **Tests must verify meaningful system behavior**, not code structure (file paths, imports, `hasattr` checks).
 
 
 ## 11. CI And Dependency Drift
@@ -214,7 +234,7 @@ Important CI surfaces:
 - `run-tests.yml`: broad Redis and Kafka path on push/schedule.
 - `run-tests-simple.yml`: Redis without Mongo.
 - `run-tests-offline.yml`: full offline profile.
-- `run-tests-kafka.yml`: Kafka + Mongo.
+- `run-tests-kafka-and-rabbit-mq.yml`: Kafka + RabbitMQ + Mongo.
 - `run-tests-all-dbs.yml`: Mongo and LMDB coverage.
 - `run-tests-in-container.yml`: Docker image tests.
 - `run-tests-py313.yml`: Python 3.13 subset.

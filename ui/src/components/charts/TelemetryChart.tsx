@@ -30,6 +30,15 @@ function normalize(vals: number[]): number[] {
   return vals.map((v) => (v - min) / (max - min));
 }
 
+export function TelemetryEmptyMessage() {
+  return (
+    <div className="text-fg-muted py-8 text-center text-xs">
+      Tasks were found but no telemetry values are present. Ensure{" "}
+      <code className="text-xs">telemetry_capture.enable: true</code> in your Flowcept settings.
+    </div>
+  );
+}
+
 export function TelemetryChart({ filter }: { filter: Record<string, unknown> }) {
   const [visibleMetrics, setVisibleMetrics] = useState<Set<string>>(new Set(METRIC_KEYS));
   const [selectedMetric, setSelectedMetric] = useState<string>(METRIC_KEYS[0]);
@@ -165,10 +174,7 @@ export function TelemetryChart({ filter }: { filter: Record<string, unknown> }) 
             No tasks matched this filter.
           </div>
         ) : (
-          <div className="text-fg-muted py-8 text-center text-xs">
-            Tasks were found but no telemetry values are present.
-            Ensure <code className="text-xs">telemetry_capture.enable: true</code> in your Flowcept settings.
-          </div>
+          <TelemetryEmptyMessage />
         )}
       </div>
 

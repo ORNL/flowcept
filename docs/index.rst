@@ -77,3 +77,4 @@ Flowcept
    contributing
    cli-reference
    api-reference
+   publications

@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -404,6 +407,48 @@ class ReportServiceTests(unittest.TestCase):
             stats = Flowcept.generate_report(input_jsonl_path=str(jsonl_path), output_path=str(output))
             assert output.exists()
             assert stats["input_mode"] == "jsonl"
+
+    def test_generate_report_defaults_to_buffer_file(self):
+        with tempfile.TemporaryDirectory() as td:
+            jsonl_path = Path(td) / "flowcept_buffer.jsonl"
+            with jsonl_path.open("w", encoding="utf-8") as f:
+                for rec in _sample_records():
+                    rec_copy = dict(rec)
+                    if isinstance(rec_copy.get("data"), (bytes, bytearray)):
+                        rec_copy["data"] = "bytes-redacted"
+                    f.write(json.dumps(rec_copy) + "\n")
+            output = Path(td) / "card.md"
+            with patch("flowcept.configs.DUMP_BUFFER_PATH", str(jsonl_path)):
+                stats = Flowcept.generate_report(output_path=str(output))
+            assert output.exists()
+            assert stats["input_mode"] == "jsonl"
+
+    def test_start_here_runs_without_settings_file(self):
+        repo_root = Path(__file__).resolve().parents[2]
+        env = os.environ.copy()
+        with tempfile.TemporaryDirectory() as td:
+            for _k in (
+                "FLOWCEPT_SETTINGS_PATH",
+                "FLOWCEPT_USE_DEFAULT",
+                "LMDB_ENABLED",
+                "MONGO_ENABLED",
+                "MQ_ENABLED",
+                "DB_FLUSH_MODE",
+            ):
+                env.pop(_k, None)
+            env["HOME"] = td
+            env["PYTHONPATH"] = str(repo_root / "src")
+            result = subprocess.run(
+                [sys.executable, str(repo_root / "examples/start_here.py")],
+                cwd=td,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert result.returncode == 0, result.stderr
+            assert (Path(td) / "flowcept_buffer.jsonl").exists()
+            assert (Path(td) / "WORKFLOW_CARD.md").exists()
 
     def test_generate_report_input_validation(self):
         with self.assertRaises(ValueError):

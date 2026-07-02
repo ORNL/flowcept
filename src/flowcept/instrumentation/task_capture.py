@@ -60,6 +60,7 @@ class FlowceptTask(object):
         stdout: str = None,
         stderr: str = None,
         status: Status = None,
+        capture_telemetry: bool | None = None,
     ):
         """
         Initializes a FlowceptTask and optionally finalizes it.
@@ -99,6 +100,8 @@ class FlowceptTask(object):
             Captured standard error from the task.
         status : Status, optional
             Task completion status. If provided, defaults to Status.FINISHED if unspecified.
+        capture_telemetry : bool, optional
+            Per-task telemetry override. ``None`` follows the global telemetry setting.
         """
         if not INSTRUMENTATION_ENABLED:
             self._ended = True
@@ -106,8 +109,9 @@ class FlowceptTask(object):
 
         self._task = TaskObject()
         self._interceptor = InstrumentationInterceptor.get_instance()
+        self._capture_telemetry = TELEMETRY_ENABLED if capture_telemetry is None else capture_telemetry
 
-        if TELEMETRY_ENABLED:
+        if self._capture_telemetry:
             tel = self._interceptor.telemetry_capture.capture()
             self._task.telemetry_at_start = tel
 
@@ -241,7 +245,7 @@ class FlowceptTask(object):
         """
         if not INSTRUMENTATION_ENABLED:
             return
-        if TELEMETRY_ENABLED:
+        if self._capture_telemetry:
             tel = self._interceptor.telemetry_capture.capture()
             self._task.telemetry_at_end = tel
         if data:

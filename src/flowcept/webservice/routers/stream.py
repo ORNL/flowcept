@@ -12,8 +12,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from flowcept.configs import WEBSERVER_SSE_MAX_BATCH, WEBSERVER_SSE_POLL_INTERVAL
 from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.webservice.deps import get_db_api
-from flowcept.webservice.services.serializers import normalize_docs
+from flowcept.commons.utils import normalize_docs
 from flowcept.webservice.services.streaming import poll_new_docs
 
 router = APIRouter(prefix="/stream", tags=["stream"])
@@ -55,7 +54,7 @@ def stream_tasks(
     agent_id: Optional[str] = None,
     since: Optional[float] = None,
     poll_interval: float = Query(default=WEBSERVER_SSE_POLL_INTERVAL, ge=0.1, le=60.0),
-    db: DBAPI = Depends(get_db_api),
+    db: DBAPI = Depends(DBAPI),
 ) -> EventSourceResponse:
     """Stream new/updated tasks as SSE events, optionally scoped by workflow/campaign/agent."""
     base_filter: Dict[str, Any] = {}
@@ -72,7 +71,7 @@ def stream_workflows(
     campaign_id: Optional[str] = None,
     since: Optional[float] = None,
     poll_interval: float = Query(default=WEBSERVER_SSE_POLL_INTERVAL, ge=0.1, le=60.0),
-    db: DBAPI = Depends(get_db_api),
+    db: DBAPI = Depends(DBAPI),
 ) -> EventSourceResponse:
     """Stream new workflows as SSE events, optionally scoped by campaign."""
     base_filter: Dict[str, Any] = {}

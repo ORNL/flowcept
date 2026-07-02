@@ -44,13 +44,15 @@ experiment:
 
 mq:
   enabled: false
-  type: redis  # or kafka or mofka; Please adjust the port (kafka's default is 9092; redis is 6379). If mofka, adjust the group_file.
+  type: redis  # or kafka, mofka, rabbitmq; adjust port accordingly (redis: 6379, kafka: 9092, rabbitmq: 5672). If mofka, also set group_file.
   host: localhost
   # uri: ?
   # instances: ["localhost:6379"] # We can have multiple MQ instances being accessed by the consumers but each interceptor will currently access one single MQ..
   port: 6379
   # group_id: auto  # Kafka-only consumer group id. Use "auto" to generate a unique group per run.
   # group_file: mofka.json
+  # username: guest  # RabbitMQ only (AMQP); default is "guest"
+  # vhost: /         # RabbitMQ only; default is "/"
   channel: interception
   buffer_size: 50
   insertion_buffer_time_secs: 5
@@ -107,6 +109,7 @@ agent:
   chat_enabled: true # Enable the /api/v1/chat endpoint (requires the llm_agent extra and LLM settings above).
   chat_max_tool_iterations: 5 # Max LLM tool-calling iterations per chat message.
   chat_max_query_limit: 1000 # Hard cap for records returned by chat LLM query tools.
+  agent_mode: disabled # How the MCP agent is deployed: disabled | separate | colocated
 
 databases:
 

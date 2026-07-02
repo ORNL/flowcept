@@ -12,7 +12,7 @@
           "health"
         ],
         "summary": "Live",
-        "description": "Liveness check.",
+        "description": "Liveness check \u2014 process is running.",
         "operationId": "live_api_v1_health_live_get",
         "responses": {
           "200": {
@@ -36,18 +36,14 @@
           "health"
         ],
         "summary": "Ready",
-        "description": "Readiness check.",
+        "description": "Readiness check \u2014 verifies all enabled services via ``Flowcept.services_alive()``.\n\nWhich services are checked is driven by settings.yaml (MQ, KVDB, MongoDB, LMDB, LLM).\nReturns HTTP 200 when all enabled services are reachable, HTTP 503 otherwise.\nThe response body includes per-service status so callers can identify which\nservice is down without reading server logs.",
         "operationId": "ready_api_v1_health_ready_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Ready Api V1 Health Ready Get"
-                }
+                "schema": {}
               }
             }
           }
@@ -656,6 +652,117 @@
         }
       }
     },
+    "/api/v1/workflows/{workflow_id}/node_positions": {
+      "get": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Get Node Positions",
+        "description": "Get node positions for a workflow graph type.",
+        "operationId": "get_node_positions_api_v1_workflows__workflow_id__node_positions_get",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "graph_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Graph type: 'dataflow', 'task', or 'activity'",
+              "title": "Graph Type"
+            },
+            "description": "Graph type: 'dataflow', 'task', or 'activity'"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Node Positions Api V1 Workflows  Workflow Id  Node Positions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Save Node Positions",
+        "description": "Save node positions for a workflow graph type.",
+        "operationId": "save_node_positions_api_v1_workflows__workflow_id__node_positions_post",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Save Node Positions Api V1 Workflows  Workflow Id  Node Positions Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tasks": {
       "get": {
         "tags": [
@@ -1114,6 +1221,49 @@
                   "type": "object",
                   "additionalProperties": true,
                   "title": "Response Get Object Api V1 Objects  Object Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "objects"
+        ],
+        "summary": "Delete Object",
+        "description": "Delete an object and all its versions by object_id.",
+        "operationId": "delete_object_api_v1_objects__object_id__delete",
+        "parameters": [
+          {
+            "name": "object_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Object Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Object Api V1 Objects  Object Id  Delete"
                 }
               }
             }
@@ -2253,6 +2403,30 @@
         }
       }
     },
+    "/api/v1/agents/cleanup/empty": {
+      "delete": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Delete Empty Agents",
+        "description": "Delete all agents from the database that don't have associated task_id.",
+        "operationId": "delete_empty_agents_api_v1_agents_cleanup_empty_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Delete Empty Agents Api V1 Agents Cleanup Empty Delete"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/stats/tasks/summary": {
       "get": {
         "tags": [
@@ -3065,7 +3239,8 @@
             "enum": [
               "tasks",
               "workflows",
-              "objects"
+              "objects",
+              "collection_sizes"
             ],
             "title": "Source",
             "default": "tasks"
@@ -3129,7 +3304,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/SortSpec"
+                  "$ref": "#/components/schemas/flowcept__webservice__schemas__dashboards__SortSpec"
                 },
                 "type": "array"
               },
@@ -3226,6 +3401,17 @@
             "type": "boolean",
             "title": "Allow Dashboard Edit",
             "default": false
+          },
+          "thread_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id"
           }
         },
         "type": "object",
@@ -3542,7 +3728,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/SortSpec"
+                  "$ref": "#/components/schemas/flowcept__webservice__schemas__common__SortSpec"
                 },
                 "type": "array"
               },
@@ -3613,7 +3799,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/SortSpec"
+                  "$ref": "#/components/schemas/flowcept__webservice__schemas__common__SortSpec"
                 },
                 "type": "array"
               },
@@ -3646,30 +3832,6 @@
         "type": "object",
         "title": "QueryRequest",
         "description": "Read-only query payload."
-      },
-      "SortSpec": {
-        "properties": {
-          "field": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Field"
-          },
-          "order": {
-            "type": "integer",
-            "enum": [
-              1,
-              -1
-            ],
-            "title": "Order",
-            "default": 1
-          }
-        },
-        "type": "object",
-        "required": [
-          "field"
-        ],
-        "title": "SortSpec",
-        "description": "Sort field/order pair."
       },
       "TimeseriesRequest": {
         "properties": {
@@ -3762,6 +3924,53 @@
         "type": "object",
         "title": "VizSpec",
         "description": "How a chart renders its rows."
+      },
+      "flowcept__webservice__schemas__common__SortSpec": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Field"
+          },
+          "order": {
+            "type": "integer",
+            "enum": [
+              1,
+              -1
+            ],
+            "title": "Order",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "field"
+        ],
+        "title": "SortSpec",
+        "description": "Sort field/order pair."
+      },
+      "flowcept__webservice__schemas__dashboards__SortSpec": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "order": {
+            "type": "integer",
+            "enum": [
+              1,
+              -1
+            ],
+            "title": "Order",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "field"
+        ],
+        "title": "SortSpec",
+        "description": "Sort field/order pair for chart data queries."
       }
     }
   }

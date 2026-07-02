@@ -27,35 +27,22 @@ Flowcept exposes provenance data to LLM-based agents through two complementary s
    workflow is still executing. It also supports offline JSONL buffer files.
 
 The two surfaces share the same underlying provenance tool core
-(``src/flowcept/agents/tools/prov_tools.py``) so queries stay consistent across both.
+(``src/flowcept/agents/data_query_tools/db_query_tools.py``) so queries stay consistent across both.
 
-The MCP agent has one backend and two orchestration paths:
-
-- **Internal LLM mode**: Flowcept builds the configured LLM and routes free-text messages through ``prompt_handler``.
-- **External LLM mode**: your outside assistant, such as Codex, Claude, LibreChat, Cursor, or another MCP client,
-  owns routing and reasoning, while Flowcept provides the same MCP prompts, tools, and in-memory context.
-
-The modes are intended to expose the same functionality. The difference is only who orchestrates the tools.
+The MCP agent exposes explicit tools only. The outside assistant, such as Codex,
+Claude, LibreChat, Cursor, or another MCP client, owns routing and reasoning,
+while Flowcept provides the MCP prompts, tools, and in-memory context.
 
 Configuring LLM orchestration
 -----------------------------
-
-Internal mode:
-
-.. code-block:: yaml
-
-   agent:
-     external_llm: false
-
-External mode:
 
 .. code-block:: yaml
 
    agent:
      external_llm: true
 
-In external mode, arbitrary free-text messages sent to ``prompt_handler`` are not internally routed. Use explicit
-commands, prompt-builder calls, and execution-tool calls from the outside assistant.
+When ``agent.external_llm`` is enabled, use explicit commands, prompt-builder
+calls, and execution-tool calls from the outside assistant.
 
 Shared commands and prefixes
 ----------------------------
@@ -101,16 +88,16 @@ The agent resolves the matching task(s) via a Mongo-style filter, then the Dataf
 tab dims all unrelated nodes and edges, tracing only the ancestor/descendant chain.
 Click any node or empty space to reset the highlight manually.
 
-Internal prompt-handler example
--------------------------------
+Explicit MCP tool example
+-------------------------
 
 .. code-block:: python
 
-   from flowcept.agents.agent_client import run_tool
+   from flowcept.agents.mcp.mcp_client import run_tool
 
    result = run_tool(
-       "prompt_handler",
-       kwargs={"message": "What are the top 5 slowest activities?"},
+       "run_workflow_query",
+       kwargs={"query": "What is the workflow name?"},
    )
 
 External prompt plus execution example
@@ -118,7 +105,7 @@ External prompt plus execution example
 
 .. code-block:: python
 
-   from flowcept.agents.agent_client import run_prompt, run_tool
+   from flowcept.agents.mcp.mcp_client import run_prompt, run_tool
 
    prompt = run_prompt(
        "build_df_query_prompt",
@@ -143,7 +130,7 @@ External workflow-message query example
 
 .. code-block:: python
 
-   from flowcept.agents.agent_client import run_prompt, run_tool
+   from flowcept.agents.mcp.mcp_client import run_prompt, run_tool
 
    prompt = run_prompt(
        "build_workflow_query_prompt",
@@ -170,7 +157,8 @@ This is a minimal offline example:
 
    import json
    from flowcept import Flowcept, flowcept_task
-   from flowcept.agents.flowcept_agent import FlowceptAgent
+   from flowcept.agents.mcp.mcp_client import run_tool
+   from flowcept.agents.mcp.mcp_server import FlowceptMCPServer
 
    @flowcept_task
    def sum_one(x):
@@ -182,10 +170,10 @@ This is a minimal offline example:
        f.dump_buffer("flowcept_buffer.jsonl")
 
    # Start the agent from the buffer file and query it
-   agent = FlowceptAgent(buffer_path="flowcept_buffer.jsonl")
+   agent = FlowceptMCPServer(buffer_path="flowcept_buffer.jsonl")
    # Or load a list of messages directly
-   # agent = FlowceptAgent(buffer_messages=msgs)
+   # agent = FlowceptMCPServer(buffer_messages=msgs)
    agent.start()
-   resp = agent.query("how many tasks?")
+   resp = run_tool("run_df_query", kwargs={"query": "how many tasks?"})[0]
    print(json.loads(resp))
    agent.stop()

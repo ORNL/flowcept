@@ -50,7 +50,7 @@ Several GitHub Actions cover different runtime environments:
 * [run-tests.yml](.github/workflows/run-tests.yml) runs the main test matrix, including Redis and Kafka paths.
 * [run-tests-simple.yml](.github/workflows/run-tests-simple.yml) runs tests without MongoDB.
 * [run-tests-offline.yml](.github/workflows/run-tests-offline.yml) runs the full-offline profile.
-* [run-tests-kafka.yml](.github/workflows/run-tests-kafka.yml) runs Mongo-backed tests with Kafka MQ.
+* [run-tests-kafka-and-rabbit-mq.yml](.github/workflows/run-tests-kafka-and-rabbit-mq.yml) runs Mongo-backed tests with Kafka and RabbitMQ.
 * [run-tests-all-dbs.yml](.github/workflows/run-tests-all-dbs.yml) runs Mongo and non-Mongo database paths.
 * [run-tests-in-container.yml](.github/workflows/run-tests-in-container.yml) runs tests inside the Flowcept container.
 * [run-tests-py313.yml](.github/workflows/run-tests-py313.yml) runs the Python 3.13-compatible subset.
