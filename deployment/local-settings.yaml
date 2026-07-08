@@ -1,0 +1,63 @@
+# Local-testing settings for deployment/compose-service.yml.
+#
+# Hosts are the compose service names (flowcept_redis / flowcept_mongo) because the
+# service container shares the compose network. Plain Redis/Mongo — no TLS/auth.
+# This is a dev/test artifact, NOT the deployed config (the cluster uses a ConfigMap +
+# secret env vars; see ../docs/deployment/amsc-i2-dev.md).
+project:
+  debug: true
+  json_serializer: default
+  replace_non_json_serializable: true
+  performance_logging: false
+  enrich_messages: false
+  db_flush_mode: online          # required: DBs enabled + MQ enabled
+log:
+  log_path: default
+  log_file_level: info
+  log_stream_level: info
+experiment:
+  user: local
+mq:
+  enabled: true
+  type: redis
+  host: flowcept_redis
+  port: 6379
+  channel: interception
+kv_db:
+  enabled: true
+  host: flowcept_redis
+  port: 6379
+db_buffer:
+  insertion_buffer_time_secs: 5
+  buffer_size: 50
+  remove_empty_fields: false
+  stop_max_trials: 300
+  stop_trials_sleep: 0.1
+web_server:
+  host: 0.0.0.0
+  port: 8008
+  ui_enabled: true
+  cors_origins: []
+databases:
+  lmdb:
+    enabled: false
+  mongodb:
+    enabled: true
+    host: flowcept_mongo
+    port: 27017
+    db: flowcept
+    create_collection_index: true
+agent:
+  enabled: true                 # set true + fill the LLM fields to run the agent (compose --profile agent)
+  mcp_host: 0.0.0.0
+  mcp_port: 8003
+  llm_server_url: ""
+  api_key: ""
+  model: "gpt-oss-120b"
+  service_provider: "openai"
+  # MCP transport-security allow-list (DNS-rebinding protection). The GUI connects with
+  # Host: flowcept_agent:8003, so that host MUST be allowed; keep localhost for the agent's
+  # own startup liveness check. NOTE the key is `mcp_allowed_hosts`, not `allowed_hosts`.
+  mcp_allowed_hosts: ["localhost:*", "127.0.0.1:*", "flowcept_agent:8003", "flowcept_agent:*"]
+  mcp_allowed_origins: ["http://localhost:*", "http://127.0.0.1:*", "http://flowcept_agent:*"]
+adapters: {}

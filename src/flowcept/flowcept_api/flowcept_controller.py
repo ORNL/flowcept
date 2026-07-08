@@ -1024,10 +1024,10 @@ class Flowcept(object):
                 else:
                     logger.error(f"{backend} is enabled but not ready!")
 
-        from flowcept.configs import AGENT, AGENT_CHAT_ENABLED
+        from flowcept.configs import AGENT, AGENT_CHAT_ENABLED, AGENT_API_KEY
 
         if AGENT_CHAT_ENABLED:
-            api_key = AGENT.get("api_key", "")
+            api_key = AGENT_API_KEY
             provider = AGENT.get("service_provider", "")
             bad = {"", "?", "your-api-key-here"}
             if api_key not in bad and provider not in bad:

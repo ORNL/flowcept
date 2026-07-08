@@ -11,7 +11,7 @@ import pandas as pd
 
 from flowcept.agents import ToolResult
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.configs import AGENT, INSTRUMENTATION_ENABLED, MQ_ENABLED
+from flowcept.configs import AGENT, INSTRUMENTATION_ENABLED, MQ_ENABLED, AGENT_API_KEY
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.instrumentation.flowcept_task import flowcept_task
 
@@ -269,7 +269,7 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
 
 
     def test_llm_query_over_buffer(self):
-        if not AGENT.get("api_key"):
+        if not AGENT_API_KEY:
             FlowceptLogger().warning("Skipping LLM agent query test because agent.api_key is not set.")
             self.skipTest("agent.api_key is not set.")
         if not os.environ.get("FLOWCEPT_SETTINGS_PATH"):
@@ -285,8 +285,8 @@ class TestAgentInMemoryQueryTools(unittest.TestCase):
             FlowceptLogger().warning("Skipping LLM agent query test because service_provider is not set.")
             self.skipTest("Agent service_provider is not set.")
 
-        if AGENT.get("api_key"):
-            key = AGENT.get("api_key")
+        if AGENT_API_KEY:
+            key = AGENT_API_KEY
             masked = f"{key[:4]}...{key[-4:]}" if len(key) > 8 else key
             print(f"Using agent.api_key: {masked}")
 
@@ -673,7 +673,7 @@ class TestLLMRoundTrips(unittest.TestCase):
     """I4: LLM-dependent round-trip tests.  Marked @pytest.mark.llm so CI skips them."""
 
     def _skip_if_no_llm(self):
-        api_key = AGENT.get("api_key", "")
+        api_key = AGENT_API_KEY
         if not api_key or api_key in ("?", "your-api-key-here", ""):
             FlowceptLogger().warning("Skipping LLM round-trip test: no valid api_key in AGENT settings.")
             self.skipTest("LLM not configured.")

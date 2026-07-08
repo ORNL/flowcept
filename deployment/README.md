@@ -87,6 +87,7 @@ Use the `Makefile` targets when possible because CI uses them too.
 | `compose-kafka.yml` | `make services-kafka` | Redis + MongoDB + Kafka/ZooKeeper. Used to test the Kafka MQ backend. |
 | `compose-mofka.yml` | `make services-mofka` | Mofka-only stack for the Mofka MQ backend. Mofka is specialized and harder to run than Redis/Kafka. |
 | `compose-grafana.yml` | no primary CI target | Redis + MongoDB + Grafana image for dashboard experiments. |
+| `compose-service.yml` | no CI target | **Builds and runs the service image itself** (webservice/UI) with Redis + MongoDB on one network — `docker compose -f deployment/compose-service.yml up --build`. Unlike the rows above (deps-only), this runs the actual Flowcept service. See [`LOCAL_TESTING.md`](LOCAL_TESTING.md). |
 | `compose-rabbitmq.yml` | upcoming `make services-rabbitmq` | Redis + MongoDB + RabbitMQ. This is expected from the upcoming `agent_refactor` merge. |
 
 Stop targets remove attached volumes, so they delete local service data:

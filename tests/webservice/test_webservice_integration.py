@@ -15,7 +15,7 @@ from flowcept import Flowcept, FlowceptTask, WorkflowObject
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.configs import MONGO_ENABLED
+from flowcept.configs import MONGO_ENABLED, AGENT_API_KEY
 from flowcept.webservice.main import create_app
 
 logger = FlowceptLogger()
@@ -869,7 +869,7 @@ def test_chat_endpoint_unavailable_without_llm():
     """POST /api/v1/chat returns 503 with a clear detail when no LLM is configured."""
     from flowcept.configs import AGENT
 
-    api_key = AGENT.get("api_key")
+    api_key = AGENT_API_KEY
     if api_key and api_key != "?":
         pytest.skip("An LLM is configured; the 503 path does not apply.")
 
@@ -972,7 +972,7 @@ def test_chat_endpoint_real_llm_queries(gridsearch_run_data, mcp_server_instance
     """Every YAML chat question works through HTTP -> LangGraph -> MCP for both tool contexts."""
     from flowcept.configs import AGENT
 
-    api_key = AGENT.get("api_key")
+    api_key = AGENT_API_KEY
     if not api_key or api_key in ("?", "your-api-key-here"):
         pytest.skip("agent.api_key is not set.")
     if not AGENT.get("service_provider") or AGENT.get("service_provider") == "?":
@@ -1475,7 +1475,7 @@ def test_chat_highlight_lineage_sse(db_cleanup, mcp_server_instance):
     from flowcept.commons.flowcept_logger import FlowceptLogger
     from flowcept.configs import AGENT
 
-    api_key = AGENT.get("api_key")
+    api_key = AGENT_API_KEY
     if not api_key or api_key in ("?", "your-api-key-here"):
         FlowceptLogger().warning("Skipping real-LLM highlight test: agent.api_key is not set.")
         pytest.skip("agent.api_key is not set.")
