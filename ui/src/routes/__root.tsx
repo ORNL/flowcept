@@ -371,7 +371,7 @@ function AppShell() {
           )}
         </div>
         {inspectorEntity ? (
-          <div className="flex-1 overflow-y-auto p-3 space-y-2 text-xs">
+          <div data-testid="inspector-panel" className="flex-1 overflow-y-auto p-3 space-y-2 text-xs">
             <div className="text-fg-muted font-medium uppercase tracking-wide text-[10px]">
               {inspectorEntity.kind === "object"
                 ? "Artifact"

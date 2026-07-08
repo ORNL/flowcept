@@ -7,7 +7,7 @@
  *  3. Tasks tab shows the agent's tasks; clicking a row opens the TaskDrawer.
  *  4. Activity column cells are clickable and filter the task list.
  *  5. Raw tab renders the agent JSON.
- *  6. Workflow detail page: activity_id column is clickable and sets the activity filter.
+ *  6. Workflow detail page: task row clicks update the Inspector without filtering the table.
  *
  * All API calls are intercepted. No backend required.
  * Playwright evaluates routes LIFO — register catch-all FIRST, specific routes LAST.
@@ -495,23 +495,30 @@ test.describe("Agent detail page", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests: Workflow detail — activity_id is clickable
+// Tests: Workflow detail — task row selection
 // ---------------------------------------------------------------------------
 
-test.describe("Workflow detail — activity column", () => {
+test.describe("Workflow detail — task row selection", () => {
   test.beforeEach(async ({ page }) => {
     await mockWorkflowDetailApis(page);
     await page.goto(`/workflows/${WF_ID}`);
   });
 
-  test("clicking an activity name sets the activity filter in the URL", async ({ page }) => {
-    // Activity cells are buttons; wait for the table rows to appear first.
-    await expect(page.getByRole("button", { name: "step_x", exact: true }).first()).toBeVisible();
+  test("clicking an activity name selects that task without filtering the table", async ({ page }) => {
+    const taskRow = page.locator("div.absolute").filter({ hasText: "wt1" }).first();
+    await expect(taskRow).toBeVisible({ timeout: 5_000 });
+    const initialUrl = page.url();
 
-    // Click the step_x activity button in a task row.
-    await page.getByRole("button", { name: "step_x", exact: true }).first().click();
+    await taskRow.getByText("step_x", { exact: true }).click();
 
-    await expect(page).toHaveURL(/activity=step_x/);
+    await expect(page).toHaveURL(initialUrl);
+    await expect(page).not.toHaveURL(/activity=/);
+    await expect(page.getByText("wt2", { exact: true })).toBeVisible();
+    const inspector = page.getByTestId("inspector-panel");
+    await expect(inspector).toContainText("Task");
+    await expect(inspector).toContainText("task_id");
+    await expect(inspector).toContainText("wt1");
+    await expect(inspector).toContainText("step_x");
   });
 
   test("task_id cells are styled as links (accent color) to signal they are clickable", async ({ page }) => {
@@ -534,15 +541,14 @@ test.describe("Workflow detail — activity column", () => {
     await expect(header).toContainText("Created:");
   });
 
-  test("clicking an activity in workflow detail opens the ActivityDrawer inspector panel", async ({ page }) => {
-    // Activity cells are buttons in the task table.
-    await expect(page.getByRole("button", { name: "step_x", exact: true }).first()).toBeVisible();
+  test("clicking an activity in workflow detail does not open ActivityDrawer", async ({ page }) => {
+    const taskRow = page.locator("div.absolute").filter({ hasText: "wt1" }).first();
+    await expect(taskRow).toBeVisible({ timeout: 5_000 });
 
-    await page.getByRole("button", { name: "step_x", exact: true }).first().click();
+    await taskRow.getByText("step_x", { exact: true }).click();
 
-    // The activity inspector (ActivityDrawer) must appear.
-    await expect(page.getByTestId("activity-drawer")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByTestId("activity-drawer")).toContainText("step_x");
+    await expect(page.getByTestId("activity-drawer")).toHaveCount(0);
+    await expect(page).not.toHaveURL(/activity=/);
   });
 
   test("workflow detail has an agents tab that shows a table of agents in the workflow", async ({ page }) => {
@@ -560,17 +566,20 @@ test.describe("Workflow detail — activity column", () => {
     await expect(page).toHaveURL(new RegExp(`/workflows/${WF_ID}`));
   });
 
-  test("opening activity drawer in workflow detail closes task drawer (mutual exclusion)", async ({ page }) => {
+  test("clicking a task row in workflow detail updates the Inspector without changing URL", async ({ page }) => {
     // Wait for task rows to appear.
     await expect(page.getByText("wt1", { exact: true })).toBeVisible({ timeout: 5_000 });
+    const initialUrl = page.url();
 
-    // Click task row wt1 to open TaskDrawer.
+    // Click task row wt1: this should update the right Inspector panel only.
     await page.getByText("wt1", { exact: true }).click();
-    await page.waitForURL(/task=wt1/, { timeout: 5_000 });
-
-    // Now click an activity button — TaskDrawer must close, ActivityDrawer must open.
-    await page.getByRole("button", { name: "step_y", exact: true }).first().click();
-    await expect(page.getByTestId("activity-drawer")).toBeVisible({ timeout: 5_000 });
+    await expect(page).toHaveURL(initialUrl);
+    const inspector = page.getByTestId("inspector-panel");
+    await expect(page.getByText("Inspector")).toHaveCount(1);
+    await expect(inspector).toContainText("Task");
+    await expect(inspector).toContainText("task_id");
+    await expect(inspector).toContainText("wt1");
+    await expect(inspector).toContainText("step_x");
     await expect(page).not.toHaveURL(/task=/);
   });
 });

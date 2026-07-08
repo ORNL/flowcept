@@ -27,6 +27,7 @@ import { getAiModelUsageRows, type AiModelUsageRow } from "../lib/aiUsage";
 import { ChartRenderer } from "../components/dashboard/ChartRenderer";
 import { chart, dashboardSpec, type DashboardSpec } from "../components/dashboard/spec";
 import { useInspectorStore } from "../stores/inspectorStore";
+import { taskToInspectorEntity } from "../lib/inspectorEntities";
 
 const TABS = ["tasks", "agents", "ai", "graph", "timeline", "telemetry", "card", "artifacts", "dashboard", "raw"] as const;
 
@@ -111,16 +112,9 @@ function WorkflowDetail() {
         header: "Activity",
         size: 170,
         cell: ({ row }) => (
-          <button
-            className="text-accent hover:underline text-left truncate max-w-full"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate({ search: (s) => ({ ...s, activity: row.original.activity_id || undefined, task: undefined }) });
-            }}
-            title={row.original.activity_id ?? ""}
-          >
+          <span className="text-accent truncate max-w-full" title={row.original.activity_id ?? ""}>
             {row.original.activity_id ?? "—"}
-          </button>
+          </span>
         ),
       },
       {
@@ -322,7 +316,7 @@ function WorkflowDetail() {
               const next = typeof updater === "function" ? updater(tableSorting) : updater;
               if (next[0]) navigate({ search: (s) => ({ ...s, sort: `${next[0].desc ? "-" : ""}${next[0].id}` }) });
             }}
-            onRowClick={(t) => navigate({ search: (s) => ({ ...s, task: t.task_id, activity: undefined }) })}
+            onRowClick={(t) => useInspectorStore.getState().set(taskToInspectorEntity(t))}
           />
         ))}
 
