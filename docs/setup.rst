@@ -31,6 +31,7 @@ Good practice is to cherry-pick the extras relevant to your workflow instead of 
    pip install flowcept[mlflow]          # MLflow adapter
    pip install flowcept[dask]            # Dask adapter
    pip install flowcept[tensorboard]     # TensorBoard adapter
+   pip install flowcept[rabbitmq]        # RabbitMQ message queue
    pip install flowcept[kafka]           # Kafka message queue
    pip install flowcept[nvidia]          # NVIDIA GPU runtime capture
    pip install flowcept[telemetry]       # CPU/GPU/memory telemetry capture
@@ -114,9 +115,10 @@ Message Queue (MQ)
 
 Supported MQs:
 
-- `Redis <https://redis.io>`_ → **default**, lightweight, works on Linux, macOS, Windows, and HPC (tested on Frontier and Summit)  
-- `Kafka <https://kafka.apache.org>`_ → for distributed environments or if Kafka is already in your stack  
-- `Mofka <https://mofka.readthedocs.io>`_ → optimized for HPC runs  
+- `Redis <https://redis.io>`_ → **default**, lightweight, works on Linux, macOS, Windows, and HPC (tested on Frontier and Summit)
+- `RabbitMQ <https://www.rabbitmq.com>`_ → AMQP-based broker, suitable for cloud and enterprise environments
+- `Kafka <https://kafka.apache.org>`_ → for distributed environments or if Kafka is already in your stack
+- `Mofka <https://mofka.readthedocs.io>`_ → optimized for HPC runs
 
 Database (DB)
 --------------
@@ -149,10 +151,11 @@ Using Docker Compose (recommended)
 
 We provide a `Makefile <https://github.com/ORNL/flowcept/blob/main/deployment/Makefile>`_ with shortcuts:
 
-1. **Redis only (no DB)**: ``make services``   (LMDB can be used in this setup as a lightweight DB)  
-2. **Redis + MongoDB**: ``make services-mongo``  
-3. **Kafka + MongoDB**: ``make services-kafka``  
-4. **Mofka only (no DB)**: ``make services-mofka``  
+1. **Redis only (no DB)**: ``make services``   (LMDB can be used in this setup as a lightweight DB)
+2. **Redis + MongoDB**: ``make services-mongo``
+3. **RabbitMQ + MongoDB**: ``make services-rabbitmq``
+4. **Kafka + MongoDB**: ``make services-kafka``
+5. **Mofka only (no DB)**: ``make services-mofka``
 
 To customize, edit the YAML files in `deployment <https://github.com/ORNL/flowcept/tree/main/deployment>`_ and run:
 

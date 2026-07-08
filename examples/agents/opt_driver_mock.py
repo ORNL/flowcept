@@ -4,7 +4,7 @@ import random
 from typing import Dict, List
 
 from flowcept.flowcept_api.flowcept_controller import Flowcept
-from flowcept.agents.agent_client import run_tool
+from flowcept.agents.mcp.mcp_client import run_tool
 from flowcept.flowceptor.consumers.base_consumer import BaseConsumer
 from flowcept.instrumentation.flowcept_task import flowcept_task
 from flowcept.instrumentation.task_capture import FlowceptTask

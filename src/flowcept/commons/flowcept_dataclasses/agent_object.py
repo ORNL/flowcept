@@ -5,7 +5,7 @@ import msgpack
 from omegaconf import OmegaConf, DictConfig
 
 from flowcept.commons.utils import get_utc_now
-from flowcept.commons.sanitization import sanitize_json_like
+from flowcept.commons.utils import sanitize_json_like
 from flowcept.configs import (
     EXTRA_METADATA,
 )

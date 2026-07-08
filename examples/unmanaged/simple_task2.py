@@ -41,4 +41,4 @@ if __name__ == "__main__":
     flowcept.stop()
 
     flowcept_messages = Flowcept.read_buffer_file()
-    assert len(flowcept_messages) == 5
+    assert len(flowcept_messages) == 6

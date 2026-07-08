@@ -445,7 +445,7 @@ agent:
 
 #### Internal-LLM mode
 
-Flowcept builds the model using `build_llm_model()` (`src/flowcept/agents/agents_utils.py`).
+Flowcept builds the model using `build_llm_model()` (`src/flowcept/agents/llm/builders.py`).
 
 Providers in code:
 

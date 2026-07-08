@@ -51,10 +51,10 @@ jobs:
         run: |
           pip install .
           pip list
-          flowcept --init-settings -y
+          rm -f ~/.flowcept/settings.yaml flowcept_buffer.jsonl WORKFLOW_CARD.md
           python examples/start_here.py
           pip uninstall flowcept -y 
-          rm ~/.flowcept/settings.yaml
+          rm -f ~/.flowcept/settings.yaml flowcept_buffer.jsonl WORKFLOW_CARD.md
 
       - name: Start docker compose with redis
         run: make services-mongo
@@ -110,7 +110,8 @@ jobs:
           echo "=== inotify limits ==="
           cat /proc/sys/fs/inotify/max_user_watches || true
           cat /proc/sys/fs/inotify/max_user_instances || true
-          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"
+          # Below, ignoring tests that require an active LLM service provider:
+          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -m "not llm" -k "not test_decorated_function_timed"
 
       - name: Test decorator timing in isolated offline mode
         run: |
@@ -182,7 +183,7 @@ jobs:
           echo "=== inotify limits ==="
           cat /proc/sys/fs/inotify/max_user_watches || true
           cat /proc/sys/fs/inotify/max_user_instances || true
-          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"
+          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -m "not llm" -k "not test_decorated_function_timed"
 
       - name: Test telemetry in isolated telemetry mode with kafka
         run: |

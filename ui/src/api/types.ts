@@ -77,6 +77,7 @@ export interface Campaign {
 export interface AgentSummary {
   agent_id: string;
   name?: string;
+  workflow_id?: string;
   registered_at?: number | string | null;
   task_count: number;
   activities: string[];

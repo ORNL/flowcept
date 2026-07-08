@@ -23,7 +23,6 @@ def problem_evaluate(phenome, uuid):
 def dummy_func1(x):
     cool_var = "cool value"  # test if we can intercept this var
     print(cool_var)
-    y = cool_var
     return x * 2
 
 
@@ -52,7 +51,7 @@ class TestDask(unittest.TestCase):
     def test_dummyfunc(self):
         client, cluster = start_local_dask_cluster(n_workers=1)
         i1 = np.random.random()
-        o1 = client.submit(dummy_func1, i1)
+        client.submit(dummy_func1, i1)
         stop_local_dask_cluster(client, cluster)
         # self.logger.debug(o1.result())
 

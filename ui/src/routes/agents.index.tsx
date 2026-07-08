@@ -53,6 +53,11 @@ function AgentsPage() {
                   {a.agent_id}
                 </div>
               )}
+              {a.workflow_id && (
+                <div className="text-[10px] text-fg-muted mt-0.5 pl-6">
+                  workflow: <span className="font-mono">{a.workflow_id}</span>
+                </div>
+              )}
             </div>
             <div className="text-fg-muted mt-2 space-y-1 text-xs">
               <div>

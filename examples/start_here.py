@@ -2,11 +2,10 @@
 This is a very simple script to show the basic instrumentation capabilities of Flowcept, using its most straightforward
 way of capturing workflow provenance from functions: using @decorators. It is meant to be executed in offline model.
 
-Flowcept will flush its internal buffer to a simple JSONL file in the end, if a `dump_buffer_path` is defined in
- the settings file (typically under ~/.flowcept/settings.yaml).
+Flowcept will flush its internal buffer to a simple JSONL file at the end of the run.
 
 This very simple scenario does not need any database, streaming service, message queue or any other external service.
-It should run fine after installing Flowcept via `pip install flowcept` and running `$> flowcept --init-settings`.
+It should run fine after installing Flowcept via `pip install flowcept`.
 
 For more complex features, such as online provenance analysis, HPC requirements, federated/highly distributed execution,
  data observability from existing adapters, PyTorch models, telemetry capture optimization, query requirements, or
@@ -45,11 +44,8 @@ if __name__ == "__main__":
     main()
 
     # Reporting and verifications:
-    prov_buffer = Flowcept.read_buffer_file()
-    assert len(prov_buffer) == 2
+    raw_records = Flowcept.read_buffer_file()
+    assert len(raw_records) == 2
     workflow_card_path = "WORKFLOW_CARD.md"
-    report_stats = Flowcept.generate_report(
-        records=prov_buffer,
-        output_path=workflow_card_path,
-    )
+    Flowcept.generate_report(output_path=workflow_card_path)
     print(f"{workflow_card_path} generated!")

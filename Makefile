@@ -12,11 +12,14 @@ help:
 	@printf "\033[32mservices-stop-kafka\033[0m       stop Kafka services and remove attached volumes\n"
 	@printf "\033[32mservices-mofka\033[0m            run services with Mofka using Docker\n"
 	@printf "\033[32mservices-stop-mofka\033[0m       stop Mofka services and remove attached volumes\n"
+	@printf "\033[32mservices-rabbitmq\033[0m         run services with RabbitMQ using Docker\n"
+	@printf "\033[32mservices-stop-rabbitmq\033[0m    stop RabbitMQ services and remove attached volumes\n"
 	@printf "\033[32mtests\033[0m                     run unit tests with pytest\n"
 	@printf "\033[32mtests-offline\033[0m             run offline-safe tests with pytest\n"
 	@printf "\033[32mtests-in-container\033[0m        run unit tests with pytest inside Flowcept's container\n"
 	@printf "\033[32mtests-in-container-mongo\033[0m  run unit tests inside container with MongoDB\n"
-	@printf "\033[32mtests-in-container-kafka\033[0m  run unit tests inside container with Kafka and MongoDB\n"
+	@printf "\033[32mtests-in-container-kafka\033[0m     run unit tests inside container with Kafka and MongoDB\n"
+	@printf "\033[32mtests-in-container-rabbitmq\033[0m  run unit tests inside container with RabbitMQ and MongoDB\n"
 	@printf "\033[32mtests-notebooks\033[0m           test the notebooks using pytest\n"
 	@printf "\033[32mclean\033[0m                     remove cache directories and Sphinx build output\n"
 	@printf "\033[32mdocs\033[0m                      build HTML documentation using Sphinx\n"
@@ -153,6 +156,17 @@ services-mofka:
 # Stop Mofka services and remove attached volumes
 services-stop-mofka:
 	docker compose --file deployment/compose-mofka.yml down --volumes
+
+# Run services with RabbitMQ using Docker
+services-rabbitmq:
+	docker compose --file deployment/compose-rabbitmq.yml up --detach
+
+# Stop RabbitMQ services and remove attached volumes
+services-stop-rabbitmq:
+	docker compose --file deployment/compose-rabbitmq.yml down --volumes
+
+tests-in-container-rabbitmq:
+	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_rabbitmq -e MQ_PORT=5672 -e MQ_TYPE=rabbitmq -e MONGO_HOST=flowcept_mongo -e MONGO_ENABLED=true -e LMDB_ENABLED=false --network flowcept_default flowcept /bin/bash -lc '/opt/conda/envs/flowcept/bin/flowcept --init-settings --full -y && /opt/conda/envs/flowcept/bin/flowcept --config-profile full-online -y && /opt/conda/envs/flowcept/bin/pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/instrumentation_tests/ml_tests --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"'
 
 # Run unit tests using pytest
 .PHONY: tests

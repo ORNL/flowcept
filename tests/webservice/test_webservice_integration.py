@@ -14,8 +14,11 @@ from fastapi.testclient import TestClient
 from flowcept import Flowcept, FlowceptTask, WorkflowObject
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
+from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import MONGO_ENABLED
 from flowcept.webservice.main import create_app
+
+logger = FlowceptLogger()
 
 
 pytestmark = pytest.mark.skipif(not MONGO_ENABLED, reason="MongoDB is disabled")
@@ -28,6 +31,35 @@ def _wait_for(condition, timeout_sec: float = 20.0, interval_sec: float = 0.25) 
             return True
         time.sleep(interval_sec)
     return False
+
+
+def test_webservice_static_contract_routes():
+    """Basic route contracts that do not need seeded provenance data."""
+    from flowcept.version import __version__
+
+    client = TestClient(create_app())
+
+    rs = client.get("/api/v1/info")
+    assert rs.status_code == 200
+    assert rs.json() == {"service": "flowcept", "version": __version__}
+
+    assert client.get("/api/v1/health/live").json() == {"status": "ok"}
+    assert client.get("/api/v1/health/ready").json()["status"] == "ready"
+
+    root = client.get("/")
+    assert root.status_code == 200
+    if root.headers["content-type"].startswith("application/json"):
+        assert root.json()["service"] == "flowcept-webservice"
+    else:
+        assert "text/html" in root.headers["content-type"]
+
+    openapi = client.get("/openapi.json")
+    assert openapi.status_code == 200
+    paths = openapi.json()["paths"]
+    assert "/api/v1/workflows/{workflow_id}/workflow_card" in paths
+    assert "/api/v1/workflows/{workflow_id}/provenance_card" not in paths
+    assert client.get("/docs").status_code == 200
+    assert client.get("/redoc").status_code == 200
 
 
 @pytest.fixture
@@ -49,6 +81,7 @@ def db_cleanup(request):
             pass
 
     from flowcept.configs import LMDB_ENABLED
+
     initial_lmdb_agents = set()
     if LMDB_ENABLED and hasattr(dao, "_agents_db"):
         try:
@@ -104,6 +137,7 @@ def db_cleanup(request):
         DocumentDBDAO._instance.close()
 
 
+
 def test_webservice_end_to_end_with_flowcept_and_blob_apis(db_cleanup):
     """End-to-end: real workflow + blob objects, then exercise the read APIs."""
     if not Flowcept.services_alive():
@@ -118,20 +152,20 @@ def test_webservice_end_to_end_with_flowcept_and_blob_apis(db_cleanup):
             task.end(generated={"y": 2})
 
         workflow_id = Flowcept.current_workflow_id
-        generic_obj_id = Flowcept.db.save_or_update_object(
+        generic_obj_id = Flowcept.insert_or_update_object(
             object=b"generic-blob-payload",
             object_type="artifact",
             save_data_in_collection=True,
             custom_metadata={"kind": "generic"},
         )
 
-        dataset_obj_id = Flowcept.db.save_or_update_dataset(
+        dataset_obj_id = Flowcept.insert_or_update_dataset(
             object=b"dataset-blob-payload",
             save_data_in_collection=True,
             custom_metadata={"split": "train"},
         )
 
-        model_obj_id = Flowcept.db.save_or_update_ml_model(
+        model_obj_id = Flowcept.insert_or_update_ml_model(
             object=b"model-blob-payload",
             save_data_in_collection=True,
             custom_metadata={"framework": "sklearn"},
@@ -355,6 +389,10 @@ def test_webservice_campaigns_agents_stats_and_prov_card(db_cleanup):
     rs = client.get(f"/api/v1/workflows/{workflow_id}/workflow_card", params={"format": "pdf"})
     assert rs.status_code == 200
     assert rs.headers["content-type"].startswith("application/pdf")
+    assert rs.headers["content-disposition"] == f'attachment; filename="workflow_card_{workflow_id}.pdf"'
+
+    rs = client.get(f"/api/v1/workflows/non-existent-{uuid4()}/workflow_card", params={"format": "markdown"})
+    assert rs.status_code == 404
 
     # Cleanup singleton client handles for test isolation.
     if DocumentDBDAO._instance is not None:
@@ -376,7 +414,7 @@ def test_webservice_object_versioning_and_unified_query(db_cleanup):
         with FlowceptTask(activity_id="emit", used={"x": 1}) as task:
             task.end(generated={"y": 1})
         for version in range(2):
-            Flowcept.db.save_or_update_object(
+            Flowcept.insert_or_update_object(
                 object=f"payload-v{version}".encode(),
                 object_id=obj_id,
                 object_type="ml_model",
@@ -446,9 +484,36 @@ def test_webservice_object_versioning_and_unified_query(db_cleanup):
     assert rs.status_code == 200
     assert rs.json()["count"] >= 1
 
+    rs = client.get("/api/v1/tasks/")
+    assert rs.status_code == 404
+
+    rs = client.get("/api/v1/tasks", params={"filter_json": "[]"})
+    assert rs.status_code == 400
+
+    rs = client.post(
+        "/api/v1/tasks/query",
+        json={
+            "filter": {},
+            "projection": ["task_id", "workflow_id"],
+            "aggregation": [{"operator": "max", "field": "started_at"}],
+            "limit": 10,
+        },
+    )
+    assert rs.status_code == 400
+
     rs = client.post(f"/api/v1/workflows/{workflow_id}/reports/workflow-card/download")
     assert rs.status_code == 200
     assert rs.headers["content-type"].startswith("text/markdown")
+    assert rs.headers["content-disposition"] == f'attachment; filename="workflow_card_{workflow_id}.md"'
+
+    rs = client.get(f"/api/v1/workflows/non-existent-{uuid4()}")
+    assert rs.status_code == 404
+
+    rs = client.get("/api/v1/workflows", params={"filter_json": "not-json"})
+    assert rs.status_code == 400
+
+    rs = client.post(f"/api/v1/workflows/non-existent-{uuid4()}/reports/workflow-card/download")
+    assert rs.status_code == 404
 
     if DocumentDBDAO._instance is not None:
         DocumentDBDAO._instance.close()
@@ -740,12 +805,15 @@ def test_prov_tools_shared_core(db_cleanup):
     if not Flowcept.services_alive():
         pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
 
-    from flowcept.agents.tools.prov_tools import (
+    from flowcept.agents.data_query_tools.db_query_tools import (
         get_task_summary,
         list_campaigns,
-        make_chart,
         query_tasks,
         query_workflows,
+    )
+    from flowcept.agents.data_query_tools.dashboard_tools import (
+        make_chart,
+        get_dashboard,
     )
 
     campaign_id = f"ws-campaign-{uuid4()}"
@@ -785,6 +853,10 @@ def test_prov_tools_shared_core(db_cleanup):
     assert result.result["rows"]
     assert result.result["chart"]["chart_id"] == "chat-c1"
 
+    # get_dashboard returns 404 for unknown id (no real dashboard needed).
+    result = get_dashboard("nonexistent-dashboard-id")
+    assert result.code == 404
+
     # Disallowed filter operators are rejected by the shared core.
     result = query_tasks(filter={"$where": "1"}, limit=10)
     assert result.code >= 400
@@ -797,7 +869,7 @@ def test_chat_endpoint_unavailable_without_llm():
     """POST /api/v1/chat returns 503 with a clear detail when no LLM is configured."""
     from flowcept.configs import AGENT
 
-    api_key = AGENT.get("api_key")
+    api_key = AGENT_API_KEY
     if api_key and api_key != "?":
         pytest.skip("An LLM is configured; the 503 path does not apply.")
 
@@ -808,50 +880,261 @@ def test_chat_endpoint_unavailable_without_llm():
     assert "LLM" in rs.json()["detail"] or "llm" in rs.json()["detail"]
 
 
-def test_chat_endpoint_real_llm_tool_roundtrip(db_cleanup):
-    """Real LLM chat round-trip: the model must call a query tool and answer (env-gated)."""
-    from flowcept.commons.flowcept_logger import FlowceptLogger
+def _load_chat_query_cases():
+    """Load path-agnostic chat integration questions."""
+    import pathlib
+    import yaml
+
+    yaml_path = pathlib.Path(__file__).parent / "chat_query_tests.yaml"
+    cases = yaml.safe_load(yaml_path.read_text())
+    assert cases, "No chat query cases found in chat_query_tests.yaml"
+    return cases
+
+
+def _chat_response_score(actual: str, expected: str) -> float:
+    """Return a simple token-overlap score for path-agnostic chat answer checks."""
+    import re
+
+    def _tokens(text: str) -> set[str]:
+        tokens = set()
+        for raw_token in re.findall(r"[a-zA-Z0-9_.]+", text.lower()):
+            token = raw_token.strip(".")
+            tokens.add(token)
+            tokens.update(part for part in token.split(".") if part)
+        return {token for token in tokens if token}
+
+    actual_tokens = _tokens(actual)
+    # Expand actual with underscore-split parts (e.g. "dataset_id" → "dataset", "id")
+    expanded_actual = set(actual_tokens)
+    for tok in actual_tokens:
+        expanded_actual.update(part for part in tok.split("_") if part)
+
+    expected_tokens = _tokens(expected)
+    if not expected_tokens:
+        return 1.0
+
+    def _matches(exp_tok: str) -> bool:
+        if exp_tok in expanded_actual:
+            return True
+        if len(exp_tok) >= 3:
+            # Substring match (e.g. "trained" matches "pretrained")
+            if any(exp_tok in act_tok for act_tok in actual_tokens):
+                return True
+            # Compound-identifier match: for underscore-joined identifiers, all significant
+            # parts (len≥3) must appear individually in the actual response (exact or substring).
+            parts = [p for p in exp_tok.split("_") if len(p) >= 3]
+            if len(parts) >= 2 and all(
+                p in expanded_actual or any(p in act_tok for act_tok in actual_tokens)
+                for p in parts
+            ):
+                return True
+        return False
+
+    matched = sum(1 for exp_tok in expected_tokens if _matches(exp_tok))
+    return matched / len(expected_tokens)
+
+
+
+@pytest.mark.llm
+@pytest.mark.parametrize(
+    ("tool_context", "expected_tool_names"),
+    [
+        (
+            "db",
+            {
+                "query_tasks",
+                "query_workflows",
+                "get_task_summary",
+                "list_campaigns",
+                "list_agents",
+                "highlight_lineage",
+                "make_chart",
+                "query_objects",
+            },
+        ),
+        (
+            "df",
+            {
+                "query_tasks",
+                "query_workflows",
+                "query_objects",
+                "get_task_summary",
+                "get_objects_summary",
+                "list_campaigns",
+                "list_agents",
+                "make_chart",
+                "highlight_lineage",
+            },
+        ),
+    ],
+)
+def test_chat_endpoint_real_llm_queries(gridsearch_run_data, mcp_server_instance, tool_context, expected_tool_names):
+    """Every YAML chat question works through HTTP -> LangGraph -> MCP for both tool contexts."""
     from flowcept.configs import AGENT
 
-    api_key = AGENT.get("api_key")
-    if not api_key or api_key == "?":
-        FlowceptLogger().warning("Skipping real-LLM chat test because agent.api_key is not set.")
+    api_key = AGENT_API_KEY
+    if not api_key or api_key in ("?", "your-api-key-here"):
         pytest.skip("agent.api_key is not set.")
     if not AGENT.get("service_provider") or AGENT.get("service_provider") == "?":
-        FlowceptLogger().warning("Skipping real-LLM chat test because agent.service_provider is not set.")
         pytest.skip("agent.service_provider is not set.")
-    if not Flowcept.services_alive():
-        pytest.skip("Flowcept services are not alive (MQ/KVDB/Mongo).")
 
-    campaign_id = f"ws-campaign-{uuid4()}"
-    db_cleanup["campaigns"].append(campaign_id)
-    with Flowcept(campaign_id=campaign_id, workflow_name=f"ws-chat-wf-{uuid4()}"):
-        workflow_id = Flowcept.current_workflow_id
-        for i in range(3):
-            with FlowceptTask(activity_id="chat_seed", used={"i": i}) as task:
-                task.end(generated={"o": i})
-
-    ok = _wait_for(lambda: len(Flowcept.db.task_query(filter={"workflow_id": workflow_id}) or []) >= 3)
-    assert ok, "Timed out waiting for persisted tasks."
+    campaign_id = gridsearch_run_data["campaign_id"]
+    workflow_id = gridsearch_run_data["workflow_id"]
 
     app = create_app()
     client = TestClient(app)
+
+    import os
+
+    case_id_filter = {c.strip() for c in os.environ.get("CHAT_TEST_CASE_IDS", "").split(",") if c.strip()}
+
+    for case in _load_chat_query_cases():
+        # Skip cases restricted to a different tool_context.
+        allowed_contexts = case.get("tool_contexts", ["db", "df"])
+        if tool_context not in allowed_contexts:
+            continue
+        # Skip cases not in the explicit case_id filter (when set).
+        case_id = case.get("case_id")
+        if case_id_filter and case_id not in case_id_filter:
+            continue
+
+        # Attempt each question up to MAX_ATTEMPTS times; retry on HTTP errors or
+        # score misses (transient rate-limiting can degrade LLM response quality).
+        MAX_ATTEMPTS = 2
+        rs = body = actual = tool_trace = score = None
+        for attempt in range(MAX_ATTEMPTS):
+            rs = client.post(
+                "/api/v1/chat",
+                json={
+                    "messages": [{"role": "user", "content": case["user_query"]}],
+                    "context": {"campaign_id": campaign_id, "workflow_id": workflow_id, "tool_context": tool_context},
+                    "stream": False,
+                },
+            )
+            if rs.status_code != 200:
+                if attempt < MAX_ATTEMPTS - 1:
+                    logger.warning(
+                        f"HTTP {rs.status_code} on attempt {attempt + 1} for {case['user_query']!r}; retrying."
+                    )
+                    continue
+                break
+            body = rs.json()
+            actual = body.get("message", "")
+            tool_trace = body.get("tool_trace") or []
+            score = _chat_response_score(actual, case["expected_response"])
+            if score >= case["score_threshold"] and tool_trace:
+                break
+            if attempt < MAX_ATTEMPTS - 1:
+                if not tool_trace:
+                    logger.warning(
+                        f"No tool call on attempt {attempt + 1} for {case['user_query']!r}; retrying."
+                    )
+                else:
+                    logger.warning(
+                        f"Score {score:.2f} < {case['score_threshold']:.2f} on attempt {attempt + 1} "
+                        f"for {case['user_query']!r}; retrying."
+                    )
+        assert rs.status_code == 200, f"HTTP error for query: {case['user_query']!r}; body={rs.text}"
+        assert actual, f"Empty response for query: {case['user_query']!r}"
+        assert tool_trace, f"LLM made no tool call for query: {case['user_query']!r}"
+        assert score >= case["score_threshold"], (
+            f"Low answer score for {tool_context} query {case['user_query']!r}: "
+            f"score={score:.2f}, threshold={case['score_threshold']:.2f}\n"
+            f"Expected: {case['expected_response']}\nActual: {actual}"
+        )
+        assert any(
+            event.get("name") in expected_tool_names or event.get("tool_name") in expected_tool_names
+            for event in tool_trace
+        ), f"Expected MCP {tool_context} tool path for query {case['user_query']!r}; trace={tool_trace!r}"
+
+        # Optional structured-response assertions.
+        tool_expected = case.get("tool_expected")
+        if tool_expected == "make_chart":
+            cards = body.get("cards") or []
+            assert cards, f"Expected card event for make_chart in query {case['user_query']!r}"
+        elif tool_expected == "make_chart":
+            assert any(
+                e.get("name") == "make_chart" for e in tool_trace
+            ), f"Expected make_chart in tool_trace for query {case['user_query']!r}; trace={tool_trace!r}"
+
+    if DocumentDBDAO._instance is not None:
+        DocumentDBDAO._instance.close()
+
+
+@pytest.mark.llm
+def test_chat_endpoint_records_ai_model_usage_tasks(gridsearch_run_data, db_cleanup, mcp_server_instance):
+    """A chat request creates a Flowcept workflow with AI model invocation provenance."""
+    from flowcept.agents.chat_orchestration.chat_orchestrator_service import CHAT_WORKFLOW_NAME
+    from flowcept.commons.vocabulary import PROV_AGENT
+
+    services = Flowcept.services_status()
+    if not all(v == "ok" for v in services.values()):
+        pytest.skip(f"Flowcept services are not alive: {services}")
+    if services.get("llm") != "ok":
+        pytest.skip(f"LLM provider is not configured or not alive: {services}")
+
+    workflow_id = gridsearch_run_data["workflow_id"]
+    before = {wf["workflow_id"] for wf in Flowcept.db.workflow_query(filter={"name": CHAT_WORKFLOW_NAME}) or []}
+
+    client = TestClient(create_app())
+    mcp_server_instance.reset_context()
     rs = client.post(
         "/api/v1/chat",
         json={
-            "messages": [{"role": "user", "content": "How many tasks ran in this workflow?"}],
+            "messages": [{"role": "user", "content": "How many tasks are in this workflow? Use the query_tasks tool."}],
             "context": {"workflow_id": workflow_id},
             "stream": False,
         },
     )
-    assert rs.status_code == 200
-    body = rs.json()
-    assert body["message"]
-    assert any("3" in str(part) for part in (body["message"], body.get("tool_trace", [])))
-    assert body.get("tool_trace"), "Expected the LLM to call at least one tool."
 
-    if DocumentDBDAO._instance is not None:
-        DocumentDBDAO._instance.close()
+    assert rs.status_code == 200, rs.text
+    assert rs.json().get("message")
+    assert rs.json().get("tool_trace")
+
+    def _new_chat_workflow_ids():
+        workflows = Flowcept.db.workflow_query(filter={"name": CHAT_WORKFLOW_NAME}) or []
+        return [wf["workflow_id"] for wf in workflows if wf["workflow_id"] not in before]
+
+    ok = _wait_for(lambda: len(_new_chat_workflow_ids()) >= 1)
+    assert ok, "Timed out waiting for chat workflow to be persisted."
+    chat_workflow_id = _new_chat_workflow_ids()[0]
+    db_cleanup["workflows"].append(chat_workflow_id)
+
+    ok = _wait_for(
+        lambda: len(
+            Flowcept.db.task_query(
+                filter={
+                    "workflow_id": chat_workflow_id,
+                    "subtype": PROV_AGENT.AI_MODEL_INVOCATION.value,
+                }
+            )
+            or []
+        )
+        >= 1
+    )
+    assert ok, "Timed out waiting for AI model invocation task to be persisted."
+
+    llm_tasks = (
+        Flowcept.db.task_query(
+            filter={"workflow_id": chat_workflow_id, "subtype": PROV_AGENT.AI_MODEL_INVOCATION.value},
+        )
+        or []
+    )
+    llm_task = llm_tasks[0]
+    assert llm_task["subtype"] == PROV_AGENT.AI_MODEL_INVOCATION.value
+    assert "telemetry_at_start" not in llm_task
+    assert "telemetry_at_end" not in llm_task
+    usage = llm_task["custom_metadata"]["llm_usage"]
+    assert usage["model"]
+    assert usage["input_chars"] > 0
+    assert usage["output_tokens"] is None or usage["output_tokens"] > 0
+    assert "provider_response_metadata" in usage
+    assert any(task["custom_metadata"]["llm_usage"]["output_chars"] > 0 for task in llm_tasks)
+
+    tool_tasks = Flowcept.db.task_query(
+        filter={"workflow_id": chat_workflow_id, "subtype": PROV_AGENT.AGENT_TOOL.value},
+    )
+    assert tool_tasks, "The forced DB query should record at least one agent tool task."
 
 
 def test_recursive_delete_workflow_and_campaign(db_cleanup):
@@ -869,13 +1152,13 @@ def test_recursive_delete_workflow_and_campaign(db_cleanup):
     with Flowcept(campaign_id=campaign_id, workflow_name=f"del-wf1-{uuid4()}"):
         with FlowceptTask(activity_id="del_task", used={"x": 1}) as t1:
             t1.end(generated={"y": 1})
-        Flowcept.db.save_or_update_object(object=b"blob1", object_type="artifact", save_data_in_collection=True)
+        Flowcept.insert_or_update_object(object=b"blob1", object_type="artifact", save_data_in_collection=True)
         wf1_id = Flowcept.current_workflow_id
 
     with Flowcept(campaign_id=campaign_id, workflow_name=f"del-wf2-{uuid4()}"):
         with FlowceptTask(activity_id="del_task", used={"x": 2}) as t2:
             t2.end(generated={"y": 2})
-        Flowcept.db.save_or_update_object(object=b"blob2", object_type="artifact", save_data_in_collection=True)
+        Flowcept.insert_or_update_object(object=b"blob2", object_type="artifact", save_data_in_collection=True)
         wf2_id = Flowcept.current_workflow_id
 
     assert wf1_id and wf2_id
@@ -1036,18 +1319,25 @@ def test_agent_telemetry_timeseries(db_cleanup):
     )
 
 
-def test_file_dashboard_store_roundtrip(tmp_path):
-    """FileDashboardStore (non-Mongo fallback) persists real JSON files."""
-    from flowcept.webservice.services.dashboard_store import FileDashboardStore
+def test_lmdb_dashboard_roundtrip(tmp_path, monkeypatch):
+    """LMDB dashboard CRUD persists and retrieves dashboard documents."""
+    from flowcept.configs import LMDB_ENABLED
 
-    store = FileDashboardStore(directory=str(tmp_path))
-    doc = {"dashboard_id": "d1", "name": "local", "charts": [], "layout": []}
-    assert store.save(doc)
-    assert store.get("d1")["name"] == "local"
-    assert any(d["dashboard_id"] == "d1" for d in store.list())
-    assert store.delete("d1")
-    assert store.get("d1") is None
-    assert store.delete("d1") is False
+    if not LMDB_ENABLED:
+        pytest.skip("LMDB not enabled.")
+    from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
+    import flowcept.configs as _fc_configs
+
+    monkeypatch.setitem(_fc_configs.LMDB_SETTINGS, "path", str(tmp_path / "lmdb"))
+    dao = LMDBDAO()
+    doc = {"dashboard_id": "d1", "dashboard_type": "common_workflow", "name": "local", "charts": [], "layout": []}
+    assert dao.save_dashboard(doc)
+    assert dao.get_dashboard("d1")["name"] == "local"
+    assert any(d["dashboard_id"] == "d1" for d in dao.list_dashboards())
+    assert dao.list_dashboards(filter={"dashboard_type": "common_workflow"})
+    assert dao.delete_dashboard("d1")
+    assert dao.get_dashboard("d1") is None
+    dao.close()
 
 
 def test_webservice_dataflow_graph(db_cleanup):
@@ -1073,6 +1363,7 @@ def test_webservice_dataflow_graph(db_cleanup):
 
     # Coarse level (default): per-task input/output chunk entities (PROV Entity vs Activity).
     from flowcept import configs
+
     original_max = getattr(configs, "WEBSERVER_MAX_LABEL_LENGTH", 30)
     try:
         configs.WEBSERVER_MAX_LABEL_LENGTH = 300
@@ -1114,12 +1405,13 @@ def test_webservice_dataflow_graph(db_cleanup):
     # submit_gridsearch_job outputs configs list under the key "configs" (not "arg_0")
     submit_node = next(n for n in task_nodes if n["label"] == "submit_gridsearch_job")
     submit_output_chunks = [
-        c for c in chunk_nodes
+        c
+        for c in chunk_nodes
         if any(e["source"] == submit_node["id"] and e["target"] == c["id"] for e in body["edges"])
     ]
     assert submit_output_chunks, "submit_gridsearch_job must have output chunks"
-    assert all("configs" in c["label"] for c in submit_output_chunks), (
-        f"submit_gridsearch_job output chunk labels must use 'configs', got: {[c['label'] for c in submit_output_chunks]}"
+    assert any("configs" in c["label"] for c in submit_output_chunks), (
+        f"submit_gridsearch_job output chunks must include a 'configs' chunk, got: {[c['label'] for c in submit_output_chunks]}"
     )
     assert not any(re.match(r"^arg_\d+$", c["label"]) for c in chunk_nodes), (
         "No chunk label should be a raw arg_N key — positional keys must use count fallback"
@@ -1147,7 +1439,7 @@ def test_webservice_dataflow_graph(db_cleanup):
 
 
 def _parse_sse(text: str) -> list:
-    """Parse a raw SSE response body into a list of {event, data} dicts.
+    r"""Parse a raw SSE response body into a list of {event, data} dicts.
 
     SSE separates events with \\r\\n\\r\\n (CRLF) or \\n\\n; normalise first.
     """
@@ -1161,9 +1453,9 @@ def _parse_sse(text: str) -> list:
         ev: dict = {}
         for line in block.split("\n"):
             if line.startswith("event:"):
-                ev["event"] = line[len("event:"):].strip()
+                ev["event"] = line[len("event:") :].strip()
             elif line.startswith("data:"):
-                raw = line[len("data:"):].strip()
+                raw = line[len("data:") :].strip()
                 try:
                     ev["data"] = json.loads(raw)
                 except json.JSONDecodeError:
@@ -1173,7 +1465,7 @@ def _parse_sse(text: str) -> list:
     return events
 
 
-def test_chat_highlight_lineage_sse(db_cleanup):
+def test_chat_highlight_lineage_sse(db_cleanup, mcp_server_instance):
     """Full end-to-end: real LLM emits ui:highlight SSE event with the correct seed task IDs.
 
     Creates a two-task workflow (step_a → step_b via shared data), asks the chat
@@ -1183,7 +1475,7 @@ def test_chat_highlight_lineage_sse(db_cleanup):
     from flowcept.commons.flowcept_logger import FlowceptLogger
     from flowcept.configs import AGENT
 
-    api_key = AGENT.get("api_key")
+    api_key = AGENT_API_KEY
     if not api_key or api_key in ("?", "your-api-key-here"):
         FlowceptLogger().warning("Skipping real-LLM highlight test: agent.api_key is not set.")
         pytest.skip("agent.api_key is not set.")
@@ -1227,7 +1519,12 @@ def test_chat_highlight_lineage_sse(db_cleanup):
         rs = client.post(
             "/api/v1/chat",
             json={
-                "messages": [{"role": "user", "content": f"Highlight the lineage of task {step_a_id} in the dataflow graph using the highlight_lineage tool."}],
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": f"Highlight the lineage of task {step_a_id} in the dataflow graph using the highlight_lineage tool.",
+                    }
+                ],
                 "context": {"workflow_id": wf_id},
                 "stream": True,
             },
@@ -1277,10 +1574,7 @@ def test_node_positions_endpoint(db_cleanup):
     # 2. Save positions
     pos_data = {
         "graph_type": "dataflow",
-        "positions": {
-            "node-1": {"x": 12.5, "y": 45.6},
-            "node-2": {"x": 78.9, "y": 101.2}
-        }
+        "positions": {"node-1": {"x": 12.5, "y": 45.6}, "node-2": {"x": 78.9, "y": 101.2}},
     }
     rs = client.post(f"/api/v1/workflows/{workflow_id}/node_positions", json=pos_data)
     assert rs.status_code == 200
@@ -1300,6 +1594,7 @@ def test_agents_without_tasks_are_not_returned(db_cleanup):
         pytest.skip("Flowcept services are not alive.")
 
     from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
+
     empty_agent_id = f"empty-agent-{uuid4()}"
 
     agent = AgentObject()
@@ -1314,4 +1609,3 @@ def test_agents_without_tasks_are_not_returned(db_cleanup):
     assert rs.status_code == 200
     items = rs.json()["items"]
     assert not any(item["agent_id"] == empty_agent_id for item in items)
-

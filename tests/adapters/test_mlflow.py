@@ -1,6 +1,5 @@
 import os
 import unittest
-import os
 import uuid
 from time import sleep
 import numpy as np

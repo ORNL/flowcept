@@ -15,7 +15,7 @@ import { DataflowView } from "../components/charts/DataflowView";
 import { CoarseDataflowView } from "../components/charts/CoarseDataflowView";
 import { GanttChart } from "../components/charts/GanttChart";
 import { StatusStrip } from "../components/charts/StatusStrip";
-import { TelemetryChart } from "../components/charts/TelemetryChart";
+import { TelemetryChart, TelemetryEmptyMessage } from "../components/charts/TelemetryChart";
 import { JsonTree } from "../components/JsonTree";
 import { Markdown } from "../components/markdown/Markdown";
 import { DataTable } from "../components/tables/DataTable";
@@ -23,11 +23,12 @@ import { TaskDrawer } from "../components/tasks/TaskDrawer";
 import { ActivityDrawer } from "../components/tasks/ActivityDrawer";
 import { apiDelete, apiPost } from "../api/client";
 import { fmtDuration, fmtTs, shortId, statusColor, taskDuration, toEpochSec, type TimeValue } from "../lib/format";
+import { getAiModelUsageRows, type AiModelUsageRow } from "../lib/aiUsage";
 import { ChartRenderer } from "../components/dashboard/ChartRenderer";
 import { chart, dashboardSpec, type DashboardSpec } from "../components/dashboard/spec";
 import { useInspectorStore } from "../stores/inspectorStore";
 
-const TABS = ["tasks", "agents", "graph", "timeline", "telemetry", "card", "artifacts", "dashboard", "raw"] as const;
+const TABS = ["tasks", "agents", "ai", "graph", "timeline", "telemetry", "card", "artifacts", "dashboard", "raw"] as const;
 
 export const Route = createFileRoute("/workflows/$workflowId")({
   component: WorkflowDetail,
@@ -279,7 +280,7 @@ function WorkflowDetail() {
                 search.tab === t ? "border-accent text-fg border-b-2" : "text-fg-muted hover:text-fg"
               }`}
             >
-              {t === "card" ? "Workflow Card" : t === "dashboard" ? "Dashboard" : t === "graph" ? "Graphs" : t}
+              {t === "card" ? "Workflow Card" : t === "dashboard" ? "Dashboard" : t === "graph" ? "Graphs" : t === "ai" ? "AI Model Usage" : t}
             </button>
           ))}
         </div>
@@ -327,6 +328,13 @@ function WorkflowDetail() {
 
       {search.tab === "agents" && <WorkflowAgentsTab workflowId={workflowId} />}
 
+      {search.tab === "ai" && (
+        <AiModelUsageTab
+          tasks={taskItems}
+          onTaskClick={(taskId) => navigate({ search: (s) => ({ ...s, task: taskId }) })}
+        />
+      )}
+
       {search.tab === "graph" && <GraphTab tasks={taskItems} workflowId={workflowId} />}
 
       {search.tab === "timeline" && (
@@ -341,7 +349,7 @@ function WorkflowDetail() {
       {search.tab === "telemetry" && (
         <div className="card p-4">
           {taskItems.length > 0 && !taskItems.some((t) => t.telemetry_at_start || t.telemetry_at_end) ? (
-            <p className="text-fg-muted text-sm">Telemetry capture was disabled for this workflow.</p>
+            <TelemetryEmptyMessage />
           ) : (
             <TelemetryChart filter={{ workflow_id: workflowId }} />
           )}
@@ -443,6 +451,115 @@ function ArtifactsTab({ workflowId }: { workflowId: string }) {
   return (
     <div className="card p-4">
       <DataTable data={items} columns={OBJECT_COLS} onRowClick={(obj) => useInspectorStore.getState().set({ kind: "object", data: obj })} />
+    </div>
+  );
+}
+
+const AI_USAGE_COLS: ColumnDef<AiModelUsageRow, any>[] = [
+  {
+    id: "status",
+    header: "Status",
+    size: 90,
+    cell: ({ row }) => {
+      const status = row.original.task.status ?? "—";
+      return (
+        <span className="inline-flex items-center gap-2">
+          <span className="inline-block h-2 w-2 rounded-full" style={{ background: statusColor(status) }} />
+          <span>{status}</span>
+        </span>
+      );
+    },
+  },
+  {
+    id: "model",
+    header: "Model",
+    size: 180,
+    cell: ({ row }) => row.original.model ?? "—",
+  },
+  {
+    id: "total_tokens",
+    header: "Tokens",
+    size: 90,
+    cell: ({ row }) => row.original.total_tokens_label,
+  },
+  {
+    id: "input_output_tokens",
+    header: "In / Out",
+    size: 100,
+    cell: ({ row }) => `${row.original.input_tokens_label} / ${row.original.output_tokens_label}`,
+  },
+  {
+    id: "prompt",
+    header: "Prompt",
+    size: 220,
+    cell: ({ row }) => <span title="Click row to inspect the full prompt">{row.original.prompt_preview || "—"}</span>,
+  },
+  {
+    id: "response",
+    header: "Response",
+    size: 220,
+    cell: ({ row }) => <span title="Click row to inspect the full response">{row.original.response_preview || "—"}</span>,
+  },
+  {
+    id: "task_id",
+    header: "Task",
+    size: 130,
+    cell: ({ row }) => <span className="font-mono text-accent">{shortId(row.original.task_id, 12)}</span>,
+  },
+  {
+    id: "started_at",
+    header: "Started",
+    size: 150,
+    cell: ({ row }) => fmtTs(row.original.started_at),
+  },
+  {
+    id: "duration",
+    header: "Duration",
+    size: 100,
+    cell: ({ row }) => fmtDuration(row.original.duration),
+  },
+];
+
+function AiModelUsageTab({ tasks, onTaskClick }: { tasks: Task[]; onTaskClick: (taskId: string) => void }) {
+  const rows = useMemo(() => getAiModelUsageRows(tasks), [tasks]);
+  const totals = useMemo(
+    () => ({
+      calls: rows.length,
+      input_tokens: rows.reduce((sum, row) => sum + (row.input_tokens ?? 0), 0),
+      output_tokens: rows.reduce((sum, row) => sum + (row.output_tokens ?? 0), 0),
+      total_tokens: rows.reduce((sum, row) => sum + (row.total_tokens ?? 0), 0),
+    }),
+    [rows],
+  );
+
+  if (!rows.length) {
+    return <div className="card p-4 text-sm text-fg-muted">No AI model invocation tasks found for this workflow.</div>;
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-4">
+        <MetricCard label="LLM calls" value={String(totals.calls)} />
+        <MetricCard label="input tokens" value={String(totals.input_tokens)} />
+        <MetricCard label="output tokens" value={String(totals.output_tokens)} />
+        <MetricCard label="total tokens" value={String(totals.total_tokens)} />
+      </div>
+      <div className="card p-4">
+        <DataTable data={rows} columns={AI_USAGE_COLS} onRowClick={(row) => onTaskClick(row.task_id)} />
+      </div>
+      <div className="card p-4">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">Raw AI model invocation tasks</div>
+        <JsonTree data={rows.map((row) => row.task)} name="ai_model_invocations" />
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="card p-4">
+      <div className="text-xs uppercase tracking-wide text-fg-muted">{label}</div>
+      <div className="mt-1 text-lg font-semibold">{value}</div>
     </div>
   );
 }

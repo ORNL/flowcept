@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 from uuid import uuid4
 
 import flowcept
@@ -13,12 +13,15 @@ from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
 from flowcept.commons.flowcept_logger import FlowceptLogger
+from time import time
+
 from flowcept.commons.utils import (
     ClassProperty,
     buffer_to_disk,
     resolve_dump_buffer_path,
     generate_pseudo_id,
 )
+from flowcept.commons.vocabulary import Status
 from flowcept.configs import (
     MQ_INSTANCES,
     INSTRUMENTATION_ENABLED,
@@ -43,7 +46,7 @@ class Flowcept(object):
     campaign_id = None
     buffer = None
     is_started = False
-    current_instance = None
+    _current_instance = None
 
     @ClassProperty
     def db(cls):
@@ -54,9 +57,14 @@ class Flowcept(object):
             cls._db = DBAPI()
         return cls._db
 
+    @staticmethod
+    def get_current_instance() -> "Flowcept":
+        """Return the active Flowcept instance, or None if none is running."""
+        return Flowcept._current_instance
+
     def __init__(
         self,
-        interceptors: List[str] = None,
+        interceptors: Union[List[str], str, None] = None,
         bundle_exec_id: str = None,
         campaign_id: str = None,
         workflow_id: str = None,
@@ -82,10 +90,10 @@ class Flowcept(object):
 
         Parameters
         ----------
-        interceptors : Union[BaseInterceptor, List[BaseInterceptor], str], optional
+        interceptors : Union[List[str], str, None], optional
             A list of interceptor kinds (or a single interceptor kind) to apply.
             Examples: "instrumentation", "dask", "mlflow", ...
-            The order of interceptors matters — place the outer-most interceptor first,
+            The order of interceptors matters — place the outermost interceptor first,
 
         bundle_exec_id : str, optional
             Identifier for grouping interceptors in a bundle, essential for the correct initialization and stop of
@@ -154,19 +162,21 @@ class Flowcept(object):
         self.args = args
         self.kwargs = kwargs
 
-        if interceptors:
-            self._interceptors = interceptors
-            if not isinstance(self._interceptors, list):
-                self._interceptors = [self._interceptors]
-        else:
+        self._interceptors: Union[List[str], None] = None
+        if interceptors is None:
             if not INSTRUMENTATION_ENABLED:
-                self._interceptors = None
                 self.enabled = False
             else:
                 self._interceptors = ["instrumentation"]
+        elif isinstance(interceptors, list):
+            self._interceptors = interceptors
+        else:
+            self._interceptors = [interceptors]
 
         self._interceptor_instances = None
+        self._first_interceptor: BaseInterceptor = None
         self._should_save_workflow = save_workflow
+        self._current_workflow_obj: WorkflowObject = None
         self._workflow_saved = False  # This is to ensure that the wf is saved only once.
         self.current_workflow_id = workflow_id or str(uuid4())
         self.campaign_id = campaign_id or str(uuid4())
@@ -183,30 +193,7 @@ class Flowcept(object):
         self.parent_workflow_id = parent_workflow_id
         self.agent_id = agent_id
         self.agent_name = agent_name
-
-        if self.agent_id is not None:
-            from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
-
-            agent_obj = AgentObject(agent_id=self.agent_id, name=self.agent_name)
-            agent_obj.enrich()
-
-            from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED
-
-            if MONGO_ENABLED:
-                from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
-
-                try:
-                    MongoDBDAO().insert_or_update_agent(agent_obj)
-                except Exception as e:
-                    self.logger.error(f"Error storing agent in MongoDB: {e}")
-
-            if LMDB_ENABLED:
-                from flowcept.commons.daos.docdb_dao.lmdb_dao import LMDBDAO
-
-                try:
-                    LMDBDAO().insert_or_update_agent(agent_obj)
-                except Exception as e:
-                    self.logger.error(f"Error storing agent in LMDB: {e}")
+        self._agent_saved = False
 
         should_delete_buffer_file = (
             flowcept.configs.DELETE_BUFFER_FILE if delete_buffer_file is None else delete_buffer_file
@@ -241,30 +228,26 @@ class Flowcept(object):
                 interceptor_inst = BaseInterceptor.build(interceptor)
                 interceptor_inst.start(bundle_exec_id=self.bundle_exec_id, check_safe_stops=self._check_safe_stops)
                 self._interceptor_instances.append(interceptor_inst)
+                if self._first_interceptor is None:
+                    self._first_interceptor = interceptor_inst
                 if isinstance(interceptor_inst._mq_dao.buffer, AutoflushBuffer):
                     Flowcept.buffer = self.buffer = interceptor_inst._mq_dao.buffer.current_buffer
                 else:
                     Flowcept.buffer = self.buffer = interceptor_inst._mq_dao.buffer
+
+                if (self.agent_id is not None or self.agent_name is not None) and not self._agent_saved:
+                    self.agent_id = self.save_agent(name=self.agent_name, agent_id=self.agent_id)
+                    self._agent_saved = True
 
                 if self._should_save_workflow and not self._workflow_saved:
                     self.save_workflow(interceptor, interceptor_inst)
 
         else:
             Flowcept.current_workflow_id = None
-        Flowcept.current_instance = self
+        Flowcept._current_instance = self
         Flowcept.is_started = self.is_started = True
         self.logger.debug("Flowcept started successfully.")
         return self
-
-    @staticmethod
-    def emit_message(message: Dict):
-        """Append a message to the active interceptor buffer."""
-        if Flowcept.current_instance is None:
-            return
-        interceptors = Flowcept.current_instance._interceptor_instances or []
-        if not interceptors:
-            return
-        interceptors[0].intercept(message)
 
     def get_buffer(self, return_df: bool = False):
         """
@@ -469,12 +452,261 @@ class Flowcept(object):
             workflow_id=workflow_id or self.current_workflow_id,
             campaign_id=campaign_id or self.campaign_id,
         )
-
-        interceptors = self._interceptor_instances or []
-        if not interceptors:
+        if not self._first_interceptor:
             raise Exception("No active interceptors are initialized or registered on this Flowcept instance.")
-        interceptors[0].send_agent_message(agent_obj)
+        self._first_interceptor.send_agent_message(agent_obj)
         return agent_obj.agent_id
+
+    @staticmethod
+    def _get_interceptor():
+        """Return the active interceptor for object/model message emission.
+
+        Tries the current Flowcept instance first; falls back to InstrumentationInterceptor
+        (needed when called from a Dask worker where no Flowcept context is registered).
+        Raises RuntimeError when neither is available.
+        """
+        fc = Flowcept.get_current_instance()
+        if fc is not None and fc._first_interceptor:
+            return fc._first_interceptor
+        from flowcept.flowceptor.adapters.instrumentation_interceptor import InstrumentationInterceptor
+
+        interceptor = InstrumentationInterceptor.get_instance()
+        if interceptor is None or not interceptor.started:
+            raise RuntimeError(
+                "No active Flowcept context or InstrumentationInterceptor found. "
+                "Ensure Flowcept is started before calling this method."
+            )
+        return interceptor
+
+    @staticmethod
+    def insert_or_update_object(
+        object,
+        object_id=None,
+        task_id=None,
+        workflow_id=None,
+        object_type=None,
+        custom_metadata=None,
+        save_data_in_collection=False,
+        pickle=False,
+        control_version=False,
+        tags=None,
+    ) -> str:
+        """Persist a blob object and emit its metadata to the active MQ buffer.
+
+        Parameters
+        ----------
+        object : Any
+            Blob payload bytes or serializable object.
+        object_id : str, optional
+            Logical object identifier. Generated when omitted.
+        task_id : str, optional
+            Associated task identifier.
+        workflow_id : str, optional
+            Associated workflow identifier. Defaults to current workflow when available.
+        object_type : str, optional
+            User-defined object category.
+        custom_metadata : dict, optional
+            Arbitrary metadata attached to the object.
+        save_data_in_collection : bool, optional
+            ``True`` stores bytes in-object; ``False`` stores in GridFS.
+        pickle : bool, optional
+            If ``True``, pickle ``object`` before persistence.
+        control_version : bool, optional
+            If ``True``, enable append-only history semantics.
+        tags : list of str, optional
+            Labels to associate with the object.
+
+        Returns
+        -------
+        str
+            Persisted object identifier.
+        """
+        from flowcept.flowcept_api.db_api import DBAPI
+        from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
+
+        interceptor = Flowcept._get_interceptor()
+        wf_id = workflow_id or Flowcept.current_workflow_id
+        blob_obj = BlobObject(
+            object_id=object_id,
+            task_id=task_id,
+            workflow_id=wf_id,
+            object_type=object_type,
+            custom_metadata=custom_metadata,
+            tags=tags,
+        )
+        blob_obj = DBAPI()._insert_or_update_object(
+            blob_obj=blob_obj,
+            object=object,
+            save_data_in_collection=save_data_in_collection,
+            pickle=pickle,
+            control_version=control_version,
+        )
+        interceptor.send_object_message(blob_obj)
+        return blob_obj.object_id
+
+    @staticmethod
+    def insert_or_update_ml_model(
+        object,
+        object_id=None,
+        task_id=None,
+        workflow_id=None,
+        custom_metadata=None,
+        save_data_in_collection=False,
+        pickle=False,
+        control_version=False,
+        tags=None,
+    ) -> str:
+        """Persist an ML model blob and emit its metadata to the active MQ buffer.
+
+        Parameters
+        ----------
+        object : Any
+            Model payload bytes or serializable object.
+        object_id : str, optional
+            Logical object identifier.
+        task_id : str, optional
+            Associated task identifier.
+        workflow_id : str, optional
+            Associated workflow identifier.
+        custom_metadata : dict, optional
+            Arbitrary metadata attached to the object.
+        save_data_in_collection : bool, optional
+            ``True`` stores bytes in-object; ``False`` stores in GridFS.
+        pickle : bool, optional
+            If ``True``, pickle ``object`` before persistence.
+        control_version : bool, optional
+            Enable append-only history semantics.
+        tags : list of str, optional
+            Labels to associate with the object.
+
+        Returns
+        -------
+        str
+            Persisted object identifier.
+        """
+        return Flowcept.insert_or_update_object(
+            object=object,
+            object_id=object_id,
+            task_id=task_id,
+            workflow_id=workflow_id,
+            object_type="ml_model",
+            custom_metadata=custom_metadata,
+            save_data_in_collection=save_data_in_collection,
+            pickle=pickle,
+            control_version=control_version,
+            tags=tags,
+        )
+
+    @staticmethod
+    def insert_or_update_dataset(
+        object,
+        object_id=None,
+        task_id=None,
+        workflow_id=None,
+        custom_metadata=None,
+        save_data_in_collection=False,
+        pickle=False,
+        control_version=False,
+        tags=None,
+    ) -> str:
+        """Persist a dataset blob and emit its metadata to the active MQ buffer.
+
+        Parameters
+        ----------
+        object : Any
+            Dataset payload bytes or serializable object.
+        object_id : str, optional
+            Logical object identifier.
+        task_id : str, optional
+            Associated task identifier.
+        workflow_id : str, optional
+            Associated workflow identifier.
+        custom_metadata : dict, optional
+            Arbitrary metadata attached to the object.
+        save_data_in_collection : bool, optional
+            ``True`` stores bytes in-object; ``False`` stores in GridFS.
+        pickle : bool, optional
+            If ``True``, pickle ``object`` before persistence.
+        control_version : bool, optional
+            Enable append-only history semantics.
+        tags : list of str, optional
+            Labels to associate with the object.
+
+        Returns
+        -------
+        str
+            Persisted object identifier.
+        """
+        return Flowcept.insert_or_update_object(
+            object=object,
+            object_id=object_id,
+            task_id=task_id,
+            workflow_id=workflow_id,
+            object_type="dataset",
+            custom_metadata=custom_metadata,
+            save_data_in_collection=save_data_in_collection,
+            pickle=pickle,
+            control_version=control_version,
+            tags=tags,
+        )
+
+    @staticmethod
+    def insert_or_update_torch_model(
+        model,
+        object_id=None,
+        task_id=None,
+        workflow_id=None,
+        custom_metadata=None,
+        control_version=False,
+        save_profile=True,
+        tags=None,
+    ) -> str:
+        """Persist a PyTorch model state dictionary and emit its metadata to the active MQ buffer.
+
+        Parameters
+        ----------
+        model : torch.nn.Module
+            PyTorch model whose ``state_dict`` will be persisted.
+        object_id : str, optional
+            Existing object identifier to update.
+        task_id : str, optional
+            Associated task identifier.
+        workflow_id : str, optional
+            Associated workflow identifier.
+        custom_metadata : dict, optional
+            Extra metadata. The model class name is added automatically.
+        control_version : bool, optional
+            Enable append-only history semantics.
+        save_profile : bool, optional
+            If ``True`` (default), adds ``model_profile`` to ``custom_metadata``.
+        tags : list of str, optional
+            Labels to associate with the object.
+
+        Returns
+        -------
+        str
+            Persisted object identifier.
+        """
+        from flowcept.flowcept_api.db_api import DBAPI
+        from flowcept.commons.flowcept_dataclasses.blob_object import BlobObject
+
+        interceptor = Flowcept._get_interceptor()
+        wf_id = workflow_id or Flowcept.current_workflow_id
+        blob_obj = BlobObject(
+            object_id=object_id,
+            task_id=task_id,
+            workflow_id=wf_id,
+            custom_metadata=custom_metadata,
+            tags=tags,
+        )
+        blob_obj = DBAPI()._insert_or_update_torch_model(
+            model=model,
+            blob_obj=blob_obj,
+            control_version=control_version,
+            save_profile=save_profile,
+        )
+        interceptor.send_object_message(blob_obj)
+        return blob_obj.object_id
 
     @staticmethod
     def generate_report(
@@ -504,7 +736,8 @@ class Flowcept(object):
         output_path : str, optional
             Destination path for the generated report file.
         input_jsonl_path : str, optional
-            Path to a Flowcept JSONL buffer file used as report input.
+            Path to a Flowcept JSONL buffer file used as report input. If no
+            input mode is provided, the configured default buffer file is used.
         records : list of dict, optional
             In-memory workflow/task/object records used as report input.
         workflow_id : str, optional
@@ -661,35 +894,40 @@ class Flowcept(object):
         -------
         None
         """
-        wf_obj = WorkflowObject()
-        wf_obj.workflow_id = Flowcept.current_workflow_id
-        wf_obj.campaign_id = Flowcept.campaign_id
-        wf_obj.parent_workflow_id = self.parent_workflow_id
-        wf_obj.agent_id = self.agent_id
+        self._current_workflow_obj = WorkflowObject()
+        self._current_workflow_obj.workflow_id = Flowcept.current_workflow_id
+        self._current_workflow_obj.started_at = time()
+        self._current_workflow_obj.status = Status.RUNNING
+        self._current_workflow_obj.campaign_id = Flowcept.campaign_id
+        self._current_workflow_obj.parent_workflow_id = self.parent_workflow_id
+        self._current_workflow_obj.agent_id = self.agent_id
         if self.workflow_name:
-            wf_obj.name = self.workflow_name
+            self._current_workflow_obj.name = self.workflow_name
         if self.workflow_description:
-            wf_obj.workflow_description = self.workflow_description
+            self._current_workflow_obj.workflow_description = self.workflow_description
         if self.workflow_subtype:
-            wf_obj.subtype = self.workflow_subtype
+            self._current_workflow_obj.subtype = self.workflow_subtype
         if self.workflow_args:
-            wf_obj.used = self.workflow_args
+            self._current_workflow_obj.used = self.workflow_args
 
         if interceptor == "dask":
             dask_client = self.kwargs.get("dask_client", None)
             if dask_client:
                 from flowcept.flowceptor.adapters.dask.dask_plugins import set_workflow_info_on_workers
 
-                wf_obj.adapter_id = "dask"
+                self._current_workflow_obj.adapter_id = "dask"
                 scheduler_info = dict(dask_client.scheduler_info())
-                wf_obj.custom_metadata = {"n_workers": len(scheduler_info["workers"]), "scheduler": scheduler_info}
-                set_workflow_info_on_workers(dask_client, wf_obj)
+                self._current_workflow_obj.custom_metadata = {
+                    "n_workers": len(scheduler_info["workers"]),
+                    "scheduler": scheduler_info,
+                }
+                set_workflow_info_on_workers(dask_client, self._current_workflow_obj)
             else:
                 raise Exception("You must provide the argument `dask_client` so we can correctly link the workflow.")
 
         if KVDB_ENABLED:
             interceptor_instance._mq_dao.set_campaign_id(Flowcept.campaign_id)
-        interceptor_instance.send_workflow_message(wf_obj)
+        interceptor_instance.send_workflow_message(self._current_workflow_obj)
         self._workflow_saved = True
 
     def _init_persistence(self, mq_host=None, mq_port=None):
@@ -707,6 +945,15 @@ class Flowcept(object):
         if not self.is_started or not self.enabled:
             self.logger.warning("Flowcept is already stopped or may never have been started!")
             return
+
+        if (
+            self._should_save_workflow
+            and self._first_interceptor is not None
+            and self._current_workflow_obj is not None
+        ):
+            self._current_workflow_obj.ended_at = time()
+            self._current_workflow_obj.status = Status.FINISHED
+            self._first_interceptor.intercept(self._current_workflow_obj.to_dict())
 
         if self._interceptors and len(self._interceptor_instances):
             for interceptor in self._interceptor_instances:
@@ -730,7 +977,7 @@ class Flowcept(object):
             pass
 
         Flowcept.buffer = self.buffer = None
-        Flowcept.current_instance = None
+        Flowcept._current_instance = None
         Flowcept.is_started = self.is_started = False
         self.logger.debug("All stopped!")
 
@@ -744,51 +991,62 @@ class Flowcept(object):
         self.stop()
 
     @staticmethod
-    def services_alive() -> bool:
-        """
-        Checks the liveness of the MQ (Message Queue) and, if enabled, the MongoDB service.
+    def services_status() -> Dict[str, str]:
+        """Return per-service liveness as ``{service: "ok" | "unavailable"}``.
 
-        Returns
-        -------
-        bool
-            True if all services (MQ and optionally MongoDB) are alive, False otherwise.
-
-        Notes
-        -----
-        - The method tests the liveness of the MQ service using `MQDao`.
-        - If `MONGO_ENABLED` is True, it also checks the liveness of the MongoDB service
-          using `MongoDBDAO`.
-        - Logs errors if any service is not ready, and logs success when both services are operational.
-
-        Examples
-        --------
-        >>> is_alive = services_alive()
-        >>> if is_alive:
-        ...     print("All services are running.")
-        ... else:
-        ...     print("One or more services are not ready.")
+        Which services are checked is driven entirely by settings.yaml / env vars:
+        ``mq.enabled``, ``kv_db.enabled``, ``databases.mongodb.enabled``,
+        ``databases.lmdb.enabled``, and ``agent.chat_enabled`` with a valid API key.
         """
         logger = FlowceptLogger()
+        result: Dict[str, str] = {}
         mq = MQDao.build()
+
         if MQ_ENABLED:
-            if not mq.liveness_test():
-                logger.error("MQ Not Ready!")
-                return False
+            up = mq.liveness_test()
+            result["mq"] = "ok" if up else "unavailable"
+            if not up:
+                logger.error("MQ not ready!")
 
         if KVDB_ENABLED:
-            if not mq._keyvalue_dao.liveness_test():
-                logger.error("KVBD is enabled but is not ready!")
-                return False
+            up = mq._keyvalue_dao.liveness_test()
+            result["kvdb"] = "ok" if up else "unavailable"
+            if not up:
+                logger.error("KVDB is enabled but not ready!")
 
-        logger.info("MQ is alive!")
-        if MONGO_ENABLED:
-            from flowcept.commons.daos.docdb_dao.mongodb_dao import MongoDBDAO
+        if MONGO_ENABLED or LMDB_ENABLED:
+            from flowcept.flowcept_api.db_api import DBAPI
 
-            if not MongoDBDAO(create_indices=False).liveness_test():
-                logger.error("MongoDB is enabled but DocDB is not Ready!")
-                return False
-            logger.info("DocDB is alive!")
-        return True
+            for backend, up in DBAPI.db_liveness_tests().items():
+                result[backend] = "ok" if up else "unavailable"
+                if up:
+                    logger.info(f"{backend} is alive!")
+                else:
+                    logger.error(f"{backend} is enabled but not ready!")
+
+        from flowcept.configs import AGENT, AGENT_CHAT_ENABLED
+
+        if AGENT_CHAT_ENABLED:
+            api_key = AGENT_API_KEY
+            provider = AGENT.get("service_provider", "")
+            bad = {"", "?", "your-api-key-here"}
+            if api_key not in bad and provider not in bad:
+                try:
+                    from flowcept.agents.llm.builders import build_llm_model
+
+                    build_llm_model(track_tools=False).invoke("ping")
+                    result["llm"] = "ok"
+                    logger.info("LLM provider is alive!")
+                except Exception as exc:
+                    result["llm"] = "unavailable"
+                    logger.error(f"LLM provider not reachable: {exc}")
+
+        return result
+
+    @staticmethod
+    def services_alive() -> bool:
+        """Return True when all enabled services are reachable (or none are enabled)."""
+        return all(v == "ok" for v in Flowcept.services_status().values())
 
     @staticmethod
     def start_consumption_services(bundle_exec_id: str = None, check_safe_stops: bool = False, consumers: List = None):

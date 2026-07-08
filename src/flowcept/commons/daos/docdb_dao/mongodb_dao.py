@@ -6,7 +6,6 @@ from typing import List, Dict, Tuple, Any
 import io
 import json
 from uuid import uuid4
-from datetime import datetime, timezone
 
 import pickle
 import zipfile
@@ -581,11 +580,6 @@ class MongoDBDAO(DocumentDBDAO):
         }
 
     @staticmethod
-    def _utc_now():
-        """Get timezone-aware UTC timestamp."""
-        return datetime.now(timezone.utc)
-
-    @staticmethod
     def _payload_to_bytes(payload):
         """Convert supported payload types to bytes for hashing/size metadata."""
         if isinstance(payload, bytes):
@@ -758,6 +752,22 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
+    def save_workflow_domain_data_schema(self, workflow_id: str, fields: Dict) -> bool:
+        """Update selected workflow fields without replacing the full document."""
+        if workflow_id is None:
+            self.logger.exception("The workflow identifier cannot be none.")
+            return False
+        try:
+            result = self._wfs_collection.update_one(
+                {WorkflowObject.workflow_id_field(): workflow_id},
+                {"$set": fields},
+                upsert=True,
+            )
+            return result.matched_count > 0 or result.upserted_id is not None
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
     def insert_or_update_agent(self, agent_obj: AgentObject) -> bool:
         """Insert or update agent."""
         _dict = agent_obj.to_dict().copy()
@@ -887,27 +897,25 @@ class MongoDBDAO(DocumentDBDAO):
 
     def save_or_update_object(
         self,
+        blob_obj,
         object,
-        object_id=None,
-        task_id=None,
-        workflow_id=None,
-        object_type=None,
-        custom_metadata=None,
         save_data_in_collection=False,
         pickle_=False,
         control_version=False,
-        tags=None,
     ):
         """Save an object."""
-        if object_id is None:
-            object_id = str(uuid4())
-        now = MongoDBDAO._utc_now()
+        from time import time
         from flowcept.configs import FLOWCEPT_USER
 
-        actor = FLOWCEPT_USER
+        if blob_obj.object_id is None:
+            blob_obj.object_id = str(uuid4())
+        now = time()
+        if blob_obj.created_at is None:
+            blob_obj.created_at = now
+        blob_obj.updated_at = now
 
         obj_doc = {
-            "object_id": object_id,
+            "object_id": blob_obj.object_id,
             **self._build_blob_storage_doc(
                 object_payload=object,
                 save_data_in_collection=save_data_in_collection,
@@ -915,16 +923,16 @@ class MongoDBDAO(DocumentDBDAO):
             ),
         }
 
-        if task_id is not None:
-            obj_doc["task_id"] = task_id
-        if workflow_id is not None:
-            obj_doc["workflow_id"] = workflow_id
-        if object_type is not None:
-            obj_doc["object_type"] = object_type
-        if custom_metadata is not None:
-            obj_doc["custom_metadata"] = custom_metadata
-        if tags is not None:
-            obj_doc["tags"] = list(tags)
+        if blob_obj.task_id is not None:
+            obj_doc["task_id"] = blob_obj.task_id
+        if blob_obj.workflow_id is not None:
+            obj_doc["workflow_id"] = blob_obj.workflow_id
+        if blob_obj.object_type is not None:
+            obj_doc["object_type"] = blob_obj.object_type
+        if blob_obj.custom_metadata is not None:
+            obj_doc["custom_metadata"] = blob_obj.custom_metadata
+        if blob_obj.tags is not None:
+            obj_doc["tags"] = list(blob_obj.tags)
 
         if not control_version:
             update_query = [
@@ -932,32 +940,35 @@ class MongoDBDAO(DocumentDBDAO):
                     "$set": {
                         **obj_doc,
                         "version": {"$add": [{"$ifNull": ["$version", -1]}, 1]},
+                        "created_at": {"$ifNull": ["$created_at", blob_obj.created_at]},
+                        "updated_at": blob_obj.updated_at,
                     }
                 }
             ]
             self._obj_collection.update_one(
-                {"object_id": object_id},
+                {"object_id": blob_obj.object_id},
                 update_query,
                 upsert=True,
             )
-            return object_id
+            return blob_obj.object_id
 
+        actor = FLOWCEPT_USER
         max_attempts = 5
         for attempt in range(max_attempts):
-            latest_doc = self._obj_collection.find_one({"object_id": object_id})
+            latest_doc = self._obj_collection.find_one({"object_id": blob_obj.object_id})
             if latest_doc is None:
                 insert_doc = {
                     **obj_doc,
                     "version": 0,
                     "prev_version": None,
-                    "created_at": now,
+                    "created_at": blob_obj.created_at,
                     "created_by": actor,
-                    "updated_at": now,
+                    "updated_at": blob_obj.updated_at,
                     "updated_by": actor,
                 }
                 try:
                     self._obj_collection.insert_one(insert_doc)
-                    return object_id
+                    return blob_obj.object_id
                 except Exception:
                     if attempt == max_attempts - 1:
                         raise
@@ -969,20 +980,20 @@ class MongoDBDAO(DocumentDBDAO):
                 **obj_doc,
                 "version": expected_version + 1,
                 "prev_version": expected_version,
-                "created_at": latest_doc.get("created_at", now),
+                "created_at": latest_doc.get("created_at", blob_obj.created_at),
                 "created_by": latest_doc.get("created_by", actor),
-                "updated_at": now,
+                "updated_at": blob_obj.updated_at,
                 "updated_by": actor,
             }
             try:
                 matched_count = self._update_with_optional_transaction(
-                    object_id=object_id,
+                    object_id=blob_obj.object_id,
                     expected_version=expected_version,
                     latest_doc=latest_doc,
                     update_doc=update_doc,
                 )
                 if matched_count == 1:
-                    return object_id
+                    return blob_obj.object_id
                 # CAS failed; remove potential duplicate history append on next trial by ignoring dup insert.
                 sleep(0.02 * (attempt + 1))
             except Exception as e:
@@ -992,7 +1003,7 @@ class MongoDBDAO(DocumentDBDAO):
                 sleep(0.02 * (attempt + 1))
                 continue
 
-        raise ValueError(f"Could not update object_id={object_id} due to repeated concurrent CAS failures.")
+        raise ValueError(f"Could not update object_id={blob_obj.object_id} due to repeated concurrent CAS failures.")
 
     def update_object_metadata(
         self,
@@ -1008,10 +1019,11 @@ class MongoDBDAO(DocumentDBDAO):
         if object_id is None:
             raise ValueError("object_id must not be None.")
 
+        from time import time
         from flowcept.configs import FLOWCEPT_USER
 
         actor = FLOWCEPT_USER
-        now = MongoDBDAO._utc_now()
+        now = time()
         set_fields = {}
 
         if custom_metadata is not None:
@@ -1820,3 +1832,337 @@ class MongoDBDAO(DocumentDBDAO):
         except Exception as e:
             self.logger.exception(e)
             return {}
+
+    def task_summary(self, filter: Dict) -> Dict:
+        """Summarize tasks via Mongo aggregation pipeline.
+
+        Returns status counts, per-activity stats, and time range for tasks matching filter.
+        """
+        from flowcept.commons.daos.docdb_dao.docdb_dao_utils import _merge_summary_rows
+
+        match = [{"$match": filter}] if filter else []
+        duration_seconds = {"$divide": [{"$subtract": ["$ended_at", "$started_at"]}, 1000]}
+        rows = (
+            self.raw_pipeline(
+                match
+                + [
+                    {
+                        "$group": {
+                            "_id": {"activity_id": "$activity_id", "status": "$status"},
+                            "count": {"$sum": 1},
+                            "avg_duration": {"$avg": duration_seconds},
+                            "min_duration": {"$min": duration_seconds},
+                            "max_duration": {"$max": duration_seconds},
+                            "sum_duration": {"$sum": duration_seconds},
+                            "min_started_at": {"$min": "$started_at"},
+                            "max_ended_at": {"$max": "$ended_at"},
+                        }
+                    }
+                ],
+                collection="tasks",
+            )
+            or []
+        )
+        return _merge_summary_rows(
+            [
+                {
+                    "activity_id": row["_id"].get("activity_id"),
+                    "status": row["_id"].get("status"),
+                    **{k: row.get(k) for k in row if k != "_id"},
+                }
+                for row in rows
+            ]
+        )
+
+    def derive_campaigns(self, campaign_id: str = None) -> List[Dict]:
+        """Derive campaign summaries by grouping workflows and tasks by campaign_id.
+
+        Parameters
+        ----------
+        campaign_id : str, optional
+            When provided, only the matching campaign is returned.
+        """
+        from flowcept.commons.daos.docdb_dao.docdb_dao_utils import to_epoch
+
+        campaigns: Dict = {}
+
+        def _campaign(cid):
+            return campaigns.setdefault(
+                cid,
+                {
+                    "campaign_id": cid,
+                    "workflow_count": 0,
+                    "task_count": 0,
+                    "users": set(),
+                    "workflow_names": set(),
+                    "first_ts": None,
+                    "last_ts": None,
+                },
+            )
+
+        def _expand(record, *values):
+            for raw in values:
+                val = to_epoch(raw)
+                if val is None:
+                    continue
+                record["first_ts"] = val if record["first_ts"] is None else min(record["first_ts"], val)
+                record["last_ts"] = val if record["last_ts"] is None else max(record["last_ts"], val)
+
+        _base_match: Dict = {"campaign_id": {"$exists": True, "$ne": None}}
+        if campaign_id:
+            _base_match["campaign_id"] = campaign_id
+
+        wf_rows = (
+            self.raw_pipeline(
+                [
+                    {"$match": _base_match},
+                    {
+                        "$group": {
+                            "_id": "$campaign_id",
+                            "workflow_count": {"$sum": 1},
+                            "users": {"$addToSet": "$user"},
+                            "workflow_names": {"$addToSet": "$name"},
+                            "first_ts": {"$min": "$utc_timestamp"},
+                            "last_ts": {"$max": "$utc_timestamp"},
+                        }
+                    },
+                ],
+                collection="workflows",
+            )
+            or []
+        )
+
+        task_rows = (
+            self.raw_pipeline(
+                [
+                    {"$match": _base_match},
+                    {
+                        "$group": {
+                            "_id": "$campaign_id",
+                            "task_count": {"$sum": 1},
+                            "first_ts": {"$min": "$started_at"},
+                            "last_ts": {"$max": "$ended_at"},
+                        }
+                    },
+                ],
+                collection="tasks",
+            )
+            or []
+        )
+
+        for row in wf_rows:
+            record = _campaign(row["_id"])
+            record["workflow_count"] = row.get("workflow_count", 0)
+            record["users"].update(u for u in row.get("users", []) if u)
+            record["workflow_names"].update(n for n in row.get("workflow_names", []) if n)
+            _expand(record, row.get("first_ts"), row.get("last_ts"))
+        for row in task_rows:
+            record = _campaign(row["_id"])
+            record["task_count"] = row.get("task_count", 0)
+            _expand(record, row.get("first_ts"), row.get("last_ts"))
+
+        results = []
+        for record in campaigns.values():
+            record["users"] = sorted(record["users"])
+            record["workflow_names"] = sorted(record["workflow_names"])
+            results.append(record)
+        results.sort(
+            key=lambda r: (1, r["last_ts"]) if r["last_ts"] is not None else (0, float("-inf")),
+            reverse=True,
+        )
+        return results
+
+    def derive_agents(self, filter: Dict = None) -> List[Dict]:
+        """Derive agent summaries by joining stored agents with task provenance."""
+
+        def _ts(val):
+            if val is None:
+                return None
+            if isinstance(val, (int, float)):
+                return float(val)
+            from datetime import datetime as _dt
+
+            if isinstance(val, _dt):
+                return val.timestamp()
+            if isinstance(val, str):
+                try:
+                    return _dt.fromisoformat(val.replace("Z", "+00:00")).timestamp()
+                except Exception:
+                    return None
+            return None
+
+        try:
+            stored = self.agent_query(filter=filter or {}) or []
+        except Exception as e:
+            self.logger.error(f"Error querying stored agents: {e}")
+            stored = []
+        stored = [a for a in stored if a.get("agent_id") not in ("train_agent_id", "orchestrator_agent_id")]
+        if not stored:
+            return []
+
+        agent_ids = [a["agent_id"] for a in stored if "agent_id" in a]
+        rows = (
+            self.raw_pipeline(
+                [
+                    {"$match": {"agent_id": {"$in": agent_ids}}},
+                    {
+                        "$group": {
+                            "_id": "$agent_id",
+                            "task_count": {"$sum": 1},
+                            "activities": {"$addToSet": "$activity_id"},
+                            "source_agent_ids": {"$addToSet": "$source_agent_id"},
+                            "campaign_ids": {"$addToSet": "$campaign_id"},
+                            "workflow_ids": {"$addToSet": "$workflow_id"},
+                            "last_active": {"$max": "$registered_at"},
+                        }
+                    },
+                ],
+                collection="tasks",
+            )
+            or []
+        )
+
+        stats_map = {
+            row["_id"]: {
+                "task_count": row.get("task_count", 0),
+                "activities": sorted(a for a in row.get("activities", []) if a),
+                "source_agent_ids": sorted(s for s in row.get("source_agent_ids", []) if s),
+                "campaign_ids": sorted(c for c in row.get("campaign_ids", []) if c),
+                "workflow_ids": sorted(w for w in row.get("workflow_ids", []) if w),
+                "last_active": _ts(row.get("last_active")),
+            }
+            for row in rows
+        }
+
+        agents = []
+        for sa in stored:
+            agent_id = sa["agent_id"]
+            stat = stats_map.get(
+                agent_id,
+                {
+                    "task_count": 0,
+                    "activities": [],
+                    "source_agent_ids": [],
+                    "campaign_ids": [],
+                    "workflow_ids": [],
+                    "last_active": None,
+                },
+            )
+            if stat["task_count"] == 0:
+                continue
+            agents.append(
+                {
+                    "agent_id": agent_id,
+                    "task_count": stat["task_count"],
+                    "activities": stat["activities"],
+                    "source_agent_ids": stat["source_agent_ids"],
+                    "campaign_ids": stat["campaign_ids"],
+                    "workflow_ids": stat["workflow_ids"],
+                    "last_active": stat["last_active"],
+                    "name": sa.get("name"),
+                    "workflow_id": sa.get("workflow_id"),
+                    "registered_at": _ts(sa.get("registered_at")),
+                }
+            )
+        agents.sort(
+            key=lambda a: (1, a["registered_at"]) if a["registered_at"] is not None else (0, float("-inf")),
+            reverse=True,
+        )
+        return agents
+
+    def telemetry_timeseries(
+        self, filter: Dict, fields: List, x_field: str = "started_at", limit: int = 1000
+    ) -> List[Dict]:
+        """Extract plottable rows of dot-notated fields from tasks."""
+        from flowcept.commons.daos.docdb_dao.docdb_dao_utils import get_nested
+
+        top_level = sorted({f.split(".")[0] for f in fields} | {x_field.split(".")[0]})
+        docs = (
+            self.task_query(
+                filter=filter,
+                projection=["task_id", "activity_id"] + top_level,
+                limit=limit,
+            )
+            or []
+        )
+        rows = []
+        for doc in docs:
+            row = {
+                x_field: get_nested(doc, x_field),
+                "task_id": doc.get("task_id"),
+                "activity_id": doc.get("activity_id"),
+            }  # noqa: E501
+            row.update({f: get_nested(doc, f) for f in fields})
+            rows.append(row)
+        rows.sort(key=lambda r: (r[x_field] is None, r[x_field]))
+        return rows
+
+    def resolve_chart_data(self, data: Dict, context: Dict = None) -> Dict:
+        """Resolve a declarative chart spec into plottable rows (Mongo implementation)."""
+        from flowcept.commons.daos.docdb_dao.docdb_dao_utils import (
+            _merge_context_filter,
+            _metric_key,
+        )
+
+        card_filter = data.get("filter") or {}
+        query_filter = _merge_context_filter(card_filter, context)
+        source = data.get("source", "tasks")
+        limit = data.get("limit") or 1000
+        group_by = data.get("group_by")
+        metrics = data.get("metrics") or []
+        x_field = data.get("x")
+        y_fields = data.get("y") or []
+
+        if source == "collection_sizes":
+            rows = []
+            for collection in ("tasks", "objects", "workflows"):
+                try:
+                    result = self.raw_pipeline(
+                        ([{"$match": query_filter}] if query_filter else [])
+                        + [{"$group": {"_id": None, "bytes": {"$sum": {"$bsonSize": "$$ROOT"}}}}],
+                        collection=collection,
+                    )
+                    bytes_val = result[0]["bytes"] if result else 0
+                except Exception:
+                    bytes_val = 0
+                rows.append({"collection": collection, "sum_bytes": bytes_val})
+            return {"rows": rows, "count": len(rows)}
+
+        if group_by or metrics:
+            metrics = metrics or [{"field": "", "agg": "count"}]
+            has_elapsed = any(m.get("field") == "elapsed" for m in metrics)
+            if source in ("tasks", "workflows", "objects") and not has_elapsed:
+                group_id = f"${group_by}" if group_by else None
+                group_stage: Dict = {"_id": group_id}
+                mongo_key_map: Dict = {}
+                for metric in metrics:
+                    canonical = _metric_key(metric)
+                    mongo_key = canonical.replace(".", "_")
+                    mongo_key_map[mongo_key] = canonical
+                    if metric.get("agg") == "count":
+                        group_stage[mongo_key] = {"$sum": 1}
+                    else:
+                        group_stage[mongo_key] = {f"${metric['agg']}": f"${metric['field']}"}
+                pipeline = ([{"$match": query_filter}] if query_filter else []) + [{"$group": group_stage}]
+                raw = self.raw_pipeline(pipeline, collection=source) or []
+                out = []
+                for row in raw:
+                    record = {group_by or "group": row.pop("_id")}
+                    for mk, canonical in mongo_key_map.items():
+                        if mk in row:
+                            record[canonical] = row.pop(mk)
+                    record.update(row)
+                    out.append(record)
+                out.sort(key=lambda r: str(r.get(group_by or "group")))
+                rows = out[:limit]
+                return {"rows": rows, "count": len(rows)}
+
+        if x_field and y_fields:
+            rows = self.telemetry_timeseries(query_filter, fields=y_fields, x_field=x_field, limit=limit)
+            return {"rows": rows[:limit], "count": len(rows[:limit])}
+
+        sort_raw = data.get("sort")
+        sort = None if not sort_raw else [(s["field"], s["order"]) for s in sort_raw]
+        rows = self.query(collection=source, filter=query_filter, limit=limit, sort=sort) or []
+        rows = rows[:limit]
+        return {"rows": rows, "count": len(rows)}
