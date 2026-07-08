@@ -11,7 +11,7 @@ import pandas as pd
 
 from flowcept.agents import ToolResult
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.configs import AGENT, INSTRUMENTATION_ENABLED, MQ_ENABLED
+from flowcept.configs import AGENT, INSTRUMENTATION_ENABLED, MQ_ENABLED, AGENT_API_KEY
 from flowcept.flowcept_api.flowcept_controller import Flowcept
 from flowcept.instrumentation.flowcept_task import flowcept_task
 

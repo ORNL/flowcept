@@ -6,7 +6,7 @@ import unicodedata
 
 from flowcept.flowceptor.consumers.agent.base_agent_context_manager import BaseAgentContextManager
 from flowcept.instrumentation.flowcept_agent_task import FlowceptLLM, get_current_context_task
-from flowcept.configs import AGENT
+from flowcept.configs import AGENT, AGENT_API_KEY
 
 
 def build_llm_model(

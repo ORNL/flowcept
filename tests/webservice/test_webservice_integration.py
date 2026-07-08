@@ -15,7 +15,7 @@ from flowcept import Flowcept, FlowceptTask, WorkflowObject
 from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.configs import MONGO_ENABLED
+from flowcept.configs import MONGO_ENABLED, AGENT_API_KEY
 from flowcept.webservice.main import create_app
 
 logger = FlowceptLogger()
