@@ -60,3 +60,4 @@ ui/src/routeTree.gen.ts
 ui/docs/
 ui/test-results/
 ui/playwright-report/
+.codex/

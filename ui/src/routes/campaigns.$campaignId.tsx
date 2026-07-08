@@ -13,7 +13,7 @@ import { ChartRenderer } from "../components/dashboard/ChartRenderer";
 import { chart as chartSchema, dashboardSpec, type DashboardSpec } from "../components/dashboard/spec";
 import { StatusStrip } from "../components/charts/StatusStrip";
 import { Markdown } from "../components/markdown/Markdown";
-import { fmtTs, fmtUserTs, shortId } from "../lib/format";
+import { fmtTs, fmtUserTs, getWorkflowTimestamp, shortId } from "../lib/format";
 
 
 export const Route = createFileRoute("/campaigns/$campaignId")({
@@ -101,7 +101,7 @@ function CampaignDetail() {
                   <span className="font-medium">{w.name}</span>{" "}
                   <span className="text-fg-muted font-mono">{shortId(w.workflow_id)}</span>
                 </span>
-                <span className="text-fg-muted">{fmtUserTs(w.user, w.utc_timestamp)}</span>
+                <span className="text-fg-muted">{fmtUserTs(w.user, getWorkflowTimestamp(w))}</span>
               </Link>
             ))}
         </div>

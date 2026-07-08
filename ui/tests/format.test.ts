@@ -15,6 +15,7 @@ import {
   agentIconStyle,
   buildAgentNameColorMap,
   applyNodePositions,
+  getWorkflowTimestamp,
   sortAgents,
   sortCampaigns,
   sortWorkflows,
@@ -204,6 +205,16 @@ describe("workflow sort ordering (newest-first)", () => {
     );
     expect(sorted[0].workflow_id).toBe("wf-ts");
     expect(sorted[1].workflow_id).toBe("wf-no-ts");
+  });
+
+  it("sorts workflows by started_at when utc_timestamp is missing", () => {
+    const workflows = [
+      { workflow_id: "wf-old", name: "old run", utc_timestamp: 1_700_000_000 },
+      { workflow_id: "wf-new", name: "new run", started_at: 1_780_000_000 },
+    ];
+    const sorted = sortWorkflows(workflows);
+    expect(getWorkflowTimestamp(sorted[0])).toBe(1_780_000_000);
+    expect(sorted[0].workflow_id).toBe("wf-new");
   });
 });
 
@@ -505,7 +516,6 @@ describe("filterGraphEdges", () => {
     expect(res.map((e) => e.relation)).not.toContain("delegation");
   });
 });
-
 
 
 

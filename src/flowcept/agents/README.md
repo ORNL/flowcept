@@ -52,7 +52,7 @@ agents/
     pandas_utils.py          # safe_execute, normalize_output, format_result_df, …
 
   mcp/
-    mcp_server.py            # MCP server entry point (start with `flowcept --start-agent`)
+    mcp_server.py            # MCP server entry point (start with `flowcept --start --agent`)
     mcp_client.py            # Client helpers: run_tool()
     mcp_tools/               # Thin MCP wrappers over data_query_tools/
       db_query_mcp_tools.py
@@ -161,7 +161,7 @@ paper reference.
 ## Starting the MCP Server
 
 ```bash
-flowcept --start-agent
+flowcept --start --agent
 ```
 
 ## Client Usage

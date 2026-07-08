@@ -4,7 +4,7 @@ Flowcept Agent
 Flowcept exposes provenance data to LLM-based agents through two complementary surfaces:
 
 **1. Web Chat Agent (browser-embedded)**
-   An interactive chat panel in the Flowcept Web UI (``flowcept --start-ui``) that answers
+   An interactive chat panel in the Flowcept Web UI (``flowcept --start --ui``) that answers
    natural-language questions about provenance data stored in MongoDB. It queries the
    **persisted provenance store** and is always scoped to the page the user is viewing
    (a specific workflow or campaign). It also supports **streaming-data context**: when a
@@ -21,7 +21,7 @@ Flowcept exposes provenance data to LLM-based agents through two complementary s
    - Requires ``agent`` + ``web_server.chat.enabled: true`` in settings (see :doc:`web_ui`).
 
 **2. MCP Agent (external LLM / CLI)**
-   A standalone MCP server (``flowcept --start-agent``) that external assistants such as
+   A standalone MCP server (``flowcept --start --agent``) that external assistants such as
    Claude Code, Codex, Cursor, or LibreChat connect to. It consumes messages from the
    **live MQ stream** (Redis, Kafka, or Mofka) so it can respond to queries while the
    workflow is still executing. It also supports offline JSONL buffer files.

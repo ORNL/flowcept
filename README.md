@@ -124,10 +124,10 @@ pip install "flowcept[webservice,mongo]"
 make services-mongo
 flowcept --init-settings --full -y
 flowcept --config-profile full-online -y
-flowcept --start-ui
+flowcept --start --ui
 ```
 
-Open `http://localhost:8008`.
+Open `http://localhost:5173`.
 
 In another terminal, run a workflow with the same online settings, for example:
 
@@ -203,7 +203,7 @@ Query surfaces:
 
 - Python API: `Flowcept.db`
 - CLI: `flowcept --query ...`
-- REST API: `flowcept --start-webservice`
+- REST API: `flowcept --start --webservice`
 - Web UI: browser-based exploration and dashboards
 - Flowcept Agent: natural-language provenance querying and reasoning
 

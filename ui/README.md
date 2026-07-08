@@ -5,14 +5,13 @@ campaigns, workflows, tasks, artifacts (datasets/ML models), and agents — with
 updates, per-workflow/campaign dashboards, and an embedded LLM chat that queries the
 provenance database and renders charts.
 
-The UI is served by the Flowcept webservice (FastAPI, `src/flowcept/webservice/`). Built
-assets are emitted into the Python package (`src/flowcept/webservice/ui_build/`) so released
-wheels ship the UI; end users need no Node toolchain.
+In development, `flowcept --start --ui` starts both the FastAPI webservice and the
+React frontend service. The frontend service proxies `/api` to FastAPI.
 
 **Quick start:**
 ```bash
 make ui-install && make ui-build
-flowcept --start-ui        # webservice + Vite dev server; open http://localhost:8008
+flowcept --start --ui      # FastAPI webservice + React frontend service; open http://localhost:5173
 ```
 
 ---
@@ -159,19 +158,18 @@ ui/
 - Redis + MongoDB running (`make services-mongo`).
 - Node 22+ and npm for development/build only.
 
-### Production-style (bundled)
+### FastAPI service
 
 ```bash
 make ui-install   # once: npm ci --prefix ui
 make ui-build     # emits assets into src/flowcept/webservice/ui_build/
-flowcept --start-webservice   # serves UI + API on :8008
-# open http://localhost:8008
+flowcept --start --webservice # starts the FastAPI webservice on :8008
 ```
 
 ### Development (hot reload)
 
 ```bash
-make ui    # kills old processes, starts webservice in background + Vite dev server in foreground
+make ui    # kills old processes, starts FastAPI in background + React frontend service in foreground
            # UI:  http://localhost:5173  (proxies /api → :8008)
            # API: http://localhost:8008
 ```
@@ -179,9 +177,9 @@ make ui    # kills old processes, starts webservice in background + Vite dev ser
 Or manually:
 ```bash
 # terminal 1 — API:
-PYTHONPATH=src python -m flowcept.cli --start-webservice
+PYTHONPATH=src python -m flowcept.cli --start --webservice
 
-# terminal 2 — UI dev server:
+# terminal 2 — React frontend service:
 npm run dev --prefix ui
 ```
 

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet, apiGetText, apiPost } from "./client";
-import { toEpochSec } from "../lib/format";
+import { getWorkflowTimestamp, sortWorkflows } from "../lib/format";
 import type {
   AgentSummary,
   BlobObjectDoc,
@@ -159,9 +159,9 @@ export function useVisibleWorkflows(params: { campaign_id?: string } = {}) {
   const withTasks = useWorkflowsWithTasks();
   const items = useMemo(() => {
     if (!workflows.data || !withTasks.data) return [];
-    return workflows.data.items
-      .filter((w) => w.name && withTasks.data.has(w.workflow_id) && toEpochSec(w.utc_timestamp) !== null)
-      .sort((a, b) => (toEpochSec(b.utc_timestamp) ?? 0) - (toEpochSec(a.utc_timestamp) ?? 0));
+    return sortWorkflows(
+      workflows.data.items.filter((w) => w.name && withTasks.data.has(w.workflow_id) && getWorkflowTimestamp(w) !== null),
+    );
   }, [workflows.data, withTasks.data]);
   return {
     items,

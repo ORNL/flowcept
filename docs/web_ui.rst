@@ -1,9 +1,10 @@
 Web UI
 ======
 
-Flowcept ships a built-in web interface for browsing and analyzing provenance data.
-It is a React single-page application served directly by the Flowcept webservice — no
-separate process or Node.js installation is needed by end users.
+Flowcept ships a React web interface for browsing and analyzing provenance data.
+``flowcept --start --ui`` starts the React frontend service and the FastAPI
+webservice it depends on. ``flowcept --start --webservice`` starts only the
+FastAPI service.
 
 .. contents:: On this page
    :local:
@@ -13,7 +14,7 @@ separate process or Node.js installation is needed by end users.
 Installation
 ------------
 
-Install Flowcept with the ``webservice`` extra (the UI assets are bundled in the wheel):
+Install Flowcept with the ``webservice`` extra:
 
 .. code-block:: bash
 
@@ -45,18 +46,18 @@ Starting the UI
 
 .. code-block:: bash
 
-   flowcept --start-ui
+   flowcept --start --ui
 
 This command:
 
-1. Kills any previously running webservice or Vite process on the configured ports.
-2. Starts the Flowcept webservice in the background (FastAPI + bundled UI assets).
-3. Starts the Vite development server in the foreground (hot-reload, proxies ``/api``
+1. Kills any previously running Flowcept webservice or frontend process on the configured ports.
+2. Starts the FastAPI webservice in the background.
+3. Starts the React frontend service in the foreground (hot-reload, proxies ``/api``
    to the webservice).
 
 Press ``Ctrl+C`` to stop both.
 
-The UI is served on ``http://localhost:8008`` by default.
+The React frontend service is served on ``http://localhost:5173`` by default.
 The API is available at ``http://localhost:8008/api/v1`` (interactive docs at
 ``http://localhost:8008/docs``).
 
@@ -212,7 +213,7 @@ The Flowcept MCP agent is a separate server for external agent clients
 
 .. code-block:: bash
 
-   flowcept --start-agent   # default port: 8000
+   flowcept --start --agent
 
 The web UI does not depend on the agent; the chat panel talks to the webservice
 directly. See :doc:`agent` for full MCP agent documentation.

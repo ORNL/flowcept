@@ -12,7 +12,12 @@ export interface Workflow {
   campaign_id?: string;
   parent_workflow_id?: string;
   user?: string;
-  utc_timestamp?: number;
+  utc_timestamp?: number | string;
+  created_at?: number | string;
+  updated_at?: number | string;
+  timestamp?: number | string;
+  started_at?: number | string;
+  ended_at?: number | string;
   flowcept_version?: string;
   sys_name?: string;
   environment_id?: string;

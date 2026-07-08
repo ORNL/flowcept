@@ -6,7 +6,7 @@ import { Trash2 } from "lucide-react";
 import { useCampaigns, useVisibleWorkflows, useAgents } from "../api/queries";
 import { apiDelete } from "../api/client";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
-import { fmtTs, fmtUserTs, shortId, toEpochSec } from "../lib/format";
+import { fmtTs, fmtUserTs, getWorkflowTimestamp, shortId } from "../lib/format";
 
 export const Route = createFileRoute("/")({ component: Overview });
 
@@ -37,7 +37,7 @@ function Overview() {
       .filter((t): t is number => t != null && t > 0);
     if (campTs.length) return Math.max(...campTs);
     const ts = workflows.items
-      .map((w) => toEpochSec(w.utc_timestamp))
+      .map((w) => getWorkflowTimestamp(w))
       .filter((t): t is number => t != null);
     return ts.length ? Math.max(...ts) : undefined;
   }, [campaigns.data, workflows.items]);
@@ -108,7 +108,7 @@ function Overview() {
                   <span className="text-fg-muted font-mono">{shortId(w.workflow_id)}</span>
                 </Link>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-fg-muted">{fmtUserTs(w.user, w.utc_timestamp)}</span>
+                  <span className="text-fg-muted">{fmtUserTs(w.user, getWorkflowTimestamp(w))}</span>
                   <button
                     onClick={() => setDeleteTarget({ kind: "workflow", id: w.workflow_id })}
                     className="text-fg-muted opacity-0 group-hover:opacity-100 hover:text-err ml-1"

@@ -179,6 +179,7 @@ def run_chat(
     with _FC(
         workflow_name=CHAT_WORKFLOW_NAME,
         start_persistence=True,
+        check_safe_stops=False,
         save_workflow=True,
         agent_name="FlowceptAgent",
     ):

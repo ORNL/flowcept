@@ -291,9 +291,9 @@ Periodically offer to read the relevant RST and Markdown files to check for stal
 
 The single source of truth is `src/flowcept/webservice/services/sorting.py` → `sort_docs_by_first_date_field`. It must sort **descending** (`reverse=True`) and use `float("-inf")` as the fallback key for docs without a date field (so undated docs sort last, not first).
 
-All list routers — `workflows.py`, `tasks.py`, `objects.py`, `agents.py`, `campaigns.py` — call this function before slicing. If you change the sort direction or add a new list endpoint, make sure it also sorts descending before the limit slice.
+All list routers — `workflows.py`, `tasks.py`, `objects.py`, `agents.py`, `campaigns.py` — call this function before slicing. If you change the sort direction or add a new list endpoint, make sure it also sorts descending before the limit slice. Workflow lists sort by the first available timestamp per document, with `utc_timestamp` falling back to `started_at`.
 
-The frontend `useVisibleWorkflows` hook re-sorts the received items by `utc_timestamp` descending as well. Both layers must agree on newest-first; if either is flipped, recent runs disappear from the UI.
+The frontend `useVisibleWorkflows` hook re-sorts the received items by the same workflow timestamp fallback as well. Both layers must agree on newest-first; if either is flipped, recent runs disappear from the UI.
 
 ## 15. Default Dashboard Configs — Two Locations Must Stay in Sync
 

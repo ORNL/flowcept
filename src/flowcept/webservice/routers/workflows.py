@@ -55,7 +55,7 @@ def list_workflows(
     docs = db.workflow_query(filter=query_filter) or []
     docs = sort_docs_by_first_date_field(
         docs,
-        ["utc_timestamp", "created_at", "updated_at", "timestamp", "started_at", "ended_at"],
+        ["utc_timestamp", "started_at", "created_at", "updated_at", "timestamp", "ended_at"],
     )
     docs = docs[:limit]
     normalized = normalize_docs(docs)

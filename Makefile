@@ -24,9 +24,9 @@ help:
 	@printf "\033[32mclean\033[0m                     remove cache directories and Sphinx build output\n"
 	@printf "\033[32mdocs\033[0m                      build HTML documentation using Sphinx\n"
 	@printf "\033[32mwebservice\033[0m                start the Flowcept webservice (REST API + web UI)\n"
-	@printf "\033[32mui\033[0m                        kill old processes, start webservice + UI dev server\n"
+	@printf "\033[32mui\033[0m                        kill old processes, start FastAPI + React frontend services\n"
 	@printf "\033[32mui-install\033[0m                install web UI dependencies (npm ci)\n"
-	@printf "\033[32mui-dev\033[0m                    run the web UI dev server (proxies /api to :5000)\n"
+	@printf "\033[32mui-dev\033[0m                    run the React frontend service (proxies /api to :8008)\n"
 	@printf "\033[32mui-build\033[0m                  build the web UI into src/flowcept/webservice/ui_build\n"
 	@printf "\033[32mui-checks\033[0m                 typecheck the web UI\n"
 	@printf "\033[32mui-test\033[0m                   run web UI unit tests (vitest)\n"
@@ -64,7 +64,7 @@ ui-e2e:
 	cd ui && npx playwright test
 
 ui:
-	FLOWCEPT_SETTINGS_PATH=$(or $(FLOWCEPT_SETTINGS_PATH),$(PWD)/agent_sandbox/settings.yaml) PYTHONPATH=src python -m flowcept.cli --start-ui
+	FLOWCEPT_SETTINGS_PATH=$(or $(FLOWCEPT_SETTINGS_PATH),$(PWD)/agent_sandbox/settings.yaml) PYTHONPATH=src python -m flowcept.cli --start --ui
 
 reformat:
 	ruff check src --fix --unsafe-fixes
@@ -96,7 +96,7 @@ docs:
 
 .PHONY: webservice
 webservice:
-	FLOWCEPT_SETTINGS_PATH=$(or $(FLOWCEPT_SETTINGS_PATH),$(PWD)/agent_sandbox/settings.yaml) PYTHONPATH=src python -m flowcept.cli --start-webservice
+	FLOWCEPT_SETTINGS_PATH=$(or $(FLOWCEPT_SETTINGS_PATH),$(PWD)/agent_sandbox/settings.yaml) PYTHONPATH=src python -m flowcept.cli --start --webservice
 
 # Run services using Docker
 services:

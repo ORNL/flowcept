@@ -40,7 +40,7 @@ def get_campaign(campaign_id: str, db: DBAPI = Depends(DBAPI)) -> Dict[str, Any]
 
     workflows = sort_docs_by_first_date_field(
         workflows,
-        ["utc_timestamp", "created_at", "updated_at", "timestamp", "started_at", "ended_at"],
+        ["utc_timestamp", "started_at", "created_at", "updated_at", "timestamp", "ended_at"],
     )
     summary = next(
         (c for c in db.derive_campaigns() if c["campaign_id"] == campaign_id),

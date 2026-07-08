@@ -200,8 +200,17 @@ export function sortCampaigns(campaigns: any[]): any[] {
   return [...campaigns].sort((a, b) => getCampaignTimestamp(b) - getCampaignTimestamp(a));
 }
 
+export function getWorkflowTimestamp(w: any): number | null {
+  const fields = ["utc_timestamp", "started_at", "created_at", "updated_at", "timestamp", "ended_at"];
+  for (const field of fields) {
+    const ts = toEpochSec(w[field] as TimeValue);
+    if (ts !== null) return ts;
+  }
+  return null;
+}
+
 export function sortWorkflows(workflows: any[]): any[] {
-  return [...workflows].sort((a, b) => (toEpochSec(b.utc_timestamp) ?? 0) - (toEpochSec(a.utc_timestamp) ?? 0));
+  return [...workflows].sort((a, b) => (getWorkflowTimestamp(b) ?? 0) - (getWorkflowTimestamp(a) ?? 0));
 }
 
 export function filterActiveAgents(agents: any[]): any[] {
@@ -212,6 +221,4 @@ export function filterGraphEdges(edges: any[], options: { showDelegation: boolea
   if (options.showDelegation) return edges;
   return edges.filter((e) => e.relation !== "delegation");
 }
-
-
 

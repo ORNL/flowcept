@@ -945,6 +945,7 @@ class TestProvAgentInstrumentation(unittest.TestCase):
         self.assertEqual(svc.CHAT_WORKFLOW_NAME, "Flowcept LangGraph Chat")
         self.assertNotIn("WorkflowObject", src)
         self.assertIn("start_persistence=True", src)
+        self.assertIn("check_safe_stops=False", src)
         self.assertIn("save_workflow=True", src)
 
     def test_build_graph_does_not_accept_workflow_id(self):
