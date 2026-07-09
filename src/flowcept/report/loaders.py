@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from flowcept.commons.sanitization import sanitize_json_like
+from flowcept.commons.utils import sanitize_json_like
 
 
 def read_jsonl(path: Path) -> Tuple[List[Dict[str, Any]], int]:

@@ -117,6 +117,23 @@ Current profile values:
 Environment variables can override settings values at runtime. This matters for keys such as
 ``MONGO_ENABLED``, ``LMDB_ENABLED``, ``LMDB_PATH``, ``MQ_ENABLED``, ``MQ_TYPE``, ``MQ_PORT``, and ``DB_FLUSH_MODE``.
 
+Starting Flowcept services
+--------------------------
+
+Use ``--start`` with one or more service flags:
+
+.. code-block:: shell
+
+   flowcept --start --webservice
+   flowcept --start --webservice --agent
+   flowcept --start --ui
+   flowcept --start --agent
+   flowcept --start --agent --webservice --ui
+
+``--webservice`` starts the FastAPI service. ``--agent`` starts the FastMCP
+agent service. ``--ui`` starts the React frontend service and also starts the
+FastAPI webservice it depends on.
+
 Available commands
 ------------------
 

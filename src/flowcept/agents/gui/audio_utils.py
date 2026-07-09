@@ -4,10 +4,11 @@ from io import BytesIO
 import base64
 
 import streamlit as st
-from gtts import gTTS
-from streamlit_mic_recorder import mic_recorder
-import speech_recognition as sr
-from pydub import AudioSegment  # needs ffmpeg installed
+
+# NOTE: the audio backends (gtts, streamlit-mic-recorder, SpeechRecognition, pydub) live in the
+# optional `llm_agent_audio` extra (+ system ffmpeg) and are imported lazily inside the functions
+# that use them. This keeps the GUI importable with only the `llm_agent` extra when audio is
+# disabled (agent.audio_enabled: false) instead of failing at import with ModuleNotFoundError.
 
 
 def _normalize_mic_output(out) -> bytes | None:
@@ -34,6 +35,8 @@ def _to_pcm_wav_16k(blob: bytes) -> bytes:
     Convert arbitrary audio bytes (webm/ogg/mp3/…) to 16-bit PCM WAV mono @16k.
     Requires ffmpeg via pydub.
     """
+    from pydub import AudioSegment  # llm_agent_audio extra; needs ffmpeg
+
     if _is_wav_pcm(blob):
         return blob
     seg = AudioSegment.from_file(BytesIO(blob))  # ffmpeg does the heavy lifting
@@ -47,6 +50,9 @@ def get_audio_text(user_input: str) -> str:
     """
     User Audio Getter.
     """
+    from streamlit_mic_recorder import mic_recorder  # llm_agent_audio extra
+    import speech_recognition as sr  # llm_agent_audio extra
+
     # Voice input expander
     with st.expander("🎤 Voice input", expanded=False):
         st.caption("Click **Speak**, talk, then **Stop**. Allow mic permission in your browser.")
@@ -89,6 +95,9 @@ def get_audio_text(user_input: str) -> str:
 
 def speech_to_text():
     """Record from mic, return transcribed text or None."""
+    from streamlit_mic_recorder import mic_recorder  # llm_agent_audio extra
+    import speech_recognition as sr  # llm_agent_audio extra
+
     rec = mic_recorder(
         start_prompt="🎙️ Speak",
         stop_prompt="⏹️ Stop",
@@ -114,6 +123,8 @@ def speak(text: str):
     if not text:
         return
     try:
+        from gtts import gTTS  # llm_agent_audio extra
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
             gTTS(text).save(tmp.name)
             st.audio(tmp.name, format="audio/mp3")

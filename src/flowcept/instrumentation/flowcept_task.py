@@ -134,6 +134,12 @@ def flowcept_task(func=None, **decorator_kwargs):
         tags = decorator_kwargs.get("tags", None)
         subtype = decorator_kwargs.get("subtype", None)
         output_names = decorator_kwargs.get("output_names", None)
+        agent_id = decorator_kwargs.get("agent_id", None)
+        decorator_kwargs.get("agent_name", None)
+        source_agent_id = decorator_kwargs.get("source_agent_id", None)
+        decorator_kwargs.get("source_agent_name", None)
+        capture_telemetry = decorator_kwargs.get("capture_telemetry", None)
+        task_should_capture_telemetry = TELEMETRY_ENABLED if capture_telemetry is None else capture_telemetry
 
         # --- shared helpers for sync+async wrappers -------------------------
 
@@ -160,6 +166,8 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.activity_id = func.__name__
             task_obj.workflow_id = handled_args.pop("workflow_id", Flowcept.current_workflow_id)
             task_obj.campaign_id = handled_args.pop("campaign_id", Flowcept.campaign_id)
+            task_obj.agent_id = handled_args.pop("agent_id", None) or agent_id
+            task_obj.source_agent_id = handled_args.pop("source_agent_id", source_agent_id)
             task_obj.used = handled_args
             task_obj.tags = tags
             task_obj.started_at = time()
@@ -172,7 +180,7 @@ def flowcept_task(func=None, **decorator_kwargs):
             task_obj.task_id = str(task_obj.started_at)
             _thread_local._flowcept_current_context_task_id = task_obj.task_id
 
-            if TELEMETRY_ENABLED:
+            if task_should_capture_telemetry:
                 # capture telemetry at start
                 task_obj.telemetry_at_start = interceptor.telemetry_capture.capture()
 
@@ -203,6 +211,9 @@ def flowcept_task(func=None, **decorator_kwargs):
                     if isinstance(result, (tuple, list)):
                         if len(output_names) == len(result):
                             named = {k: v for k, v in zip(output_names, result)}
+                        elif len(output_names) == 1:
+                            # single output_name: store the whole collection as-is
+                            named = {output_names[0]: result}
                     elif isinstance(output_names, str):
                         named = {output_names: result}
                     elif isinstance(output_names, (tuple, list)) and len(output_names) == 1:
@@ -237,7 +248,7 @@ def flowcept_task(func=None, **decorator_kwargs):
 
             task_obj.ended_at = time()
 
-            if TELEMETRY_ENABLED:
+            if task_should_capture_telemetry:
                 # capture telemetry at end
                 task_obj.telemetry_at_end = interceptor.telemetry_capture.capture()
 

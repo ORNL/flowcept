@@ -40,8 +40,9 @@ To minimize interference with HPC applications, provenance messages are buffered
 and streamed asynchronously to a **publish–subscribe hub**.  
 Flowcept supports configurable flushing strategies and multiple broker backends:
 
-- **Redis** → low-latency messaging, minimal setup, default for most use cases.  
-- **Kafka** → high throughput for data-intensive workflows.  
+- **Redis** → low-latency messaging, minimal setup, default for most use cases.
+- **RabbitMQ** → AMQP-based broker, suitable for cloud and enterprise environments.
+- **Kafka** → high throughput for data-intensive workflows.
 - **Mofka** → RDMA-optimized transport, ideal for tightly coupled HPC networks.
 
 Regardless of the broker, all provenance messages follow a **common schema**.

@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from flowcept import __version__
 from flowcept.report.aggregations import as_float, elapsed_seconds, fmt_timestamp_utc
-from flowcept.commons.sanitization import sanitize_json_like
+from flowcept.commons.utils import sanitize_json_like
 
 
 def render_markdown_file_into_rich_terminal(markdown_path: str | Path, *, stream=None) -> None:
@@ -98,6 +98,53 @@ def _fmt_text(value: Any, default: str = "-") -> str:
     return text if text else default
 
 
+def _first_machine_info(workflow: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the first captured machine_info entry for workflow infrastructure."""
+    machine_info = workflow.get("machine_info")
+    if not isinstance(machine_info, dict):
+        return {}
+    if all(key in machine_info for key in ("platform", "cpu", "memory")):
+        return machine_info
+    for entry in machine_info.values():
+        if isinstance(entry, dict):
+            return entry
+    return {}
+
+
+def _derive_host_os(machine_info: Dict[str, Any]) -> Optional[str]:
+    platform_info = machine_info.get("platform")
+    if not isinstance(platform_info, dict):
+        return None
+    parts = [
+        platform_info.get("system"),
+        platform_info.get("release"),
+        platform_info.get("machine"),
+    ]
+    text = " ".join(str(part) for part in parts if part)
+    return text or None
+
+
+def _derive_compute_hardware(machine_info: Dict[str, Any]) -> Optional[str]:
+    parts: List[str] = []
+    cpu_info = machine_info.get("cpu")
+    if isinstance(cpu_info, dict):
+        cpu_name = cpu_info.get("brand_raw") or cpu_info.get("brand") or cpu_info.get("arch")
+        cpu_count = cpu_info.get("count")
+        if cpu_name and cpu_count:
+            parts.append(f"{cpu_count} CPU cores ({cpu_name})")
+        elif cpu_name:
+            parts.append(str(cpu_name))
+    memory_info = machine_info.get("memory")
+    if isinstance(memory_info, dict):
+        total_mem = _deep_get(memory_info, ["virtual", "total"])
+        if as_float(total_mem) is not None:
+            parts.append(f"{_fmt_bytes(as_float(total_mem))} RAM")
+    gpu_info = machine_info.get("gpu")
+    if isinstance(gpu_info, dict) and gpu_info:
+        parts.append(f"{len(gpu_info)} GPU device(s)")
+    return "; ".join(parts) if parts else None
+
+
 def _fmt_nonzero_seconds(value: Optional[float]) -> str:
     """Render seconds only when strictly positive."""
     if value is None or value <= 0:
@@ -124,7 +171,7 @@ def _is_empty_metric(value: Any) -> bool:
     if value is None:
         return True
     if isinstance(value, str):
-        return value.strip() in {"-", "unknown", "", "- / -", "-/-"}
+        return value.strip() in {"-", "unknown", "", "- / -", "-/-", "~"}
     return False
 
 
@@ -303,18 +350,15 @@ def _build_object_details_lines(objects: List[Dict[str, Any]]) -> List[str]:
                 f"storage=`{_to_str(obj.get('storage_type'), default='-')}`, "
                 f"size=`{_fmt_bytes(as_float(obj.get('object_size_bytes')))}" + "`)"
             )
-            lines.append(
-                "    <br> "
-                f"`task_id`: `{_to_str(obj.get('task_id'), default='-')}`; "
-                f"`workflow_id`: `{_to_str(obj.get('workflow_id'), default='-')}`; "
-                f"`timestamp`: `{fmt_timestamp_utc(_extract_object_timestamp(obj))}`"
-            )
-            lines.append(f"    <br> `sha256`: `{_to_str(obj.get('data_sha256'), default='-')}`")
+            lines.append(f"    - task_id: `{_to_str(obj.get('task_id'), default='-')}`")
+            lines.append(f"    - workflow_id: `{_to_str(obj.get('workflow_id'), default='-')}`")
+            lines.append(f"    - timestamp: `{fmt_timestamp_utc(_extract_object_timestamp(obj))}`")
+            lines.append(f"    - sha256: `{_to_str(obj.get('data_sha256'), default='-')}`")
             raw_tags = obj.get("tags")
             if isinstance(raw_tags, list) and raw_tags:
                 tags_text = ", ".join(str(tag) for tag in raw_tags)
-                lines.append(f"    <br> `tags`: `{tags_text}`")
-            lines.append("    <br> `custom_metadata`:")
+                lines.append(f"    - tags: `{tags_text}`")
+            lines.append("    - custom_metadata:")
             lines.append("    ```yaml")
             metadata_lines = _format_nested_metadata_lines(obj.get("custom_metadata", {}))
             for row in metadata_lines:
@@ -1346,37 +1390,50 @@ def render_workflow_card_markdown(
     lines.append("")
 
     # --- Section 2: Summary ---
-    lines.append("## 2. Summary")
-    lines.append("")
-    lines.append(f"- **execution_id:** `{_to_str(workflow.get('workflow_id'), default='~')}`")
+    summary_lines: List[str] = []
+    _append_summary_line(summary_lines, "execution_id", _to_str(workflow.get("workflow_id"), default="~"))
     if workflow.get("campaign_id") is not None:
-        lines.append(f"- **campaign_id:** `{_to_str(workflow.get('campaign_id'))}`")
-    lines.append(f"- **version:** `{_to_str(workflow.get('version'), default='~')}`")
-    lines.append(f"- **started_at (UTC):** `{fmt_timestamp_utc(min_start) or '~'}`")
-    lines.append(f"- **ended_at (UTC):** `{fmt_timestamp_utc(max_end) or '~'}`")
-    lines.append(f"- **duration:** `{_fmt_seconds(total_elapsed)}`")
-    lines.append(f"- **status:** `{_to_str(workflow.get('status'), default='~')}`")
-    lines.append(f"- **location:** `{_to_str(workflow.get('sys_name'), default='~')}`")
-    lines.append(f"- **user:** `{_to_str(workflow.get('user'), default='~')}`")
+        _append_summary_line(summary_lines, "campaign_id", _to_str(workflow.get("campaign_id")))
+    _append_summary_line(summary_lines, "version", _to_str(workflow.get("version"), default="~"))
+    _append_summary_line(summary_lines, "started_at (UTC)", fmt_timestamp_utc(min_start) or "~")
+    _append_summary_line(summary_lines, "ended_at (UTC)", fmt_timestamp_utc(max_end) or "~")
+    _append_summary_line(summary_lines, "duration", _fmt_seconds(total_elapsed))
+    _append_summary_line(summary_lines, "status", _to_str(workflow.get("status"), default="~"))
+    _append_summary_line(summary_lines, "location", _to_str(workflow.get("sys_name"), default="~"))
+    _append_summary_line(summary_lines, "user", _to_str(workflow.get("user"), default="~"))
     if workflow.get("subtype") is not None:
-        lines.append(f"- **Workflow Subtype:** `{_to_str(workflow.get('subtype'))}`")
-    lines.append(f"- **entrypoint.repository:** `{_to_str(code_repo.get('remote'), default='~')}`")
-    lines.append(f"- **entrypoint.branch:** `{_to_str(code_repo.get('branch'), default='~')}`")
-    lines.append(f"- **entrypoint.short_sha:** `{_to_str(code_repo.get('short_sha'), default='~')}`")
+        _append_summary_line(summary_lines, "Workflow Subtype", _to_str(workflow.get("subtype")))
+    _append_summary_line(summary_lines, "entrypoint.repository", _to_str(code_repo.get("remote"), default="~"))
+    _append_summary_line(summary_lines, "entrypoint.branch", _to_str(code_repo.get("branch"), default="~"))
+    _append_summary_line(summary_lines, "entrypoint.short_sha", _to_str(code_repo.get("short_sha"), default="~"))
     if code_repo.get("dirty") is not None:
-        lines.append(f"- **entrypoint.dirty:** `{_to_str(code_repo.get('dirty'))}`")
-    lines.append("")
+        _append_summary_line(summary_lines, "entrypoint.dirty", _to_str(code_repo.get("dirty")))
+    if summary_lines:
+        lines.append("## 2. Summary")
+        lines.append("")
+        lines.extend(summary_lines)
+        lines.append("")
 
     # --- Section 3: Infrastructure ---
-    lines.append("## 3. Infrastructure")
-    lines.append("")
-    lines.append(f"- **host_os:** `{_to_str(workflow.get('host_os'), default='~')}`")
-    lines.append(f"- **compute_hardware:** `{_to_str(workflow.get('compute_hardware'), default='~')}`")
-    lines.append(f"- **runtime_environment:** `{_to_str(workflow.get('environment_id'), default='~')}`")
-    lines.append(f"- **resource_manager:** `{_to_str(workflow.get('resource_manager'), default='~')}`")
-    lines.append(f"- **primary_software:** `{_to_str(workflow.get('primary_software'), default='~')}`")
-    lines.append(f"- **environment_snapshot:** `{_to_str(workflow.get('environment_snapshot'), default='~')}`")
-    lines.append("")
+    machine_info = _first_machine_info(workflow)
+    infra_lines: List[str] = []
+    infra_values = {
+        "host_os": workflow.get("host_os") or _derive_host_os(machine_info),
+        "compute_hardware": workflow.get("compute_hardware") or _derive_compute_hardware(machine_info),
+        "runtime_environment": workflow.get("runtime_environment") or workflow.get("environment_id"),
+        "resource_manager": workflow.get("resource_manager"),
+        "primary_software": workflow.get("primary_software")
+        or f"Flowcept {workflow.get('flowcept_version') or __version__}",
+        "environment_snapshot": workflow.get("environment_snapshot"),
+    }
+    for key, value in infra_values.items():
+        if not _is_empty_metric(_to_str(value, default="~")):
+            infra_lines.append(f"- **{key}:** `{value}`")
+    if infra_lines:
+        lines.append("## 3. Infrastructure")
+        lines.append("")
+        lines.extend(infra_lines)
+        lines.append("")
 
     # --- Section 4: Workflow Overview ---
     lines.append("## 4. Workflow Overview")
@@ -1405,9 +1462,6 @@ def render_workflow_card_markdown(
                 lines.append("    ```")
             else:
                 lines.append(f"  - `{key}`: `{_format_single_field_value(value)}`")
-    else:
-        lines.append("- **arguments:** `~`")
-
     # significant inputs – from workflow.used
     used_data = workflow.get("used")
     if isinstance(used_data, dict) and used_data:
@@ -1422,8 +1476,6 @@ def render_workflow_card_markdown(
                 lines.append("    ```")
             else:
                 lines.append(f"  - `{key}`: `{_format_single_field_value(value)}`")
-    else:
-        lines.append("- **significant inputs:** `~`")
 
     # significant outputs – from workflow.generated
     generated_data = workflow.get("generated")
@@ -1439,10 +1491,10 @@ def render_workflow_card_markdown(
                 lines.append("    ```")
             else:
                 lines.append(f"  - `{key}`: `{_format_single_field_value(value)}`")
-    else:
-        lines.append("- **significant outputs:** `~`")
 
-    lines.append(f"- **observations:** `{_to_str(workflow.get('observations'), default='~')}`")
+    obs = workflow.get("observations")
+    if obs:
+        lines.append(f"- **observations:** `{_format_single_field_value(obs)}`")
     lines.append("")
 
     # 4.2 Workflow Structure
@@ -1617,7 +1669,7 @@ def render_workflow_card_markdown(
                 f"- GPU activity detected on `{gpu_device_count}` device(s); peak temperature: `{peak_text}`."
             )
     else:
-        lines.append("~ *(resource telemetry was not captured)*")
+        lines.append("*Resource telemetry was not captured.*")
         lines.append("")
 
     lines.append("### 4.4 Observations")
@@ -1737,9 +1789,6 @@ def render_workflow_card_markdown(
             lines.append("- **hosts:**")
             for host, count in host_counts.most_common():
                 lines.append(f"  - `{host}`: {count} task(s)")
-        else:
-            lines.append("- **hosts:** `~`")
-
         # inputs (used) and outputs (generated)
         used_fields: Dict[str, List[Any]] = defaultdict(list)
         gen_fields: Dict[str, List[Any]] = defaultdict(list)
@@ -1769,9 +1818,6 @@ def render_workflow_card_markdown(
                 numeric_vals = [v for v in numeric_vals if v is not None]
                 if numeric_vals and len(numeric_vals) == len(used_fields[key]):
                     variability_candidates.append((activity_id, f"used.{key}", max(numeric_vals) - min(numeric_vals)))
-        else:
-            lines.append("- **inputs:** `~`")
-
         if gen_fields:
             activity_generated_field_counts.append((activity_id, len(gen_fields)))
             lines.append("- **outputs:**")
@@ -1786,9 +1832,6 @@ def render_workflow_card_markdown(
                     variability_candidates.append(
                         (activity_id, f"generated.{key}", max(numeric_vals) - min(numeric_vals))
                     )
-        else:
-            lines.append("- **outputs:** `~`")
-
         lines.append("")
 
     activity_detail_insights: List[str] = []
@@ -1914,18 +1957,8 @@ def render_workflow_card_markdown(
         )
         lines.extend(_build_object_details_lines(objects))
         lines.append("")
-        lines.append("### Output Artifacts")
-        lines.append("")
-        lines.append("~ *(output artifacts captured at the activity level above)*")
-        lines.append("")
     else:
-        lines.append("### Input Artifacts")
-        lines.append("")
-        lines.append("~ *(no object artifacts were recorded for this run)*")
-        lines.append("")
-        lines.append("### Output Artifacts")
-        lines.append("")
-        lines.append("~ *(no object artifacts were recorded for this run)*")
+        lines.append("*No object artifacts were recorded for this run.*")
         lines.append("")
 
     has_aggregated_activity = any(int(row.get("n_tasks", 0) or 0) > 1 for row in activities)

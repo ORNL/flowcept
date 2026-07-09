@@ -1,9 +1,8 @@
 import logging
-import os.path
 import unittest
 
 from flowcept.commons.flowcept_logger import FlowceptLogger
-from flowcept.configs import PROJECT_NAME, LOG_FILE_LEVEL, LOG_FILE_PATH
+from flowcept.configs import PROJECT_NAME
 
 
 class TestLog(unittest.TestCase):

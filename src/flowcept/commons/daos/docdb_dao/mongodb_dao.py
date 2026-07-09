@@ -6,7 +6,6 @@ from typing import List, Dict, Tuple, Any
 import io
 import json
 from uuid import uuid4
-from datetime import datetime, timezone
 
 import pickle
 import zipfile
@@ -23,6 +22,7 @@ from flowcept.commons.daos.docdb_dao.docdb_dao_base import DocumentDBDAO
 from flowcept.commons.flowcept_dataclasses.workflow_object import (
     WorkflowObject,
 )
+from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.utils import perf_log, get_utc_now_str
@@ -85,6 +85,9 @@ class MongoDBDAO(DocumentDBDAO):
         self._wfs_collection = self._db["workflows"]
         self._obj_collection = self._db["objects"]
         self._obj_history_collection = self._db["object_history"]
+        self._dashboards_collection = self._db["dashboards"]
+        self._agents_collection = self._db["agents"]
+        self._node_positions_collection = self._db["node_positions"]
 
         if create_indices:
             self._create_indices()
@@ -110,6 +113,11 @@ class MongoDBDAO(DocumentDBDAO):
         if "campaign_id" not in existing_indices:
             self._wfs_collection.create_index("campaign_id")
 
+        # Creating agent collection indices:
+        existing_indices = [list(x["key"].keys())[0] for x in self._agents_collection.list_indexes()]
+        if AgentObject.agent_id_field() not in existing_indices:
+            self._agents_collection.create_index(AgentObject.agent_id_field(), unique=True)
+
         # Creating objects collection indices:
         existing_indices = [list(x["key"].keys())[0] for x in self._obj_collection.list_indexes()]
 
@@ -133,6 +141,16 @@ class MongoDBDAO(DocumentDBDAO):
             self._obj_history_collection.create_index("object_id")
         if ["created_at"] not in existing_history_indices:
             self._obj_history_collection.create_index("created_at")
+
+        # Creating dashboards collection indices:
+        existing_indices = [list(x["key"].keys())[0] for x in self._dashboards_collection.list_indexes()]
+        if "dashboard_id" not in existing_indices:
+            self._dashboards_collection.create_index("dashboard_id", unique=True)
+
+        # Creating node_positions collection indices:
+        existing_indices_np = [list(x["key"].keys())[0] for x in self._node_positions_collection.list_indexes()]
+        if "workflow_id" not in existing_indices_np:
+            self._node_positions_collection.create_index([("workflow_id", 1), ("graph_type", 1)], unique=True)
 
     def _pipeline(
         self,
@@ -441,6 +459,15 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
+    def delete_agents_with_filter(self, filter) -> bool:
+        """Delete agent documents that match the specified filter."""
+        try:
+            self._agents_collection.delete_many(filter)
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
     def count_tasks(self) -> int:
         """Count number of docs in tasks collection."""
         try:
@@ -465,10 +492,92 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return -1
 
-    @staticmethod
-    def _utc_now():
-        """Get timezone-aware UTC timestamp."""
-        return datetime.now(timezone.utc)
+    def delete_workflow_data(self, workflow_id: str) -> dict:
+        """Delete all data for one workflow: tasks, objects, workflow doc, and orphaned agents.
+
+        An agent is considered orphaned after this deletion if it has no remaining tasks
+        in any other workflow.
+
+        Parameters
+        ----------
+        workflow_id : str
+            The workflow identifier whose data should be deleted.
+
+        Returns
+        -------
+        dict
+            Per-collection deleted counts:
+            ``{"workflows": x, "tasks": y, "objects": z, "agents": a}``.
+        """
+        agent_ids = self._tasks_collection.distinct(
+            "agent_id", {"workflow_id": workflow_id, "agent_id": {"$exists": True}}
+        )
+        tasks_result = self._tasks_collection.delete_many({"workflow_id": workflow_id})
+        objects_result = self._obj_collection.delete_many({"workflow_id": workflow_id})
+        wfs_result = self._wfs_collection.delete_many({"workflow_id": workflow_id})
+        agents_deleted = self._delete_orphaned_agents(agent_ids)
+        return {
+            "workflows": wfs_result.deleted_count,
+            "tasks": tasks_result.deleted_count,
+            "objects": objects_result.deleted_count,
+            "agents": agents_deleted,
+        }
+
+    def _delete_orphaned_agents(self, agent_ids: list) -> int:
+        """Delete agents from ``agent_ids`` that have no remaining tasks.
+
+        Parameters
+        ----------
+        agent_ids : list
+            Candidate agent IDs to check and potentially remove.
+
+        Returns
+        -------
+        int
+            Number of agent documents deleted.
+        """
+        if not agent_ids:
+            return 0
+        orphans = [aid for aid in agent_ids if self._tasks_collection.count_documents({"agent_id": aid}) == 0]
+        if not orphans:
+            return 0
+        result = self._agents_collection.delete_many({"agent_id": {"$in": orphans}})
+        return result.deleted_count
+
+    def delete_campaign_data(self, campaign_id: str) -> dict:
+        """Delete all data for one campaign: tasks, objects, workflow docs, and orphaned agents.
+
+        An agent is considered orphaned after this deletion if it has no remaining tasks
+        in any workflow.
+
+        Parameters
+        ----------
+        campaign_id : str
+            The campaign identifier whose data should be deleted.
+
+        Returns
+        -------
+        dict
+            Per-collection deleted counts:
+            ``{"workflows": x, "tasks": y, "objects": z, "agents": a}``.
+        """
+        wf_cursor = self._wfs_collection.find({"campaign_id": campaign_id}, {"workflow_id": 1})
+        wf_ids = [doc["workflow_id"] for doc in wf_cursor if "workflow_id" in doc]
+        if not wf_ids:
+            return {"workflows": 0, "tasks": 0, "objects": 0, "agents": 0}
+        agent_ids = self._tasks_collection.distinct(
+            "agent_id", {"workflow_id": {"$in": wf_ids}, "agent_id": {"$exists": True}}
+        )
+        tasks_result = self._tasks_collection.delete_many({"workflow_id": {"$in": wf_ids}})
+        objects_result = self._obj_collection.delete_many({"workflow_id": {"$in": wf_ids}})
+        wfs_result = self._wfs_collection.delete_many({"campaign_id": campaign_id})
+        agents_deleted = self._delete_orphaned_agents(agent_ids)
+        return {
+            "workflows": wfs_result.deleted_count,
+            "tasks": tasks_result.deleted_count,
+            "objects": objects_result.deleted_count,
+            "agents": agents_deleted,
+        }
 
     @staticmethod
     def _payload_to_bytes(payload):
@@ -643,6 +752,50 @@ class MongoDBDAO(DocumentDBDAO):
             self.logger.exception(e)
             return False
 
+    def save_workflow_domain_data_schema(self, workflow_id: str, fields: Dict) -> bool:
+        """Update selected workflow fields without replacing the full document."""
+        if workflow_id is None:
+            self.logger.exception("The workflow identifier cannot be none.")
+            return False
+        try:
+            result = self._wfs_collection.update_one(
+                {WorkflowObject.workflow_id_field(): workflow_id},
+                {"$set": fields},
+                upsert=True,
+            )
+            return result.matched_count > 0 or result.upserted_id is not None
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
+    def insert_or_update_agent(self, agent_obj: AgentObject) -> bool:
+        """Insert or update agent."""
+        _dict = agent_obj.to_dict().copy()
+        agent_id = _dict.pop(AgentObject.agent_id_field(), None)
+        if agent_id is None:
+            self.logger.exception("The agent identifier cannot be none.")
+            return False
+        _filter = {AgentObject.agent_id_field(): agent_id}
+        update_query = {}
+
+        machine_info = _dict.pop("machine_info", None)
+        if machine_info is not None:
+            for k in machine_info:
+                _dict[f"machine_info.{k}"] = machine_info[k]
+
+        update_query.update(
+            {
+                "$set": _dict,
+            }
+        )
+
+        try:
+            result = self._agents_collection.update_one(_filter, update_query, upsert=True)
+            return (result.upserted_id is not None) or result.raw_result["updatedExisting"]
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
     def to_df(self, collection="tasks", filter=None) -> pd.DataFrame:
         """
         Convert the contents of a MongoDB collection to a pandas DataFrame.
@@ -744,27 +897,25 @@ class MongoDBDAO(DocumentDBDAO):
 
     def save_or_update_object(
         self,
+        blob_obj,
         object,
-        object_id=None,
-        task_id=None,
-        workflow_id=None,
-        object_type=None,
-        custom_metadata=None,
         save_data_in_collection=False,
         pickle_=False,
         control_version=False,
-        tags=None,
     ):
         """Save an object."""
-        if object_id is None:
-            object_id = str(uuid4())
-        now = MongoDBDAO._utc_now()
+        from time import time
         from flowcept.configs import FLOWCEPT_USER
 
-        actor = FLOWCEPT_USER
+        if blob_obj.object_id is None:
+            blob_obj.object_id = str(uuid4())
+        now = time()
+        if blob_obj.created_at is None:
+            blob_obj.created_at = now
+        blob_obj.updated_at = now
 
         obj_doc = {
-            "object_id": object_id,
+            "object_id": blob_obj.object_id,
             **self._build_blob_storage_doc(
                 object_payload=object,
                 save_data_in_collection=save_data_in_collection,
@@ -772,16 +923,16 @@ class MongoDBDAO(DocumentDBDAO):
             ),
         }
 
-        if task_id is not None:
-            obj_doc["task_id"] = task_id
-        if workflow_id is not None:
-            obj_doc["workflow_id"] = workflow_id
-        if object_type is not None:
-            obj_doc["object_type"] = object_type
-        if custom_metadata is not None:
-            obj_doc["custom_metadata"] = custom_metadata
-        if tags is not None:
-            obj_doc["tags"] = list(tags)
+        if blob_obj.task_id is not None:
+            obj_doc["task_id"] = blob_obj.task_id
+        if blob_obj.workflow_id is not None:
+            obj_doc["workflow_id"] = blob_obj.workflow_id
+        if blob_obj.object_type is not None:
+            obj_doc["object_type"] = blob_obj.object_type
+        if blob_obj.custom_metadata is not None:
+            obj_doc["custom_metadata"] = blob_obj.custom_metadata
+        if blob_obj.tags is not None:
+            obj_doc["tags"] = list(blob_obj.tags)
 
         if not control_version:
             update_query = [
@@ -789,32 +940,35 @@ class MongoDBDAO(DocumentDBDAO):
                     "$set": {
                         **obj_doc,
                         "version": {"$add": [{"$ifNull": ["$version", -1]}, 1]},
+                        "created_at": {"$ifNull": ["$created_at", blob_obj.created_at]},
+                        "updated_at": blob_obj.updated_at,
                     }
                 }
             ]
             self._obj_collection.update_one(
-                {"object_id": object_id},
+                {"object_id": blob_obj.object_id},
                 update_query,
                 upsert=True,
             )
-            return object_id
+            return blob_obj.object_id
 
+        actor = FLOWCEPT_USER
         max_attempts = 5
         for attempt in range(max_attempts):
-            latest_doc = self._obj_collection.find_one({"object_id": object_id})
+            latest_doc = self._obj_collection.find_one({"object_id": blob_obj.object_id})
             if latest_doc is None:
                 insert_doc = {
                     **obj_doc,
                     "version": 0,
                     "prev_version": None,
-                    "created_at": now,
+                    "created_at": blob_obj.created_at,
                     "created_by": actor,
-                    "updated_at": now,
+                    "updated_at": blob_obj.updated_at,
                     "updated_by": actor,
                 }
                 try:
                     self._obj_collection.insert_one(insert_doc)
-                    return object_id
+                    return blob_obj.object_id
                 except Exception:
                     if attempt == max_attempts - 1:
                         raise
@@ -826,20 +980,20 @@ class MongoDBDAO(DocumentDBDAO):
                 **obj_doc,
                 "version": expected_version + 1,
                 "prev_version": expected_version,
-                "created_at": latest_doc.get("created_at", now),
+                "created_at": latest_doc.get("created_at", blob_obj.created_at),
                 "created_by": latest_doc.get("created_by", actor),
-                "updated_at": now,
+                "updated_at": blob_obj.updated_at,
                 "updated_by": actor,
             }
             try:
                 matched_count = self._update_with_optional_transaction(
-                    object_id=object_id,
+                    object_id=blob_obj.object_id,
                     expected_version=expected_version,
                     latest_doc=latest_doc,
                     update_doc=update_doc,
                 )
                 if matched_count == 1:
-                    return object_id
+                    return blob_obj.object_id
                 # CAS failed; remove potential duplicate history append on next trial by ignoring dup insert.
                 sleep(0.02 * (attempt + 1))
             except Exception as e:
@@ -849,7 +1003,7 @@ class MongoDBDAO(DocumentDBDAO):
                 sleep(0.02 * (attempt + 1))
                 continue
 
-        raise ValueError(f"Could not update object_id={object_id} due to repeated concurrent CAS failures.")
+        raise ValueError(f"Could not update object_id={blob_obj.object_id} due to repeated concurrent CAS failures.")
 
     def update_object_metadata(
         self,
@@ -865,10 +1019,11 @@ class MongoDBDAO(DocumentDBDAO):
         if object_id is None:
             raise ValueError("object_id must not be None.")
 
+        from time import time
         from flowcept.configs import FLOWCEPT_USER
 
         actor = FLOWCEPT_USER
-        now = MongoDBDAO._utc_now()
+        now = time()
         set_fields = {}
 
         if custom_metadata is not None:
@@ -1064,9 +1219,12 @@ class MongoDBDAO(DocumentDBDAO):
             return self.object_query(filter, projection, limit, sort)
         elif collection == "object_history":
             return list(self._obj_history_collection.find(filter))
+        elif collection == "agents":
+            return self.agent_query(filter, projection, limit, sort, remove_json_unserializables)
         else:
             raise Exception(
-                f"You used type={collection}, but MongoDB only stores tasks, workflows, objects, and object_history"
+                f"You used type={collection}, but MongoDB only stores "
+                "tasks, workflows, objects, object_history, and agents"
             )
 
     def raw_task_pipeline(self, pipeline: List[Dict]):
@@ -1115,6 +1273,117 @@ class MongoDBDAO(DocumentDBDAO):
         except Exception as e:
             self.logger.exception(e)
             return None
+
+    def raw_pipeline(self, pipeline: List[Dict], collection: str = "tasks"):
+        """
+        Run a raw MongoDB aggregation pipeline on a chosen collection.
+
+        Generalization of :meth:`raw_task_pipeline` for the other collections
+        (``workflows``, ``objects``, ``object_history``).
+
+        Parameters
+        ----------
+        pipeline : list of dict
+            A MongoDB aggregation pipeline represented as a list of stage documents.
+        collection : str, optional
+            Target collection name. Defaults to ``"tasks"``.
+
+        Returns
+        -------
+        list of dict or None
+            The aggregation results, or ``None`` if an error occurred.
+        """
+        collections = {
+            "tasks": self._tasks_collection,
+            "workflows": self._wfs_collection,
+            "objects": self._obj_collection,
+            "object_history": self._obj_history_collection,
+        }
+        if collection not in collections:
+            raise ValueError(f"Unknown collection: {collection}. Expected one of {sorted(collections)}.")
+        try:
+            return list(collections[collection].aggregate(pipeline))
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def save_dashboard(self, dashboard: Dict) -> bool:
+        """Insert or replace a dashboard document keyed by ``dashboard_id``.
+
+        Parameters
+        ----------
+        dashboard : dict
+            Dashboard spec document containing a ``dashboard_id`` field.
+
+        Returns
+        -------
+        bool
+            True on success, False otherwise.
+        """
+        try:
+            self._dashboards_collection.replace_one({"dashboard_id": dashboard["dashboard_id"]}, dashboard, upsert=True)
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
+    def get_dashboard(self, dashboard_id: str) -> Dict:
+        """Get a dashboard document by id.
+
+        Parameters
+        ----------
+        dashboard_id : str
+            Dashboard identifier.
+
+        Returns
+        -------
+        dict or None
+            The dashboard document, or None when not found.
+        """
+        try:
+            return self._dashboards_collection.find_one({"dashboard_id": dashboard_id}, projection={"_id": 0})
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def list_dashboards(self, filter: Dict = None) -> List[Dict]:
+        """List dashboard documents.
+
+        Parameters
+        ----------
+        filter : dict, optional
+            Mongo-style filter. Defaults to all dashboards.
+
+        Returns
+        -------
+        list of dict
+            Matching dashboard documents.
+        """
+        try:
+            return list(self._dashboards_collection.find(filter or {}, projection={"_id": 0}))
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def delete_dashboard(self, dashboard_id: str) -> bool:
+        """Delete a dashboard document by id.
+
+        Parameters
+        ----------
+        dashboard_id : str
+            Dashboard identifier.
+
+        Returns
+        -------
+        bool
+            True when a document was deleted, False otherwise.
+        """
+        try:
+            result = self._dashboards_collection.delete_one({"dashboard_id": dashboard_id})
+            return result.deleted_count > 0
+        except Exception as e:
+            self.logger.exception(e)
+            return False
 
     def task_query(
         self,
@@ -1175,7 +1444,12 @@ class MongoDBDAO(DocumentDBDAO):
                     _projection[proj_field] = 1
 
             if remove_json_unserializables:
-                _projection.update({"_id": 0, "timestamp": 0})
+                # Mongo only allows excluding `_id` inside an inclusion projection; excluding
+                # other fields (e.g., `timestamp`) is valid only in exclusion-only projections.
+                _projection.pop("timestamp", None)
+                _projection["_id"] = 0
+                if projection is None:
+                    _projection["timestamp"] = 0
             try:
                 rs = self._tasks_collection.find(
                     filter=filter,
@@ -1211,6 +1485,35 @@ class MongoDBDAO(DocumentDBDAO):
             _projection.update({"_id": 0})  # Add here more fields that are non serializable
         try:
             rs = self._wfs_collection.find(
+                filter=filter,
+                projection=_projection,
+                limit=limit,
+                sort=sort,
+            )
+            lst = list(rs)
+            return lst
+        except Exception as e:
+            self.logger.exception(e)
+            return None
+
+    def agent_query(
+        self,
+        filter: Dict = None,
+        projection: List[str] = None,
+        limit: int = 0,
+        sort: List[Tuple] = None,
+        remove_json_unserializables=True,
+    ) -> List[Dict]:
+        """Query agents collection in the MongoDB database."""
+        _projection = {}
+        if projection is not None:
+            for proj_field in projection:
+                _projection[proj_field] = 1
+
+        if remove_json_unserializables:
+            _projection.update({"_id": 0})
+        try:
+            rs = self._agents_collection.find(
                 filter=filter,
                 projection=_projection,
                 limit=limit,
@@ -1477,3 +1780,389 @@ class MongoDBDAO(DocumentDBDAO):
                 queue = queue[1:]
             else:
                 break
+
+    def save_node_positions(self, workflow_id: str, graph_type: str, positions: Dict) -> bool:
+        """Save or update node positions for a workflow graph type.
+
+        Parameters
+        ----------
+        workflow_id : str
+            Workflow identifier.
+        graph_type : str
+            Graph type: 'dataflow', 'task', or 'activity'.
+        positions : dict
+            Dict mapping node IDs to coordinates {"x": float, "y": float}.
+
+        Returns
+        -------
+        bool
+            True on success, False otherwise.
+        """
+        try:
+            self._node_positions_collection.replace_one(
+                {"workflow_id": workflow_id, "graph_type": graph_type},
+                {"workflow_id": workflow_id, "graph_type": graph_type, "positions": positions},
+                upsert=True,
+            )
+            return True
+        except Exception as e:
+            self.logger.exception(e)
+            return False
+
+    def get_node_positions(self, workflow_id: str, graph_type: str) -> Dict:
+        """Get node positions for a workflow graph type.
+
+        Parameters
+        ----------
+        workflow_id : str
+            Workflow identifier.
+        graph_type : str
+            Graph type.
+
+        Returns
+        -------
+        dict
+            Dict mapping node IDs to coordinates.
+        """
+        try:
+            doc = self._node_positions_collection.find_one(
+                {"workflow_id": workflow_id, "graph_type": graph_type}, projection={"_id": 0}
+            )
+            return doc.get("positions", {}) if doc else {}
+        except Exception as e:
+            self.logger.exception(e)
+            return {}
+
+    def task_summary(self, filter: Dict) -> Dict:
+        """Summarize tasks via Mongo aggregation pipeline.
+
+        Returns status counts, per-activity stats, and time range for tasks matching filter.
+        """
+        from flowcept.commons.daos.docdb_dao.docdb_dao_utils import _merge_summary_rows
+
+        match = [{"$match": filter}] if filter else []
+        duration_seconds = {"$divide": [{"$subtract": ["$ended_at", "$started_at"]}, 1000]}
+        rows = (
+            self.raw_pipeline(
+                match
+                + [
+                    {
+                        "$group": {
+                            "_id": {"activity_id": "$activity_id", "status": "$status"},
+                            "count": {"$sum": 1},
+                            "avg_duration": {"$avg": duration_seconds},
+                            "min_duration": {"$min": duration_seconds},
+                            "max_duration": {"$max": duration_seconds},
+                            "sum_duration": {"$sum": duration_seconds},
+                            "min_started_at": {"$min": "$started_at"},
+                            "max_ended_at": {"$max": "$ended_at"},
+                        }
+                    }
+                ],
+                collection="tasks",
+            )
+            or []
+        )
+        return _merge_summary_rows(
+            [
+                {
+                    "activity_id": row["_id"].get("activity_id"),
+                    "status": row["_id"].get("status"),
+                    **{k: row.get(k) for k in row if k != "_id"},
+                }
+                for row in rows
+            ]
+        )
+
+    def derive_campaigns(self, campaign_id: str = None) -> List[Dict]:
+        """Derive campaign summaries by grouping workflows and tasks by campaign_id.
+
+        Parameters
+        ----------
+        campaign_id : str, optional
+            When provided, only the matching campaign is returned.
+        """
+        from flowcept.commons.daos.docdb_dao.docdb_dao_utils import to_epoch
+
+        campaigns: Dict = {}
+
+        def _campaign(cid):
+            return campaigns.setdefault(
+                cid,
+                {
+                    "campaign_id": cid,
+                    "workflow_count": 0,
+                    "task_count": 0,
+                    "users": set(),
+                    "workflow_names": set(),
+                    "first_ts": None,
+                    "last_ts": None,
+                },
+            )
+
+        def _expand(record, *values):
+            for raw in values:
+                val = to_epoch(raw)
+                if val is None:
+                    continue
+                record["first_ts"] = val if record["first_ts"] is None else min(record["first_ts"], val)
+                record["last_ts"] = val if record["last_ts"] is None else max(record["last_ts"], val)
+
+        _base_match: Dict = {"campaign_id": {"$exists": True, "$ne": None}}
+        if campaign_id:
+            _base_match["campaign_id"] = campaign_id
+
+        wf_rows = (
+            self.raw_pipeline(
+                [
+                    {"$match": _base_match},
+                    {
+                        "$group": {
+                            "_id": "$campaign_id",
+                            "workflow_count": {"$sum": 1},
+                            "users": {"$addToSet": "$user"},
+                            "workflow_names": {"$addToSet": "$name"},
+                            "first_ts": {"$min": "$utc_timestamp"},
+                            "last_ts": {"$max": "$utc_timestamp"},
+                        }
+                    },
+                ],
+                collection="workflows",
+            )
+            or []
+        )
+
+        task_rows = (
+            self.raw_pipeline(
+                [
+                    {"$match": _base_match},
+                    {
+                        "$group": {
+                            "_id": "$campaign_id",
+                            "task_count": {"$sum": 1},
+                            "first_ts": {"$min": "$started_at"},
+                            "last_ts": {"$max": "$ended_at"},
+                        }
+                    },
+                ],
+                collection="tasks",
+            )
+            or []
+        )
+
+        for row in wf_rows:
+            record = _campaign(row["_id"])
+            record["workflow_count"] = row.get("workflow_count", 0)
+            record["users"].update(u for u in row.get("users", []) if u)
+            record["workflow_names"].update(n for n in row.get("workflow_names", []) if n)
+            _expand(record, row.get("first_ts"), row.get("last_ts"))
+        for row in task_rows:
+            record = _campaign(row["_id"])
+            record["task_count"] = row.get("task_count", 0)
+            _expand(record, row.get("first_ts"), row.get("last_ts"))
+
+        results = []
+        for record in campaigns.values():
+            record["users"] = sorted(record["users"])
+            record["workflow_names"] = sorted(record["workflow_names"])
+            results.append(record)
+        results.sort(
+            key=lambda r: (1, r["last_ts"]) if r["last_ts"] is not None else (0, float("-inf")),
+            reverse=True,
+        )
+        return results
+
+    def derive_agents(self, filter: Dict = None) -> List[Dict]:
+        """Derive agent summaries by joining stored agents with task provenance."""
+
+        def _ts(val):
+            if val is None:
+                return None
+            if isinstance(val, (int, float)):
+                return float(val)
+            from datetime import datetime as _dt
+
+            if isinstance(val, _dt):
+                return val.timestamp()
+            if isinstance(val, str):
+                try:
+                    return _dt.fromisoformat(val.replace("Z", "+00:00")).timestamp()
+                except Exception:
+                    return None
+            return None
+
+        try:
+            stored = self.agent_query(filter=filter or {}) or []
+        except Exception as e:
+            self.logger.error(f"Error querying stored agents: {e}")
+            stored = []
+        stored = [a for a in stored if a.get("agent_id") not in ("train_agent_id", "orchestrator_agent_id")]
+        if not stored:
+            return []
+
+        agent_ids = [a["agent_id"] for a in stored if "agent_id" in a]
+        rows = (
+            self.raw_pipeline(
+                [
+                    {"$match": {"agent_id": {"$in": agent_ids}}},
+                    {
+                        "$group": {
+                            "_id": "$agent_id",
+                            "task_count": {"$sum": 1},
+                            "activities": {"$addToSet": "$activity_id"},
+                            "source_agent_ids": {"$addToSet": "$source_agent_id"},
+                            "campaign_ids": {"$addToSet": "$campaign_id"},
+                            "workflow_ids": {"$addToSet": "$workflow_id"},
+                            "last_active": {"$max": "$registered_at"},
+                        }
+                    },
+                ],
+                collection="tasks",
+            )
+            or []
+        )
+
+        stats_map = {
+            row["_id"]: {
+                "task_count": row.get("task_count", 0),
+                "activities": sorted(a for a in row.get("activities", []) if a),
+                "source_agent_ids": sorted(s for s in row.get("source_agent_ids", []) if s),
+                "campaign_ids": sorted(c for c in row.get("campaign_ids", []) if c),
+                "workflow_ids": sorted(w for w in row.get("workflow_ids", []) if w),
+                "last_active": _ts(row.get("last_active")),
+            }
+            for row in rows
+        }
+
+        agents = []
+        for sa in stored:
+            agent_id = sa["agent_id"]
+            stat = stats_map.get(
+                agent_id,
+                {
+                    "task_count": 0,
+                    "activities": [],
+                    "source_agent_ids": [],
+                    "campaign_ids": [],
+                    "workflow_ids": [],
+                    "last_active": None,
+                },
+            )
+            if stat["task_count"] == 0:
+                continue
+            agents.append(
+                {
+                    "agent_id": agent_id,
+                    "task_count": stat["task_count"],
+                    "activities": stat["activities"],
+                    "source_agent_ids": stat["source_agent_ids"],
+                    "campaign_ids": stat["campaign_ids"],
+                    "workflow_ids": stat["workflow_ids"],
+                    "last_active": stat["last_active"],
+                    "name": sa.get("name"),
+                    "workflow_id": sa.get("workflow_id"),
+                    "registered_at": _ts(sa.get("registered_at")),
+                }
+            )
+        agents.sort(
+            key=lambda a: (1, a["registered_at"]) if a["registered_at"] is not None else (0, float("-inf")),
+            reverse=True,
+        )
+        return agents
+
+    def telemetry_timeseries(
+        self, filter: Dict, fields: List, x_field: str = "started_at", limit: int = 1000
+    ) -> List[Dict]:
+        """Extract plottable rows of dot-notated fields from tasks."""
+        from flowcept.commons.daos.docdb_dao.docdb_dao_utils import get_nested
+
+        top_level = sorted({f.split(".")[0] for f in fields} | {x_field.split(".")[0]})
+        docs = (
+            self.task_query(
+                filter=filter,
+                projection=["task_id", "activity_id"] + top_level,
+                limit=limit,
+            )
+            or []
+        )
+        rows = []
+        for doc in docs:
+            row = {
+                x_field: get_nested(doc, x_field),
+                "task_id": doc.get("task_id"),
+                "activity_id": doc.get("activity_id"),
+            }  # noqa: E501
+            row.update({f: get_nested(doc, f) for f in fields})
+            rows.append(row)
+        rows.sort(key=lambda r: (r[x_field] is None, r[x_field]))
+        return rows
+
+    def resolve_chart_data(self, data: Dict, context: Dict = None) -> Dict:
+        """Resolve a declarative chart spec into plottable rows (Mongo implementation)."""
+        from flowcept.commons.daos.docdb_dao.docdb_dao_utils import (
+            _merge_context_filter,
+            _metric_key,
+        )
+
+        card_filter = data.get("filter") or {}
+        query_filter = _merge_context_filter(card_filter, context)
+        source = data.get("source", "tasks")
+        limit = data.get("limit") or 1000
+        group_by = data.get("group_by")
+        metrics = data.get("metrics") or []
+        x_field = data.get("x")
+        y_fields = data.get("y") or []
+
+        if source == "collection_sizes":
+            rows = []
+            for collection in ("tasks", "objects", "workflows"):
+                try:
+                    result = self.raw_pipeline(
+                        ([{"$match": query_filter}] if query_filter else [])
+                        + [{"$group": {"_id": None, "bytes": {"$sum": {"$bsonSize": "$$ROOT"}}}}],
+                        collection=collection,
+                    )
+                    bytes_val = result[0]["bytes"] if result else 0
+                except Exception:
+                    bytes_val = 0
+                rows.append({"collection": collection, "sum_bytes": bytes_val})
+            return {"rows": rows, "count": len(rows)}
+
+        if group_by or metrics:
+            metrics = metrics or [{"field": "", "agg": "count"}]
+            has_elapsed = any(m.get("field") == "elapsed" for m in metrics)
+            if source in ("tasks", "workflows", "objects") and not has_elapsed:
+                group_id = f"${group_by}" if group_by else None
+                group_stage: Dict = {"_id": group_id}
+                mongo_key_map: Dict = {}
+                for metric in metrics:
+                    canonical = _metric_key(metric)
+                    mongo_key = canonical.replace(".", "_")
+                    mongo_key_map[mongo_key] = canonical
+                    if metric.get("agg") == "count":
+                        group_stage[mongo_key] = {"$sum": 1}
+                    else:
+                        group_stage[mongo_key] = {f"${metric['agg']}": f"${metric['field']}"}
+                pipeline = ([{"$match": query_filter}] if query_filter else []) + [{"$group": group_stage}]
+                raw = self.raw_pipeline(pipeline, collection=source) or []
+                out = []
+                for row in raw:
+                    record = {group_by or "group": row.pop("_id")}
+                    for mk, canonical in mongo_key_map.items():
+                        if mk in row:
+                            record[canonical] = row.pop(mk)
+                    record.update(row)
+                    out.append(record)
+                out.sort(key=lambda r: str(r.get(group_by or "group")))
+                rows = out[:limit]
+                return {"rows": rows, "count": len(rows)}
+
+        if x_field and y_fields:
+            rows = self.telemetry_timeseries(query_filter, fields=y_fields, x_field=x_field, limit=limit)
+            return {"rows": rows[:limit], "count": len(rows[:limit])}
+
+        sort_raw = data.get("sort")
+        sort = None if not sort_raw else [(s["field"], s["order"]) for s in sort_raw]
+        rows = self.query(collection=source, filter=query_filter, limit=limit, sort=sort) or []
+        rows = rows[:limit]
+        return {"rows": rows, "count": len(rows)}

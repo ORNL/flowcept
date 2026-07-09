@@ -91,6 +91,49 @@ All API routes are mounted under:
 - Supported `scope`: `workflows | tasks | objects | models | datasets`
 - `models` and `datasets` enforce fixed base filters (`object_type=ml_model` and `object_type=dataset`)
 
+### Campaigns (derived)
+
+- `GET /api/v1/campaigns` — campaign summaries derived by grouping workflows/tasks by `campaign_id`
+- `GET /api/v1/campaigns/{campaign_id}` — summary + workflows + task summary
+- `GET /api/v1/campaigns/{campaign_id}/workflow_card?format=json|markdown`
+
+### Agents (derived)
+
+- `GET /api/v1/agents` — agent summaries derived from task `agent_id`/`source_agent_id`
+- `GET /api/v1/agents/{agent_id}` and `GET /api/v1/agents/{agent_id}/tasks`
+
+### Stats
+
+- `GET /api/v1/stats/tasks/summary?workflow_id=&campaign_id=&agent_id=&filter_json=`
+- `POST /api/v1/stats/timeseries` — dot-notated (telemetry) fields over tasks for plotting
+- `POST /api/v1/stats/chart_data` — declarative dashboard chart data resolver
+
+### Dashboards
+
+- `GET|POST /api/v1/dashboards`, `GET|PUT|DELETE /api/v1/dashboards/{dashboard_id}`
+- Specs are validated (`schemas/dashboards.py`); stored in the `dashboards` Mongo collection,
+  or JSON files under `web_server.dashboards_dir` when MongoDB is disabled
+
+### Workflow cards
+
+- `GET /api/v1/workflows/{workflow_id}/workflow_card?format=json|markdown`
+
+### Live streams (SSE)
+
+- `GET /api/v1/stream/tasks?workflow_id=&campaign_id=&agent_id=&since=&poll_interval=`
+- `GET /api/v1/stream/workflows?campaign_id=&since=&poll_interval=`
+- Server-sent events backed by incremental DB polling; the `cursor` in each event resumes streams
+
+### Chat
+
+- `POST /api/v1/chat` — LLM chat with DB-backed provenance tools (shared with the MCP agent)
+- Requires the `llm_agent` extra and the `agent` settings section; returns 503 otherwise
+- `stream=true` (default) streams SSE events: `tool_call`, `tool_result`, `card`, `token`, `done`
+
+### Web UI
+
+- The built SPA (from `ui/`) is served at `/` when present (`make ui-build`); API always wins under `/api`
+
 ## Query model
 
 Advanced `POST /query` endpoints share a common request model:

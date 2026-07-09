@@ -1,22 +1,53 @@
 """Utilities."""
 
 import argparse
+import base64
+import re
 import threading
 from datetime import datetime, timedelta, timezone
 import json
 from time import time, sleep
-from typing import Callable, List, Dict
+from typing import Any, Callable, List, Dict
 import os
 import platform
 import subprocess
 import types
 import numpy as np
 
+try:
+    from bson import ObjectId as _ObjectId
+except Exception:
+    _ObjectId = None
+
 from flowcept import configs
 from flowcept.commons.flowcept_dataclasses.task_object import TaskObject
 from flowcept.commons.flowcept_logger import FlowceptLogger
 from flowcept.configs import PERF_LOG
 from flowcept.commons.vocabulary import Status
+
+
+def to_epoch(value):
+    """Normalize a timestamp to epoch seconds.
+
+    Accepts float/int epoch-sec or epoch-ms, ISO string, or datetime object.
+    Returns None if the value cannot be interpreted as a timestamp.
+    """
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return value / 1000.0 if value >= 1e12 else float(value)
+    if isinstance(value, str):
+        try:
+            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return dt.replace(tzinfo=timezone.utc).timestamp() if dt.tzinfo is None else dt.timestamp()
+        except ValueError:
+            return None
+    try:
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=timezone.utc).timestamp() if value.tzinfo is None else value.timestamp()
+    except Exception:
+        pass
+    return None
 
 
 def get_utc_now() -> float:
@@ -364,3 +395,80 @@ class ClassProperty:
 
     def __get__(self, instance, owner):
         return self.fget(owner)
+
+
+# ---------------------------------------------------------------------------
+# Sanitization helpers
+# ---------------------------------------------------------------------------
+
+_SENSITIVE_KEY_PATTERNS = ("api_key", "access_key", "token", "secret", "password", "passwd", "credentials")
+_SENSITIVE_VALUE_PATTERN = re.compile(r"\bsk-[A-Za-z0-9_-]+")
+
+
+def _redact_key_value(key: str, value: Any) -> Any:
+    key_l = key.lower()
+    if any(pat in key_l for pat in _SENSITIVE_KEY_PATTERNS):
+        return "REDACTED"
+    if isinstance(value, str) and _SENSITIVE_VALUE_PATTERN.search(value):
+        return "REDACTED"
+    return value
+
+
+def _is_sensitive_key(key: str) -> bool:
+    return any(pat in key.lower() for pat in _SENSITIVE_KEY_PATTERNS)
+
+
+def sanitize_json_like(value: Any, drop_sensitive_keys: bool = False, mongo_safe_keys: bool = False) -> Any:
+    """Recursively sanitize dict/list structures, redacting sensitive keys and values."""
+    if isinstance(value, dict):
+        out: Dict[str, Any] = {}
+        for k, v in value.items():
+            key = str(k)
+            if drop_sensitive_keys and _is_sensitive_key(key):
+                continue
+            output_key = key.replace(".", "_").replace("$", "_") if mongo_safe_keys else key
+            out[output_key] = sanitize_json_like(
+                _redact_key_value(key, v),
+                drop_sensitive_keys=drop_sensitive_keys,
+                mongo_safe_keys=mongo_safe_keys,
+            )
+        return out
+    if isinstance(value, (list, tuple)):
+        return [
+            sanitize_json_like(v, drop_sensitive_keys=drop_sensitive_keys, mongo_safe_keys=mongo_safe_keys)
+            for v in value
+        ]
+    if isinstance(value, str) and _SENSITIVE_VALUE_PATTERN.search(value):
+        return "REDACTED"
+    return value
+
+
+# ---------------------------------------------------------------------------
+# JSON serialization helpers for API responses
+# ---------------------------------------------------------------------------
+
+
+def _to_jsonable(value: Any, include_data: bool = False) -> Any:
+    """Recursively normalize values for JSON API responses."""
+    if value is None:
+        return None
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, bytes):
+        return base64.b64encode(value).decode("ascii") if include_data else None
+    if _ObjectId is not None and isinstance(value, _ObjectId):
+        return str(value)
+    if isinstance(value, (list, tuple)):
+        return [_to_jsonable(item, include_data=include_data) for item in value]
+    if isinstance(value, dict):
+        return {
+            str(k): _to_jsonable(v, include_data=include_data) for k, v in value.items() if include_data or k != "data"
+        }
+    return str(value)
+
+
+def normalize_docs(docs: List[Dict[str, Any]], include_data: bool = False) -> List[Dict[str, Any]]:
+    """Normalize result documents for JSON API response."""
+    return [_to_jsonable(doc, include_data=include_data) for doc in docs]

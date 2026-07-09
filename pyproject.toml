@@ -47,29 +47,29 @@ dependencies = [
     "omegaconf",
     "numpy",
     "msgpack",
-    "orjson"
+    "orjson",
+    "rich",
 ]
 
 [project.optional-dependencies]
 redis = ["redis<8"]
 lmdb = ["lmdb"]
 telemetry = ["psutil>=6.1.1", "py-cpuinfo"]
-extras = ["flowcept[redis]", "flowcept[telemetry]", "flowcept[mongo]", "GitPython", "pandas", "pyarrow", "requests", "rich"]
-webservice = ["fastapi", "uvicorn", "pyyaml"]
-legacy_webservice = ["flask-restful"]
+extras = ["flowcept[redis]", "flowcept[telemetry]", "flowcept[mongo]", "GitPython", "pandas", "pyarrow", "requests"]
+webservice = ["fastapi", "uvicorn", "pyyaml", "sse-starlette"]
 
-analytics = ["seaborn", "plotly", "scipy", "matplotlib"]
 report_pdf = ["matplotlib", "reportlab", "networkx"]
 mongo = ["pymongo", "pyarrow"]
 dask = ["tomli", "dask[distributed]<=2024.10.0"]
 docs = ["sphinx", "furo"]
 kafka = ["confluent-kafka<=2.8.0"]  # As of today, 2/28/2025, version 2.8.1 is stale. When this gets fixed, let's remove the version constraint. https://pypi.org/project/confluent-kafka/#history
+rabbitmq = ["pika"]
 mlflow = ["mlflow-skinny", "SQLAlchemy", "alembic", "watchdog", "cryptography"]
 nvidia = ["nvidia-ml-py"]
 amd = ["amdsmi"]
 mqtt = ["paho-mqtt"]
 tensorboard = ["tensorboard", "tensorflow", "tbparse"]
-llm_agent = ["mcp[cli]", "langchain_community", "langchain_openai", "streamlit", "PyMuPDF", "matplotlib", "tabulate"]
+llm_agent = ["mcp[cli]", "langchain_community", "langchain_openai", "langgraph", "streamlit", "PyMuPDF", "matplotlib", "tabulate"]
 llm_google = ["flowcept[llm_agent]", "google-genai"]
 llm_agent_audio = ["flowcept[llm_agent]", "streamlit-mic-recorder", "SpeechRecognition", "pydub", "gTTS"]
 # System dependency (required for pydub)
@@ -80,14 +80,16 @@ llm_agent_audio = ["flowcept[llm_agent]", "streamlit-mic-recorder", "SpeechRecog
 
 dev = [
     "flowcept[docs]",
+    "flowcept[rabbitmq]",
     "jupyterlab",
     "nbmake",
-    "pika",
     "pytest",
     "pytest-timeout",
     "ruff",
-    "pyyaml"
+    "pyyaml",
+    "httpx2"
 ]
+
 # Torch and some other ML-specific libs are only used for dev/test workflows.
 ml_dev = [
     "torch>=2.6.0",
@@ -103,9 +105,9 @@ all = [
     "flowcept[redis]",
     "flowcept[lmdb]",
     "flowcept[mongo]",
-    "flowcept[analytics]",
     "flowcept[dask]",
     "flowcept[kafka]",
+    "flowcept[rabbitmq]",
     "flowcept[mlflow]",
     "flowcept[mqtt]",
     "flowcept[tensorboard]",
@@ -130,11 +132,16 @@ convention = "numpy"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/flowcept"]
+# Built web UI assets (created by `make ui-build` into the package dir); gitignored but shipped.
+artifacts = ["src/flowcept/webservice/ui_build/**"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "resources/sample_settings.yaml" = "resources/sample_settings.yaml"
 
 [tool.pytest.ini_options]
+markers = [
+    "llm: tests that require a real LLM (run locally with env set; excluded from CI except run-llm-tests.yml)",
+]
 filterwarnings = [
     "ignore:websockets\\.legacy is deprecated:DeprecationWarning",
     "ignore:websockets\\.server\\.WebSocketServerProtocol is deprecated:DeprecationWarning",

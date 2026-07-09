@@ -10,9 +10,10 @@ from fastapi.responses import Response
 
 from flowcept import Flowcept
 from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.schemas.common import ListResponse, QueryRequest
-from flowcept.webservice.services.serializers import normalize_docs
+from flowcept.webservice.services.dataflow import build_dataflow
+from flowcept.webservice.services.reports import workflow_card_response
+from flowcept.commons.utils import normalize_docs
 from flowcept.webservice.services.sorting import sort_docs_by_first_date_field
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
@@ -38,7 +39,7 @@ def list_workflows(
     parent_workflow_id: str | None = None,
     name: str | None = None,
     filter_json: str | None = None,
-    db: DBAPI = Depends(get_db_api),
+    db: DBAPI = Depends(DBAPI),
 ) -> ListResponse:
     """List workflows with optional basic filters."""
     query_filter = _json_filter(filter_json)
@@ -54,7 +55,7 @@ def list_workflows(
     docs = db.workflow_query(filter=query_filter) or []
     docs = sort_docs_by_first_date_field(
         docs,
-        ["utc_timestamp", "created_at", "updated_at", "timestamp", "started_at", "ended_at"],
+        ["utc_timestamp", "started_at", "created_at", "updated_at", "timestamp", "ended_at"],
     )
     docs = docs[:limit]
     normalized = normalize_docs(docs)
@@ -62,7 +63,7 @@ def list_workflows(
 
 
 @router.get("/{workflow_id}", response_model=Dict[str, Any])
-def get_workflow(workflow_id: str, db: DBAPI = Depends(get_db_api)) -> Dict[str, Any]:
+def get_workflow(workflow_id: str, db: DBAPI = Depends(DBAPI)) -> Dict[str, Any]:
     """Get a workflow by id."""
     doc = db.get_workflow_object(workflow_id)
     if doc is None:
@@ -71,8 +72,17 @@ def get_workflow(workflow_id: str, db: DBAPI = Depends(get_db_api)) -> Dict[str,
     return normalized[0]
 
 
+@router.delete("/{workflow_id}", response_model=Dict[str, Any])
+def delete_workflow(workflow_id: str, db: DBAPI = Depends(DBAPI)) -> Dict[str, Any]:
+    """Recursively delete a workflow and all its tasks and objects."""
+    if db.get_workflow_object(workflow_id) is None:
+        raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
+    counts = db.delete_workflow_data(workflow_id)
+    return {"deleted": counts}
+
+
 @router.post("/query", response_model=ListResponse)
-def query_workflows(payload: QueryRequest, db: DBAPI = Depends(get_db_api)) -> ListResponse:
+def query_workflows(payload: QueryRequest, db: DBAPI = Depends(DBAPI)) -> ListResponse:
     """Run an advanced read-only workflows query."""
     sort = None if payload.sort is None else [(s.field, s.order) for s in payload.sort]
     docs = db.query(
@@ -89,8 +99,33 @@ def query_workflows(payload: QueryRequest, db: DBAPI = Depends(get_db_api)) -> L
     return ListResponse(items=normalized, count=len(normalized), limit=payload.limit)
 
 
+@router.get("/{workflow_id}/dataflow", response_model=Dict[str, Any])
+def get_workflow_dataflow(
+    workflow_id: str,
+    db: DBAPI = Depends(DBAPI),
+) -> Dict[str, Any]:
+    """Get the PROV-style dataflow graph derived from tasks' used/generated fields."""
+    graph = build_dataflow(db, workflow_id)
+    if graph is None:
+        raise HTTPException(status_code=404, detail=f"No dataflow data for workflow: {workflow_id}")
+    return graph
+
+
+@router.get("/{workflow_id}/workflow_card")
+def get_workflow_card(
+    workflow_id: str,
+    format: str = Query(default="json"),
+    db: DBAPI = Depends(DBAPI),
+) -> Response:
+    """Get a workflow card as structured JSON or rendered markdown."""
+    wf_obj = db.get_workflow_object(workflow_id)
+    if wf_obj is None:
+        raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
+    return workflow_card_response(format=format, workflow_id=workflow_id)
+
+
 @router.post("/{workflow_id}/reports/workflow-card/download")
-def download_workflow_card(workflow_id: str, db: DBAPI = Depends(get_db_api)) -> Response:
+def download_workflow_card(workflow_id: str, db: DBAPI = Depends(DBAPI)) -> Response:
     """Generate and download a workflow card markdown file."""
     wf_obj = db.get_workflow_object(workflow_id)
     if wf_obj is None:
@@ -123,3 +158,32 @@ def download_workflow_card(workflow_id: str, db: DBAPI = Depends(get_db_api)) ->
         media_type="text/markdown; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/{workflow_id}/node_positions", response_model=Dict[str, Any])
+def get_node_positions(
+    workflow_id: str,
+    graph_type: str = Query(..., description="Graph type: 'dataflow', 'task', or 'activity'"),
+    db: DBAPI = Depends(DBAPI),
+) -> Dict[str, Any]:
+    """Get node positions for a workflow graph type."""
+    if db.get_workflow_object(workflow_id) is None:
+        raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
+    return db.get_node_positions(workflow_id, graph_type)
+
+
+@router.post("/{workflow_id}/node_positions", response_model=Dict[str, Any])
+def save_node_positions(
+    workflow_id: str,
+    payload: Dict[str, Any],
+    db: DBAPI = Depends(DBAPI),
+) -> Dict[str, Any]:
+    """Save node positions for a workflow graph type."""
+    if db.get_workflow_object(workflow_id) is None:
+        raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
+    graph_type = payload.get("graph_type")
+    positions = payload.get("positions")
+    if not graph_type or positions is None:
+        raise HTTPException(status_code=400, detail="Missing graph_type or positions in payload")
+    success = db.save_node_positions(workflow_id, graph_type, positions)
+    return {"success": success}

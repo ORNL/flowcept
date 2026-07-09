@@ -26,7 +26,24 @@ class TaskObject:
     """Constant type label for this object ("task")."""
 
     subtype: AnyStr = None
-    """Optional subtype of the task (e.g., iteration, ML step, custom)."""
+    """Optional subtype of the task for domain or framework-level classification.
+
+    For general ML workflows use :class:`~flowcept.commons.vocabulary.ML_Types`
+    (e.g., ``"ml_workflow"``, ``"learning"``).
+
+    For agentic AI provenance (PROV-AGENT model, arXiv:2508.02866) use
+    :class:`~flowcept.commons.vocabulary.PROV_AGENT`:
+
+    - ``"ai_model_invocation"`` (:attr:`~flowcept.commons.vocabulary.PROV_AGENT.AI_MODEL_INVOCATION`) —
+      a single LLM prompt→response call.  Captured automatically by
+      :class:`~flowcept.instrumentation.flowcept_agent_task.FlowceptLLM`.
+    - ``"agent_tool"`` (:attr:`~flowcept.commons.vocabulary.PROV_AGENT.AGENT_TOOL`) —
+      a tool execution by an AI agent.  Captured automatically by the
+      :func:`~flowcept.instrumentation.flowcept_agent_task.agent_flowcept_task` decorator.
+
+    Custom values such as ``"iteration"`` or ``"ml_step"`` are also allowed for
+    domain-specific tagging.
+    """
 
     task_id: AnyStr = None
     """Unique identifier of the task."""

@@ -10,6 +10,7 @@ import pandas as pd
 
 
 from flowcept.commons.flowcept_dataclasses.workflow_object import WorkflowObject
+from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
 from flowcept.configs import MONGO_ENABLED, LMDB_ENABLED
 
 
@@ -120,6 +121,37 @@ class DocumentDBDAO(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def save_workflow_domain_data_schema(self, workflow_id: str, fields: Dict):
+        """Update selected workflow fields without replacing the full document."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def insert_or_update_agent(self, agent_obj: AgentObject):
+        """Insert or update an agent object.
+
+        Parameters
+        ----------
+        agent_obj : AgentObject
+            The agent object to insert or update.
+
+        Raises
+        ------
+        NotImplementedError
+            This method must be implemented by subclasses.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def liveness_test(self) -> bool:
+        """Return True if the backing store is reachable and accepting queries."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete_agents_with_filter(self, filter) -> bool:
+        """Delete agent documents that match the filter."""
+        raise NotImplementedError
+
+    @abstractmethod
     def insert_one_task(self, task_dict: Dict):
         """Insert a single task document.
 
@@ -215,6 +247,30 @@ class DocumentDBDAO(ABC):
     @abstractmethod
     def workflow_query(self, filter, projection, limit, sort, remove_json_unserializables):
         """Query workflow documents.
+
+        Parameters
+        ----------
+        filter : dict
+            Query filter to apply.
+        projection : dict
+            Fields to include or exclude in the results.
+        limit : int
+            Maximum number of documents to return.
+        sort : list
+            Sorting criteria.
+        remove_json_unserializables : bool
+            Whether to remove JSON-unserializable fields from the results.
+
+        Raises
+        ------
+        NotImplementedError
+            This method must be implemented by subclasses.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def agent_query(self, filter, projection, limit, sort, remove_json_unserializables):
+        """Query agent documents.
 
         Parameters
         ----------
@@ -346,39 +402,26 @@ class DocumentDBDAO(ABC):
     @abstractmethod
     def save_or_update_object(
         self,
+        blob_obj,
         object,
-        object_id,
-        task_id,
-        workflow_id,
-        object_type,
-        custom_metadata,
-        save_data_in_collection,
-        pickle_,
+        save_data_in_collection=False,
+        pickle_=False,
         control_version=False,
-        tags=None,
     ):
-        """Save an object with associated metadata.
+        """Save an object with its BlobObject metadata.
 
         Parameters
         ----------
+        blob_obj : BlobObject
+            Metadata for the object. ``object_id`` is generated when ``None``.
         object : Any
-            The object to save.
-        object_id : str
-            Unique identifier for the object.
-        task_id : str
-            Task ID associated with the object.
-        workflow_id : str
-            Workflow ID associated with the object.
-        object_type : str
-            Type of the object.
-        custom_metadata : dict
-            Custom metadata to associate with the object.
-        save_data_in_collection : bool
-            Whether to save the object in a database collection.
-        pickle_ : bool
-            Whether to serialize the object using pickle.
-        tags : list of str, optional
-            Labels to associate with the object.
+            The binary payload to persist.
+        save_data_in_collection : bool, optional
+            Whether to store bytes in-document rather than GridFS.
+        pickle_ : bool, optional
+            Whether to serialize the payload with pickle before storing.
+        control_version : bool, optional
+            If ``True``, enable append-only history semantics.
 
         Raises
         ------
@@ -433,5 +476,45 @@ class DocumentDBDAO(ABC):
         ------
         NotImplementedError
             This method must be implemented by subclasses.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def task_summary(self, filter: Dict) -> Dict:
+        """Return status counts, per-activity stats, and time range for tasks matching filter."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def derive_campaigns(self) -> List[Dict]:
+        """Derive campaign summaries by grouping workflows and tasks by campaign_id."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def derive_agents(self, filter: Dict = None) -> List[Dict]:
+        """Derive agent summaries by joining stored agents with task provenance."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def telemetry_timeseries(
+        self, filter: Dict, fields: List, x_field: str = "started_at", limit: int = 1000
+    ) -> List[Dict]:
+        """Extract plottable rows of dot-notated fields from tasks."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def resolve_chart_data(self, data: Dict, context: Dict = None) -> Dict:
+        """Resolve a declarative chart spec into plottable rows.
+
+        Parameters
+        ----------
+        data : dict
+            Chart spec with keys: source, filter, group_by, metrics, x, y, sort, limit.
+        context : dict, optional
+            Dashboard-level filter ANDed into the card filter.
+
+        Returns
+        -------
+        dict
+            ``{"rows": [...], "count": int}``.
         """
         raise NotImplementedError

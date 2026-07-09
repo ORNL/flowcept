@@ -6,7 +6,8 @@ import importlib.util
 from pathlib import Path
 from typing import Any, Dict, List
 
-from flowcept.report.aggregations import group_activities, summarize_objects
+import flowcept.configs as flowcept_configs
+from flowcept.report.aggregations import group_activities, group_transformations, summarize_objects
 from flowcept.report.loaders import load_records_from_db, read_jsonl, split_records
 from flowcept.report.renderers.campaign_workflow_card_markdown import render_campaign_workflow_card_markdown
 from flowcept.report.renderers.workflow_card_markdown import (
@@ -30,6 +31,8 @@ def _resolve_input_mode(
         modes += 1
     if workflow_id is not None or campaign_id is not None:
         modes += 1
+    if modes == 0:
+        return "jsonl"
     if modes != 1:
         raise ValueError("Provide exactly one input mode: input_jsonl_path OR records OR workflow_id/campaign_id.")
     if input_jsonl_path is not None:
@@ -37,6 +40,65 @@ def _resolve_input_mode(
     if records is not None:
         return "records"
     return "db"
+
+
+def build_workflow_card(
+    input_jsonl_path: str | None = None,
+    records: List[Dict[str, Any]] | None = None,
+    workflow_id: str | None = None,
+    campaign_id: str | None = None,
+) -> Dict[str, Any]:
+    """Build the structured workflow-card content without rendering it.
+
+    Accepts exactly one input mode (JSONL path, pre-loaded records, or DB query
+    by workflow/campaign id) and returns the aggregated structures consumed by
+    renderers and APIs.
+
+    Parameters
+    ----------
+    input_jsonl_path : str, optional
+        Path to a Flowcept JSONL buffer file. If no input mode is provided,
+        the configured default buffer file is used.
+    records : list of dict, optional
+        Pre-loaded Flowcept records (workflow/task/object dicts).
+    workflow_id : str, optional
+        Workflow identifier for DB query mode.
+    campaign_id : str, optional
+        Campaign identifier for DB query mode.
+
+    Returns
+    -------
+    dict
+        ``{"dataset", "transformations", "object_summary", "input_mode", "skipped_lines"}``.
+    """
+    mode = _resolve_input_mode(
+        input_jsonl_path=input_jsonl_path,
+        records=records,
+        workflow_id=workflow_id,
+        campaign_id=campaign_id,
+    )
+
+    skipped_lines = 0
+    if mode == "jsonl":
+        if input_jsonl_path is None:
+            input_jsonl_path = flowcept_configs.DUMP_BUFFER_PATH
+        jsonl_path = Path(input_jsonl_path)  # type: ignore[arg-type]
+        if not jsonl_path.exists():
+            raise FileNotFoundError(f"Input JSONL not found: {jsonl_path}")
+        parsed_records, skipped_lines = read_jsonl(jsonl_path)
+        dataset = split_records(parsed_records)
+    elif mode == "records":
+        dataset = split_records(records or [])
+    else:
+        dataset = load_records_from_db(workflow_id=workflow_id, campaign_id=campaign_id)
+
+    return {
+        "dataset": dataset,
+        "transformations": group_transformations(dataset.get("tasks", [])),
+        "object_summary": summarize_objects(dataset.get("objects", [])),
+        "input_mode": mode,
+        "skipped_lines": skipped_lines,
+    }
 
 
 def generate_report(
@@ -63,7 +125,8 @@ def generate_report(
     output_path : str, optional
         Output file path. If omitted, defaults to ``WORKFLOW_CARD.md``.
     input_jsonl_path : str, optional
-        Path to a Flowcept JSONL buffer file.
+        Path to a Flowcept JSONL buffer file. If no input mode is provided,
+        the configured default buffer file is used.
     records : list of dict, optional
         Pre-loaded Flowcept records (workflow/task/object dicts).
     workflow_id : str, optional
@@ -94,6 +157,8 @@ def generate_report(
 
     skipped_lines = 0
     if mode == "jsonl":
+        if input_jsonl_path is None:
+            input_jsonl_path = flowcept_configs.DUMP_BUFFER_PATH
         jsonl_path = Path(input_jsonl_path)  # type: ignore[arg-type]
         if not jsonl_path.exists():
             raise FileNotFoundError(f"Input JSONL not found: {jsonl_path}")
@@ -111,7 +176,6 @@ def generate_report(
     output = Path(output_path) if output_path is not None else None
 
     if is_campaign:
-        # Campaign dataset: multiple workflow runs detected
         render_stats = render_campaign_workflow_card_markdown(
             dataset=dataset,
             output_path=output,

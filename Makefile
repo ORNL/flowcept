@@ -12,22 +12,59 @@ help:
 	@printf "\033[32mservices-stop-kafka\033[0m       stop Kafka services and remove attached volumes\n"
 	@printf "\033[32mservices-mofka\033[0m            run services with Mofka using Docker\n"
 	@printf "\033[32mservices-stop-mofka\033[0m       stop Mofka services and remove attached volumes\n"
+	@printf "\033[32mservices-rabbitmq\033[0m         run services with RabbitMQ using Docker\n"
+	@printf "\033[32mservices-stop-rabbitmq\033[0m    stop RabbitMQ services and remove attached volumes\n"
 	@printf "\033[32mtests\033[0m                     run unit tests with pytest\n"
 	@printf "\033[32mtests-offline\033[0m             run offline-safe tests with pytest\n"
 	@printf "\033[32mtests-in-container\033[0m        run unit tests with pytest inside Flowcept's container\n"
 	@printf "\033[32mtests-in-container-mongo\033[0m  run unit tests inside container with MongoDB\n"
-	@printf "\033[32mtests-in-container-kafka\033[0m  run unit tests inside container with Kafka and MongoDB\n"
+	@printf "\033[32mtests-in-container-kafka\033[0m     run unit tests inside container with Kafka and MongoDB\n"
+	@printf "\033[32mtests-in-container-rabbitmq\033[0m  run unit tests inside container with RabbitMQ and MongoDB\n"
 	@printf "\033[32mtests-notebooks\033[0m           test the notebooks using pytest\n"
 	@printf "\033[32mclean\033[0m                     remove cache directories and Sphinx build output\n"
 	@printf "\033[32mdocs\033[0m                      build HTML documentation using Sphinx\n"
-	@printf "\033[32mwebservice\033[0m                run the Flowcept webservice locally (FastAPI)\n"
+	@printf "\033[32mwebservice\033[0m                start the Flowcept webservice (REST API + web UI)\n"
+	@printf "\033[32mui\033[0m                        kill old processes, start FastAPI + React frontend services\n"
+	@printf "\033[32mui-install\033[0m                install web UI dependencies (npm ci)\n"
+	@printf "\033[32mui-dev\033[0m                    run the React frontend service (proxies /api to :8008)\n"
+	@printf "\033[32mui-build\033[0m                  build the web UI into src/flowcept/webservice/ui_build\n"
+	@printf "\033[32mui-checks\033[0m                 typecheck the web UI\n"
+	@printf "\033[32mui-test\033[0m                   run web UI unit tests (vitest)\n"
+	@printf "\033[32mui-e2e\033[0m                    run web UI end-to-end tests (playwright)\n"
 	@printf "\033[32mchecks\033[0m                    run ruff linter and formatter checks\n"
 	@printf "\033[32mreformat\033[0m                  run ruff linter and formatter\n"
+	@printf "\033[32mcompile-rules\033[0m             compile central rules files for all coding assistants\n"
 
 # Run linter and formatter checks using ruff
 checks:
 	ruff check src
 	ruff format --check src
+
+.PHONY: compile-rules
+compile-rules:
+	python scripts/compile_rules.py
+
+.PHONY: ui-install ui-dev ui-build ui-checks ui-test ui-e2e ui
+ui-install:
+	npm ci --prefix ui --no-audit --no-fund
+
+ui-dev:
+	npm run dev --prefix ui
+
+ui-build:
+	npm run build --prefix ui
+
+ui-checks:
+	npm run lint --prefix ui
+
+ui-test:
+	npm test --prefix ui
+
+ui-e2e:
+	cd ui && npx playwright test
+
+ui:
+	FLOWCEPT_SETTINGS_PATH=$(or $(FLOWCEPT_SETTINGS_PATH),$(PWD)/agent_sandbox/settings.yaml) PYTHONPATH=src python -m flowcept.cli --start --ui
 
 reformat:
 	ruff check src --fix --unsafe-fixes
@@ -59,7 +96,7 @@ docs:
 
 .PHONY: webservice
 webservice:
-	PYTHONPATH=src python -m flowcept.cli --start-webservice --webservice-host 127.0.0.1 --webservice-port 8008
+	FLOWCEPT_SETTINGS_PATH=$(or $(FLOWCEPT_SETTINGS_PATH),$(PWD)/agent_sandbox/settings.yaml) PYTHONPATH=src python -m flowcept.cli --start --webservice
 
 # Run services using Docker
 services:
@@ -119,6 +156,17 @@ services-mofka:
 # Stop Mofka services and remove attached volumes
 services-stop-mofka:
 	docker compose --file deployment/compose-mofka.yml down --volumes
+
+# Run services with RabbitMQ using Docker
+services-rabbitmq:
+	docker compose --file deployment/compose-rabbitmq.yml up --detach
+
+# Stop RabbitMQ services and remove attached volumes
+services-stop-rabbitmq:
+	docker compose --file deployment/compose-rabbitmq.yml down --volumes
+
+tests-in-container-rabbitmq:
+	docker run --rm -v $(shell pwd):/flowcept -e KVDB_HOST=flowcept_redis -e MQ_HOST=flowcept_rabbitmq -e MQ_PORT=5672 -e MQ_TYPE=rabbitmq -e MONGO_HOST=flowcept_mongo -e MONGO_ENABLED=true -e LMDB_ENABLED=false --network flowcept_default flowcept /bin/bash -lc '/opt/conda/envs/flowcept/bin/flowcept --init-settings --full -y && /opt/conda/envs/flowcept/bin/flowcept --config-profile full-online -y && /opt/conda/envs/flowcept/bin/pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/instrumentation_tests/ml_tests --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"'
 
 # Run unit tests using pytest
 .PHONY: tests

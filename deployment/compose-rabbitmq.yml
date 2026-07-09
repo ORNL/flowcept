@@ -1,0 +1,33 @@
+name: flowcept
+services:
+  flowcept_redis:
+    container_name: flowcept_redis
+    image: redis
+    ports:
+      - 6379:6379
+
+  flowcept_mongo:
+    container_name: flowcept_mongo
+    image: mongo:latest
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data:/data/db
+
+  # RabbitMQ broker; reachable on 5672 (AMQP) and 15672 (management UI)
+  flowcept_rabbitmq:
+    container_name: flowcept_rabbitmq
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+networks:
+  flowcept:
+    driver: bridge
+
+volumes:
+  mongo_data:

@@ -31,6 +31,12 @@ class BlobObject:
     version: int = 0
     """Monotonic version of this blob object. Starts at ``0`` and increments on updates."""
 
+    created_at: float = None
+    """Epoch timestamp when the object was first persisted."""
+
+    updated_at: float = None
+    """Epoch timestamp when the object was last persisted or updated."""
+
     def __init__(
         self,
         object_id=None,
@@ -40,6 +46,8 @@ class BlobObject:
         custom_metadata=None,
         tags=None,
         version: int = 0,
+        created_at: float = None,
+        updated_at: float = None,
     ):
         self.object_id = object_id
         self.task_id = task_id
@@ -48,6 +56,8 @@ class BlobObject:
         self.custom_metadata = custom_metadata
         self.tags = tags
         self.version = 0 if version is None else int(version)
+        self.created_at = created_at
+        self.updated_at = updated_at
 
     @staticmethod
     def object_id_field():
@@ -84,7 +94,9 @@ class BlobObject:
             f"object_type={repr(self.object_type)}, "
             f"custom_metadata={repr(self.custom_metadata)}, "
             f"tags={repr(self.tags)}, "
-            f"version={repr(self.version)})"
+            f"version={repr(self.version)}, "
+            f"created_at={repr(self.created_at)}, "
+            f"updated_at={repr(self.updated_at)})"
         )
 
     def __str__(self):

@@ -371,7 +371,7 @@ pip install flowcept[webservice,mongo]
 Start webservice:
 
 ```bash
-flowcept --start-webservice --webservice-host=127.0.0.1 --webservice-port=8008
+flowcept --start --webservice --webservice-host=127.0.0.1 --webservice-port=8008
 ```
 
 Quick curl examples:
@@ -429,7 +429,7 @@ Recommended for Codex/Claude/Gemini users.
 1. Start MCP server in a separate terminal:
 
 ```bash
-flowcept --start-agent
+flowcept --start --agent
 ```
 
 2. Configure external-LLM mode:
@@ -445,7 +445,7 @@ agent:
 
 #### Internal-LLM mode
 
-Flowcept builds the model using `build_llm_model()` (`src/flowcept/agents/agents_utils.py`).
+Flowcept builds the model using `build_llm_model()` (`src/flowcept/agents/llm/builders.py`).
 
 Providers in code:
 
@@ -466,7 +466,7 @@ Common settings under `agent`:
 Start agent UI:
 
 ```bash
-flowcept --start-agent-gui
+flowcept --start --agent-gui
 ```
 
 ### Grafana monitoring
@@ -573,7 +573,7 @@ Read more:
   - Fix: `pip install flowcept[mongo]`
 - Symptom: agent won’t respond / cannot connect
   - Fix:
-    - start server: `flowcept --start-agent`
+    - start server: `flowcept --start --agent`
     - confirm `agent.mcp_host`/`agent.mcp_port` in settings
     - in external assistant mode, follow `AGENTS.md` and `docs/agent.rst`
 - Symptom: PDF report generation fails
@@ -597,9 +597,9 @@ flowcept --config-profile full-offline
 flowcept --show-settings
 
 # Start services
-flowcept --start-webservice --webservice-host=127.0.0.1 --webservice-port=8008
-flowcept --start-agent
-flowcept --start-agent-gui
+flowcept --start --webservice --webservice-host=127.0.0.1 --webservice-port=8008
+flowcept --start --agent
+flowcept --start --agent-gui
 
 # Stream MQ messages
 flowcept --stream-messages

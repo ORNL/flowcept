@@ -10,8 +10,8 @@ import pandas as pd
 import streamlit as st
 from flowcept.agents.gui import AI
 from flowcept.agents import prompt_handler
-from flowcept.agents.agent_client import run_tool
-from flowcept.agents.agents_utils import ToolResult
+from flowcept.agents.mcp.mcp_client import run_tool
+from flowcept.agents.tool_result import ToolResult
 
 
 from flowcept.agents.gui.audio_utils import _md_to_plain_text, speak

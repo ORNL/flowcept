@@ -26,6 +26,11 @@ def __getattr__(name):
 
         return BlobObject
 
+    elif name == "AgentObject":
+        from flowcept.commons.flowcept_dataclasses.agent_object import AgentObject
+
+        return AgentObject
+
     elif name == "flowcept_task":
         from flowcept.instrumentation.flowcept_task import flowcept_task
 
@@ -72,16 +77,11 @@ def __getattr__(name):
         from flowcept.configs import SETTINGS_PATH
 
         return SETTINGS_PATH
-    elif name == "TaskQueryAPI":
-        from flowcept.flowcept_api.task_query_api import TaskQueryAPI
-
-        return TaskQueryAPI
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 __all__ = [
     "FlowceptDaskWorkerAdapter",
-    "TaskQueryAPI",
     "flowcept_task",
     "FlowceptLoop",
     "FlowceptLightweightLoop",
@@ -92,6 +92,7 @@ __all__ = [
     "flowcept_torch",
     "WorkflowObject",
     "BlobObject",
+    "AgentObject",
     "__version__",
     "SETTINGS_PATH",
 ]

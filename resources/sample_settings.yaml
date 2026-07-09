@@ -1,4 +1,4 @@
-flowcept_version: 0.10.5 # Version of the Flowcept package. Do not update this manually. The CI updates it. This setting file is compatible with this version.
+flowcept_version: 0.10.8 # Version of the Flowcept package. Do not update this manually. The CI updates it. This setting file is compatible with this version.
 
 project:
   debug: true # Toggle debug mode. This will add a property `debug: true` to all saved data, making it easier to retrieve/delete them later.
@@ -44,13 +44,15 @@ experiment:
 
 mq:
   enabled: false
-  type: redis  # or kafka or mofka; Please adjust the port (kafka's default is 9092; redis is 6379). If mofka, adjust the group_file.
+  type: redis  # or kafka, mofka, rabbitmq; adjust port accordingly (redis: 6379, kafka: 9092, rabbitmq: 5672). If mofka, also set group_file.
   host: localhost
   # uri: ?
   # instances: ["localhost:6379"] # We can have multiple MQ instances being accessed by the consumers but each interceptor will currently access one single MQ..
   port: 6379
   # group_id: auto  # Kafka-only consumer group id. Use "auto" to generate a unique group per run.
   # group_file: mofka.json
+  # username: guest  # RabbitMQ only (AMQP); default is "guest"
+  # vhost: /         # RabbitMQ only; default is "/"
   channel: interception
   buffer_size: 50
   insertion_buffer_time_secs: 5
@@ -68,19 +70,20 @@ kv_db:
   # uri: use Redis connection uri here
 
 web_server:
-  host: 0.0.0.0
-  port: 5000
+  host: 127.0.0.1  # Bind address; use 0.0.0.0 to expose on all interfaces. Env: WEBSERVER_HOST.
+  port: 8008       # HTTP port for the FastAPI webservice and built UI. Env: WEBSERVER_PORT.
+  ui_enabled: true # Serve the built web UI (if assets are present) at the root path.
+  cors_origins: [] # Extra allowed CORS origins; empty disables the CORS middleware (UI is same-origin).
+  sse_poll_interval_sec: 2.0 # How often live (SSE) endpoints poll the DB for new data.
+  sse_max_batch: 500 # Max records pushed per SSE event.
+  dashboards_dir: ~/.flowcept/dashboards # Dashboard JSON storage when MongoDB is disabled.
+  max_label_length: 30 # Limit for graph labels. Fall back to inputs/outputs sequential names if exceeded.
 
 sys_metadata:
   environment_id: "laptop"   # We use this to keep track of the environment used to run an experiment. Typical values include the cluster name, but it can be anything that you think will help identify your experimentation environment.
 
 extra_metadata: # We use this to store any extra metadata you want to keep track of during an experiment.
   place_holder: ""
-
-analytics:
-  sort_orders:
-    generated.loss: minimum_first
-    generated.accuracy: maximum_first
 
 db_buffer:
   insertion_buffer_time_secs: 5   # Time interval (in seconds) to buffer incoming records before flushing to the database
@@ -93,8 +96,8 @@ agent:
   enabled: false
   mcp_host: localhost
   mcp_port: 8000
-  allowed_hosts:
-    - "0.1.2.3:*"
+  mcp_allowed_hosts: ["localhost:*", "127.0.0.1:*"]  # Default is ["localhost:*", "127.0.0.1:*"]
+  mcp_allowed_origins: ["http://localhost:*", "http://127.0.0.1:*"]  # Default is ["http://localhost:*", "http://127.0.0.1:*"]
   llm_server_url: '?'
   api_key: '?'
   model: '?'
@@ -103,6 +106,10 @@ agent:
   audio_enabled: false
   debug: true
   start_persistence: false
+  chat_enabled: true # Enable the /api/v1/chat endpoint (requires the llm_agent extra and LLM settings above).
+  chat_max_tool_iterations: 5 # Max LLM tool-calling iterations per chat message.
+  chat_max_query_limit: 1000 # Hard cap for records returned by chat LLM query tools.
+  agent_mode: disabled # How the MCP agent is deployed: disabled | separate | colocated
 
 databases:
 

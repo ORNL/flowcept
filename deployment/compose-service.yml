@@ -1,0 +1,92 @@
+# Single-command local test of the Flowcept SERVICE image (webservice + built UI),
+# wired to Redis + MongoDB on one network. Unlike the other compose files (which start
+# only dependencies), this one also builds and runs the service image itself.
+#
+#   docker compose -f deployment/compose-service.yml up --build      # webservice → http://localhost:8008
+#   docker compose -f deployment/compose-service.yml --profile agent up --build   # also start the MCP agent (needs LLM creds)
+#   docker compose -f deployment/compose-service.yml down -v          # stop + drop mongo volume
+#
+# Config comes from deployment/local-settings.yaml (mounted read-only). See LOCAL_TESTING.md.
+name: flowcept-service
+
+services:
+  flowcept_redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  flowcept_mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  flowcept_webservice:
+    build:
+      context: ..
+      dockerfile: deployment/service.Dockerfile
+      args:
+        # Set INSECURE_TLS=true in your shell when building behind a corporate
+        # TLS-intercepting proxy (e.g. `INSECURE_TLS=true docker compose ... up --build`).
+        INSECURE_TLS: ${INSECURE_TLS:-false}
+    image: flowcept-service:local
+    depends_on:
+      flowcept_redis:
+        condition: service_healthy
+      flowcept_mongo:
+        condition: service_healthy
+    ports:
+      - "8008:8008"
+    volumes:
+      - ./local-settings.yaml:/root/.flowcept/settings.yaml:ro
+    # Image CMD is already `--start-webservice`.
+
+  # Optional MCP/agent server. Only starts with `--profile agent`, and requires
+  # agent.enabled: true + the LLM fields set in local-settings.yaml.
+  flowcept_agent:
+    image: flowcept-service:local
+    profiles: ["agent"]
+    depends_on:
+      flowcept_redis:
+        condition: service_healthy
+      flowcept_mongo:
+        condition: service_healthy
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./local-settings.yaml:/root/.flowcept/settings.yaml:ro
+    command: ["conda", "run", "--no-capture-output", "-n", "flowcept", "flowcept", "--start-agent"]
+
+  # Streamlit GUI to chat with the agent. It is an MCP *client* — it calls the
+  # prompt_handler tool on flowcept_agent over http://$AGENT_HOST:$AGENT_PORT/mcp, so
+  # AGENT_HOST must point at the agent container (0.0.0.0 isn't routable as a client target).
+  # The GUI itself doesn't need the LLM — flowcept_agent does. Open http://localhost:8501.
+  flowcept_agent_gui:
+    image: flowcept-service:local
+    profiles: ["agent"]
+    depends_on:
+      - flowcept_agent
+    ports:
+      - "8501:8501"
+    environment:
+      AGENT_HOST: flowcept_agent              # MCP client target = the agent service
+      STREAMLIT_SERVER_HEADLESS: "true"        # no browser-open / first-run email prompt
+      STREAMLIT_SERVER_ADDRESS: "0.0.0.0"      # listen on all interfaces so the published port works
+      STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
+    volumes:
+      - ./local-settings.yaml:/root/.flowcept/settings.yaml:ro
+    command: ["conda", "run", "--no-capture-output", "-n", "flowcept", "flowcept", "--start-agent-gui"]
+
+volumes:
+  mongo_data:
