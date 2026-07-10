@@ -20,12 +20,24 @@ Capture, stream, query, visualize, and reason over workflow lineage across ML, a
   <a href="https://flowcept.readthedocs.io/en/latest/publications.html">Publications</a>
 </p>
 
-[![Documentation](https://img.shields.io/badge/docs-readthedocs.io-green.svg)](https://flowcept.readthedocs.io/)
-[![PyPI](https://badge.fury.io/py/flowcept.svg)](https://pypi.org/project/flowcept)
-[![Tests](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml)
-[![Checks](https://github.com/ORNL/flowcept/actions/workflows/checks.yml/badge.svg)](https://github.com/ORNL/flowcept/actions/workflows/checks.yml)
-[![License: MIT](https://img.shields.io/github/license/ORNL/flowcept)](LICENSE)
 
+<p align="center">
+  <a href="https://flowcept.readthedocs.io/">
+    <img src="https://img.shields.io/badge/docs-readthedocs.io-green.svg" alt="Documentation">
+  </a>
+  <a href="https://pypi.org/project/flowcept">
+    <img src="https://badge.fury.io/py/flowcept.svg" alt="PyPI">
+  </a>
+  <a href="https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml">
+    <img src="https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml/badge.svg" alt="Tests">
+  </a>
+  <a href="https://github.com/ORNL/flowcept/actions/workflows/checks.yml">
+    <img src="https://github.com/ORNL/flowcept/actions/workflows/checks.yml/badge.svg" alt="Checks">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/github/license/ORNL/flowcept" alt="License: MIT">
+  </a>
+</p>
 ---
 
 ## What Is Flowcept?
@@ -48,7 +60,7 @@ provenance, so users can ask questions, inspect lineage, and drive visual explor
 The Flowcept UI turns captured provenance into browsable workflow structure, data lineage,
 dashboards, workflow cards, and natural-language provenance exploration.
 
-<img src="./docs/img/FlowceptUI.gif" alt="Flowcept UI" width="800">
+<img src="./docs/img/FlowceptUI.gif" alt="Flowcept UI" style="max-width: 100%; height: auto;">
 
 ## Why Flowcept?
 
