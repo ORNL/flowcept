@@ -22,23 +22,30 @@ Capture, stream, query, visualize, and reason over workflow lineage across ML, a
 
 
 <p align="center">
+
   <a href="https://flowcept.readthedocs.io/">
     <img src="https://img.shields.io/badge/docs-readthedocs.io-green.svg" alt="Documentation">
   </a>
+
   <a href="https://pypi.org/project/flowcept">
     <img src="https://badge.fury.io/py/flowcept.svg" alt="PyPI">
   </a>
+
   <a href="https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml">
     <img src="https://github.com/ORNL/flowcept/actions/workflows/run-tests.yml/badge.svg" alt="Tests">
   </a>
+
   <a href="https://github.com/ORNL/flowcept/actions/workflows/checks.yml">
     <img src="https://github.com/ORNL/flowcept/actions/workflows/checks.yml/badge.svg" alt="Checks">
   </a>
+
   <a href="LICENSE">
     <img src="https://img.shields.io/github/license/ORNL/flowcept" alt="License: MIT">
   </a>
+
 </p>
----
+
+
 
 ## What Is Flowcept?
 
