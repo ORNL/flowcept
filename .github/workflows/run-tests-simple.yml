@@ -52,14 +52,14 @@ jobs:
         run: |
           flowcept --init-settings --full -y
           flowcept --config-profile full-online -y
-          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -k "not test_decorated_function_timed"
+          pytest tests --timeout=600 --ignore=tests/adapters/test_tensorboard.py --ignore=tests/misc_tests/telemetry_test.py -m "not llm" -k "not test_decorated_function_timed"
 
       - name: Test notebooks with pytest and redis
         run: |
           rm -f "${FLOWCEPT_SETTINGS_PATH:-$HOME/.flowcept/settings.yaml}"
           flowcept --init-settings --full --dask --mlflow -y
           flowcept --config-profile full-online -y
-          pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb" --ignore="notebooks/analytics.ipynb" --ignore=notebooks/tensorboard.ipynb
+          pytest --nbmake "notebooks/" --nbmake-timeout=600 --ignore="notebooks/dask_from_CLI.ipynb" --ignore=notebooks/tensorboard.ipynb
 
       - name: Shut down docker compose
         run: make services-stop

@@ -1,8 +1,10 @@
 """Configuration module."""
 
+import copy
 import os
 import socket
 import getpass
+import json
 
 from flowcept.version import __version__
 
@@ -18,10 +20,9 @@ DEFAULT_SETTINGS = {
     "experiment": {},
     "mq": {"enabled": False},
     "kv_db": {"enabled": False},
-    "web_server": {},
+    "web_server": {"max_label_length": 30},
     "sys_metadata": {},
     "extra_metadata": {},
-    "analytics": {},
     "db_buffer": {},
     "databases": {"mongodb": {"enabled": False}, "lmdb": {"enabled": False}},
     "adapters": {},
@@ -45,8 +46,18 @@ def _get_env_bool(name: str, default=False) -> bool:
     return str(_get_env(name, str(default))).strip().lower() in _TRUE_VALUES
 
 
+def _get_env_list(name: str, default: list[str]) -> list[str]:
+    raw = os.getenv(name)
+    if not raw:
+        return default
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        raise ValueError(f"{name} must be valid JSON array")
+
+
 if USE_DEFAULT:
-    settings = DEFAULT_SETTINGS.copy()
+    settings = copy.deepcopy(DEFAULT_SETTINGS)
     SETTINGS_PATH = "FLOWCEPT_DEFAULT_SETTINGS"
 
 else:
@@ -56,14 +67,10 @@ else:
     SETTINGS_PATH = os.getenv("FLOWCEPT_SETTINGS_PATH", f"{_SETTINGS_DIR}/settings.yaml")
 
     if not os.path.exists(SETTINGS_PATH):
-        from importlib import resources
-
-        SETTINGS_PATH = str(resources.files("resources").joinpath("sample_settings.yaml"))
-
-        with open(SETTINGS_PATH) as f:
-            settings = OmegaConf.load(f)
+        settings = copy.deepcopy(DEFAULT_SETTINGS)
+        SETTINGS_PATH = "FLOWCEPT_DEFAULT_SETTINGS"
     else:
-        settings = OmegaConf.load(SETTINGS_PATH)
+        settings = OmegaConf.to_container(OmegaConf.load(SETTINGS_PATH), resolve=True)
 
 # Making sure all settings are in place.
 keys = DEFAULT_SETTINGS.keys() - settings.keys()
@@ -104,6 +111,8 @@ MQ_HOST = _get_env("MQ_HOST", settings["mq"].get("host", "localhost"))
 MQ_PORT = int(_get_env("MQ_PORT", settings["mq"].get("port", "6379")))
 MQ_URI = _get_env("MQ_URI", settings["mq"].get("uri", None))
 MQ_GROUP_ID = _get_env("MQ_GROUP_ID", settings["mq"].get("group_id", "auto"))
+MQ_USERNAME = _get_env("MQ_USERNAME", settings["mq"].get("username", "guest"))
+MQ_VHOST = _get_env("MQ_VHOST", settings["mq"].get("vhost", "/"))
 MQ_BUFFER_SIZE = settings["mq"].get("buffer_size", 1)
 MQ_INSERTION_BUFFER_TIME = settings["mq"].get("insertion_buffer_time_secs", 1)
 MQ_TIMING = settings["mq"].get("timing", False)
@@ -149,6 +158,8 @@ if LMDB_SETTINGS:
     LMDB_ENABLED = _get_env_bool("LMDB_ENABLED", LMDB_SETTINGS.get("enabled", False))
     _lmdb_path_default = LMDB_SETTINGS.get("path", "flowcept_lmdb")
     LMDB_SETTINGS["path"] = _get_env("LMDB_PATH", _lmdb_path_default)
+
+DBS_ENABLED = MONGO_ENABLED or LMDB_ENABLED
 
 # if not LMDB_ENABLED and not MONGO_ENABLED:
 #     # At least one of these variables need to be enabled.
@@ -252,14 +263,18 @@ EXTRA_METADATA.update({"mq_port": MQ_PORT})
 ######################
 settings.setdefault("web_server", {})
 _webserver_settings = settings.get("web_server", {})
-WEBSERVER_HOST = _webserver_settings.get("host", "0.0.0.0")
-WEBSERVER_PORT = int(_webserver_settings.get("port", 5000))
-
-######################
-#    ANALYTICS      #
-######################
-
-ANALYTICS = settings.get("analytics", None)
+WEBSERVER_HOST = _get_env("WEBSERVER_HOST", _webserver_settings.get("host", "127.0.0.1"))
+WEBSERVER_PORT = int(_get_env("WEBSERVER_PORT", _webserver_settings.get("port", 8008)))
+WEBSERVER_UI_ENABLED = _webserver_settings.get("ui_enabled", True)
+WEBSERVER_CORS_ORIGINS = _webserver_settings.get("cors_origins", [])
+WEBSERVER_SSE_POLL_INTERVAL = float(_webserver_settings.get("sse_poll_interval_sec", 2.0))
+WEBSERVER_SSE_MAX_BATCH = int(_webserver_settings.get("sse_max_batch", 500))
+WEBSERVER_DASHBOARDS_DIR = os.path.expanduser(
+    _webserver_settings.get("dashboards_dir", f"~/.{PROJECT_NAME}/dashboards")
+)
+WEBSERVER_MAX_LABEL_LENGTH = int(
+    _get_env("WEBSERVER_MAX_LABEL_LENGTH", _webserver_settings.get("max_label_length", 30))
+)
 
 ####################
 # INSTRUMENTATION  #
@@ -269,9 +284,19 @@ INSTRUMENTATION = settings.get("instrumentation", {})
 INSTRUMENTATION_ENABLED = INSTRUMENTATION.get("enabled", True)
 
 AGENT = settings.get("agent", {})
+AGENT_API_KEY = _get_env("AGENT_API_KEY", AGENT.get("api_key", None))
+AGENT_CHAT_ENABLED = AGENT.get("chat_enabled", True)
+AGENT_CHAT_MAX_TOOL_ITERATIONS = int(AGENT.get("chat_max_tool_iterations", 5))
+AGENT_CHAT_MAX_QUERY_LIMIT = int(AGENT.get("chat_max_query_limit", 1000))
+AGENT_CHAT_MAX_TOOL_RESULT_CHARS = int(AGENT.get("chat_max_tool_result_chars", 4000))
 AGENT_AUDIO = _get_env_bool("AGENT_AUDIO", settings["agent"].get("audio_enabled", "false"))
 AGENT_HOST = _get_env("AGENT_HOST", settings["agent"].get("mcp_host", "localhost"))
 AGENT_PORT = int(_get_env("AGENT_PORT", settings["agent"].get("mcp_port", "8000")))
+AGENT_MODE = _get_env("AGENT_MODE", AGENT.get("agent_mode", "disabled"))
+MCP_ALLOWED_HOSTS = _get_env_list("MCP_ALLOWED_HOSTS", AGENT.get("mcp_allowed_hosts", ["localhost:*", "127.0.0.1:*"]))
+MCP_ALLOWED_ORIGINS = _get_env_list(
+    "MCP_ALLOWED_ORIGINS", AGENT.get("mcp_allowed_origins", ["http://localhost:*", "http://127.0.0.1:*"])
+)
 
 ####################
 # Enabled ADAPTERS #

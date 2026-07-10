@@ -13,7 +13,7 @@ import torch.optim as optim
 
 from flowcept import Flowcept
 from flowcept.configs import MONGO_ENABLED
-from flowcept.commons.vocabulary import ML_Types
+from flowcept.commons.vocabulary import ML_Types, PROV_AGENT
 from flowcept.instrumentation.flowcept_task import flowcept_task, get_current_context_task_id
 
 
@@ -34,9 +34,7 @@ def _set_reproducibility(seed=0):
     reproducibility["torch_manual_seeded"] = True
     reproducibility["torch_cuda_manual_seeded"] = torch.cuda.is_available()
     reproducibility["torch_deterministic_algorithms"] = (
-        torch.are_deterministic_algorithms_enabled()
-        if hasattr(torch, "are_deterministic_algorithms_enabled")
-        else True
+        torch.are_deterministic_algorithms_enabled() if hasattr(torch, "are_deterministic_algorithms_enabled") else True
     )
     reproducibility["torch_cudnn_deterministic"] = (
         bool(getattr(torch.backends.cudnn, "deterministic", False)) if hasattr(torch.backends, "cudnn") else False
@@ -48,10 +46,8 @@ def _set_reproducibility(seed=0):
 
 
 def shape_args_handler(*args, **kwargs):
-    """Capture tensor values as shape metadata for provenance payloads."""
     def _shape_key(name):
         return name if name.endswith("_shape") else f"{name}_shape"
-
     handled = {}
     for i, arg in enumerate(args):
         key = f"arg_{i}"
@@ -65,7 +61,6 @@ def shape_args_handler(*args, **kwargs):
         else:
             handled[key] = value
     return handled
-
 
 class SingleLayerPerceptron(nn.Module):
     def __init__(self, input_size, **kwargs):
@@ -96,7 +91,7 @@ def get_dataset(n_samples, split_ratio):
     y_train, y_val = y[:n_train], y[n_train:]
     dataset_task_id = get_current_context_task_id()
     custom_metadata = {"n_samples": n_samples, "split_ratio": split_ratio}
-    dataset_object_id = Flowcept.db.save_or_update_dataset(
+    dataset_object_id = Flowcept.insert_or_update_dataset(
         object={
             "x_train": x_train,
             "y_train": y_train,
@@ -123,6 +118,32 @@ def validate(model, criterion, x_val, y_val):
     return loss.item(), accuracy
 
 
+@flowcept_task(output_names=["dataset_config", "n_configs"])
+def call_hpc_agent(agent_id=None):
+    dataset_config = dict(n_samples=120, split_ratio=0.8)
+    n_configs = 5
+    return dataset_config, n_configs
+
+@flowcept_task(output_names=["configs", "job_id"], subtype=PROV_AGENT.AGENT_TOOL)
+def submit_gridsearch_job(
+    n_configs=5,
+    agent_id=None,
+    source_agent_id=None,
+):
+    """Simulate submitting a training job to an HPC system."""
+    configs = [
+        {"config_id": "cfg_1", "epochs": 2, "learning_rate": 0.01, "n_input_neurons": 1},
+        {"config_id": "cfg_2", "epochs": 4, "learning_rate": 0.03, "n_input_neurons": 1},
+        {"config_id": "cfg_3", "epochs": 6, "learning_rate": 0.08, "n_input_neurons": 2},
+        {"config_id": "cfg_4", "epochs": 10, "learning_rate": 0.12, "n_input_neurons": 2},
+        {"config_id": "cfg_5", "epochs": 14, "learning_rate": 0.20, "n_input_neurons": 2},
+    ]
+    configs = configs[:n_configs]
+    assert len(configs) == n_configs
+    job_id = "gridsearch_batch_1"
+    return configs, job_id
+
+
 @flowcept_task(subtype=ML_Types.LEARNING)
 def train_and_validate(
     n_input_neurons,
@@ -136,6 +157,8 @@ def train_and_validate(
     learning_rate=0.1,
     config_id=None,
     torch_only=False,
+    agent_id=None,
+    job_id=None,
 ):
     """Train a perceptron and return validation metrics.
 
@@ -171,7 +194,7 @@ def train_and_validate(
             }
             if config_id is not None:
                 custom_metadata["config_id"] = config_id
-            torch_model_object_id = Flowcept.db.save_or_update_torch_model(
+            torch_model_object_id = Flowcept.insert_or_update_torch_model(
                 model=model,
                 object_id=torch_model_object_id,
                 task_id=current_task_id,
@@ -179,7 +202,7 @@ def train_and_validate(
                 control_version=True,
             )
             if not torch_only:
-                ml_model_object_id = Flowcept.db.save_or_update_ml_model(
+                ml_model_object_id = Flowcept.insert_or_update_ml_model(
                     object=model.state_dict(),
                     object_id=ml_model_object_id,
                     task_id=current_task_id,
@@ -202,28 +225,64 @@ def train_and_validate(
     return result
 
 
+def _best_gridsearch_result(results):
+    return min(results, key=lambda item: float(item["result"]["best_val_loss"]))["result"]
+
+
+def select_best_model_args_handler(results=None, **kwargs):
+    """Capture the selected training output as model-selection input."""
+    if results is None:
+        return kwargs
+    result = _best_gridsearch_result(results)
+    res = {
+        "torch_model_object_id": result["torch_model_object_id"],
+        "best_val_loss": result["best_val_loss"],
+        "config_id": result["config_id"],
+    }
+    for k, v in kwargs.items():
+        res[k] = v
+    return res
+
 @flowcept_task(subtype=ML_Types.MODEL_SELECTION)
-def select_best_model(workflow_id):
-    """Select the best model object for a workflow by minimal recorded loss."""
-    best_doc = Flowcept.db.query(
-        collection="objects",
-        filter={
-            "workflow_id": workflow_id,
-            "object_type": "ml_model",
-            "custom_metadata.loss": {"$exists": True},
-        },
-        sort=[("custom_metadata.loss", 1)],
-        limit=1,
-    )[0]
-    Flowcept.db.update_object_metadata(
-        object_id=best_doc["object_id"],
-        tags=["best"],
-        control_version=True
-    )
+def select_best_model(results, agent_id=None):
+    """Select the best model from train task outputs by minimal validation loss."""
+    min_loss = float("inf")
+    best_model_object_id = None
+    best_config_id = None
+
+    for r in results:
+        if isinstance(r, dict):
+            if "torch_model_object_id" in r:
+                obj_id = r["torch_model_object_id"]
+            elif "result" in r and isinstance(r["result"], dict) and "torch_model_object_id" in r["result"]:
+                obj_id = r["result"]["torch_model_object_id"]
+            else:
+                obj_id = None
+        else:
+            obj_id = r
+
+        if not obj_id:
+            raise Exception("This can't happen")
+
+        model_obj = Flowcept.db.get_ml_model(obj_id)
+        if model_obj and model_obj.custom_metadata:
+            loss = model_obj.custom_metadata.get("loss")
+            if loss is not None and loss < min_loss:
+                min_loss = loss
+                best_model_object_id = obj_id
+                best_config_id = model_obj.custom_metadata.get("config_id")
+
+    if best_model_object_id:
+        Flowcept.db.update_object_metadata(
+            object_id=best_model_object_id,
+            tags=["best"],
+            control_version=True,
+        )
+
     return {
-        "selected_model_object_id": best_doc["object_id"],
-        "selected_loss": best_doc["custom_metadata"]["loss"],
-        "selected_config_id": best_doc["custom_metadata"]["config_id"],
+        "selected_model_object_id": best_model_object_id,
+        "selected_loss": min_loss,
+        "selected_config_id": best_config_id,
     }
 
 
@@ -235,6 +294,58 @@ def run_training(n_samples, split_ratio, n_input_neurons, epochs):
     # Train and Validate:
     result = train_and_validate(n_input_neurons, epochs, x_train, y_train, x_val, y_val, dataset_id=dataset_id)
     return result
+
+
+def run_gridsearch_experiment(campaign_id=None):
+    """Run the Perceptron GridSearch scenario and return captured artifacts."""
+    reproducibility = _set_reproducibility(seed=42)
+
+    kwargs = {
+        "workflow_name": "Perceptron GridSearch",
+        "workflow_subtype": ML_Types.WORKFLOW,
+        "workflow_args": reproducibility,
+    }
+    if campaign_id is not None:
+        kwargs["campaign_id"] = campaign_id
+
+    with Flowcept(**kwargs) as fc:
+        orchestrator_agent_id = fc.save_agent(name="Orchestrator")
+        hpc_agent_id = fc.save_agent(name="HPCAgent")
+
+        dataset_config, n_configs = call_hpc_agent(agent_id=orchestrator_agent_id)
+
+        configs, batch_job_id = submit_gridsearch_job(n_configs=n_configs, agent_id=hpc_agent_id, source_agent_id=orchestrator_agent_id)
+
+        x_train, y_train, x_val, y_val, dataset_id = get_dataset(**dataset_config)
+
+
+        results = []
+        for idx, cfg in enumerate(configs, 1):
+            result = train_and_validate(
+                n_input_neurons=cfg["n_input_neurons"],
+                epochs=cfg["epochs"],
+                learning_rate=cfg["learning_rate"],
+                x_train=x_train,
+                y_train=y_train,
+                x_val=x_val,
+                y_val=y_val,
+                dataset_id=dataset_id,
+                checkpoint_check=2,
+                config_id=cfg["config_id"],
+                job_id=batch_job_id,
+                torch_only=True,
+            )
+            results.append({"torch_model_object_id": result.get("torch_model_object_id")})
+
+        selected = select_best_model(results, agent_id=orchestrator_agent_id)
+
+    return {
+        "workflow_id": Flowcept.current_workflow_id,
+        "tasks": Flowcept.db.get_tasks_from_current_workflow(),
+        "configs": configs,
+        "results": results,
+        "selected": selected,
+    }
 
 
 def assert_single_inference_shape(model, sample):
@@ -252,6 +363,7 @@ def asserts(tasks):
     dataset_task = next((t for t in tasks if t.get("activity_id") == "get_dataset"), None)
     assert dataset_task is not None
     assert dataset_task.get("subtype") == ML_Types.DATA_PREP
+    assert dataset_task.get("agent_id") is None
     generated = dataset_task.get("generated", {})
     assert tuple(generated.get("x_train_shape", ())) == (96, 2)
     assert tuple(generated.get("y_train_shape", ())) == (96, 1)
@@ -261,6 +373,13 @@ def asserts(tasks):
     train_task = next((t for t in tasks if t.get("activity_id") == "train_and_validate"), None)
     assert train_task is not None
     assert train_task.get("subtype") == ML_Types.LEARNING
+    assert train_task.get("agent_id") is None
+
+
+
+    select_best_task = next((t for t in tasks if t.get("activity_id") == "select_best_model"), None)
+    if select_best_task is not None:
+        assert select_best_task.get("agent_id").startswith("orchestrator_agent_")
     train_generated = train_task.get("generated", {})
     ml_model_object_id = train_generated.get("ml_model_object_id")
     torch_model_object_id = train_generated.get("torch_model_object_id")
@@ -318,7 +437,6 @@ def asserts(tasks):
 
 
 class SingleLayerPerceptronTests(unittest.TestCase):
-
     @unittest.skipIf(not MONGO_ENABLED, "MongoDB is disabled")
     def test_single_layer_perceptron_example_flow(self):
         params = {
@@ -374,47 +492,7 @@ class SingleLayerPerceptronTests(unittest.TestCase):
 
     def run_gridsearch_experiment(self):
         """Run the grid-search scenario and return collected artifacts for assertions."""
-        reproducibility = _set_reproducibility(seed=42)
-        configs = [
-            {"epochs": 2, "learning_rate": 0.01, "n_input_neurons": 1},
-            {"epochs": 4, "learning_rate": 0.03, "n_input_neurons": 1},
-            {"epochs": 6, "learning_rate": 0.08, "n_input_neurons": 2},
-            {"epochs": 10, "learning_rate": 0.12, "n_input_neurons": 2},
-            {"epochs": 14, "learning_rate": 0.20, "n_input_neurons": 2},
-        ]
-
-        with Flowcept(
-            workflow_name="Perceptron GridSearch",
-            workflow_subtype=ML_Types.WORKFLOW,
-            workflow_args=reproducibility,
-        ):
-            x_train, y_train, x_val, y_val, dataset_id = get_dataset(120, 0.8)
-            results = []
-            for idx, cfg in enumerate(configs, 1):
-                result = train_and_validate(
-                    n_input_neurons=cfg["n_input_neurons"],
-                    epochs=cfg["epochs"],
-                    learning_rate=cfg["learning_rate"],
-                    x_train=x_train,
-                    y_train=y_train,
-                    x_val=x_val,
-                    y_val=y_val,
-                    dataset_id=dataset_id,
-                    checkpoint_check=2,
-                    config_id=f"cfg_{idx}",
-                    torch_only=True,
-                )
-                results.append({"config": cfg, "result": result})
-
-            selected = select_best_model(Flowcept.current_workflow_id)
-
-        return {
-            "workflow_id": Flowcept.current_workflow_id,
-            "tasks": Flowcept.db.get_tasks_from_current_workflow(),
-            "configs": configs,
-            "results": results,
-            "selected": selected,
-        }
+        return run_gridsearch_experiment()
 
     def assert_gridsearch_experiment(self, run_data):
         """Assert all grid-search expectations from captured run data."""
@@ -434,7 +512,7 @@ class SingleLayerPerceptronTests(unittest.TestCase):
                 "- **select_best_model** (subtype=`model_selection`)",
             ],
             expected_content_lines=[
-                "`tags`: `best`",
+                "    - tags: `best`",
             ],
         )
 
@@ -447,21 +525,21 @@ class SingleLayerPerceptronTests(unittest.TestCase):
         expected_content_lines,
     ):
         """Generate and validate markdown/pdf provenance reports for a workflow."""
-        card_md_path = f"./PROVENANCE_CARD_{workflow_id}.md"
+        card_md_path = f"./WORKFLOW_CARD_{workflow_id}.md"
         if os.path.exists(card_md_path):
             os.remove(card_md_path)
         md_stats = Flowcept.generate_report(
-            report_type="provenance_card",
+            report_type="workflow_card",
             format="markdown",
             output_path=card_md_path,
             workflow_id=workflow_id,
         )
         assert os.path.exists(card_md_path)
-        assert md_stats["report_type"] == "provenance_card"
+        assert md_stats["report_type"] == "workflow_card"
         assert md_stats["format"] == "markdown"
         with open(card_md_path, "r", encoding="utf-8") as f:
             card_text = f.read()
-        assert f"# Workflow Provenance Card: {workflow_title}" in card_text
+        assert f"# Workflow Card: {workflow_title}" in card_text
         assert workflow_title in card_text
         if expect_aggregation_method:
             assert "## Aggregation Method" in card_text
@@ -492,7 +570,6 @@ class SingleLayerPerceptronTests(unittest.TestCase):
         assert pdf_stats["report_type"] == "provenance_report"
         assert pdf_stats["format"] == "pdf"
 
-
     def assert_model_metadata(self, reloaded_torch_model, torch_model_object_id):
         assert hasattr(reloaded_torch_model, "_flowcept_model_object")
         flowcept_model_object = reloaded_torch_model._flowcept_model_object
@@ -512,6 +589,15 @@ class SingleLayerPerceptronTests(unittest.TestCase):
         assert all(task.get("subtype") == ML_Types.LEARNING for task in learning_tasks)
         assert all(task.get("generated", {}).get("torch_model_object_id") is not None for task in learning_tasks)
         assert all("ml_model_object_id" not in task.get("generated", {}) for task in learning_tasks)
+        assert all(task.get("agent_id") is None for task in learning_tasks)
+
+        submit_tasks = [t for t in tasks if t.get("activity_id") == "submit_gridsearch_job"]
+        assert len(submit_tasks) == 1
+        # output_names=["configs"] with a list result must store under "configs", not "arg_0"
+        submit_generated = submit_tasks[0].get("generated", {})
+        assert "configs" in submit_generated, f"Expected 'configs' key in generated, got: {list(submit_generated.keys())}"
+        assert "arg_0" not in submit_generated, "arg_0 should not appear when output_names is set"
+
         model_selection_tasks = [t for t in tasks if t.get("activity_id") == "select_best_model"]
         assert len(model_selection_tasks) == 1
         assert model_selection_tasks[0].get("subtype") == ML_Types.MODEL_SELECTION
@@ -529,17 +615,33 @@ class SingleLayerPerceptronTests(unittest.TestCase):
     def assert_gridsearch_results(self, results, selected):
         """Validate grid-search result quality and selected model consistency."""
         assert len(results) == 5
-        best_losses = [r["result"]["best_val_loss"] for r in results if r["result"]["best_val_loss"] is not None]
-        assert len(best_losses) == 5
-        rounded_losses = {round(float(loss), 4) for loss in best_losses}
+        model_losses = []
+        best_loss = float("inf")
+        best_model_object_id = None
+        best_cfg = None
+
+        for r in results:
+            obj_id = r["torch_model_object_id"]
+            model_obj = Flowcept.db.get_ml_model(obj_id)
+            assert model_obj is not None
+            loss = model_obj.custom_metadata.get("loss")
+            assert loss is not None
+            model_losses.append(loss)
+
+            if loss < best_loss:
+                best_loss = loss
+                best_model_object_id = obj_id
+                best_cfg = {
+                    "n_input_neurons": model_obj.custom_metadata.get("n_input_neurons")
+                }
+
+        assert len(model_losses) == 5
+        rounded_losses = {round(float(loss), 4) for loss in model_losses}
         assert len(rounded_losses) > 1
 
-        best_entry = min(results, key=lambda item: item["result"]["best_val_loss"])
-        best_cfg = best_entry["config"]
-        best_model_object_id = best_entry["result"]["torch_model_object_id"]
         assert best_model_object_id is not None
         assert selected["selected_model_object_id"] == best_model_object_id
-        assert abs(float(selected["selected_loss"]) - float(best_entry["result"]["best_val_loss"])) < 1e-9
+        assert abs(float(selected["selected_loss"]) - float(best_loss)) < 1e-9
         return best_cfg, best_model_object_id
 
     def assert_gridsearch_best_model_inference(self, best_cfg, best_model_object_id):

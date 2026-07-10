@@ -1,10 +1,10 @@
 # Contributing
 
-Welcome to the FlowCept project! To make sure new contributions align well with the project, following there are some guidelines to help you create code that fits right in. Following them increases the chances of your contributions being merged smoothly.
+Welcome to the Flowcept project! To make sure new contributions align well with the project, following there are some guidelines to help you create code that fits right in. Following them increases the chances of your contributions being merged smoothly.
 
 ## Code Linting and Formatting
 
-All Python code in the FlowCept package should adhere to the [PEP 8](https://peps.python.org/pep-0008/) style guide. Linting and formatting are handled through the project Makefile, which wraps [Ruff](https://github.com/astral-sh/ruff). Configuration for Ruff is defined in the [pyproject.toml](./pyproject.toml) file.
+All Python code in the Flowcept package should adhere to the [PEP 8](https://peps.python.org/pep-0008/) style guide. Linting and formatting are handled through the project Makefile, which wraps [Ruff](https://github.com/astral-sh/ruff). Configuration for Ruff is defined in the [pyproject.toml](./pyproject.toml) file.
 
 ```text
 make reformat
@@ -24,7 +24,7 @@ make html
 
 There are two protected branches in this project: `dev` and `main`. This means that these two branches should be as stable as possible, especially the `main` branch. PRs to them should be peer-reviewed.
 
-The `main` branch always has the latest working version of FlowCept, with a tagged release published to [PyPI](https://pypi.org/project/flowcept).
+The `main` branch always has the latest working version of Flowcept, with a tagged release published to [PyPI](https://pypi.org/project/flowcept).
 
 The `dev` branch may be ahead of `main` while new features are being implemented. Feature branches should be pull requested to the `dev` branch. Pull requests into the `main` branch should always be made from the `dev` branch and be merged when the developers agree it is time to do so.
 
@@ -40,7 +40,7 @@ When a new issue is created a priority label should be added indicating how impo
 
 ### Automated versioning and releases
 
-FlowCept follows semantic versioning. The [release workflow](.github/workflows/create-release-n-publish.yml) runs on pushes to `main`, creates a tagged release, and publishes the package to [PyPI](https://pypi.org/project/flowcept).
+Flowcept follows semantic versioning. The [release workflow](.github/workflows/create-release-n-publish.yml) runs on pushes to `main`, creates a tagged release, and publishes the package to [PyPI](https://pypi.org/project/flowcept).
 
 ### Automated tests and code format check
 
@@ -50,15 +50,15 @@ Several GitHub Actions cover different runtime environments:
 * [run-tests.yml](.github/workflows/run-tests.yml) runs the main test matrix, including Redis and Kafka paths.
 * [run-tests-simple.yml](.github/workflows/run-tests-simple.yml) runs tests without MongoDB.
 * [run-tests-offline.yml](.github/workflows/run-tests-offline.yml) runs the full-offline profile.
-* [run-tests-kafka.yml](.github/workflows/run-tests-kafka.yml) runs Mongo-backed tests with Kafka MQ.
+* [run-tests-kafka-and-rabbit-mq.yml](.github/workflows/run-tests-kafka-and-rabbit-mq.yml) runs Mongo-backed tests with Kafka and RabbitMQ.
 * [run-tests-all-dbs.yml](.github/workflows/run-tests-all-dbs.yml) runs Mongo and non-Mongo database paths.
-* [run-tests-in-container.yml](.github/workflows/run-tests-in-container.yml) runs tests inside the FlowCept container.
+* [run-tests-in-container.yml](.github/workflows/run-tests-in-container.yml) runs tests inside the Flowcept container.
 * [run-tests-py313.yml](.github/workflows/run-tests-py313.yml) runs the Python 3.13-compatible subset.
 * [run-llm-tests.yml](.github/workflows/run-llm-tests.yml) runs the LLM/Dask example tests.
 
 The main test workflows also run on the daily schedule configured in the workflow files.
 
-## Checklist for Creating a new FlowCept adapter
+## Checklist for Creating a new Flowcept adapter
 
 1. Create a new package directory under `flowcept/flowceptor/adapters`
 2. Create a new class that inherits from `BaseInterceptor`, and consider implementing the abstract methods:

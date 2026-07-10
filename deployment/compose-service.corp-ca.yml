@@ -1,0 +1,45 @@
+# Overlay for running behind a corporate TLS-intercepting proxy (Netskope/Zscaler, etc.).
+#
+# Symptom it fixes: the agent's (or webservice's) outbound HTTPS to the LLM fails with
+# "SSL certificate problem: self signed certificate in certificate chain" because the proxy
+# re-signs TLS with a root CA the container doesn't trust. This overlay mounts your corporate
+# root CA and appends it to certifi's bundle (which httpx/openai use) before starting the service.
+#
+# 1. Export your corporate root CA(s) to deployment/corp-ca.pem (do NOT commit it), e.g. on macOS:
+#      security find-certificate -a -p /Library/Keychains/System.keychain > deployment/corp-ca.pem
+# 2. Run with BOTH compose files:
+#      docker compose -f deployment/compose-service.yml -f deployment/compose-service.corp-ca.yml \
+#        --profile agent up --build
+#
+# Only the agent and webservice call the LLM, so only they need this. The GUI talks to the agent
+# over plain HTTP (no TLS). NOTE: this is a LOCAL-only workaround — the deployed cluster pods don't
+# go through your laptop's proxy, so they verify the real cert normally.
+name: flowcept-service
+
+services:
+  flowcept_agent:
+    volumes:
+      - ./corp-ca.pem:/certs/corp-ca.pem:ro
+    environment:
+      REQUESTS_CA_BUNDLE: /certs/corp-ca.pem
+      SSL_CERT_FILE: /certs/corp-ca.pem
+    # $$ escapes compose interpolation so the $(...) runs in the container shell.
+    command:
+      - bash
+      - -lc
+      - |
+        cat /certs/corp-ca.pem >> "$$(conda run -n flowcept python -c 'import certifi; print(certifi.where())')"
+        exec conda run --no-capture-output -n flowcept flowcept --start-agent
+
+  flowcept_webservice:
+    volumes:
+      - ./corp-ca.pem:/certs/corp-ca.pem:ro
+    environment:
+      REQUESTS_CA_BUNDLE: /certs/corp-ca.pem
+      SSL_CERT_FILE: /certs/corp-ca.pem
+    command:
+      - bash
+      - -lc
+      - |
+        cat /certs/corp-ca.pem >> "$$(conda run -n flowcept python -c 'import certifi; print(certifi.where())')"
+        exec conda run --no-capture-output -n flowcept flowcept --start-webservice

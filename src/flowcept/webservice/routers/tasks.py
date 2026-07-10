@@ -6,9 +6,8 @@ from typing import Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from flowcept.flowcept_api.db_api import DBAPI
-from flowcept.webservice.deps import get_db_api
 from flowcept.webservice.schemas.common import ListResponse, QueryRequest
-from flowcept.webservice.services.serializers import normalize_docs
+from flowcept.commons.utils import normalize_docs
 from flowcept.webservice.services.sorting import sort_docs_by_first_date_field
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -35,7 +34,7 @@ def list_tasks(
     task_id: str | None = None,
     status: str | None = None,
     filter_json: str | None = None,
-    db: DBAPI = Depends(get_db_api),
+    db: DBAPI = Depends(DBAPI),
 ) -> ListResponse:
     """List tasks with optional basic filters."""
     query_filter = _json_filter(filter_json)
@@ -61,7 +60,7 @@ def list_tasks(
 
 
 @router.get("/{task_id}", response_model=Dict[str, Any])
-def get_task(task_id: str, db: DBAPI = Depends(get_db_api)) -> Dict[str, Any]:
+def get_task(task_id: str, db: DBAPI = Depends(DBAPI)) -> Dict[str, Any]:
     """Get a task by id."""
     docs = db.task_query(filter={"task_id": task_id}, limit=1) or []
     if not docs:
@@ -74,7 +73,7 @@ def get_task(task_id: str, db: DBAPI = Depends(get_db_api)) -> Dict[str, Any]:
 def list_tasks_by_workflow(
     workflow_id: str,
     limit: int = Query(default=100, ge=1, le=1000),
-    db: DBAPI = Depends(get_db_api),
+    db: DBAPI = Depends(DBAPI),
 ) -> ListResponse:
     """List tasks for a workflow."""
     docs = db.task_query(filter={"workflow_id": workflow_id}, limit=0) or []
@@ -88,7 +87,7 @@ def list_tasks_by_workflow(
 
 
 @router.post("/query", response_model=ListResponse)
-def query_tasks(payload: QueryRequest, db: DBAPI = Depends(get_db_api)) -> ListResponse:
+def query_tasks(payload: QueryRequest, db: DBAPI = Depends(DBAPI)) -> ListResponse:
     """Run an advanced read-only task query."""
     if payload.aggregation and payload.projection and len(payload.projection) > 1:
         raise HTTPException(

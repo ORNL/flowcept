@@ -45,7 +45,7 @@ Then inspect `flowcept_buffer.jsonl`.
     - [Internal-LLM mode](#internal-llm-mode)
   - [Grafana monitoring](#grafana-monitoring)
 - [4) Provenance reports](#4-provenance-reports)
-  - [Provenance cards (markdown)](#provenance-cards-markdown)
+  - [Workflow cards (markdown)](#workflow-cards-markdown)
   - [Full reports (pdf)](#full-reports-pdf)
 - [5) Architecture](#5-architecture)
 
@@ -371,7 +371,7 @@ pip install flowcept[webservice,mongo]
 Start webservice:
 
 ```bash
-flowcept --start-webservice --webservice-host=127.0.0.1 --webservice-port=8008
+flowcept --start --webservice --webservice-host=127.0.0.1 --webservice-port=8008
 ```
 
 Quick curl examples:
@@ -429,7 +429,7 @@ Recommended for Codex/Claude/Gemini users.
 1. Start MCP server in a separate terminal:
 
 ```bash
-flowcept --start-agent
+flowcept --start --agent
 ```
 
 2. Configure external-LLM mode:
@@ -445,7 +445,7 @@ agent:
 
 #### Internal-LLM mode
 
-Flowcept builds the model using `build_llm_model()` (`src/flowcept/agents/agents_utils.py`).
+Flowcept builds the model using `build_llm_model()` (`src/flowcept/agents/llm/builders.py`).
 
 Providers in code:
 
@@ -466,7 +466,7 @@ Common settings under `agent`:
 Start agent UI:
 
 ```bash
-flowcept --start-agent-gui
+flowcept --start --agent-gui
 ```
 
 ### Grafana monitoring
@@ -483,14 +483,14 @@ Telemetry docs:
 
 ## 4) Provenance reports
 
-### Provenance cards (markdown)
+### Workflow cards (markdown)
 
 Default report mode:
 
-- `report_type="provenance_card"`
+- `report_type="workflow_card"`
 - `format="markdown"`
 
-The rendered workflow card follows the upstream Workflow Provenance Card template:
+The rendered workflow card follows the upstream Workflow Card template:
 https://github.com/data-cards/workflow-provenance-card.
 
 Python API:
@@ -499,10 +499,10 @@ Python API:
 from flowcept import Flowcept
 
 Flowcept.generate_report(
-    report_type="provenance_card",
+    report_type="workflow_card",
     format="markdown",
     workflow_id="<workflow_id>",
-    output_path="PROVENANCE_CARD.md",
+    output_path="WORKFLOW_CARD.md",
 )
 ```
 
@@ -510,7 +510,7 @@ REST download:
 
 ```bash
 curl -s -X POST \
-  http://127.0.0.1:8008/api/v1/workflows/<workflow_id>/reports/provenance-card/download
+  http://127.0.0.1:8008/api/v1/workflows/<workflow_id>/reports/workflow-card/download
 ```
 
 Docs:
@@ -573,7 +573,7 @@ Read more:
   - Fix: `pip install flowcept[mongo]`
 - Symptom: agent won’t respond / cannot connect
   - Fix:
-    - start server: `flowcept --start-agent`
+    - start server: `flowcept --start --agent`
     - confirm `agent.mcp_host`/`agent.mcp_port` in settings
     - in external assistant mode, follow `AGENTS.md` and `docs/agent.rst`
 - Symptom: PDF report generation fails
@@ -597,9 +597,9 @@ flowcept --config-profile full-offline
 flowcept --show-settings
 
 # Start services
-flowcept --start-webservice --webservice-host=127.0.0.1 --webservice-port=8008
-flowcept --start-agent
-flowcept --start-agent-gui
+flowcept --start --webservice --webservice-host=127.0.0.1 --webservice-port=8008
+flowcept --start --agent
+flowcept --start --agent-gui
 
 # Stream MQ messages
 flowcept --stream-messages
@@ -617,12 +617,12 @@ from flowcept import Flowcept
 docs = Flowcept.read_buffer_file("flowcept_buffer.jsonl")
 df = Flowcept.read_buffer_file("flowcept_buffer.jsonl", return_df=True, normalize_df=True)
 
-# Generate markdown provenance card
+# Generate markdown workflow card
 Flowcept.generate_report(
-    report_type="provenance_card",
+    report_type="workflow_card",
     format="markdown",
     workflow_id="<workflow_id>",
-    output_path="PROVENANCE_CARD.md",
+    output_path="WORKFLOW_CARD.md",
 )
 
 # Generate PDF provenance report

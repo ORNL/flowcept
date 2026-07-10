@@ -16,9 +16,22 @@ This directory contains the runtime package. Use this README as a code-orientati
 - `flowceptor/`: interceptors, adapters, consumers, telemetry capture.
 - `commons/`: shared dataclasses, DAOs, buffers, logging, serialization, sanitization.
 - `agents/`: MCP agent server/client/tools/prompts.
-- `report/`: provenance card and PDF report generation.
+- `report/`: workflow card and PDF report generation.
 - `webservice/`: FastAPI read-only REST API.
-- `analytics/`: plotting and analysis helpers.
+
+## Separation of Concerns
+
+Keep each module focused on one layer. Do not mix HTTP, orchestration, and persistence
+logic in the same place.
+
+- UI / Dashboard / user client → HTTP route → small service layer → `DBAPI` → DAO
+  (`MongoDBDAO` or `LMDBDAO`) → MongoDB / LMDB.
+- UI / Dashboard / chat route → LangChain / LangGraph orchestrator → MCP tool calls
+  → `DBAPI` or in-memory runtime objects.
+
+The webservice package should stay thin. The agents package should own orchestration
+and tool logic. Persistence stays in DAO files. Runtime queries can read the active
+DataFrame or workflow object in memory when that is the right source of truth.
 
 ## Code Rules
 

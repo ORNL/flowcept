@@ -208,7 +208,7 @@ class ModelTrainer(object):
         test_data, _ = batch
         result = test_info.copy()
 
-        best_obj_id = Flowcept.db.save_or_update_torch_model(model, task_id=task_id, workflow_id=workflow_id, custom_metadata=result)
+        best_obj_id = Flowcept.insert_or_update_torch_model(model, task_id=task_id, workflow_id=workflow_id, custom_metadata=result)
         result.update(
             {
                 "best_obj_id": best_obj_id,

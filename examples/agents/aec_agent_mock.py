@@ -7,7 +7,7 @@ from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task
 from mcp.server.fastmcp import FastMCP
 
 from flowcept.configs import AGENT
-from flowcept.agents.agents_utils import build_llm_model
+from flowcept.agents.llm.builders import build_llm_model
 
 from examples.agents.aec_agent_context_manager import AdamantineAeCContextManager
 from examples.agents.aec_prompts import choose_option_prompt, generate_options_set_prompt

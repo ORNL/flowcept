@@ -45,6 +45,23 @@ class ExplicitTaskTest(unittest.TestCase):
         assert isinstance(value, str)
         assert value.startswith("object_instance_id_")
 
+    def test_explicit_task_can_opt_out_of_telemetry_capture(self):
+        with Flowcept(start_persistence=False):
+            with FlowceptTask(activity_id="default_telemetry", used={"a": 1}) as task_ctx:
+                task_ctx.end(generated={"b": 2})
+            with FlowceptTask(activity_id="no_telemetry", used={"a": 2}, capture_telemetry=False) as task_ctx:
+                task_ctx.end(generated={"b": 3})
+
+            tasks = [msg for msg in Flowcept.buffer if isinstance(msg, dict) and msg.get("type") == "task"]
+
+        default_task = next(task for task in tasks if task["activity_id"] == "default_telemetry")
+        no_telemetry_task = next(task for task in tasks if task["activity_id"] == "no_telemetry")
+        if configs.TELEMETRY_ENABLED:
+            assert "telemetry_at_start" in default_task
+            assert "telemetry_at_end" in default_task
+        assert "telemetry_at_start" not in no_telemetry_task
+        assert "telemetry_at_end" not in no_telemetry_task
+
     @pytest.mark.safeoffline
     def test_custom_tasks(self):
         if not configs.DUMP_BUFFER_ENABLED:
@@ -53,7 +70,7 @@ class ExplicitTaskTest(unittest.TestCase):
         flowcept = Flowcept(start_persistence=False, save_workflow=True, workflow_name="MyFirstWorkflow").start()
 
         agent1 = str(uuid.uuid4())
-        t1 = FlowceptTask(activity_id="super_func1", used={"x":1}, agent_id=agent1, tags=["tag1"]).send()
+        FlowceptTask(activity_id="super_func1", used={"x":1}, agent_id=agent1, tags=["tag1"]).send()
 
         with FlowceptTask(activity_id="super_func2", used={"y": 1}, agent_id=agent1, tags=["tag2"]) as t2:
             sleep(0.5)
@@ -72,12 +89,37 @@ class ExplicitTaskTest(unittest.TestCase):
             read_args["workflow_id"] = workflow_id
 
         flowcept_messages = Flowcept.read_buffer_file(**read_args)
-        assert len(flowcept_messages) == 4
+        # 1 workflow start + 3 tasks + 1 workflow end = 5
+        assert len(flowcept_messages) == 5
 
+    @pytest.mark.safeoffline
+    def test_workflow_start_end_fields(self):
+        """Workflow messages must carry started_at on start and ended_at+status=FINISHED on stop."""
+        if not configs.DUMP_BUFFER_ENABLED:
+            self.skipTest("Skipping: project.dump_buffer.enabled is false.")
+
+        flowcept = Flowcept(start_persistence=False, save_workflow=True).start()
+        workflow_id = Flowcept.current_workflow_id
+        flowcept.stop()
+
+        read_args = {"file_path": configs.DUMP_BUFFER_PATH}
+        if configs.APPEND_WORKFLOW_ID_TO_PATH or configs.APPEND_ID_TO_PATH:
+            read_args["consolidate"] = True
+            read_args["workflow_id"] = workflow_id
+
+        messages = Flowcept.read_buffer_file(**read_args)
+        wf_messages = [m for m in messages if m.get("type") == "workflow"]
+
+        start_msg = next((m for m in wf_messages if "started_at" in m and "ended_at" not in m), None)
+        end_msg = next((m for m in wf_messages if "ended_at" in m), None)
+
+        assert start_msg is not None, "No workflow start message with started_at found."
+        assert end_msg is not None, "No workflow end message with ended_at found."
+        assert end_msg.get("status") == Status.FINISHED, "Workflow end message must have status=FINISHED."
 
     @pytest.mark.safeoffline
     def test_data_files(self):
-        with Flowcept() as f:
+        with Flowcept():
             used_args = {"a": 1}
             with FlowceptTask(used=used_args) as t:
                 repo_root = Path(__file__).resolve().parents[2]

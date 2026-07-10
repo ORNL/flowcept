@@ -44,6 +44,26 @@ jobs:
           git commit -m "Flowcept CI Bot: bumping master version"
           git push --force
 
+      # The bot's push above uses GITHUB_TOKEN, so it triggers no workflow (incl. the PR-merge
+      # mirror-to-gitlab.yml). Push the bumped main to the amsc2 GitLab mirror here so its GitLab CI
+      # rebuilds the image with the new version.py. Skips cleanly if the mirror isn't configured.
+      - name: Mirror bumped main to amsc2 GitLab
+        if: vars.AMSC_GITLAB_MIRROR_URL != ''
+        env:
+          AMSC_GITLAB_MIRROR_URL: ${{ vars.AMSC_GITLAB_MIRROR_URL }}
+          AMSC_GITLAB_MIRROR_TOKEN: ${{ secrets.AMSC_GITLAB_MIRROR_TOKEN }}
+          AMSC_GITLAB_MIRROR_BRANCH: ${{ vars.AMSC_GITLAB_MIRROR_BRANCH || 'main' }}
+        run: |
+          if [ -z "$AMSC_GITLAB_MIRROR_TOKEN" ]; then
+            echo "AMSC_GITLAB_MIRROR_TOKEN not set; skipping GitLab mirror push."; exit 0
+          fi
+          # Checkout is fetch-depth: 1 (shallow); unshallow so the force-push has full history.
+          git fetch --unshallow origin 2>/dev/null || true
+          DEST="${AMSC_GITLAB_MIRROR_BRANCH:-main}"
+          echo "Mirroring bumped main → GitLab ${DEST}"
+          git push "https://oauth2:${AMSC_GITLAB_MIRROR_TOKEN}@${AMSC_GITLAB_MIRROR_URL}" \
+            "+HEAD:refs/heads/${DEST}"
+
       - name: Get Latest PR and Create Release
         run: |
             export CURRENT_VERSION=`python -c "f = open('src/flowcept/version.py'); exec(f.read()); print(locals()['__version__']); f.close()"`
@@ -54,7 +74,7 @@ jobs:
             echo "REPOSITORY=$REPOSITORY"
             echo "TARGET=$TARGET"
             echo "CURRENT_VERSION=${CURRENT_VERSION}"
-          
+
             echo "Get latest PR"
             LATEST_PR_JSON=`curl -H "Accept: application/vnd.github+json" \
                 -H "Authorization: Bearer ${ACCESS_TOKEN}" \
@@ -72,6 +92,16 @@ jobs:
                             \"prerelease\": false}" \
                 -H "Authorization: Bearer ${ACCESS_TOKEN}" \
                 https://api.github.com/repos/${REPOSITORY}/releases
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build the web UI
+        run: |
+          make ui-install
+          make ui-build
 
       - name: Install pypa/build
         run: >-
