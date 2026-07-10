@@ -48,12 +48,7 @@ provenance, so users can ask questions, inspect lineage, and drive visual explor
 The Flowcept UI turns captured provenance into browsable workflow structure, data lineage,
 dashboards, workflow cards, and natural-language provenance exploration.
 
-> Place Gif here
-
-<!--
-![Flowcept UI: GridSearch provenance graph](docs/img/ui-gridsearch-dataflow.png)
-![Flowcept UI: GridSearch workflow card](docs/img/ui-gridsearch-workflow-card.png)
--->
+<img src="./docs/img/FlowceptUI.gif" alt="Flowcept UI" width="800">
 
 ## Why Flowcept?
 
