@@ -35,14 +35,22 @@ build-push-image:
     GITLAB_OIDC_TOKEN:
       aud: https://gitlab.com
   before_script:
-    - apk add --no-cache aws-cli python3
-    # Federate GitLab OIDC → the ECR-pusher role via the web-identity env vars (aws-cli auto-assumes).
-    - echo "$GITLAB_OIDC_TOKEN" > /tmp/gitlab_oidc_token
-    - export AWS_ROLE_ARN="$AWS_OIDC_ROLE_ARN"
-    - export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/gitlab_oidc_token
-    - export AWS_ROLE_SESSION_NAME="gitlab-ci-${CI_PIPELINE_ID}"
-    - aws ecr get-login-password --region "$AWS_REGION"
-        | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+    # Do NOT `apk add aws-cli` — Alpine's aws-cli v2 on docker:27 crashes at import (pyexpat/expat
+    # symbol skew: "XML_SetAllocTrackerActivationThreshold: symbol not found"). Instead get the ECR
+    # login from the official AWS CLI image (ECR Public → no Docker Hub rate limits) run via dind.
+    # OIDC token is passed as env and written to a file *inside* that container (dind can't mount the
+    # job container's filesystem), and AWS_ROLE_ARN + AWS_WEB_IDENTITY_TOKEN_FILE auto-federate.
+    - apk add --no-cache python3   # only for the version parse in `script:` (no aws-cli / pyexpat)
+    - |
+      docker run --rm \
+        -e AWS_ROLE_ARN="$AWS_OIDC_ROLE_ARN" \
+        -e AWS_REGION="$AWS_REGION" \
+        -e OIDC_TOKEN="$GITLAB_OIDC_TOKEN" \
+        --entrypoint /bin/sh public.ecr.aws/aws-cli/aws-cli:latest -c '
+          printf "%s" "$OIDC_TOKEN" > /tmp/oidc
+          export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/oidc AWS_ROLE_SESSION_NAME=gitlab-ci
+          aws ecr get-login-password --region "$AWS_REGION"
+        ' | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
   script:
     - VERSION=$(python3 -c "exec(open('src/flowcept/version.py').read()); print(__version__)")
     - IMAGE="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPO"
