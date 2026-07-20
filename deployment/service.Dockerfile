@@ -4,7 +4,7 @@
 # and run-tests-in-container.yml). This one is slim and self-contained:
 #   - builds the web UI and bakes it into the package (served by the webservice at /)
 #   - installs only the service extras (webservice + redis + mongo + llm_agent)
-#   - bundles the Amazon RDS/DocumentDB CA bundle for TLS connections
+#     (MongoDB Atlas uses public CAs already in the base image trust store — no CA bundle needed)
 #
 # Published to GHCR by the release workflow and mirrored to ECR via pull-through
 # cache. The deployed Pods override CMD: `--start-webservice` (:8008) and
@@ -29,9 +29,6 @@ COPY resources ./resources
 
 # Built UI so the FastAPI webservice can serve it at /
 COPY --from=ui-build /app/src/flowcept/webservice/ui_build ./src/flowcept/webservice/ui_build
-
-# DocumentDB requires TLS against the Amazon RDS global CA bundle.
-ADD https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /etc/ssl/certs/global-bundle.pem
 
 # Escape hatch for building behind a corporate TLS-intercepting proxy (Netskope/Zscaler,
 # etc.), which makes conda/pip fail with CERTIFICATE_VERIFY_FAILED. Default OFF (secure),
