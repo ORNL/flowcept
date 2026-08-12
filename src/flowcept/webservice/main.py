@@ -55,6 +55,12 @@ def create_app() -> FastAPI:
             allow_headers=["*"],
         )
 
+    # Capture Kong's trusted X-Id-Token per request so the chat endpoint's LLM calls can
+    # forward it east-west to MAG (attributes usage to the caller). No-op off-gateway.
+    from flowcept.agents.llm.request_identity import IdentityHeaderASGIMiddleware
+
+    app.add_middleware(IdentityHeaderASGIMiddleware)
+
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(info_router, prefix="/api/v1")
     app.include_router(campaigns_router, prefix="/api/v1")

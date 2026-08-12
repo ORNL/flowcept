@@ -7,8 +7,8 @@
 #   - bundles the Amazon RDS/DocumentDB CA bundle for TLS connections
 #
 # Published to GHCR by the release workflow and mirrored to ECR via pull-through
-# cache. The deployed Pods override CMD: `--start-webservice` (:8008) and
-# `--start-agent` (:8003).
+# cache. The deployed Pods override CMD: `--start --webservice` (:8008) and
+# `--start --agent` (:8003).
 
 # ---- Stage 1: build the web UI ----
 FROM node:22-slim AS ui-build
@@ -30,7 +30,10 @@ COPY resources ./resources
 # Built UI so the FastAPI webservice can serve it at /
 COPY --from=ui-build /app/src/flowcept/webservice/ui_build ./src/flowcept/webservice/ui_build
 
-# DocumentDB requires TLS against the Amazon RDS global CA bundle.
+# Amazon RDS global CA bundle — used to validate DocumentDB TLS *when TLS is enabled* (the
+# documentdb-flowcept module's tls_enabled=true path). Harmless/unused when the target runs
+# DocumentDB with in-transit TLS off (e.g. amsc-i2-dev, in-VPC); baked in so TLS can be turned
+# on without an image rebuild.
 ADD https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /etc/ssl/certs/global-bundle.pem
 
 # Escape hatch for building behind a corporate TLS-intercepting proxy (Netskope/Zscaler,
@@ -50,4 +53,4 @@ RUN conda run -n flowcept pip install -e ".[webservice,redis,mongo,llm_agent]"
 ENV FLOWCEPT_SETTINGS_PATH=/root/.flowcept/settings.yaml
 
 # Default command; Kubernetes Deployments override this (webservice vs agent).
-CMD ["conda", "run", "--no-capture-output", "-n", "flowcept", "flowcept", "--start-webservice"]
+CMD ["conda", "run", "--no-capture-output", "-n", "flowcept", "flowcept", "--start", "--webservice"]

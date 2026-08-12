@@ -154,7 +154,7 @@ docker run --rm -p 8003:8003 \
   -v "$PWD/local-settings.host.yaml:/root/.flowcept/settings.yaml:ro" \
   --name flowcept-agent \
   flowcept-service:local \
-  conda run --no-capture-output -n flowcept flowcept --start-agent
+  conda run --no-capture-output -n flowcept flowcept --start --agent
 ```
 
 ### 6. Tear down
@@ -193,5 +193,5 @@ open http://localhost:8008                       # the built UI (xdg-open on Lin
 - **`local-settings.yaml` is a dev artifact**, not the deployed config — the cluster uses a ConfigMap
   + secret env vars (see `../docs/deployment/amsc-i2-dev.md`).
 - **Faster, no-Docker alternative:** `pip install -e ".[webservice,redis,mongo,llm_agent]"`, then
-  `make services-mongo` and `make webservice` (or `flowcept --start-webservice`). Use the image path
+  `make services-mongo` and `make webservice` (or `flowcept --start --webservice`). Use the image path
   when you specifically want to validate the image.

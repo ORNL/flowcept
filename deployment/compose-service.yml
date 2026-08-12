@@ -50,7 +50,7 @@ services:
       - "8008:8008"
     volumes:
       - ./local-settings.yaml:/root/.flowcept/settings.yaml:ro
-    # Image CMD is already `--start-webservice`.
+    # Image CMD is already `--start --webservice`.
 
   # Optional MCP/agent server. Only starts with `--profile agent`, and requires
   # agent.enabled: true + the LLM fields set in local-settings.yaml.
@@ -66,7 +66,7 @@ services:
       - "8003:8003"
     volumes:
       - ./local-settings.yaml:/root/.flowcept/settings.yaml:ro
-    command: ["conda", "run", "--no-capture-output", "-n", "flowcept", "flowcept", "--start-agent"]
+    command: ["conda", "run", "--no-capture-output", "-n", "flowcept", "flowcept", "--start", "--agent"]
 
   # Streamlit GUI to chat with the agent. It is an MCP *client* — it calls the
   # prompt_handler tool on flowcept_agent over http://$AGENT_HOST:$AGENT_PORT/mcp, so
@@ -86,7 +86,7 @@ services:
       STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
     volumes:
       - ./local-settings.yaml:/root/.flowcept/settings.yaml:ro
-    command: ["conda", "run", "--no-capture-output", "-n", "flowcept", "flowcept", "--start-agent-gui"]
+    command: ["conda", "run", "--no-capture-output", "-n", "flowcept", "flowcept", "--start", "--agent-gui"]
 
 volumes:
   mongo_data:

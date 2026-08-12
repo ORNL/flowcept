@@ -109,7 +109,11 @@ class FlowceptMCPServer:
             AppStatus.should_exit_event = None
         except ImportError:
             pass
-        config = uvicorn.Config(mcp_flowcept.streamable_http_app, host=AGENT_HOST, port=AGENT_PORT, lifespan="on")
+        # Capture Kong's trusted X-Id-Token per request so LLM calls can forward it to MAG.
+        from flowcept.agents.llm.request_identity import IdentityHeaderASGIMiddleware
+
+        app = IdentityHeaderASGIMiddleware(mcp_flowcept.streamable_http_app)
+        config = uvicorn.Config(app, host=AGENT_HOST, port=AGENT_PORT, lifespan="on")
         self._server = uvicorn.Server(config)
         self._server.run()
 

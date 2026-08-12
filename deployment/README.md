@@ -46,13 +46,13 @@ EXTRAS="" BUILD_UI=false IMAGE_TAG=flowcept:core bash deployment/build-image.sh
 
 # Agent-focused image
 EXTRAS="lmdb,telemetry,dev,llm_agent,extras" \
-FLOWCEPT_CMD="flowcept --start-agent" \
+FLOWCEPT_CMD="flowcept --start --agent" \
 IMAGE_TAG=flowcept:agent \
 bash deployment/build-image.sh
 
 # Webservice/UI image with fewer Python extras than [all]
 EXTRAS="redis,mongo,telemetry,webservice,llm_agent,extras" \
-FLOWCEPT_CMD="flowcept --start-webservice --webservice-host=0.0.0.0" \
+FLOWCEPT_CMD="flowcept --start --webservice --webservice-host=0.0.0.0" \
 IMAGE_TAG=flowcept:webservice \
 bash deployment/build-image.sh
 ```
@@ -144,7 +144,7 @@ make run
 Run the webservice and packaged UI from the image:
 
 ```bash
-FLOWCEPT_CMD="flowcept --start-webservice --webservice-host=0.0.0.0" \
+FLOWCEPT_CMD="flowcept --start --webservice --webservice-host=0.0.0.0" \
 IMAGE_TAG=flowcept:webservice \
 bash deployment/build-image.sh
 

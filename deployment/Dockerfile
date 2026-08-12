@@ -39,7 +39,7 @@ RUN if [ "$BUILD_UI" = "true" ]; then \
 
 # 8000: default Flowcept MCP/agent service port.
 # 8003: common deployment override for the MCP/agent service.
-# 8008: FastAPI webservice and packaged web UI (`flowcept --start-webservice`).
+# 8008: FastAPI webservice and packaged web UI (`flowcept --start --webservice`).
 # 5173: Vite UI development server (`make ui-dev` / `flowcept --start-ui`).
 EXPOSE 8000 8003 8008 5173
 

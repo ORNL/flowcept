@@ -54,6 +54,7 @@ def build_llm_model(
         )
     elif _service_provider == "openai":
         from langchain_openai import ChatOpenAI
+        from flowcept.agents.llm.request_identity import llm_forward_headers
 
         api_key = os.environ.get("OPENAI_API_KEY", AGENT_API_KEY)
         base_url = os.environ.get("OPENAI_BASE_URL", AGENT.get("llm_server_url") or None)
@@ -64,6 +65,15 @@ def build_llm_model(
             init_kwargs["base_url"] = base_url
         if org:
             init_kwargs["organization"] = org
+
+        # East-west identity forwarding (AmSC/MAG): when Kong injected an X-Id-Token on the
+        # inbound request, forward it verbatim so MAG (LiteLLM) authenticates and attributes
+        # usage to the calling user/project. Off-gateway this is {} and nothing changes.
+        # api_key stays a non-empty placeholder (ChatOpenAI requires one); MAG ignores the
+        # bearer when X-Id-Token is present.
+        fwd_headers = llm_forward_headers()
+        if fwd_headers:
+            init_kwargs["default_headers"] = fwd_headers
 
         llm = ChatOpenAI(**init_kwargs, **_model_kwargs)
     elif _service_provider == "google":

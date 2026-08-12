@@ -29,7 +29,7 @@ services:
       - -lc
       - |
         cat /certs/corp-ca.pem >> "$$(conda run -n flowcept python -c 'import certifi; print(certifi.where())')"
-        exec conda run --no-capture-output -n flowcept flowcept --start-agent
+        exec conda run --no-capture-output -n flowcept flowcept --start --agent
 
   flowcept_webservice:
     volumes:
@@ -42,4 +42,4 @@ services:
       - -lc
       - |
         cat /certs/corp-ca.pem >> "$$(conda run -n flowcept python -c 'import certifi; print(certifi.where())')"
-        exec conda run --no-capture-output -n flowcept flowcept --start-webservice
+        exec conda run --no-capture-output -n flowcept flowcept --start --webservice
