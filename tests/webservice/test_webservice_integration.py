@@ -1132,7 +1132,7 @@ def test_chat_endpoint_records_ai_model_usage_tasks(gridsearch_run_data, db_clea
     assert any(task["custom_metadata"]["llm_usage"]["output_chars"] > 0 for task in llm_tasks)
 
     tool_tasks = Flowcept.db.task_query(
-        filter={"workflow_id": chat_workflow_id, "subtype": PROV_AGENT.AGENT_TOOL.value},
+        filter={"workflow_id": chat_workflow_id, "subtype": PROV_AGENT.TOOL_INVOCATION.value},
     )
     assert tool_tasks, "The forced DB query should record at least one agent tool task."
 

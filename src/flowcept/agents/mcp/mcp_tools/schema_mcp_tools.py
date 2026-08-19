@@ -10,7 +10,7 @@ from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def get_schema_context(tool_context: str = "db", workflow_id: Optional[str] = None) -> ToolResult:
     """Return schema context for the active query path.
 
@@ -66,7 +66,7 @@ def get_schema_context(tool_context: str = "db", workflow_id: Optional[str] = No
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def get_df_schema_context(context_kind: str = "tasks") -> ToolResult:
     """Return the in-memory DataFrame schema context for the DF query path.
 
@@ -105,7 +105,7 @@ def get_df_schema_context(context_kind: str = "tasks") -> ToolResult:
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def get_workflow_schema_context(workflow_id: str) -> ToolResult:
     """Return the workflow-scoped schema context for the DB query path.
 

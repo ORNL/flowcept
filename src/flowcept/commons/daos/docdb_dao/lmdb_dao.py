@@ -715,7 +715,7 @@ class LMDBDAO(DocumentDBDAO):
         agent_ids = [a["agent_id"] for a in stored if "agent_id" in a]
         docs = (
             self.task_query(
-                filter={"agent_id": {"$in": agent_ids}},
+                filter={"$or": [{"agent_id": {"$in": agent_ids}}, {"source_agent_id": {"$in": agent_ids}}]},
                 projection=[
                     "agent_id",
                     "activity_id",
@@ -730,33 +730,32 @@ class LMDBDAO(DocumentDBDAO):
 
         stats_map: Dict = {}
         for doc in docs:
-            agent_id = doc.get("agent_id")
-            if not agent_id:
-                continue
-            record = stats_map.setdefault(
-                agent_id,
-                {
-                    "task_count": 0,
-                    "activities": set(),
-                    "source_agent_ids": set(),
-                    "campaign_ids": set(),
-                    "workflow_ids": set(),
-                    "last_active": None,
-                },
-            )
-            record["task_count"] += 1
-            for key, field in (
-                ("activities", "activity_id"),
-                ("source_agent_ids", "source_agent_id"),
-                ("campaign_ids", "campaign_id"),
-                ("workflow_ids", "workflow_id"),
-            ):
-                if doc.get(field):
-                    record[key].add(doc[field])
-            ts = _ts(doc.get("registered_at"))
-            if ts is not None:
-                current = record["last_active"]
-                record["last_active"] = ts if current is None else max(current, ts)
+            participants = [doc.get("agent_id"), doc.get("source_agent_id")]
+            for agent_id in {agent_id for agent_id in participants if agent_id in agent_ids}:
+                record = stats_map.setdefault(
+                    agent_id,
+                    {
+                        "task_count": 0,
+                        "activities": set(),
+                        "source_agent_ids": set(),
+                        "campaign_ids": set(),
+                        "workflow_ids": set(),
+                        "last_active": None,
+                    },
+                )
+                record["task_count"] += 1
+                for key, field in (
+                    ("activities", "activity_id"),
+                    ("source_agent_ids", "source_agent_id"),
+                    ("campaign_ids", "campaign_id"),
+                    ("workflow_ids", "workflow_id"),
+                ):
+                    if doc.get(field):
+                        record[key].add(doc[field])
+                ts = _ts(doc.get("registered_at"))
+                if ts is not None:
+                    current = record["last_active"]
+                    record["last_active"] = ts if current is None else max(current, ts)
         for record in stats_map.values():
             for key in ("activities", "source_agent_ids", "campaign_ids", "workflow_ids"):
                 record[key] = sorted(record[key])

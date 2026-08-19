@@ -125,6 +125,7 @@ def init_settings(
     dask: bool = False,
     mlflow: bool = False,
     tensorboard: bool = False,
+    codex: bool = False,
 ):
     """
     Create or extend the user settings file.
@@ -142,6 +143,8 @@ def init_settings(
         Add default mlflow adapter settings under `adapters.mlflow`.
     tensorboard : bool, optional
         Add default tensorboard adapter settings under `adapters.tensorboard`.
+    codex : bool, optional
+        Add default Codex adapter settings under `adapters.codex`.
 
     Notes
     -----
@@ -151,7 +154,7 @@ def init_settings(
       and only writes adapter sections.
     - `--full` only copies the full sample file. It does not apply a runtime profile.
     """
-    add_adapters = dask or mlflow or tensorboard
+    add_adapters = dask or mlflow or tensorboard or codex
 
     settings_path_env = os.getenv("FLOWCEPT_SETTINGS_PATH", None)
     if settings_path_env is not None:
@@ -205,6 +208,12 @@ def init_settings(
 
         TensorboardSettings().save_settings()
         print("Added adapters.tensorboard settings.")
+
+    if codex:
+        from flowcept.flowceptor.adapters.code_assistants.codex.codex_dataclasses import CodexSettings
+
+        CodexSettings().save_settings()
+        print("Added adapters.codex settings.")
 
 
 def _resolve_user_settings_path() -> Path:

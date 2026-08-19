@@ -11,7 +11,7 @@ from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def generate_workflow_card(
     workflow_id: str = None,
     campaign_id: str = None,

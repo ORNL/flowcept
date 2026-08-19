@@ -72,7 +72,7 @@ def _build_graph(
                 tool_fn = tools_by_name.get(name)
                 with FlowceptTask(
                     activity_id=name,
-                    subtype=PROV_AGENT.AGENT_TOOL,
+                    subtype=PROV_AGENT.TOOL_INVOCATION,
                     used=sanitize_json_like(args, mongo_safe_keys=True),
                     agent_id=agent_id,
                 ) as task:

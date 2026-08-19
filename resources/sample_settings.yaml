@@ -1,4 +1,4 @@
-flowcept_version: 0.10.8 # Version of the Flowcept package. Do not update this manually. The CI updates it. This setting file is compatible with this version.
+flowcept_version: 1.0.3 # Version of the Flowcept package. Do not update this manually. The CI updates it. This setting file is compatible with this version.
 
 project:
   debug: true # Toggle debug mode. This will add a property `debug: true` to all saved data, making it easier to retrieve/delete them later.
@@ -165,6 +165,15 @@ adapters:
     log_tags: ['scalars', 'hparams', 'tensors']
     log_metrics: ['accuracy']
     watch_interval_sec: 5
+
+  codex:
+    kind: codex
+    file_path: codex_events.jsonl
+    watch_interval_sec: 1
+    recursive: true
+    include_developer_messages: true
+    include_reasoning: true
+    declared_provenance_enabled: false
 
   dask:
     kind: dask

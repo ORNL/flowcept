@@ -142,6 +142,7 @@ Adapter setup is additive:
 flowcept --init-settings --dask -y
 flowcept --init-settings --mlflow -y
 flowcept --init-settings --tensorboard -y
+flowcept --init-settings --codex -y
 ```
 
 These commands add `adapters.<name>` to the current settings file.
@@ -262,6 +263,10 @@ Adapters:
   - `examples/tensorboard_example.py`
   - `notebooks/tensorboard.ipynb`
   - `tests/adapters/test_tensorboard.py`
+- Codex adapter:
+  - `examples/codex_example.py`
+  - `tests/adapters/test_codex_interceptor.py`
+  - DPL skill docs: `resources/skills/agent-loop-provenance/README.md`
 
 Agentic provenance / MCP:
 

@@ -749,10 +749,15 @@ class TestProvAgentInstrumentation(unittest.TestCase):
     """Structural tests for PROV-AGENT enum usage.  No live services required."""
 
     def test_prov_agent_enum_values(self):
-        from flowcept.commons.vocabulary import PROV_AGENT
+        from flowcept.commons.vocabulary import PROV_AGENT, PROV_AGENT_LOOP
 
         self.assertEqual(PROV_AGENT.AI_MODEL_INVOCATION.value, "ai_model_invocation")
-        self.assertEqual(PROV_AGENT.AGENT_TOOL.value, "agent_tool")
+        self.assertEqual(PROV_AGENT.TOOL_INVOCATION.value, "tool_invocation")
+        self.assertEqual(PROV_AGENT_LOOP.SESSION.value, "session")
+        self.assertEqual(PROV_AGENT_LOOP.EXECUTION_PLAN.value, "execution_plan")
+        self.assertEqual(PROV_AGENT_LOOP.PLAN_STEP_EXECUTION.value, "plan_step_execution")
+        self.assertEqual(PROV_AGENT_LOOP.LOOP_ITERATION.value, "loop_iteration")
+        self.assertEqual(PROV_AGENT_LOOP.EVALUATION.value, "evaluation")
 
     def test_flowcept_llm_uses_prov_agent_enum_not_bare_string(self):
         import inspect
@@ -767,8 +772,12 @@ class TestProvAgentInstrumentation(unittest.TestCase):
         import flowcept.instrumentation.flowcept_agent_task as m
 
         src = inspect.getsource(m.agent_flowcept_task)
-        self.assertNotIn('"agent_task"', src, "agent_flowcept_task must use PROV_AGENT.AGENT_TOOL, not bare string")
-        self.assertIn("PROV_AGENT.AGENT_TOOL", src)
+        self.assertNotIn(
+            '"agent_task"',
+            src,
+            "agent_flowcept_task must use PROV_AGENT.TOOL_INVOCATION, not bare string",
+        )
+        self.assertIn("PROV_AGENT.TOOL_INVOCATION", src)
 
     def test_context_manager_comparisons_use_prov_agent_enum(self):
         import inspect

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Loop Provenance"
+  short_description: "Log Flowcept agent loop provenance"
+  default_prompt: "Use $agent-loop-provenance while working so Codex logs contain Flowcept PROV-Agent-Loop execution plans, steps, loop iterations, evaluations, and results."

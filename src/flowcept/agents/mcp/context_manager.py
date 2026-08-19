@@ -224,15 +224,15 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
         if msg_type == "task":
             task_msg = TaskObject.from_dict(msg_obj)
 
-            # Filter agent-internal tasks (AI_MODEL_INVOCATION and AGENT_TOOL) that must not
+            # Filter agent-internal tasks (AI_MODEL_INVOCATION and TOOL_INVOCATION) that must not
             # pollute the user-workflow DataFrame.  Two cases warrant filtering:
             # 1. The task belongs to this agent (original self-filter).
             # 2. A user workflow is already loaded and this task belongs to a different workflow
             #    — i.e. it was emitted by an external agent (e.g. the chat orchestrator) running
             #    its own session workflow alongside the user's workflow.
-            # User workflow tasks that happen to carry AGENT_TOOL (e.g. submit_gridsearch_job)
+            # User workflow tasks that happen to carry TOOL_INVOCATION (e.g. submit_gridsearch_job)
             # are preserved because their workflow_id matches the loaded workflow.
-            if task_msg.subtype in (PROV_AGENT.AI_MODEL_INVOCATION, PROV_AGENT.AGENT_TOOL):
+            if task_msg.subtype in (PROV_AGENT.AI_MODEL_INVOCATION, PROV_AGENT.TOOL_INVOCATION):
                 loaded_wf_id = (self.context.workflow_msg_obj or {}).get("workflow_id")
                 task_wf_id = msg_obj.get("workflow_id")
                 if task_msg.agent_id == self.agent_id or (loaded_wf_id and task_wf_id != loaded_wf_id):
@@ -255,7 +255,7 @@ class FlowceptAgentContextManager(BaseAgentContextManager):
                         FlowceptTask(
                             agent_id=self.agent_id,
                             generated={"msg": "Provenance Agent reset context."},
-                            subtype=PROV_AGENT.AGENT_TOOL,
+                            subtype=PROV_AGENT.TOOL_INVOCATION,
                             activity_id="reset_user_context",
                         ).send()
                     return True

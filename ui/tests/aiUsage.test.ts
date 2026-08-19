@@ -25,7 +25,7 @@ describe("getAiModelUsageRows", () => {
         used: { prompt: "What happened in this workflow?".repeat(10) },
         generated: { response: "The workflow finished successfully.".repeat(10) },
       },
-      { task_id: "task-2", subtype: "agent_tool" },
+      { task_id: "task-2", subtype: "tool_invocation" },
     ];
 
     const rows = getAiModelUsageRows(tasks);

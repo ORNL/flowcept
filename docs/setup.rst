@@ -31,6 +31,7 @@ Good practice is to cherry-pick the extras relevant to your workflow instead of 
    pip install flowcept[mlflow]          # MLflow adapter
    pip install flowcept[dask]            # Dask adapter
    pip install flowcept[tensorboard]     # TensorBoard adapter
+   pip install flowcept[codex]           # Codex session-log adapter
    pip install flowcept[rabbitmq]        # RabbitMQ message queue
    pip install flowcept[kafka]           # Kafka message queue
    pip install flowcept[nvidia]          # NVIDIA GPU runtime capture
@@ -250,6 +251,20 @@ Adapter flags are additive:
    flowcept --init-settings --dask -y
    flowcept --init-settings --mlflow -y
    flowcept --init-settings --tensorboard -y
+   flowcept --init-settings --codex -y
+
+Codex declared provenance
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Codex adapter can capture standard Codex session logs without extra
+assistant instructions. To capture declared PROV-Agent-Loop semantics such as
+execution plans, plan steps, loop iterations, evaluations, criteria, decisions,
+beliefs, memories, and lessons learned, install the bundled
+``resources/skills/agent-loop-provenance`` skill and enable
+``adapters.codex.declared_provenance_enabled`` in the settings file.
+
+See ``resources/skills/agent-loop-provenance/README.md`` for the skill
+installation and usage instructions.
 
 Custom Settings File
 ---------------------

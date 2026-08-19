@@ -1,0 +1,1 @@
+"""Code assistant adapter subpackages."""

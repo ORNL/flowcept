@@ -64,7 +64,7 @@ def agent_flowcept_task(func=None, **decorator_kwargs):
             task_should_capture_telemetry = TELEMETRY_ENABLED if capture_telemetry is None else capture_telemetry
 
             task_obj = TaskObject()
-            task_obj.subtype = decorator_kwargs.get("subtype", PROV_AGENT.AGENT_TOOL)
+            task_obj.subtype = decorator_kwargs.get("subtype", PROV_AGENT.TOOL_INVOCATION)
             task_obj.activity_id = func.__name__
             handled_args = args_handler(*args, **kwargs)
             task_obj.workflow_id = handled_args.pop("workflow_id", Flowcept.current_workflow_id)

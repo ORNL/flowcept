@@ -42,6 +42,10 @@ class BaseInterceptor(object):
             from flowcept.flowceptor.adapters.tensorboard.tensorboard_interceptor import TensorboardInterceptor
 
             return TensorboardInterceptor()
+        elif kind == "codex":
+            from flowcept.flowceptor.adapters.code_assistants.codex.codex_interceptor import CodexInterceptor
+
+            return CodexInterceptor()
 
         elif kind == "broker_mqtt":
             from flowcept.flowceptor.adapters.brokers.mqtt_interceptor import MQTTBrokerInterceptor

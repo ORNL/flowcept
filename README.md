@@ -251,6 +251,7 @@ pip install "flowcept[mongo]"         # MongoDB support
 pip install "flowcept[webservice]"    # REST API and web UI
 pip install "flowcept[dask]"          # Dask adapter
 pip install "flowcept[mlflow]"        # MLflow adapter
+pip install "flowcept[codex]"         # Codex session-log adapter
 pip install "flowcept[rabbitmq]"      # RabbitMQ MQ
 pip install "flowcept[kafka]"         # Kafka MQ
 pip install "flowcept[telemetry]"     # CPU/memory telemetry

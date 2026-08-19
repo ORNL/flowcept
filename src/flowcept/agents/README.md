@@ -118,12 +118,12 @@ agent-specific activities in the task database:
 | Enum | Stored string | What it captures |
 |---|---|---|
 | `PROV_AGENT.AI_MODEL_INVOCATION` | `"ai_model_invocation"` | One LLM prompt → response call |
-| `PROV_AGENT.AGENT_TOOL` | `"agent_tool"` | One tool execution by an AI agent |
+| `PROV_AGENT.TOOL_INVOCATION` | `"tool_invocation"` | One tool execution by an AI agent |
 
 ### Automatic capture
 
 **MCP tools** — every `@mcp_flowcept.tool()` function in `mcp_tools/` is also
-decorated with `@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)`.  No extra
+decorated with `@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)`.  No extra
 code needed; tool calls are stored automatically when the interceptor is running.
 
 **LLM calls** — wrap any LangChain model with `FlowceptLLM` to record every
@@ -139,7 +139,7 @@ response = wrapped.invoke("How many tasks failed?")
 wraps each graph execution in a `Flowcept` context (`workflow_name="Flowcept LangGraph Chat"`,
 `start_persistence=True`).  This gives every chat turn its own `workflow_id`.
 Within the graph, `call_model` uses `FlowceptLLM` and `call_tools` uses
-`FlowceptTask(subtype=PROV_AGENT.AGENT_TOOL)` — both inherit
+`FlowceptTask(subtype=PROV_AGENT.TOOL_INVOCATION)` — both inherit
 `Flowcept.current_workflow_id` automatically.
 
 ### Querying agent provenance
@@ -149,7 +149,7 @@ Within the graph, `call_model` uses `FlowceptLLM` and `call_tools` uses
 Flowcept.db.task_query(filter={"subtype": "ai_model_invocation", "agent_id": my_agent_id})
 
 # All tool executions in a chat session (workflow)
-Flowcept.db.task_query(filter={"subtype": "agent_tool", "workflow_id": thread_id})
+Flowcept.db.task_query(filter={"subtype": "tool_invocation", "workflow_id": thread_id})
 ```
 
 The UI uses `subtype` to display AI agent workflows differently from regular

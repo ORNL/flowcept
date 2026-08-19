@@ -170,6 +170,7 @@ Supported adapters:
 - **MLflow** — `MLflow example <https://github.com/ORNL/flowcept/blob/main/examples/mlflow_example.py>`_
 - **Dask** — `Dask example <https://github.com/ORNL/flowcept/blob/main/examples/dask_example.py>`_
 - **TensorBoard** — `TensorBoard example <https://github.com/ORNL/flowcept/blob/main/examples/tensorboard_example.py>`_
+- **Codex** — `Codex example <https://github.com/ORNL/flowcept/blob/main/examples/codex_example.py>`_
 
 Install the extras you need (see `installation <setup.html>`_), then configure the adapter in your settings file.
 Adapters capture runs, tasks, metrics, and artifacts and push them through Flowcept’s pipeline (MQ → DB).
@@ -663,6 +664,7 @@ References & Examples
 - MLflow adapter: https://github.com/ORNL/flowcept/blob/main/examples/mlflow_example.py
 - Dask adapter: https://github.com/ORNL/flowcept/blob/main/examples/dask_example.py
 - TensorBoard adapter: https://github.com/ORNL/flowcept/blob/main/examples/tensorboard_example.py
+- Codex adapter: https://github.com/ORNL/flowcept/blob/main/examples/codex_example.py
 - Loop instrumentation: https://github.com/ORNL/flowcept/blob/main/examples/instrumented_loop_example.py
 - LLM/PyTorch model: https://github.com/ORNL/flowcept/blob/main/examples/llm_complex/llm_model.py
 - MCP Agent tasks: https://github.com/ORNL/flowcept/blob/main/examples/agents/aec_agent_mock.py

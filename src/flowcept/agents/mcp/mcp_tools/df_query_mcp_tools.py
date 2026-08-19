@@ -33,7 +33,7 @@ _WORKFLOW_HEAVY_FIELDS = frozenset(
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def run_df_query(code: str, context_kind: str = "tasks") -> ToolResult:
     """Execute pandas code against the current context DataFrame.
 
@@ -59,7 +59,7 @@ def run_df_query(code: str, context_kind: str = "tasks") -> ToolResult:
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def df_query_tasks(code: str) -> ToolResult:
     """Query task provenance using pandas code against the in-memory tasks DataFrame.
 
@@ -70,7 +70,7 @@ def df_query_tasks(code: str) -> ToolResult:
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def df_query_workflows() -> ToolResult:
     """Return the workflow record(s) loaded in the agent's in-memory context.
 
@@ -98,7 +98,7 @@ def df_query_workflows() -> ToolResult:
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def df_query_objects(code: str) -> ToolResult:
     """Query stored data-object records using pandas code against the in-memory objects DataFrame.
 
@@ -109,7 +109,7 @@ def df_query_objects(code: str) -> ToolResult:
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def df_get_task_summary() -> ToolResult:
     """Summarize tasks in the in-memory DataFrame: activity types, status counts, time range.
 
@@ -136,7 +136,7 @@ def df_get_task_summary() -> ToolResult:
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def df_get_objects_summary() -> ToolResult:
     """Summarize stored objects in the in-memory objects DataFrame: available types, counts, and tracked columns.
 
@@ -157,7 +157,7 @@ def df_get_objects_summary() -> ToolResult:
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def df_list_campaigns() -> ToolResult:
     """List campaign summaries derived from the in-memory tasks DataFrame.
 
@@ -180,7 +180,7 @@ def df_list_campaigns() -> ToolResult:
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def df_list_agents() -> ToolResult:
     """List agent summaries derived from the in-memory tasks DataFrame.
 
@@ -199,7 +199,7 @@ def df_list_agents() -> ToolResult:
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def df_highlight_lineage(task_ids: list = None, code: str = None) -> ToolResult:
     """Return seed task IDs for UI lineage highlighting from the in-memory tasks DataFrame.
 
@@ -222,7 +222,7 @@ def df_highlight_lineage(task_ids: list = None, code: str = None) -> ToolResult:
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def df_fix_query(raw_text: str, runtime_error: str = None) -> ToolResult:
     """Extract or repair pandas code using the current agent DataFrame columns.
 

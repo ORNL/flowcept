@@ -15,21 +15,21 @@ from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def db_make_chart(card_spec: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> ToolResult:
     """Build a chart from a declarative dashboard card spec; the UI renders the result."""
     return dashboard_tools.make_chart(card_spec=card_spec, context=context)
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def db_get_dashboard(dashboard_id: str) -> ToolResult:
     """Get a stored dashboard spec by id."""
     return dashboard_tools.get_dashboard(dashboard_id=dashboard_id)
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def db_update_dashboard(dashboard_id: str, spec: Dict[str, Any]) -> ToolResult:
     """Replace a stored dashboard spec with a complete revised spec."""
     return dashboard_tools.update_dashboard(dashboard_id=dashboard_id, spec=spec)
@@ -41,7 +41,7 @@ def db_update_dashboard(dashboard_id: str, spec: Dict[str, Any]) -> ToolResult:
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def df_make_chart(result_code: str, plot_code: str = "") -> ToolResult:
     """Generate a chart from the in-memory tasks DataFrame.
 
@@ -62,14 +62,14 @@ def df_make_chart(result_code: str, plot_code: str = "") -> ToolResult:
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def df_get_dashboard(dashboard_id: str) -> ToolResult:
     """Get a stored dashboard spec by id (DF path — delegates to the same dashboard store)."""
     return dashboard_tools.get_dashboard(dashboard_id=dashboard_id)
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def df_update_dashboard(dashboard_id: str, spec: Dict[str, Any]) -> ToolResult:
     """Replace a stored dashboard spec with a complete revised spec (DF path)."""
     return dashboard_tools.update_dashboard(dashboard_id=dashboard_id, spec=spec)

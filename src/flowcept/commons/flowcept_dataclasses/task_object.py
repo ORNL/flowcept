@@ -37,7 +37,7 @@ class TaskObject:
     - ``"ai_model_invocation"`` (:attr:`~flowcept.commons.vocabulary.PROV_AGENT.AI_MODEL_INVOCATION`) —
       a single LLM prompt→response call.  Captured automatically by
       :class:`~flowcept.instrumentation.flowcept_agent_task.FlowceptLLM`.
-    - ``"agent_tool"`` (:attr:`~flowcept.commons.vocabulary.PROV_AGENT.AGENT_TOOL`) —
+    - ``"tool_invocation"`` (:attr:`~flowcept.commons.vocabulary.PROV_AGENT.TOOL_INVOCATION`) —
       a tool execution by an AI agent.  Captured automatically by the
       :func:`~flowcept.instrumentation.flowcept_agent_task.agent_flowcept_task` decorator.
 

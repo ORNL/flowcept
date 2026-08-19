@@ -63,6 +63,7 @@ Adapter flags are additive:
    flowcept --init-settings --dask -y
    flowcept --init-settings --mlflow -y
    flowcept --init-settings --tensorboard -y
+   flowcept --init-settings --codex -y
 
 They add ``adapters.<name>`` to the current settings file instead of replacing it.
 

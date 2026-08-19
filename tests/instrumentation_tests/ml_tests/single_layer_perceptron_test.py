@@ -124,7 +124,7 @@ def call_hpc_agent(agent_id=None):
     n_configs = 5
     return dataset_config, n_configs
 
-@flowcept_task(output_names=["configs", "job_id"], subtype=PROV_AGENT.AGENT_TOOL)
+@flowcept_task(output_names=["configs", "job_id"], subtype=PROV_AGENT.TOOL_INVOCATION)
 def submit_gridsearch_job(
     n_configs=5,
     agent_id=None,

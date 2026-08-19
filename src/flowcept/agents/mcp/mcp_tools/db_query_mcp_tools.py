@@ -14,7 +14,7 @@ from flowcept.instrumentation.flowcept_agent_task import agent_flowcept_task
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def db_query_tasks(
     filter: Optional[Dict[str, Any]] = None,
     projection: Optional[List[str]] = None,
@@ -26,35 +26,35 @@ def db_query_tasks(
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def db_query_workflows(filter: Optional[Dict[str, Any]] = None, limit: int = 100) -> ToolResult:
     """Query workflow provenance records in the database with a Mongo-style filter."""
     return db_query_tools.query_workflows(filter=filter, limit=limit)
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def db_get_task_summary(filter: Optional[Dict[str, Any]] = None) -> ToolResult:
     """Summarize tasks matching a filter: status counts, per-activity durations, time range."""
     return db_query_tools.get_task_summary(filter=filter)
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def db_list_campaigns(campaign_id: Optional[str] = None) -> ToolResult:
     """List derived campaign summaries (campaigns group workflows and tasks)."""
     return db_query_tools.list_campaigns(campaign_id=campaign_id)
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def db_list_agents(filter: Optional[Dict[str, Any]] = None) -> ToolResult:
     """List derived agent summaries (agents observed in task provenance)."""
     return db_query_tools.list_agents(filter=filter)
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def db_query_objects(
     filter: Optional[Dict[str, Any]] = None,
     projection: Optional[Any] = None,
@@ -70,7 +70,7 @@ def db_query_objects(
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def db_highlight_lineage(
     task_ids: Optional[List[str]] = None,
     filter: Optional[Dict[str, Any]] = None,
@@ -81,7 +81,7 @@ def db_highlight_lineage(
 
 
 @mcp_flowcept.tool()
-@agent_flowcept_task(subtype=PROV_AGENT.AGENT_TOOL)
+@agent_flowcept_task(subtype=PROV_AGENT.TOOL_INVOCATION)
 def db_fix_query(
     query_params: Dict[str, Any],
     error: str,

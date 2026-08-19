@@ -21,7 +21,7 @@ It is described in:
 
 PROV-AGENT names the main building blocks you see in modern AI systems:
 
-- **Activities** such as Campaign, Workflow, Task, AIModelInvocation, and AgentTool
+- **Activities** such as Campaign, Workflow, Task, AIModelInvocation, and ToolInvocation
 - **Agents** such as an AI agent or a human user
 - **Data Objects** such as domain data, prompts, responses, scheduling info, and telemetry
 - **Relations** such as *used*, *wasGeneratedBy*, *wasAssociatedWith*, *wasAttributedTo*, and *wasInformedBy*
@@ -64,21 +64,21 @@ Use the :class:`~flowcept.commons.vocabulary.PROV_AGENT` enum to set these value
        Captured automatically by :class:`~flowcept.instrumentation.flowcept_agent_task.FlowceptLLM`.
        ``used.prompt`` stores the input; ``generated.response`` stores the output;
        ``custom_metadata.llm_usage`` stores token counts.
-   * - ``PROV_AGENT.AGENT_TOOL``
-     - ``agent_tool``
-     - A tool execution by an AI agent (*AgentTool* in PROV-AGENT).
+   * - ``PROV_AGENT.TOOL_INVOCATION``
+     - ``tool_invocation``
+     - A tool execution by an AI agent (*ToolInvocation* in PROV-AGENT).
        Captured automatically by the
        :func:`~flowcept.instrumentation.flowcept_agent_task.agent_flowcept_task` decorator
        applied to MCP tools and LangGraph tool nodes.
        ``used`` stores tool arguments; ``generated`` stores the return value.
 
-The ``wasInformedBy`` relation — an ``AgentTool`` activity informing an ``AIModelInvocation`` — is
+The ``wasInformedBy`` relation — a ``ToolInvocation`` activity informing an ``AIModelInvocation`` — is
 the key link for root-cause analysis and downstream impact tracing in PROV-AGENT.  In Flowcept this
 is expressed through the ``agent_id`` field: every task with the same ``agent_id`` belongs to the
 same AI agent and can be queried together to reconstruct the full agent provenance graph.
 
 The UI uses ``subtype`` to visually distinguish AI agent activities from regular workflow tasks.
-Filter for ``subtype == "ai_model_invocation"`` or ``subtype == "agent_tool"`` to isolate agent
+Filter for ``subtype == "ai_model_invocation"`` or ``subtype == "tool_invocation"`` to isolate agent
 interactions from the provenance database.
 
 Figure

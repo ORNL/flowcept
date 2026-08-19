@@ -2004,10 +2004,29 @@ class MongoDBDAO(DocumentDBDAO):
         rows = (
             self.raw_pipeline(
                 [
-                    {"$match": {"agent_id": {"$in": agent_ids}}},
+                    {
+                        "$match": {
+                            "$or": [
+                                {"agent_id": {"$in": agent_ids}},
+                                {"source_agent_id": {"$in": agent_ids}},
+                            ]
+                        }
+                    },
+                    {
+                        "$project": {
+                            "participants": ["$agent_id", "$source_agent_id"],
+                            "activity_id": 1,
+                            "source_agent_id": 1,
+                            "campaign_id": 1,
+                            "workflow_id": 1,
+                            "registered_at": 1,
+                        }
+                    },
+                    {"$unwind": "$participants"},
+                    {"$match": {"participants": {"$in": agent_ids}}},
                     {
                         "$group": {
-                            "_id": "$agent_id",
+                            "_id": "$participants",
                             "task_count": {"$sum": 1},
                             "activities": {"$addToSet": "$activity_id"},
                             "source_agent_ids": {"$addToSet": "$source_agent_id"},
