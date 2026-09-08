@@ -34,6 +34,28 @@ from flowcept.flowceptor.consumers.consumer_utils import (
 from time import time, sleep
 
 
+def _escape_key_dots(value):
+    """Escape '.' and leading '$' in nested dict keys.
+
+    The task upsert uses an aggregation-pipeline ``$set``, which rejects such
+    keys anywhere in the document (server error 16412) and fails the whole
+    ``bulk_write`` batch. Escaped with the fullwidth lookalikes so the stored
+    document stays readable.
+    """
+    if isinstance(value, dict):
+        out = {}
+        for k, v in value.items():
+            if isinstance(k, str):
+                k = k.replace(".", "．")
+                if k.startswith("$"):
+                    k = "＄" + k[1:]
+            out[k] = _escape_key_dots(v)
+        return out
+    if isinstance(value, list):
+        return [_escape_key_dots(v) for v in value]
+    return value
+
+
 class MongoDBDAO(DocumentDBDAO):
     """
     A data access object for MongoDB.
@@ -303,7 +325,7 @@ class MongoDBDAO(DocumentDBDAO):
                 requests.append(
                     UpdateOne(
                         filter={indexing_key: indexing_key_value},
-                        update=[{"$set": indexed_buffer[indexing_key_value]}],
+                        update=[{"$set": _escape_key_dots(indexed_buffer[indexing_key_value])}],
                         upsert=True,
                     )
                 )

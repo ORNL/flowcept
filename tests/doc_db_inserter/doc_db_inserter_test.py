@@ -98,6 +98,25 @@ class TestMongoDBInserter(unittest.TestCase):
         c1 = self.doc_dao.count_tasks()
         assert c0 == c1
 
+    def test_db_insert_with_dotted_keys(self):
+        """Tasks whose payload keys contain '.' or a leading '$' must still persist."""
+        # Keys like a dataframe column named "yr.doy" inside a captured payload
+        # used to fail the whole bulk_write with server error 16412.
+        c0 = self.doc_dao.count_tasks()
+        uid = str(uuid4())
+        docs = [
+            {
+                "task_id": str(uuid4()),
+                "myid": uid,
+                "debug": True,
+                "status": "FINISHED",
+                "used": {"columns": {"yr.doy": 1, "$weird": "x"}},
+            }
+        ]
+        assert self.doc_dao.insert_and_update_many_tasks(docs, "myid") is True
+        self.doc_dao.delete_task_keys("myid", [uid])
+        assert self.doc_dao.count_tasks() == c0
+
     def test_status_updates(self):
         c0 = self.doc_dao.count_tasks()
         assert c0 >= 0
