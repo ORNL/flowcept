@@ -26,6 +26,7 @@ DEFAULT_SETTINGS = {
     "db_buffer": {},
     "databases": {"mongodb": {"enabled": False}, "lmdb": {"enabled": False}},
     "adapters": {},
+    "plugins": {},
     "agent": {},
 }
 
@@ -297,6 +298,12 @@ MCP_ALLOWED_HOSTS = _get_env_list("MCP_ALLOWED_HOSTS", AGENT.get("mcp_allowed_ho
 MCP_ALLOWED_ORIGINS = _get_env_list(
     "MCP_ALLOWED_ORIGINS", AGENT.get("mcp_allowed_origins", ["http://localhost:*", "http://127.0.0.1:*"])
 )
+
+####################
+# PLUGINS          #
+####################
+# Settings are already resolved to plain containers at load time.
+PLUGINS = dict(settings.get("plugins", {}) or {})
 
 ####################
 # Enabled ADAPTERS #

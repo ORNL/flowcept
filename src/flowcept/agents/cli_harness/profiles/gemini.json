@@ -1,0 +1,31 @@
+{
+  "harness": "gemini_cli",
+  "_comment": "Google Gemini CLI. Its extension/hook events are camelCase and nest tool detail under a `toolCall` object.",
+  "events": {
+    "SessionStart": "session_start",
+    "SessionEnd": "session_end",
+    "UserPromptSubmit": "prompt",
+    "BeforeToolCall": "tool_pre",
+    "PreToolUse": "tool_pre",
+    "AfterToolCall": "tool_post",
+    "PostToolUse": "tool_post",
+    "ToolCallError": "tool_error",
+    "ModelResponse": "turn_end",
+    "AgentFinish": "turn_end",
+    "Notification": "notification",
+    "Compress": "compact"
+  },
+  "fields": {
+    "session_id": ["sessionId", "session_id", "conversationId"],
+    "cwd": ["cwd", "workspaceDir", "targetDir"],
+    "model": ["model", "modelName", "config.model"],
+    "prompt": ["prompt", "userPrompt", "text"],
+    "response": ["responseText", "modelResponse", "text"],
+    "tool_name": ["toolCall.name", "toolName", "name"],
+    "tool_use_id": ["toolCall.callId", "callId", "toolCallId"],
+    "tool_input": ["toolCall.args", "args", "toolArgs"],
+    "tool_response": ["toolCall.response", "response", "resultDisplay"],
+    "error": ["error", "errorMessage", "toolCall.error"],
+    "permission_mode": ["approvalMode", "config.approvalMode"]
+  }
+}

@@ -338,7 +338,7 @@ class TelemetryCapture:
                 p.executable = psutil_p.exe()
                 p.cmd_line = psutil_p.cmdline()
                 p.num_open_file_descriptors = psutil_p.num_fds()
-                p.num_connections = len(psutil_p.net_connections())
+                p.num_connections = len(psutil_p.connections())
                 try:
                     p.io_counters = psutil_p.io_counters()._asdict()
                 except Exception:

@@ -33,6 +33,7 @@ from flowcept.configs import (
     DUMP_BUFFER_PATH,
     APPEND_WORKFLOW_ID_TO_PATH,
     APPEND_ID_TO_PATH,
+    PLUGINS,
 )
 from flowcept.flowceptor.adapters.base_interceptor import BaseInterceptor
 
@@ -174,6 +175,7 @@ class Flowcept(object):
             self._interceptors = [interceptors]
 
         self._interceptor_instances = None
+        self._plugin_instances: dict = {}
         self._first_interceptor: BaseInterceptor = None
         self._should_save_workflow = save_workflow
         self._current_workflow_obj: WorkflowObject = None
@@ -200,6 +202,38 @@ class Flowcept(object):
         )
         if should_delete_buffer_file:
             Flowcept.delete_buffer_file()
+
+    @property
+    def plugins(self) -> dict:
+        """Return the dict of running plugin instances keyed by their config name."""
+        return self._plugin_instances
+
+    @staticmethod
+    def _build_plugin(kind: str, cfg: dict):
+        """Instantiate a plugin by kind string, passing cfg as its config dict.
+
+        Each plugin's internal interceptor automatically reuses Flowcept's
+        InstrumentationInterceptor singleton (same MQ connection and buffer) when
+        it is already started — the same pattern used by the Dask client interceptor.
+        """
+        if kind == "academy":
+            from flowcept.agents.academy.academy_plugin import FlowceptAcademyPlugin
+
+            return FlowceptAcademyPlugin(config=cfg)
+        elif kind == "langgraph":
+            from flowcept.agents.langgraph.langgraph_plugin import FlowceptLangGraphPlugin
+
+            return FlowceptLangGraphPlugin(config=cfg)
+        elif kind == "crewai":
+            from flowcept.agents.crewai.crewai_plugin import FlowceptCrewAIPlugin
+
+            return FlowceptCrewAIPlugin(config=cfg)
+        elif kind == "autogen":
+            from flowcept.agents.autogen.autogen_plugin import FlowceptAutoGenPlugin
+
+            return FlowceptAutoGenPlugin(config=cfg)
+        else:
+            raise ValueError(f"Unknown plugin kind: '{kind}'. Supported: academy, langgraph, crewai, autogen.")
 
     def start(self) -> "Flowcept":
         """Start Flowcept Controller."""
@@ -244,6 +278,22 @@ class Flowcept(object):
 
         else:
             Flowcept.current_workflow_id = None
+
+        for plugin_name, plugin_cfg in PLUGINS.items():
+            if not isinstance(plugin_cfg, dict) or not plugin_cfg.get("enabled", False):
+                continue
+            kind = plugin_cfg.get("kind", plugin_name)
+            # Propagate Flowcept's campaign_id so all auto-started plugins share the same campaign.
+            merged_cfg = dict(plugin_cfg)
+            merged_cfg.setdefault("campaign_id", self.campaign_id)
+            try:
+                plugin = Flowcept._build_plugin(kind, merged_cfg)
+                plugin.start()
+                self._plugin_instances[plugin_name] = plugin
+                self.logger.debug(f"Plugin '{plugin_name}' ({kind}) started from config.")
+            except Exception as e:
+                self.logger.error(f"Failed to start plugin '{plugin_name}': {e}")
+
         Flowcept._current_instance = self
         Flowcept.is_started = self.is_started = True
         self.logger.debug("Flowcept started successfully.")
@@ -945,6 +995,14 @@ class Flowcept(object):
         if not self.is_started or not self.enabled:
             self.logger.warning("Flowcept is already stopped or may never have been started!")
             return
+
+        for plugin_name, plugin in list(self._plugin_instances.items()):
+            try:
+                plugin.stop()
+                self.logger.debug(f"Plugin '{plugin_name}' stopped.")
+            except Exception as e:
+                self.logger.error(f"Failed to stop plugin '{plugin_name}': {e}")
+        self._plugin_instances = {}
 
         if (
             self._should_save_workflow

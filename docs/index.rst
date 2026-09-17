@@ -65,6 +65,8 @@ Flowcept
    setup
    web_ui
    agent
+   agent_plugins
+   harness_plugins
    prov_capture
    telemetry_capture
    prov_storage

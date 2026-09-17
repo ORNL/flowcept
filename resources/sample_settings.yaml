@@ -1,4 +1,4 @@
-flowcept_version: 0.10.8 # Version of the Flowcept package. Do not update this manually. The CI updates it. This setting file is compatible with this version.
+flowcept_version: 1.0.5 # Version of the Flowcept package. Do not update this manually. The CI updates it. This setting file is compatible with this version.
 
 project:
   debug: true # Toggle debug mode. This will add a property `debug: true` to all saved data, making it easier to retrieve/delete them later.
@@ -44,12 +44,11 @@ experiment:
 
 mq:
   enabled: false
-  type: redis  # or kafka, mofka, rabbitmq; adjust port accordingly (redis: 6379, kafka: 9092, rabbitmq: 5672). If mofka, also set group_file.
+  type: redis  # or kafka, mofka, rabbitmq, diaspora; adjust port accordingly (redis: 6379, kafka: 9092, rabbitmq: 5672). If mofka, also set group_file.
   host: localhost
   # uri: ?
   # instances: ["localhost:6379"] # We can have multiple MQ instances being accessed by the consumers but each interceptor will currently access one single MQ..
   port: 6379
-  # group_id: auto  # Kafka-only consumer group id. Use "auto" to generate a unique group per run.
   # group_file: mofka.json
   # username: guest  # RabbitMQ only (AMQP); default is "guest"
   # vhost: /         # RabbitMQ only; default is "/"
@@ -112,7 +111,6 @@ agent:
   agent_mode: disabled # How the MCP agent is deployed: disabled | separate | colocated
 
 databases:
-
   lmdb:
     enabled: false
     path: flowcept_lmdb
@@ -128,6 +126,46 @@ databases:
 #    log_path: /var/log/mongodb/mongod.log
 #    lock_file_path: /var/run/mongod.pid
 
+
+plugins:
+  # Agent-framework plugins — set enabled: true to activate without any code changes.
+  # When Flowcept starts (via context manager or .start()), enabled plugins are
+  # automatically started and stopped alongside Flowcept. No need to call
+  # plugin.start() / plugin.stop() or pass a config dict in your code.
+  #
+  # Each entry key is an arbitrary name; "kind" selects the plugin class:
+  #   academy   → FlowceptAcademyPlugin
+  #   langgraph → FlowceptLangGraphPlugin
+  #   crewai    → FlowceptCrewAIPlugin
+  #   autogen   → FlowceptAutoGenPlugin
+  #
+  # All other keys are forwarded as the plugin's config dict.
+
+  academy:
+    enabled: false
+    kind: academy
+    workflow_name: "academy-workflow"
+    performance_tracking: true
+    # perf_csv: "provenance_perf.csv"
+    # campaign_id: ~
+
+  # langgraph:
+  #   enabled: true
+  #   kind: langgraph
+  #   workflow_name: "langgraph-workflow"
+  #   performance_tracking: true
+
+  # crewai:
+  #   enabled: true
+  #   kind: crewai
+  #   workflow_name: "crewai-workflow"
+  #   performance_tracking: true
+
+  # autogen:
+  #   enabled: true
+  #   kind: autogen
+  #   workflow_name: "autogen-workflow"
+  #   performance_tracking: true
 
 adapters:
   # For each key below, you can have multiple instances. Like mlflow1, mlflow2; zambeze1, zambeze2. Use an empty dict, {}, if you won't use any adapter.

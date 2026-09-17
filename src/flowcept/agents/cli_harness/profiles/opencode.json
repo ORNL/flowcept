@@ -1,0 +1,28 @@
+{
+  "harness": "opencode",
+  "_comment": "OpenCode. Its plugin API emits dotted event names and wraps detail in a nested object, so most lookups are dotted paths.",
+  "events": {
+    "session.created": "session_start",
+    "session.idle": "turn_end",
+    "session.deleted": "session_end",
+    "session.error": "turn_end",
+    "message.updated": "prompt",
+    "tool.execute.before": "tool_pre",
+    "tool.execute.after": "tool_post",
+    "permission.updated": "notification",
+    "session.compacted": "compact"
+  },
+  "fields": {
+    "session_id": ["sessionID", "properties.sessionID", "properties.info.id", "session_id"],
+    "cwd": ["directory", "properties.directory", "worktree"],
+    "model": ["properties.model", "model", "properties.info.modelID"],
+    "prompt": ["properties.text", "properties.info.text", "text"],
+    "response": ["properties.text", "properties.info.summary", "text"],
+    "tool_name": ["tool", "properties.tool", "name"],
+    "tool_use_id": ["callID", "properties.callID", "sessionID"],
+    "tool_input": ["args", "properties.args", "input"],
+    "tool_response": ["output", "properties.output", "result"],
+    "error": ["error", "properties.error", "properties.info.error"],
+    "agent_name": ["agent", "properties.agent", "properties.info.agent"]
+  }
+}

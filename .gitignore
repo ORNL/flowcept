@@ -32,7 +32,7 @@ launch.json
 .vscode/
 **/*.err
 **/*.out
-core.*
+core.[0-9]*
 *.csv
 flowcept_code_assistants_memory.md
 uv.lock

@@ -88,6 +88,40 @@ The agent resolves the matching task(s) via a Mongo-style filter, then the Dataf
 tab dims all unrelated nodes and edges, tracing only the ancestor/descendant chain.
 Click any node or empty space to reset the highlight manually.
 
+Provenance analysis tools
+-------------------------
+
+Both surfaces expose ready-made analysis tools built on
+``flowcept.agents.prov_analysis`` (pure functions over provenance records,
+shared with the coding-harness surfaces — see :doc:`harness_plugins`). Each
+analysis comes in two variants: ``df_*`` tools run over the records loaded in
+the agent's in-memory context (the same context the DataFrame queries use),
+and ``db_*`` variants pull records from the database via ``DBAPI``, optionally
+scoped by ``workflow_id``.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Tool
+     - What it returns
+   * - ``df_summarize_execution`` / ``db_summarize_execution``
+     - Counts by activity/subtype, statuses, duration bounds, token usage.
+   * - ``df_analyze_errors`` / ``db_analyze_errors``
+     - Per-activity error rates with stderr/message excerpts.
+   * - ``df_agent_behavior`` / ``db_agent_behavior``
+     - Per-agent turns, tool calls, LLM calls, token usage, durations.
+   * - ``df_find_slowest`` / ``db_find_slowest``
+     - Slowest tasks, longest elapsed first (``limit`` defaults to 10).
+   * - ``df_cross_framework_links`` / ``db_cross_framework_links``
+     - Cross-framework provenance edges (``source_agent_id`` pointers).
+   * - ``compare_executions``
+     - Per-activity count/duration/error-rate deltas between two workflows
+       (``workflow_id_a``, ``workflow_id_b``); prefers in-memory records,
+       falls back to the DB.
+
+The web chat exposes the same tools, routed to the ``df_`` or ``db_`` variant
+by the chat's tool context.
+
 Explicit MCP tool example
 -------------------------
 

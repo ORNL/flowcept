@@ -16,6 +16,7 @@ from langchain_core.tools import StructuredTool
 from pydantic import create_model
 
 from flowcept.agents.mcp.mcp_client import run_tool
+from flowcept.agents.mcp.mcp_tools import analysis_mcp_tools as _analysis
 from flowcept.agents.mcp.mcp_tools import db_query_mcp_tools as _db
 from flowcept.agents.mcp.mcp_tools import df_query_mcp_tools as _df
 from flowcept.agents.mcp.mcp_tools import dashboard_mcp_tools as _dash
@@ -273,6 +274,105 @@ def update_dashboard(
     return _run_mcp(_dash.db_update_dashboard.__name__, dashboard_id=dashboard_id, spec=spec or {})
 
 
+def summarize_execution(
+    tool_context: str,
+    context: Optional[Dict[str, Any]],
+    workflow_id: Optional[str] = None,
+) -> str:
+    """Summarize an execution: task counts by activity/subtype, statuses, durations, token usage.
+
+    DB mode: analyzes DB records, optionally scoped by ``workflow_id``.
+    DF mode: analyzes the records loaded in the agent's in-memory context.
+    """
+    effective_id = workflow_id or (context or {}).get("workflow_id")
+    if tool_context == "df":
+        return _run_mcp(_analysis.df_summarize_execution.__name__, workflow_id=effective_id)
+    return _run_mcp(_analysis.db_summarize_execution.__name__, workflow_id=effective_id)
+
+
+def analyze_errors(
+    tool_context: str,
+    context: Optional[Dict[str, Any]],
+    workflow_id: Optional[str] = None,
+) -> str:
+    """Analyze failed tasks: per-activity error rates, stderr excerpts, first/last failure times.
+
+    DB mode: analyzes DB records, optionally scoped by ``workflow_id``.
+    DF mode: analyzes the records loaded in the agent's in-memory context.
+    """
+    if tool_context == "df":
+        return _run_mcp(_analysis.df_analyze_errors.__name__)
+    effective_id = workflow_id or (context or {}).get("workflow_id")
+    return _run_mcp(_analysis.db_analyze_errors.__name__, workflow_id=effective_id)
+
+
+def analyze_agent_behavior(
+    tool_context: str,
+    context: Optional[Dict[str, Any]],
+    workflow_id: Optional[str] = None,
+) -> str:
+    """Profile per-agent behavior: turns, tool calls by tool, LLM calls, token usage, durations.
+
+    DB mode: analyzes DB records, optionally scoped by ``workflow_id``.
+    DF mode: analyzes the records loaded in the agent's in-memory context.
+    """
+    if tool_context == "df":
+        return _run_mcp(_analysis.df_agent_behavior.__name__)
+    effective_id = workflow_id or (context or {}).get("workflow_id")
+    return _run_mcp(_analysis.db_agent_behavior.__name__, workflow_id=effective_id)
+
+
+def find_slowest_tasks(
+    tool_context: str,
+    context: Optional[Dict[str, Any]],
+    limit: int = 10,
+    workflow_id: Optional[str] = None,
+) -> str:
+    """Find the slowest tasks, longest elapsed first, with status and parent-chain depth.
+
+    DB mode: analyzes DB records, optionally scoped by ``workflow_id``.
+    DF mode: analyzes the records loaded in the agent's in-memory context.
+    """
+    if tool_context == "df":
+        return _run_mcp(_analysis.df_find_slowest.__name__, limit=limit)
+    effective_id = workflow_id or (context or {}).get("workflow_id")
+    return _run_mcp(_analysis.db_find_slowest.__name__, workflow_id=effective_id, limit=limit)
+
+
+def cross_framework_links(
+    tool_context: str,
+    context: Optional[Dict[str, Any]],
+    workflow_id: Optional[str] = None,
+) -> str:
+    """List cross-framework provenance links (source_agent_id edges) and unlinked task counts.
+
+    DB mode: analyzes DB records, optionally scoped by ``workflow_id``.
+    DF mode: analyzes the records loaded in the agent's in-memory context.
+    """
+    if tool_context == "df":
+        return _run_mcp(_analysis.df_cross_framework_links.__name__)
+    effective_id = workflow_id or (context or {}).get("workflow_id")
+    return _run_mcp(_analysis.db_cross_framework_links.__name__, workflow_id=effective_id)
+
+
+def compare_executions(
+    tool_context: str,
+    context: Optional[Dict[str, Any]],
+    workflow_id_a: str = "",
+    workflow_id_b: str = "",
+) -> str:
+    """Compare two workflow executions per activity: count, duration, and error-rate deltas.
+
+    Pass the two workflow ids to compare. Records come from the agent context
+    when loaded there, otherwise from the database.
+    """
+    return _run_mcp(
+        _analysis.compare_executions.__name__,
+        workflow_id_a=workflow_id_a,
+        workflow_id_b=workflow_id_b,
+    )
+
+
 # ---------------------------------------------------------------------------
 # LangChain tool builder
 # ---------------------------------------------------------------------------
@@ -343,6 +443,12 @@ _ALL_TOOLS = [
     make_chart,
     highlight_lineage,
     fix_query,
+    summarize_execution,
+    analyze_errors,
+    analyze_agent_behavior,
+    find_slowest_tasks,
+    cross_framework_links,
+    compare_executions,
 ]
 
 _DASHBOARD_TOOLS = [get_dashboard, update_dashboard]

@@ -1,0 +1,32 @@
+{
+  "harness": "codex",
+  "_comment": "OpenAI Codex CLI. Notification hooks deliver a typed JSON envelope; the turn/tool names below cover the documented types. Unmapped names fall through to the built-in defaults.",
+  "events": {
+    "session-start": "session_start",
+    "session-end": "session_end",
+    "session-configured": "session_start",
+    "user-message": "prompt",
+    "agent-turn-complete": "turn_end",
+    "agent-message": "turn_end",
+    "exec-command-begin": "tool_pre",
+    "exec-command-end": "tool_post",
+    "patch-apply-begin": "tool_pre",
+    "patch-apply-end": "tool_post",
+    "mcp-tool-call-begin": "tool_pre",
+    "mcp-tool-call-end": "tool_post",
+    "error": "tool_error"
+  },
+  "fields": {
+    "session_id": ["session_id", "conversation_id", "id"],
+    "cwd": ["cwd", "workdir", "turn_context.cwd"],
+    "model": ["model", "turn_context.model"],
+    "prompt": ["input_messages", "last_user_message", "message"],
+    "response": ["last_agent_message", "agent_message", "message"],
+    "tool_name": ["invocation.tool", "tool", "command", "call.name"],
+    "tool_use_id": ["call_id", "invocation.call_id", "id"],
+    "tool_input": ["invocation.arguments", "command", "changes", "arguments"],
+    "tool_response": ["output", "stdout", "result", "aggregated_output"],
+    "error": ["error", "stderr", "message"],
+    "permission_mode": ["turn_context.approval_policy", "approval_policy", "sandbox_policy"]
+  }
+}

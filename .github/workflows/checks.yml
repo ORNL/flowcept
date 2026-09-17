@@ -19,7 +19,7 @@ jobs:
       - name: Install package and dependencies
         run: |
           pip install --upgrade pip
-          pip install ruff
+          pip install ruff==0.15.22
           pip install .[docs,webservice,extras]
 
       - name: Run linter and formatter checks using ruff
@@ -27,6 +27,9 @@ jobs:
 
       - name: Run HTML builder for Sphinx documentation
         run: make docs
+
+      - name: Check that the committed OpenAPI spec is up to date
+        run: git diff --exit-code -- docs/openapi/flowcept-openapi.json docs/openapi/flowcept-openapi.yaml
 
       - name: Clean up
         run: |

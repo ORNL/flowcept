@@ -35,7 +35,7 @@ jobs:
 
       - name: Install package and dependencies
         run: |
-          pip install ruff
+          pip install ruff==0.15.22
           pip install .[docs]
 
       - name: List installed packages

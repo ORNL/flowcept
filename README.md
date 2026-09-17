@@ -202,6 +202,281 @@ Flowcept supports several capture styles. Use the least invasive one that answer
 
 Read [Provenance Capture Methods](https://flowcept.readthedocs.io/en/latest/prov_capture.html) for examples.
 
+## Agentic Provenance Plugins
+
+Flowcept ships with zero-code-change provenance plugins for four popular agentic frameworks: **Academy**, **LangGraph**, **CrewAI**, and **AutoGen**. Each plugin automatically captures:
+
+- **Intra-agent provenance** — individual action/task executions with inputs, outputs, timing, and status
+- **Inter-agent provenance** — parent/child relationships between agents and the tasks they spawn
+- **LLM call provenance** — every OpenAI or Anthropic API call linked back to the agent action that triggered it (model, prompt, tokens, latency)
+
+### Enabling plugins via `settings.yaml`
+
+Add a `plugins:` block to your `~/.flowcept/settings.yaml`. Only the frameworks you want to track need to be listed:
+
+```yaml
+plugins:
+  academy:
+    enabled: true
+    kind: academy
+    workflow_name: "my-academy-workflow"
+    performance_tracking: true
+  langgraph:
+    enabled: true
+    kind: langgraph
+    workflow_name: "my-langgraph-workflow"
+    performance_tracking: true
+  crewai:
+    enabled: true
+    kind: crewai
+    workflow_name: "my-crewai-workflow"
+    performance_tracking: true
+  autogen:
+    enabled: true
+    kind: autogen
+    workflow_name: "my-autogen-workflow"
+    performance_tracking: true
+```
+
+Then wrap your code with `Flowcept()` — all enabled plugins start and stop automatically:
+
+```python
+from flowcept import Flowcept
+
+with Flowcept():
+    # your Academy / LangGraph / CrewAI / AutoGen code here
+    ...
+```
+
+### Helper utilities
+
+Each plugin exposes drop-in wrappers to record LLM calls regardless of which framework is active:
+
+| Function / Class | Purpose |
+|---|---|
+| `openai_chat(prompt, model, ...)` | Call OpenAI and automatically record the call with provenance linkage |
+| `anthropic_chat(prompt, model, ...)` | Same for Anthropic Claude models |
+| `FlowceptAnthropicClient(client)` | Wrap an existing `anthropic.Anthropic` client to intercept all `messages.create` / `stream` calls |
+| `run_team(team, task, ...)` | *(AutoGen only)* Run an autogen team and capture full provenance without an explicit plugin handle |
+
+All four plugins export `openai_chat` and `anthropic_chat` from their respective modules (e.g. `from flowcept.agents.academy.academy_plugin import openai_chat`).
+
+### What gets captured
+
+| Captured field | Academy | LangGraph | CrewAI | AutoGen |
+|---|:---:|:---:|:---:|:---:|
+| Agent action / node executions | ✓ | ✓ | ✓ | ✓ |
+| Inputs and outputs per action | ✓ | ✓ | ✓ | ✓ |
+| Timing (start / end / latency) | ✓ | ✓ | ✓ | ✓ |
+| Parent–child task linkage | ✓ | ✓ | ✓ | ✓ |
+| LLM calls (OpenAI) | ✓ | ✓ | ✓ | ✓ |
+| LLM calls (Anthropic) | ✓ | ✓ | ✓ | ✓ |
+| Token usage | ✓ | ✓ | ✓ | ✓ |
+| Agent ID on LLM calls | ✓ | ✓ | ✓ | ✓ |
+| Automatic agent wrapping | ✓ | ✓ | — | ✓ |
+
+### Provenance record types per plugin
+
+Each plugin emits typed `TaskObject` records tagged with a `subtype` field, forming a nested provenance hierarchy:
+
+| Plugin | Record subtypes and hierarchy |
+|---|---|
+| **Academy** | Campaign `WorkflowObject` → agent `WorkflowObject` → `academy_action` / `academy_loop` / `academy_lifecycle` (siblings) → `llm_call` (under action or loop) |
+| **LangGraph** | `WorkflowObject` → `langgraph_graph` → `langgraph_node` → `llm_call` / `tool_call` |
+| **CrewAI** | `WorkflowObject` → `crewai_crew` (no children via `parent_task_id`) · `crewai_task` → `crewai_agent` → `llm_call` / `tool_call` |
+| **AutoGen** | `WorkflowObject` → `autogen_run` → `autogen_message` → `llm_call` |
+
+All records carry `campaign_id`, `workflow_id`, `task_id`, `started_at`, `ended_at`, and `status`. `used` (inputs) and `generated` (outputs) are present on records that represent computation (`academy_action`, node/graph records, LLM and tool calls); `parent_task_id` links child records to their enclosing parent.
+
+### Cross-plugin composition
+
+All four plugins can run under a **shared `campaign_id`** using the `from_academy_plugin()` factory. AutoGen and CrewAI share the Academy plugin's in-memory buffer directly; LangGraph creates its own interceptor but inherits the same `campaign_id`:
+
+```python
+from flowcept.agents.academy.academy_plugin import FlowceptAcademyPlugin
+from flowcept.agents.langgraph.langgraph_plugin import FlowceptLangGraphPlugin
+from flowcept.agents.autogen.autogen_plugin import FlowceptAutoGenPlugin
+from flowcept.agents.crewai.crewai_plugin import FlowceptCrewAIPlugin
+
+ap = FlowceptAcademyPlugin(config={"workflow_name": "my-run"})
+ap.start()
+lg = FlowceptLangGraphPlugin.from_academy_plugin(ap)   # own interceptor, shared campaign_id
+ag = FlowceptAutoGenPlugin.from_academy_plugin(ap)     # shared buffer
+cr = FlowceptCrewAIPlugin.from_academy_plugin(ap)      # shared buffer
+
+# ... run workloads ...
+
+lg.stop()   # flush LangGraph's interceptor
+ap.stop()   # flush Academy / AutoGen / CrewAI shared buffer
+```
+
+Every record across all four plugins carries the same `campaign_id`, so a single query retrieves the full cross-framework provenance trace.
+
+### Cross-framework provenance linking
+
+When an Academy `@action` launches a LangGraph graph or an AutoGen team, the plugins can record an explicit parent–child edge across framework boundaries.
+
+**Academy (source side)** — two `contextvars.ContextVar` values are set automatically during execution:
+
+- `_current_academy_agent_id` — the Academy agent identifier, set once per agent at startup
+- `_current_action_task_id` — the Flowcept `task_id` of the currently-executing `@action` or `@loop`
+
+Read the latter inside an action to get the enclosing task's identifier:
+
+```python
+from flowcept.agents.academy.academy_plugin import _current_action_task_id
+action_task_id = _current_action_task_id.get()
+```
+
+**LangGraph (target side)** — pass the action's `task_id` as `_source_agent_id` in the initial graph state:
+
+```python
+result = await graph.ainvoke(
+    {"_source_agent_id": action_task_id, ...},
+    config={"callbacks": [lg.callback_handler]},
+)
+```
+
+The LangGraph plugin stores it as `source_agent_id` in `custom_metadata` of both `langgraph_graph` and `langgraph_node` records.
+
+**AutoGen (target side)** — pass it as `source_agent_id` to `run_team()`:
+
+```python
+result = await ag.run_team(team, task, source_agent_id=action_task_id)
+```
+
+The AutoGen plugin stores it in `custom_metadata` of the `autogen_run` record.
+
+**AI coding harness (target side)** — the harness capture (`flowcept.agents.harness`) links the other way too: give it a framework-emitted task or agent id and every turn, tool, and LLM-call task it records carries it as a top-level `source_agent_id`. Set it with the `flowcept_source_agent_id` hook-payload key, the `FLOWCEPT_HARNESS_SOURCE_AGENT_ID` environment variable (the payload key wins), or `SessionTracer(..., source_agent_id=...)`:
+
+```python
+from flowcept.agents.harness import SessionTracer
+
+with SessionTracer("my_agent", source_agent_id=action_task_id) as tracer:
+    ...
+```
+
+In all cases, `campaign_id` and `workflow_id` alone are sufficient for coarse-grained cross-framework queries without explicit identifier threading.
+
+### Examples
+
+Runnable examples for each framework are in [`examples/agents/`](examples/agents/):
+
+- [`examples/agents/academy/academy_example.py`](examples/agents/academy/academy_example.py)
+- [`examples/agents/langgraph/langgraph_example.py`](examples/agents/langgraph/langgraph_example.py)
+- [`examples/agents/crewai/crewai_example.py`](examples/agents/crewai/crewai_example.py)
+- [`examples/agents/autogen/autogen_example.py`](examples/agents/autogen/autogen_example.py)
+- [`examples/agents/combined_agentic_systems/combined_example.py`](examples/agents/combined_agentic_systems/combined_example.py) — all four frameworks running concurrently
+- [`examples/agents/langchain/langchain_example.py`](examples/agents/langchain/langchain_example.py) — LangChain callback handler capture with a fake chat model (runs offline)
+- [`examples/agents/openai_agents/openai_agents_example.py`](examples/agents/openai_agents/openai_agents_example.py) — OpenAI Agents SDK tracing processor; runs a real agent with `OPENAI_API_KEY`, or synthetic SDK spans offline
+- [`examples/agents/otel/otel_example.py`](examples/agents/otel/otel_example.py) — OpenTelemetry GenAI span exporter fed by synthetic spans (runs offline)
+- [`examples/agents/cli_harness/cli_harness_example.py`](examples/agents/cli_harness/cli_harness_example.py) — profile-driven CLI-harness adapter, replaying Codex-style hook events (runs offline)
+- [`examples/agents/claude_code/claude_code_example.py`](examples/agents/claude_code/claude_code_example.py) — Claude Code install walkthrough plus a simulated hook-event replay (runs offline)
+- [`examples/agents/claude_agent_sdk/claude_agent_sdk_example.py`](examples/agents/claude_agent_sdk/claude_agent_sdk_example.py) — `trace_query` drop-in for `claude_agent_sdk.query` (requires `ANTHROPIC_API_KEY`)
+- [`examples/agents/prov_analysis/prov_analysis_example.py`](examples/agents/prov_analysis/prov_analysis_example.py) — agentic provenance analysis: replays two synthetic sessions and runs every `prov_analysis` function over them (runs offline)
+
+## AI Coding Harness Provenance Plugins
+
+Flowcept also captures what an **AI coding harness** actually did — prompts, turns,
+tool calls, subagents — as PROV-AGENT provenance. An agentic coding session is a
+workflow: a prompt causes a turn, a turn causes tool calls, a tool call edits a
+file. These plugins write that structure into Flowcept's own record format, so
+"which prompt produced this bad edit?" becomes a query instead of a scroll
+through a transcript.
+
+| Source | Plugin |
+| --- | --- |
+| Claude Code | [`plugins/flowcept`](plugins/flowcept) (Claude Code plugin), or hooks in `settings.json` |
+| Codex CLI, Gemini CLI, Cursor, OpenCode | [`flowcept.agents.cli_harness`](src/flowcept/agents/cli_harness/) — one JSON profile per harness |
+| Anything emitting OpenTelemetry GenAI spans | [`flowcept.agents.otel`](src/flowcept/agents/otel/) span exporter (`pip install flowcept[harness_otel]`) |
+| Claude Agent SDK | [`flowcept.agents.claude_agent_sdk`](src/flowcept/agents/claude_agent_sdk/) `trace_query` (`pip install flowcept[harness_claude_sdk]`) |
+| OpenAI Agents SDK | [`flowcept.agents.openai_agents`](src/flowcept/agents/openai_agents/) tracing processor |
+| LangChain / LangGraph | [`flowcept.agents.langchain`](src/flowcept/agents/langchain/) callback handler |
+| Your own agent | `flowcept.agents.harness.SessionTracer`, or the `flowcept-harness-mcp` server's `record_event` tool |
+
+The capture path is deliberately **stdlib-only**: a harness hook is a fresh process
+on the interactive critical path, and importing heavy dependencies costs far more
+than the capture itself. Records are appended as JSONL, one file per session, under
+`~/.flowcept/harness/buffers/`, in Flowcept's native format.
+
+### Quick start: Claude Code
+
+```
+/plugin marketplace add <path to this repo>
+/plugin install flowcept
+```
+
+Then work normally, and when you want to see what was recorded:
+
+```bash
+flowcept-harness sessions        # every captured session, newest first
+flowcept-harness show            # the most recent one, turn by turn
+flowcept-harness report          # a Flowcept workflow card
+```
+
+### Quick start: another CLI harness
+
+Point the harness's hook at the profile-driven adapter:
+
+```bash
+flowcept-harness hook --harness codex --profile codex
+```
+
+Profiles live in [`src/flowcept/agents/cli_harness/profiles/`](src/flowcept/agents/cli_harness/profiles/)
+and are plain JSON — adding a harness means adding a file, not writing code.
+
+### Quick start: in-process capture
+
+```python
+# OpenTelemetry GenAI spans
+from flowcept.agents.otel.otel_plugin import FlowceptSpanExporter
+
+# OpenAI Agents SDK — register once, nothing else changes
+from flowcept.agents.openai_agents.openai_agents_plugin import install
+install()
+
+# LangChain / LangGraph
+from flowcept.agents.langchain.langchain_plugin import FlowceptCallbackHandler
+
+# Claude Agent SDK — a drop-in for claude_agent_sdk.query
+from flowcept.agents.claude_agent_sdk.claude_agent_sdk_plugin import trace_query
+
+# Your own agent
+from flowcept.agents.harness import SessionTracer
+```
+
+See [`examples/agents/harness/harness_example.py`](examples/agents/harness/harness_example.py)
+and `flowcept-harness --help` for the full CLI (status, flush to a live Flowcept
+backend, repair of crashed sessions). Configuration is via `FLOWCEPT_HARNESS_*`
+environment variables, including redaction of credential-shaped values, prompt
+digests instead of full prompts, and offline-first buffering. Full documentation,
+including the configuration table, privacy posture, and the record model, is in
+[`src/flowcept/agents/harness/README.md`](src/flowcept/agents/harness/README.md).
+
+### Provenance analysis
+
+Captured sessions can be analyzed, not just replayed. The analysis logic lives
+in [`flowcept.agents.prov_analysis`](src/flowcept/agents/prov_analysis/) —
+pure functions over provenance records — and is exposed on every surface:
+
+- **Harness MCP tools** — the `flowcept-harness-mcp` server adds
+  `analyze_session` (summary + agent behavior), `analyze_errors` (failure
+  clustering with excerpts), `find_slowest` (latency ranking), and
+  `cross_links` (edges across framework boundaries).
+- **CLI** — `flowcept-harness analyze <session> [--errors | --slowest N | --links]`
+  runs the same analyses over a session's buffer.
+- **Claude Code plugin** — [`plugins/flowcept`](plugins/flowcept) wires the MCP
+  server in via its `.mcp.json` (a stdio server launched by
+  `scripts/mcp-server.sh`) and ships two skills: `prov-analysis` (turn captured
+  provenance into answers) and `write-flowcept-plugin` (author a capture plugin
+  for a new harness). Set `FLOWCEPT_HARNESS_AUTOREPORT=1` to have the plugin
+  write a workflow card per session on SessionEnd (opt-in, off by default).
+- **Flowcept agent MCP / web chat** — `df_*`/`db_*` analysis tools and
+  `compare_executions` over the agent's in-memory context or the DB.
+
+See [`examples/agents/prov_analysis/prov_analysis_example.py`](examples/agents/prov_analysis/prov_analysis_example.py)
+and [`src/flowcept/agents/prov_analysis/README.md`](src/flowcept/agents/prov_analysis/README.md).
+
 ## Storage And Querying
 
 Flowcept can run fully offline or as an online distributed system.

@@ -2006,6 +2006,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /:
+    get:
+      tags:
+      - health
+      summary: Root
+      operationId: root__get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Root  Get
 components:
   schemas:
     AggregationSpec:
@@ -2457,6 +2472,11 @@ components:
         type:
           type: string
           title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
       type: object
       required:
       - loc

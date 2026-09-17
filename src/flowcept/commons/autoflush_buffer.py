@@ -23,10 +23,10 @@ class AutoflushBuffer:
         self._swap_event = Event()
         self._stop_event = Event()
 
-        self._timer_thread = Thread(target=self.time_based_flush)
+        self._timer_thread = Thread(target=self.time_based_flush, daemon=True)
         self._timer_thread.start()
 
-        self._flush_thread = Thread(target=self._flush_buffers)
+        self._flush_thread = Thread(target=self._flush_buffers, daemon=True)
         self._flush_thread.start()
 
         self._flush_function = flush_function

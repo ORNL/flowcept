@@ -1,0 +1,44 @@
+version: '3.8'
+name: flowcept
+services:
+  # flowcept_redis:
+  #   container_name: flowcept_redis
+  #   image: redis
+  #   ports:
+  #     - 6379:6379
+
+  # flowcept_mongo:
+  #   container_name: flowcept_mongo
+  #   image: mongo:latest
+  #   # volumes:
+  #   #   - /Users/rsr/Downloads/mongo_data/db:/data/db
+  #   ports:
+  #     - 27017:27017
+
+  # mofka:
+  #   image: ghcr.io/mochi-hpc/mochi-spack-buildcache:mofka-0.4.0-cmuy7qp44yxutafxseqiqbn3iejima4k.spack
+  #   ports:
+  #     - '9999:9999'
+  #   volumes:
+  #     - ./resources/mofka_config.json:/config/mofka_config.json
+  #     - ./resources/mofka.json:/config/mofka.json
+
+  diaspora:
+    container_name: flowcept_diaspora
+    image:
+    ports:
+      - '9999:9999'
+    volumes:
+      - ./resources/diaspora_config.json:/config/diaspora_config.json
+      - ./resources/diaspora.json:/config/diaspora.json
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      diaspora-ctl topic create --name flowcept \
+                          --driver files \
+                          --driver.root_path /tmp/diaspora-data/interception \
+                          --topic.num_partitions 1
+      sleep 0.3
+      echo "Created topic."
+      while true; do sleep 3600; done
+      "

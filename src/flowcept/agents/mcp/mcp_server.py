@@ -11,6 +11,7 @@ from flowcept.agents.mcp.context_manager import mcp_flowcept, ctx_manager
 
 # Import all mcp_tools modules so their @mcp_flowcept.tool() decorators fire
 from flowcept.agents.mcp.mcp_tools.session_tools import check_liveness
+import flowcept.agents.mcp.mcp_tools.analysis_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.db_query_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.dashboard_mcp_tools  # noqa: F401
 import flowcept.agents.mcp.mcp_tools.df_query_mcp_tools  # noqa: F401

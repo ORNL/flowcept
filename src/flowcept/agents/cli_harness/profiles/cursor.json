@@ -1,0 +1,32 @@
+{
+  "harness": "cursor",
+  "_comment": "Cursor agent hooks. Cursor identifies a conversation with `conversation_id` and the workspace with `workspace_roots`; tool events carry `tool_name` plus a free-form `tool_input`.",
+  "events": {
+    "beforeSubmitPrompt": "prompt",
+    "afterPromptSubmit": "prompt",
+    "beforeShellExecution": "tool_pre",
+    "beforeMCPExecution": "tool_pre",
+    "beforeReadFile": "tool_pre",
+    "beforeEdit": "tool_pre",
+    "afterFileEdit": "tool_post",
+    "afterShellExecution": "tool_post",
+    "afterMCPExecution": "tool_post",
+    "stop": "turn_end",
+    "afterAgentTurn": "turn_end",
+    "start": "session_start",
+    "sessionEnd": "session_end"
+  },
+  "fields": {
+    "session_id": ["conversation_id", "conversationId", "session_id", "thread_id"],
+    "cwd": ["workspace_roots.0", "workspace_root", "cwd"],
+    "model": ["model", "model_name"],
+    "prompt": ["prompt", "text", "attachments.prompt"],
+    "response": ["text", "response", "assistant_message"],
+    "tool_name": ["tool_name", "command", "tool", "server_name"],
+    "tool_use_id": ["generation_id", "tool_call_id", "call_id"],
+    "tool_input": ["tool_input", "command", "edits", "args"],
+    "tool_response": ["tool_response", "output", "result"],
+    "error": ["error", "stderr"],
+    "permission_mode": ["permission", "mode"]
+  }
+}
