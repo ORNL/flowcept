@@ -177,6 +177,10 @@ class GenericJSONEncoder(json.JSONEncoder):
             return [self.default(item) for item in obj]
         elif isinstance(obj, dict):
             return {self.default(key): self.default(value) for key, value in obj.items()}
+        elif isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
         elif hasattr(obj, "__dict__"):
             return self.default(obj.__dict__)
         elif isinstance(obj, object):
@@ -184,10 +188,6 @@ class GenericJSONEncoder(json.JSONEncoder):
                 return str(obj)
             except Exception:
                 return None
-        elif isinstance(obj, np.int) or isinstance(obj, np.int32) or isinstance(obj, np.int64):
-            return int(obj)
-        elif isinstance(obj, np.float) or isinstance(obj, np.float32) or isinstance(obj, np.float64):
-            return float(obj)
         return super().default(obj)
 
 
