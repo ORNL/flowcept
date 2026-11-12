@@ -117,6 +117,47 @@ class ExplicitTaskTest(unittest.TestCase):
         assert end_msg is not None, "No workflow end message with ended_at found."
         assert end_msg.get("status") == Status.FINISHED, "Workflow end message must have status=FINISHED."
 
+    def _workflow_end_status(self, workflow_id):
+        read_args = {"file_path": configs.DUMP_BUFFER_PATH}
+        if configs.APPEND_WORKFLOW_ID_TO_PATH or configs.APPEND_ID_TO_PATH:
+            read_args["consolidate"] = True
+            read_args["workflow_id"] = workflow_id
+        messages = Flowcept.read_buffer_file(**read_args)
+        end_msgs = [
+            m
+            for m in messages
+            if m.get("type") == "workflow" and m.get("workflow_id") == workflow_id and "ended_at" in m
+        ]
+        assert len(end_msgs) == 1, f"Expected one workflow end message, got {len(end_msgs)}."
+        return end_msgs[0].get("status")
+
+    @pytest.mark.safeoffline
+    def test_workflow_status_error_when_context_raises(self):
+        """A workflow whose context manager block raises must end with status=ERROR."""
+        if not configs.DUMP_BUFFER_ENABLED:
+            self.skipTest("Skipping: project.dump_buffer.enabled is false.")
+
+        with pytest.raises(ValueError), Flowcept(start_persistence=False, save_workflow=True):
+            workflow_id = Flowcept.current_workflow_id
+            raise ValueError("boom")
+
+        assert self._workflow_end_status(workflow_id) == Status.ERROR
+
+    @pytest.mark.safeoffline
+    def test_workflow_status_finished_when_context_exits_cleanly(self):
+        """A clean exit, including sys.exit(0), keeps status=FINISHED."""
+        if not configs.DUMP_BUFFER_ENABLED:
+            self.skipTest("Skipping: project.dump_buffer.enabled is false.")
+
+        with Flowcept(start_persistence=False, save_workflow=True):
+            workflow_id = Flowcept.current_workflow_id
+        assert self._workflow_end_status(workflow_id) == Status.FINISHED
+
+        with pytest.raises(SystemExit), Flowcept(start_persistence=False, save_workflow=True):
+            workflow_id = Flowcept.current_workflow_id
+            raise SystemExit(0)
+        assert self._workflow_end_status(workflow_id) == Status.FINISHED
+
     @pytest.mark.safeoffline
     def test_data_files(self):
         with Flowcept():

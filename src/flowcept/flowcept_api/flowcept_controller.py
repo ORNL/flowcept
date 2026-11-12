@@ -940,8 +940,15 @@ class Flowcept(object):
         doc_inserter.start()
         self._db_inserters.append(doc_inserter)
 
-    def stop(self):
-        """Stop Flowcept controller."""
+    def stop(self, status: Status = Status.FINISHED):
+        """Stop Flowcept controller.
+
+        Parameters
+        ----------
+        status : Status, optional
+            Final status recorded on the workflow object. Defaults to ``Status.FINISHED``.
+            The context manager passes ``Status.ERROR`` when the block raises.
+        """
         if not self.is_started or not self.enabled:
             self.logger.warning("Flowcept is already stopped or may never have been started!")
             return
@@ -952,7 +959,7 @@ class Flowcept(object):
             and self._current_workflow_obj is not None
         ):
             self._current_workflow_obj.ended_at = time()
-            self._current_workflow_obj.status = Status.FINISHED
+            self._current_workflow_obj.status = status
             self._first_interceptor.intercept(self._current_workflow_obj.to_dict())
 
         if self._interceptors and len(self._interceptor_instances):
@@ -987,8 +994,9 @@ class Flowcept(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Run the stop function."""
-        self.stop()
+        """Run the stop function, recording ERROR if the block raised."""
+        failed = exc_type is not None and not (issubclass(exc_type, SystemExit) and exc_val.code in (0, None))
+        self.stop(status=Status.ERROR if failed else Status.FINISHED)
 
     @staticmethod
     def services_status() -> Dict[str, str]:
